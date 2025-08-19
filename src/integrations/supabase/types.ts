@@ -14,16 +14,568 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance: {
+        Row: {
+          branch_id: string | null
+          check_in_location: string | null
+          check_in_photo_url: string | null
+          check_in_time: string | null
+          check_out_location: string | null
+          check_out_photo_url: string | null
+          check_out_time: string | null
+          created_at: string | null
+          id: string
+          rider_id: string | null
+          status: string | null
+          work_date: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          check_in_location?: string | null
+          check_in_photo_url?: string | null
+          check_in_time?: string | null
+          check_out_location?: string | null
+          check_out_photo_url?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          id?: string
+          rider_id?: string | null
+          status?: string | null
+          work_date?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          check_in_location?: string | null
+          check_in_photo_url?: string | null
+          check_in_time?: string | null
+          check_out_location?: string | null
+          check_out_photo_url?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          id?: string
+          rider_id?: string | null
+          status?: string | null
+          work_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          address: string | null
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          manager_id: string | null
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      customer_loyalty: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          points_balance: number | null
+          tier: string | null
+          total_earned_points: number | null
+          total_redeemed_points: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          points_balance?: number | null
+          tier?: string | null
+          total_earned_points?: number | null
+          total_redeemed_points?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          points_balance?: number | null
+          tier?: string | null
+          total_earned_points?: number | null
+          total_redeemed_points?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_loyalty_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_reports: {
+        Row: {
+          branch_id: string | null
+          cash_collected: number | null
+          created_at: string | null
+          end_location: string | null
+          id: string
+          photos: Json | null
+          report_date: string
+          rider_id: string | null
+          start_location: string | null
+          total_sales: number | null
+          total_transactions: number | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          cash_collected?: number | null
+          created_at?: string | null
+          end_location?: string | null
+          id?: string
+          photos?: Json | null
+          report_date: string
+          rider_id?: string | null
+          start_location?: string | null
+          total_sales?: number | null
+          total_transactions?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          cash_collected?: number | null
+          created_at?: string | null
+          end_location?: string | null
+          id?: string
+          photos?: Json | null
+          report_date?: string
+          rider_id?: string | null
+          start_location?: string | null
+          total_sales?: number | null
+          total_transactions?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_reports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_reports_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_reports_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory: {
+        Row: {
+          branch_id: string | null
+          id: string
+          last_updated: string | null
+          max_stock_level: number | null
+          min_stock_level: number | null
+          product_id: string | null
+          reserved_quantity: number | null
+          rider_id: string | null
+          stock_quantity: number | null
+        }
+        Insert: {
+          branch_id?: string | null
+          id?: string
+          last_updated?: string | null
+          max_stock_level?: number | null
+          min_stock_level?: number | null
+          product_id?: string | null
+          reserved_quantity?: number | null
+          rider_id?: string | null
+          stock_quantity?: number | null
+        }
+        Update: {
+          branch_id?: string | null
+          id?: string
+          last_updated?: string | null
+          max_stock_level?: number | null
+          min_stock_level?: number | null
+          product_id?: string | null
+          reserved_quantity?: number | null
+          rider_id?: string | null
+          stock_quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string | null
+          code: string
+          cost_price: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          notes: string | null
+          product_id: string | null
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          rider_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          notes?: string | null
+          product_id?: string | null
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          rider_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          movement_type?: Database["public"]["Enums"]["stock_movement_type"]
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          rider_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          product_id: string | null
+          quantity: number
+          total_price: number
+          transaction_id: string | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          quantity: number
+          total_price: number
+          transaction_id?: string | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          total_price?: number
+          transaction_id?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          discount_amount: number | null
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string | null
+          rider_id: string | null
+          status: Database["public"]["Enums"]["transaction_status"] | null
+          total_amount: number
+          transaction_date: string | null
+          transaction_number: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          discount_amount?: number | null
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          rider_id?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"] | null
+          total_amount?: number
+          transaction_date?: string | null
+          transaction_number: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          discount_amount?: number | null
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          rider_id?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"] | null
+          total_amount?: number
+          transaction_date?: string | null
+          transaction_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          branch_id: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+          user_id: string | null
+        }
+      }
+      has_role: {
+        Args: { required_role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      stock_movement_type: "in" | "out" | "transfer" | "adjustment" | "return"
+      transaction_status: "pending" | "completed" | "cancelled" | "returned"
+      user_role:
+        | "ho_admin"
+        | "branch_manager"
+        | "rider"
+        | "finance"
+        | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +702,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      stock_movement_type: ["in", "out", "transfer", "adjustment", "return"],
+      transaction_status: ["pending", "completed", "cancelled", "returned"],
+      user_role: ["ho_admin", "branch_manager", "rider", "finance", "customer"],
+    },
   },
 } as const
