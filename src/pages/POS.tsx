@@ -26,6 +26,7 @@ interface Product {
   price: number;
   stock_quantity: number;
   category: string;
+  description?: string;
 }
 
 interface CartItem extends Product {
@@ -54,6 +55,7 @@ const POS = () => {
           name,
           price,
           category,
+          description,
           inventory(stock_quantity)
         `)
         .eq('is_active', true);
@@ -65,6 +67,7 @@ const POS = () => {
         name: product.name,
         price: product.price,
         category: product.category,
+        description: product.description,
         stock_quantity: product.inventory?.[0]?.stock_quantity || 0
       })) || [];
 
@@ -78,8 +81,31 @@ const POS = () => {
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Group products by category for better display
+  const groupedProducts = filteredProducts.reduce((acc, product) => {
+    const category = product.category || 'Lainnya';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(product);
+    return acc;
+  }, {} as Record<string, Product[]>);
+
+  const categories = Object.keys(groupedProducts).sort();
+
+  // Category colors for better visual distinction
+  const categoryColors: Record<string, string> = {
+    'Espresso Based': 'bg-amber-50 border-amber-200 text-amber-800',
+    'Milk Based': 'bg-blue-50 border-blue-200 text-blue-800', 
+    'Signature': 'bg-purple-50 border-purple-200 text-purple-800',
+    'Creampresso': 'bg-rose-50 border-rose-200 text-rose-800',
+    'Refresher': 'bg-green-50 border-green-200 text-green-800',
+    'Topping': 'bg-gray-50 border-gray-200 text-gray-800',
+    'Syrup': 'bg-yellow-50 border-yellow-200 text-yellow-800'
+  };
 
   const addToCart = (product: Product) => {
     const existingItem = cart.find(item => item.id === product.id);
@@ -210,10 +236,15 @@ const POS = () => {
       {/* Products Section */}
       <div className="flex-1 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Point of Sale</h1>
-          <Badge variant="secondary" className="text-sm">
-            {products.length} Produk
-          </Badge>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Zeger Coffee POS</h1>
+            <Badge variant="secondary" className="text-sm bg-primary/10 text-primary">
+              ☕ {products.length} Menu Items
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Total Kategori: {categories.length}</span>
+          </div>
         </div>
 
         {/* Search */}
@@ -229,39 +260,80 @@ const POS = () => {
 
         {/* Products Grid */}
         <ScrollArea className="h-[calc(100vh-280px)]">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredProducts.map((product) => (
-              <Card 
-                key={product.id} 
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => addToCart(product)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm line-clamp-2">{product.name}</CardTitle>
-                  <Badge variant="outline" className="w-fit text-xs">
-                    {product.category}
+          <div className="space-y-8">
+            {categories.map((category) => (
+              <div key={category} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Badge 
+                    className={`px-3 py-1 text-sm font-medium ${categoryColors[category] || 'bg-gray-50 border-gray-200 text-gray-800'}`}
+                    variant="outline"
+                  >
+                    {category}
                   </Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-lg font-bold text-primary">
-                      Rp {product.price.toLocaleString('id-ID')}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <Badge 
-                        variant={product.stock_quantity > 0 ? "secondary" : "destructive"}
-                        className="text-xs"
-                      >
-                        Stok: {product.stock_quantity}
-                      </Badge>
-                      <Button size="sm" disabled={product.stock_quantity <= 0}>
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent"></div>
+                  <span className="text-xs text-muted-foreground">
+                    {groupedProducts[category].length} item
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {groupedProducts[category].map((product) => (
+                    <Card 
+                      key={product.id} 
+                      className="cursor-pointer hover:shadow-lg transition-all duration-200 group border-2 hover:border-primary/20 relative overflow-hidden"
+                      onClick={() => addToCart(product)}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                      <CardHeader className="pb-3 relative z-10">
+                        <CardTitle className="text-sm line-clamp-2 group-hover:text-primary transition-colors duration-200">
+                          {product.name}
+                        </CardTitle>
+                        {product.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                            {product.description}
+                          </p>
+                        )}
+                      </CardHeader>
+                      <CardContent className="relative z-10">
+                        <div className="space-y-3">
+                          <p className="text-base font-bold text-primary">
+                            Rp {product.price.toLocaleString('id-ID')}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <Badge 
+                              variant={
+                                product.stock_quantity > 20 ? "default" : 
+                                product.stock_quantity > 0 ? "secondary" : 
+                                "destructive"
+                              }
+                              className="text-xs"
+                            >
+                              {product.stock_quantity > 0 ? 
+                                `Stok: ${product.stock_quantity}` : 
+                                'Habis'
+                              }
+                            </Badge>
+                            <Button 
+                              size="sm" 
+                              disabled={product.stock_quantity <= 0}
+                              className="h-7 w-7 p-0"
+                              variant={product.stock_quantity <= 0 ? "outline" : "default"}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             ))}
+            
+            {categories.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Tidak ada produk ditemukan</p>
+              </div>
+            )}
           </div>
         </ScrollArea>
       </div>

@@ -63,13 +63,43 @@ const CustomerApp = () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('category')
+        .order('name');
 
       if (error) throw error;
       setProducts(data || []);
     } catch (error: any) {
       toast.error("Gagal memuat menu");
     }
+  };
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Group products by category
+  const groupedProducts = filteredProducts.reduce((acc, product) => {
+    const category = product.category || 'Lainnya';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(product);
+    return acc;
+  }, {} as Record<string, Product[]>);
+
+  const categories = Object.keys(groupedProducts).sort();
+
+  // Category icons for visual distinction
+  const categoryIcons: Record<string, string> = {
+    'Espresso Based': '☕',
+    'Milk Based': '🥛',
+    'Signature': '⭐',
+    'Creampresso': '🍦',
+    'Refresher': '🍃',
+    'Topping': '🍯',
+    'Syrup': '🍭'
   };
 
   const addToCart = (product: Product) => {
@@ -101,11 +131,6 @@ const CustomerApp = () => {
 
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const earnedPoints = Math.floor(totalAmount / 1000); // 1 point per 1000 rupiah
-
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const callRider = (riderId: number) => {
     const rider = nearbyRiders.find(r => r.id === riderId);
@@ -152,34 +177,51 @@ const CustomerApp = () => {
 
       {/* Products */}
       <ScrollArea className="h-96">
-        <div className="space-y-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{product.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {product.description}
-                    </p>
-                    <p className="text-lg font-bold text-primary">
-                      Rp {product.price.toLocaleString('id-ID')}
-                    </p>
-                    <Badge variant="outline" className="text-xs">
-                      {product.category}
-                    </Badge>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => addToCart(product)}
-                    className="ml-4"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-6">
+          {categories.map((category) => (
+            <div key={category} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{categoryIcons[category] || '📋'}</span>
+                <h3 className="font-bold text-base text-primary">{category}</h3>
+                <div className="flex-1 h-px bg-border"></div>
+                <Badge variant="outline" className="text-xs">
+                  {groupedProducts[category].length} item
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                {groupedProducts[category].map((product) => (
+                  <Card key={product.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{product.name}</h4>
+                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                            {product.description}
+                          </p>
+                          <p className="text-lg font-bold text-primary">
+                            Rp {product.price.toLocaleString('id-ID')}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => addToCart(product)}
+                          className="ml-4"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
+          
+          {categories.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Tidak ada menu ditemukan</p>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>
