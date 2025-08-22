@@ -423,8 +423,8 @@ const MobileSeller = () => {
   );
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-gradient-to-b from-purple-600 to-blue-600 text-white p-4">
-      <div className="bg-white/95 backdrop-blur rounded-xl p-4 text-gray-900 min-h-[calc(100vh-2rem)]">
+    <div className="max-w-md mx-auto min-h-screen bg-gradient-to-b from-primary to-primary-light text-white p-4">
+      <div className="glass rounded-xl p-4 text-gray-900 min-h-[calc(100vh-2rem)]">
         {currentView === 'checkin' && renderCheckIn()}
         {currentView === 'stock-confirm' && renderStockConfirm()}
         {currentView === 'selling' && renderSelling()}

@@ -434,8 +434,8 @@ const CustomerApp = () => {
   );
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-gradient-to-b from-blue-600 to-purple-600 text-white">
-      <div className="bg-white/95 backdrop-blur text-gray-900 min-h-screen">
+    <div className="max-w-md mx-auto min-h-screen bg-gradient-to-b from-primary to-primary-light text-white">
+      <div className="glass text-gray-900 min-h-screen">
         {/* Header */}
         <div className="sticky top-0 bg-white/90 backdrop-blur border-b p-4 z-10">
           <div className="flex items-center justify-between">
