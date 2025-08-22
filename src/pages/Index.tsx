@@ -50,8 +50,8 @@ const Index = () => {
           <Card className="cursor-pointer hover:shadow-lg transition-shadow group" onClick={() => navigate('/customer-app')}>
             <CardContent className="p-6 text-center">
               <Smartphone className="h-12 w-12 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
-              <h3 className="text-lg font-semibold mb-2">Customer App</h3>
-              <p className="text-muted-foreground text-sm">Aplikasi customer untuk order & loyalty</p>
+              <h3 className="text-lg font-semibold mb-2">Aplikasi Customer</h3>
+              <p className="text-muted-foreground text-sm">Aplikasi pelanggan untuk order & loyalty</p>
             </CardContent>
           </Card>
         </div>
@@ -67,7 +67,7 @@ const Index = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Sales Chart */}
             <div className="dashboard-card animate-slide-up">
-              <h3 className="text-xl font-semibold mb-4 text-foreground">Sales Performance</h3>
+              <h3 className="text-xl font-semibold mb-4 text-foreground">Performa Penjualan</h3>
               <SalesChart />
             </div>
             

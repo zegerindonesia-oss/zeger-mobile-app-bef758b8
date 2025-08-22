@@ -11,20 +11,20 @@ interface DashboardHeaderProps {
 const roleConfig = {
   ho: {
     icon: Building2,
-    label: "Head Office",
-    description: "Central Management",
+    label: "Kantor Pusat",
+    description: "Manajemen Pusat",
     color: "bg-primary text-primary-foreground"
   },
   branch: {
     icon: Users,
-    label: "Branch Manager",
-    description: "Branch Operations",
+    label: "Manajer Cabang",
+    description: "Operasional Cabang",
     color: "bg-warning text-warning-foreground"
   },
   rider: {
     icon: Bike,
     label: "Mobile Seller",
-    description: "Field Operations",
+    description: "Operasional Lapangan",
     color: "bg-success text-success-foreground"
   }
 };
@@ -43,7 +43,7 @@ export const DashboardHeader = ({ activeRole, onRoleChange }: DashboardHeaderPro
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Welcome back!
+              Selamat datang kembali!
             </h1>
             <p className="text-muted-foreground">
               {currentConfig.label} - {currentConfig.description}

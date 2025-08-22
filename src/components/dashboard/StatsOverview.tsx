@@ -7,104 +7,104 @@ interface StatsOverviewProps {
 const statsData = {
   ho: [
     {
-      title: "Total Revenue",
-      value: "Rp 2,480,000,000",
-      change: "+12.5%",
+      title: "Total Pendapatan",
+      value: "Rp 2.480.000.000",
+      change: "+12,5%",
       trend: "up",
       icon: DollarSign,
-      description: "All branches combined"
+      description: "Semua cabang gabungan"
     },
     {
-      title: "Active Branches",
+      title: "Cabang Aktif",
       value: "15",
       change: "+2",
       trend: "up",
       icon: Users,
-      description: "Operating branches"
+      description: "Cabang beroperasi"
     },
     {
-      title: "Total Riders",
+      title: "Total Rider",
       value: "45",
       change: "+5",
       trend: "up",
       icon: Users,
-      description: "Active mobile sellers"
+      description: "Mobile seller aktif"
     },
     {
-      title: "Products Sold",
-      value: "12,450",
-      change: "+18.2%",
+      title: "Produk Terjual",
+      value: "12.450",
+      change: "+18,2%",
       trend: "up",
       icon: ShoppingCart,
-      description: "This month"
+      description: "Bulan ini"
     }
   ],
   branch: [
     {
-      title: "Branch Revenue",
-      value: "Rp 165,000,000",
-      change: "+8.3%",
+      title: "Pendapatan Cabang",
+      value: "Rp 165.000.000",
+      change: "+8,3%",
       trend: "up",
       icon: DollarSign,
-      description: "This month"
+      description: "Bulan ini"
     },
     {
-      title: "Active Riders",
+      title: "Rider Aktif",
       value: "3",
       change: "0",
       trend: "stable",
       icon: Users,
-      description: "Assigned to branch"
+      description: "Ditugaskan ke cabang"
     },
     {
-      title: "Orders Today",
+      title: "Pesanan Hari Ini",
       value: "87",
       change: "+12",
       trend: "up",
       icon: ShoppingCart,
-      description: "All riders combined"
+      description: "Semua rider gabungan"
     },
     {
-      title: "Stock Level",
+      title: "Level Stok",
       value: "85%",
       change: "-5%",
       trend: "down",
       icon: Package,
-      description: "Inventory status"
+      description: "Status inventori"
     }
   ],
   rider: [
     {
-      title: "Daily Sales",
-      value: "Rp 1,250,000",
-      change: "+15.2%",
+      title: "Penjualan Harian",
+      value: "Rp 1.250.000",
+      change: "+15,2%",
       trend: "up",
       icon: DollarSign,
-      description: "Today's earnings"
+      description: "Pendapatan hari ini"
     },
     {
-      title: "Orders Completed",
+      title: "Pesanan Selesai",
       value: "28",
       change: "+3",
       trend: "up",
       icon: ShoppingCart,
-      description: "Today"
+      description: "Hari ini"
     },
     {
-      title: "Commission",
-      value: "Rp 125,000",
-      change: "+15.2%",
+      title: "Komisi",
+      value: "Rp 125.000",
+      change: "+15,2%",
       trend: "up",
       icon: TrendingUp,
-      description: "Today's commission"
+      description: "Komisi hari ini"
     },
     {
-      title: "Stock Remaining",
+      title: "Sisa Stok",
       value: "72%",
       change: "-28%",
       trend: "down",
       icon: Package,
-      description: "Need restock soon"
+      description: "Perlu restok segera"
     }
   ]
 };

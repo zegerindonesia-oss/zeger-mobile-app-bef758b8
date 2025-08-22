@@ -1,13 +1,13 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const salesData = [
-  { day: "Mon", sales: 2400, orders: 45 },
-  { day: "Tue", sales: 1398, orders: 32 },
-  { day: "Wed", sales: 9800, orders: 87 },
-  { day: "Thu", sales: 3908, orders: 56 },
-  { day: "Fri", sales: 4800, orders: 78 },
-  { day: "Sat", sales: 3800, orders: 65 },
-  { day: "Sun", sales: 4300, orders: 72 }
+  { day: "Sen", sales: 2400000, orders: 45 },
+  { day: "Sel", sales: 1398000, orders: 32 },
+  { day: "Rab", sales: 9800000, orders: 87 },
+  { day: "Kam", sales: 3908000, orders: 56 },
+  { day: "Jum", sales: 4800000, orders: 78 },
+  { day: "Sab", sales: 3800000, orders: 65 },
+  { day: "Min", sales: 4300000, orders: 72 }
 ];
 
 export const SalesChart = () => {
@@ -39,8 +39,8 @@ export const SalesChart = () => {
               boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
             }}
             formatter={(value, name) => [
-              `Rp ${value.toLocaleString()}`,
-              name === 'sales' ? 'Revenue' : 'Orders'
+              `Rp ${value.toLocaleString('id-ID')}`,
+              name === 'sales' ? 'Pendapatan' : 'Pesanan'
             ]}
           />
           <Area
