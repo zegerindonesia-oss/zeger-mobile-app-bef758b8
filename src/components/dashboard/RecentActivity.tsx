@@ -11,9 +11,9 @@ const activityData = {
     {
       id: 1,
       type: "sale",
-      title: "Branch Jakarta Pusat completed 45 orders",
-      description: "Total revenue: Rp 2,250,000",
-      time: "2 minutes ago",
+      title: "Cabang Jakarta Pusat menyelesaikan 45 pesanan",
+      description: "Total pendapatan: Rp 2.250.000",
+      time: "2 menit yang lalu",
       status: "success",
       icon: CheckCircle,
       avatar: "JP"
@@ -21,9 +21,9 @@ const activityData = {
     {
       id: 2,
       type: "alert",
-      title: "Branch Surabaya - Low stock alert",
-      description: "Nasi Gudeg running low (5 items left)",
-      time: "15 minutes ago",
+      title: "Cabang Surabaya - Peringatan stok rendah",
+      description: "Kopi Espresso hampir habis (5 item tersisa)",
+      time: "15 menit yang lalu",
       status: "warning",
       icon: AlertCircle,
       avatar: "SB"
@@ -31,9 +31,9 @@ const activityData = {
     {
       id: 3,
       type: "rider",
-      title: "New rider Andi joined Branch Bandung",
-      description: "Successfully completed onboarding",
-      time: "1 hour ago",
+      title: "Rider baru Andi bergabung di Cabang Bandung",
+      description: "Berhasil menyelesaikan onboarding",
+      time: "1 jam yang lalu",
       status: "success",
       icon: User,
       avatar: "AN"
@@ -41,9 +41,9 @@ const activityData = {
     {
       id: 4,
       type: "report",
-      title: "Daily report from Branch Medan",
-      description: "Revenue: Rp 1,850,000 | Orders: 32",
-      time: "2 hours ago",
+      title: "Laporan harian dari Cabang Medan",
+      description: "Pendapatan: Rp 1.850.000 | Pesanan: 32",
+      time: "2 jam yang lalu",
       status: "info",
       icon: TrendingUp,
       avatar: "MD"
@@ -130,9 +130,9 @@ export const RecentActivity = ({ role }: RecentActivityProps) => {
   return (
     <div className="dashboard-card animate-slide-up">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold text-foreground">Recent Activity</h3>
+        <h3 className="text-xl font-semibold text-foreground">Aktivitas Terkini</h3>
         <Badge variant="outline" className="text-xs">
-          Live Updates
+          Pembaruan Langsung
         </Badge>
       </div>
       

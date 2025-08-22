@@ -2,6 +2,7 @@ import { MapPin, Clock, CheckCircle, AlertCircle, Bike, Navigation } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface RiderTrackingProps {
   role: 'ho' | 'branch' | 'rider';
@@ -86,6 +87,7 @@ const riderData = {
 
 export const RiderTracking = ({ role }: RiderTrackingProps) => {
   const riders = riderData[role] || [];
+  const navigate = useNavigate();
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -119,7 +121,7 @@ export const RiderTracking = ({ role }: RiderTrackingProps) => {
   return (
     <div className="dashboard-card animate-slide-up">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-foreground">Rider Tracking</h3>
+        <h3 className="text-lg font-semibold text-foreground">Pelacakan Rider</h3>
         <div className="flex items-center gap-2">
           <div className="status-online"></div>
           <span className="text-xs text-muted-foreground">Live</span>
@@ -164,17 +166,17 @@ export const RiderTracking = ({ role }: RiderTrackingProps) => {
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-3">
                         <span className="text-muted-foreground">
-                          Orders: <span className="font-medium text-foreground">{rider.ordersToday}</span>
+                          Pesanan: <span className="font-medium text-foreground">{rider.ordersToday}</span>
                         </span>
                         <span className="text-muted-foreground">
-                          Revenue: <span className="font-medium text-foreground">{rider.revenue}</span>
+                          Pendapatan: <span className="font-medium text-foreground">{rider.revenue}</span>
                         </span>
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-xs text-muted-foreground">
-                        Updated {rider.lastUpdate}
+                        Diperbarui {rider.lastUpdate}
                       </span>
                       {rider.status === 'active' && (
                         <Button
@@ -197,14 +199,15 @@ export const RiderTracking = ({ role }: RiderTrackingProps) => {
       
       {role === 'branch' && (
         <div className="mt-4 pt-4 border-t border-border">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full glass hover:scale-105 transition-transform"
-          >
-            <Bike className="w-4 h-4 mr-2" />
-            Add New Rider
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full glass hover:scale-105 transition-transform"
+              onClick={() => navigate('/admin-dashboard')}
+            >
+              <Bike className="w-4 h-4 mr-2" />
+              Tambah Rider Baru
+            </Button>
         </div>
       )}
     </div>

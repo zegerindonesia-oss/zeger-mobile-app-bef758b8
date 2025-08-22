@@ -80,7 +80,7 @@ const AdminDashboard = () => {
       <div className="container mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">Dashboard {profile.role === 'ho_admin' ? 'HO Admin' : 'Branch Manager'}</h1>
+          <h1 className="text-3xl font-bold">Dashboard {profile.role === 'ho_admin' ? 'Admin HO' : 'Manajer Cabang'}</h1>
           <p className="text-muted-foreground">
             Selamat datang, {profile.full_name}
           </p>
@@ -91,19 +91,19 @@ const AdminDashboard = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              User Management
+              Manajemen User
             </TabsTrigger>
             <TabsTrigger value="stock" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
-              Stock Transfer
+              Transfer Stok
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Sales Reports
+              Laporan Penjualan
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Analytics
+              Analitik
             </TabsTrigger>
           </TabsList>
 
@@ -131,11 +131,11 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ShoppingCart className="h-5 w-5" />
-                    Sales Analytics
+                    Analitik Penjualan
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Analytics dashboard akan ditampilkan di sini.</p>
+                  <p className="text-muted-foreground">Dashboard analitik akan ditampilkan di sini.</p>
                 </CardContent>
               </Card>
 
@@ -143,11 +143,11 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    User Performance
+                    Performa User
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">User performance metrics akan ditampilkan di sini.</p>
+                  <p className="text-muted-foreground">Metrik performa user akan ditampilkan di sini.</p>
                 </CardContent>
               </Card>
 
@@ -155,11 +155,11 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5" />
-                    Inventory Status
+                    Status Inventori
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">Real-time inventory akan ditampilkan di sini.</p>
+                  <p className="text-muted-foreground">Inventori real-time akan ditampilkan di sini.</p>
                 </CardContent>
               </Card>
             </div>

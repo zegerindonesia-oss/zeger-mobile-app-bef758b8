@@ -71,9 +71,9 @@ export const InventoryStatus = ({ role }: InventoryStatusProps) => {
   return (
     <div className="dashboard-card animate-slide-up">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-foreground">Inventory Status</h3>
+        <h3 className="text-lg font-semibold mb-4 text-foreground">Status Inventori</h3>
         <Badge variant="outline" className="text-xs">
-          {role === 'ho' ? 'All Branches' : role === 'branch' ? 'Branch Stock' : 'Mobile Stock'}
+          {role === 'ho' ? 'Semua Cabang' : role === 'branch' ? 'Stok Cabang' : 'Stok Mobile'}
         </Badge>
       </div>
       
@@ -113,9 +113,9 @@ export const InventoryStatus = ({ role }: InventoryStatusProps) => {
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Stock Level</span>
+                  <span className="text-muted-foreground">Level Stok</span>
                   <span className="font-medium text-foreground">
-                    {item.stock}/{item.max} items
+                    {item.stock}/{item.max} item
                   </span>
                 </div>
                 <Progress 

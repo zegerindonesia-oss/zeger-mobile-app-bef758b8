@@ -5,7 +5,7 @@ import { Coffee, Store, Truck, ShoppingCart, Smartphone, Users } from "lucide-re
 import { useNavigate } from "react-router-dom";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsOverview } from "@/components/dashboard/StatsOverview";
-import { QuickActions } from "@/components/dashboard/QuickActions";
+import { EnhancedQuickActions } from "@/components/dashboard/EnhancedQuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { SalesChart } from "@/components/charts/SalesChart";
 import { InventoryStatus } from "@/components/inventory/InventoryStatus";
@@ -30,7 +30,7 @@ const Index = () => {
         </div>
 
         {/* Quick Access Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow group" onClick={() => navigate('/pos')}>
             <CardContent className="p-6 text-center">
               <Store className="h-12 w-12 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
@@ -52,6 +52,14 @@ const Index = () => {
               <Smartphone className="h-12 w-12 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
               <h3 className="text-lg font-semibold mb-2">Aplikasi Customer</h3>
               <p className="text-muted-foreground text-sm">Aplikasi pelanggan untuk order & loyalty</p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow group" onClick={() => navigate('/admin-dashboard')}>
+            <CardContent className="p-6 text-center">
+              <Users className="h-12 w-12 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
+              <h3 className="text-lg font-semibold mb-2">Admin Dashboard</h3>
+              <p className="text-muted-foreground text-sm">Manajemen pengguna dan cabang</p>
             </CardContent>
           </Card>
         </div>
@@ -78,7 +86,7 @@ const Index = () => {
           {/* Sidebar Content */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <QuickActions role={activeRole} />
+            <EnhancedQuickActions role={activeRole} />
             
             {/* Inventory Status */}
             <InventoryStatus role={activeRole} />
