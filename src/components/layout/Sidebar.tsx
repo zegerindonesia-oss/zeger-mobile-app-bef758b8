@@ -47,19 +47,10 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    id: "roles",
-    label: "Peran",
-    icon: Settings,
-    children: [
-      { id: "role-ho", label: "Kantor Pusat", icon: Building2, path: "\/?role=ho" },
-      { id: "role-branch", label: "Manajer Cabang", icon: Store, path: "\/?role=branch" },
-      { id: "role-rider", label: "Mobile Seller", icon: Truck, path: "\/?role=rider" },
-    ]
-  },
-  {
     id: "dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
+    roles: ["ho_admin", "branch_manager", "finance"],
     children: [
       { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/" },
       { id: "analytics", label: "Analytics", icon: PieChart, path: "/analytics" },
@@ -69,6 +60,7 @@ const menuItems: MenuItem[] = [
     id: "sales",
     label: "Sales",
     icon: ShoppingCart,
+    roles: ["ho_admin", "branch_manager"],
     children: [
       { id: "pos", label: "Point of Sale", icon: ShoppingCart, path: "/pos" },
       { id: "orders", label: "Orders", icon: FileText, path: "/orders" },
@@ -79,8 +71,10 @@ const menuItems: MenuItem[] = [
     id: "inventory",
     label: "Inventory",
     icon: Package,
+    roles: ["ho_admin", "branch_manager"],
     children: [
       { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
+      { id: "stock-transfer", label: "Kirim Stok ke Rider", icon: Truck, path: "/stock-transfer" },
       { id: "stock-movements", label: "Stock Movements", icon: FileText, path: "/stock-movements" },
       { id: "stock-returns", label: "Returns", icon: FileText, path: "/returns" },
     ]
@@ -89,12 +83,13 @@ const menuItems: MenuItem[] = [
     id: "finance",
     label: "Finance",
     icon: Wallet,
+    roles: ["ho_admin", "branch_manager", "finance"],
     children: [
       { id: "profit-loss", label: "Laba Rugi", icon: FileText, path: "/finance/profit-loss" },
       { id: "cash-flow", label: "Arus Kas", icon: PieChart, path: "/finance/cash-flow" },
       { id: "balance-sheet", label: "Neraca", icon: FileText, path: "/finance/balance-sheet" },
       { id: "operational-expenses", label: "Beban Operasional", icon: FileText, path: "/finance/operational-expenses" },
-      { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
+      { id: "transactions", label: "Transactions", icon: FileText, path: "/reports/transactions" },
       { id: "daily-reports", label: "Daily Reports", icon: FileText, path: "/daily-reports" },
     ]
   },
@@ -102,6 +97,7 @@ const menuItems: MenuItem[] = [
     id: "accounting",
     label: "Accounting",
     icon: Calculator,
+    roles: ["ho_admin"],
     children: [
       { id: "chart-of-accounts", label: "Chart of Accounts", icon: FileText, path: "/chart-accounts" },
       { id: "journal", label: "Journal Entries", icon: FileText, path: "/journal" },
@@ -111,6 +107,7 @@ const menuItems: MenuItem[] = [
     id: "report",
     label: "Report",
     icon: FileText,
+    roles: ["ho_admin", "branch_manager", "finance"],
     children: [
       { id: "sales-report", label: "Sales Report", icon: FileText, path: "/reports/sales" },
       { id: "inventory-report", label: "Inventory Report", icon: FileText, path: "/reports/inventory" },
@@ -121,8 +118,11 @@ const menuItems: MenuItem[] = [
     id: "admin",
     label: "Admin",
     icon: Settings,
+    roles: ["ho_admin", "branch_manager"],
     children: [
-      { id: "user-management", label: "User Management", icon: Users, path: "/admin/users" }
+      { id: "user-management", label: "User Management", icon: Users, path: "/admin/users" },
+      { id: "branches", label: "Kelola Cabang", icon: Building2, path: "/branches" },
+      { id: "riders", label: "Kelola Rider", icon: Truck, path: "/riders" }
     ]
   }
 ];
