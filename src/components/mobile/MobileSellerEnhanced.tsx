@@ -91,8 +91,12 @@ const MobileSellerEnhanced = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris' | 'transfer'>('cash');
 
   useEffect(() => {
-    fetchRiderStock();
-  }, []);
+    if (currentView === 'stock-confirm') {
+      fetchRiderStock();
+    } else if (currentView === 'selling') {
+      fetchSellingStock();
+    }
+  }, [currentView]);
 
   const fetchRiderStock = async () => {
     try {
@@ -108,23 +112,24 @@ const MobileSellerEnhanced = () => {
 
       if (!profile) return;
 
-      // Fetch rider's inventory with products
-      const { data: inventory } = await supabase
-        .from('inventory')
+      // Fetch pending stock transfers for this rider
+      const { data: pendingTransfers } = await supabase
+        .from('stock_movements')
         .select(`
           *,
           products(id, name, price, category)
         `)
         .eq('rider_id', profile.id)
-        .gt('stock_quantity', 0);
+        .eq('movement_type', 'transfer')
+        .is('notes', null);
 
-        const stockItems = inventory?.map(item => ({
-          id: item.id,
-          product_id: item.product_id,
-          product: {...item.products, stock_quantity: item.stock_quantity},
-          rider_stock: item.stock_quantity,
-          checked: false
-        })) || [];
+      const stockItems = pendingTransfers?.map(transfer => ({
+        id: transfer.id,
+        product_id: transfer.product_id,
+        product: {...transfer.products, stock_quantity: transfer.quantity},
+        rider_stock: transfer.quantity,
+        checked: false
+      })) || [];
 
       setStockItems(stockItems);
     } catch (error: any) {
@@ -197,7 +202,6 @@ const MobileSellerEnhanced = () => {
 
     setLoading(true);
     try {
-      // Create stock movement records for confirmed stock
       const { data: { user } } = await supabase.auth.getUser();
       const { data: profile } = await supabase
         .from('profiles')
@@ -205,27 +209,84 @@ const MobileSellerEnhanced = () => {
         .eq('user_id', user?.id)
         .maybeSingle();
 
-      const stockMovements = checkedItems.map(item => ({
-        product_id: item.product_id,
-        quantity: item.rider_stock,
-        movement_type: 'transfer' as const,
-        rider_id: profile?.id,
-        branch_id: profile?.branch_id,
-        notes: 'Stock confirmed by rider'
-      }));
+      // Update stock movements with confirmation
+      for (const item of checkedItems) {
+        await supabase
+          .from('stock_movements')
+          .update({ notes: 'Stock confirmed by rider' })
+          .eq('id', item.id);
 
-      const { error } = await supabase
-        .from('stock_movements')
-        .insert(stockMovements);
+        // Update or create rider inventory
+        const { data: existingInventory } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('rider_id', profile?.id)
+          .eq('product_id', item.product_id)
+          .maybeSingle();
 
-      if (error) throw error;
+        if (existingInventory) {
+          await supabase
+            .from('inventory')
+            .update({ 
+              stock_quantity: existingInventory.stock_quantity + item.rider_stock 
+            })
+            .eq('id', existingInventory.id);
+        } else {
+          await supabase
+            .from('inventory')
+            .insert({
+              rider_id: profile?.id,
+              branch_id: profile?.branch_id,
+              product_id: item.product_id,
+              stock_quantity: item.rider_stock
+            });
+        }
+      }
 
       toast.success("Stok dikonfirmasi!");
       setCurrentView('selling');
+      fetchSellingStock(); // Fetch updated stock for selling
     } catch (error: any) {
       toast.error("Gagal konfirmasi stok: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSellingStock = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, branch_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!profile) return;
+
+      // Fetch rider's inventory with products for selling
+      const { data: inventory } = await supabase
+        .from('inventory')
+        .select(`
+          *,
+          products(id, name, price, category)
+        `)
+        .eq('rider_id', profile.id)
+        .gt('stock_quantity', 0);
+
+      const stockItems = inventory?.map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        product: {...item.products, stock_quantity: item.stock_quantity},
+        rider_stock: item.stock_quantity,
+        checked: false
+      })) || [];
+
+      setStockItems(stockItems);
+    } catch (error: any) {
+      toast.error("Gagal memuat stok penjualan");
     }
   };
 

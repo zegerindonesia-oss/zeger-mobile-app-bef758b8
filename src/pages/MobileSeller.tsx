@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MobileSellerEnhanced from "@/components/mobile/MobileSellerEnhanced";
 import MobileRiderDashboard from "@/components/mobile/MobileRiderDashboard";
+import MobileRiderAnalytics from "@/components/mobile/MobileRiderAnalytics";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
-import { LayoutDashboard, ShoppingCart, Calendar, History, Settings } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Calendar, History, Settings, BarChart3 } from "lucide-react";
 
 export default function MobileSeller() {
   const { user, userProfile, loading } = useAuth();
@@ -54,44 +55,55 @@ export default function MobileSeller() {
             </div>
           </TabsContent>
           
+          <TabsContent value="analytics" className="m-0 h-full">
+            <MobileRiderAnalytics />
+          </TabsContent>
+          
           <TabsContent value="history" className="m-0 h-full p-4">
             <div className="text-center py-8">
               <History className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Riwayat</h3>
-              <p className="text-muted-foreground">Riwayat transaksi dan aktivitas</p>
+              <h3 className="text-lg font-semibold mb-2">Riwayat Transaksi</h3>
+              <p className="text-muted-foreground">Riwayat transaksi dan laporan</p>
             </div>
           </TabsContent>
         </div>
 
         {/* Bottom Navigation */}
         <div className="bg-white border-t">
-          <TabsList className="grid w-full grid-cols-4 h-16 bg-transparent">
+          <TabsList className="grid w-full grid-cols-5 h-16 bg-transparent">
             <TabsTrigger 
               value="dashboard" 
               className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600"
             >
-              <LayoutDashboard className="h-4 w-4" />
+              <LayoutDashboard className="h-3 w-3" />
               <span className="text-xs">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger 
               value="selling"
               className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600"
             >
-              <ShoppingCart className="h-4 w-4" />
+              <ShoppingCart className="h-3 w-3" />
               <span className="text-xs">Penjualan</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="analytics"
+              className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600"
+            >
+              <BarChart3 className="h-3 w-3" />
+              <span className="text-xs">Analytics</span>
             </TabsTrigger>
             <TabsTrigger 
               value="attendance"
               className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600"
             >
-              <Calendar className="h-4 w-4" />
+              <Calendar className="h-3 w-3" />
               <span className="text-xs">Absensi</span>
             </TabsTrigger>
             <TabsTrigger 
               value="history"
               className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600"
             >
-              <History className="h-4 w-4" />
+              <History className="h-3 w-3" />
               <span className="text-xs">Riwayat</span>
             </TabsTrigger>
           </TabsList>
