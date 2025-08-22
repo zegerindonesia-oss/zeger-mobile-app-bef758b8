@@ -18,12 +18,14 @@ import {
   FileText,
   Upload,
   CreditCard,
-  Smartphone
+  Smartphone,
+  LogOut
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Product {
   id: string;
@@ -66,6 +68,7 @@ interface DailyReport {
 }
 
 const MobileSellerEnhanced = () => {
+  const { userProfile, signOut } = useAuth();
   const [currentView, setCurrentView] = useState<'checkin' | 'stock-confirm' | 'selling' | 'returns' | 'checkout'>('checkin');
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -415,6 +418,27 @@ const MobileSellerEnhanced = () => {
   // Render functions for each view
   const renderCheckIn = () => (
     <div className="space-y-6 p-4">
+      {/* Header with logout */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Avatar>
+            <AvatarFallback>{userProfile?.full_name?.charAt(0) || 'M'}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-medium text-gray-800">{userProfile?.full_name}</p>
+            <p className="text-sm text-gray-600">Mobile Seller</p>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={signOut}
+          className="text-red-600 hover:bg-red-50"
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
+      </div>
+
       <div className="text-center">
         <div className="mb-4">
           <ZegerLogo size="md" />
