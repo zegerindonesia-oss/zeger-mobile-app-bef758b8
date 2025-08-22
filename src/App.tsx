@@ -21,6 +21,7 @@ import Branches from "./pages/Branches";
 import Riders from "./pages/Riders";
 import Inventory from "./pages/Inventory";
 import AdminUsers from "./pages/AdminUsers";
+import StockTransfer from "./pages/StockTransfer";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,12 @@ const App = () => (
             <Route path="/inventory" element={
               <Layout>
                 <Inventory />
+              </Layout>
+            } />
+            <Route path="/stock-transfer" element={
+              <Layout>
+                {/* Stock transfer between branch and rider */}
+                <StockTransfer />
               </Layout>
             } />
             <Route path="/admin/users" element={

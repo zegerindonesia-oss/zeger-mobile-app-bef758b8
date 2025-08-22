@@ -1,4 +1,4 @@
-import { Bell, Menu, User, Search } from "lucide-react";
+import { Bell, Menu, User, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -22,6 +23,7 @@ interface HeaderProps {
 }
 
 export const Header = ({ onToggleSidebar, userProfile }: HeaderProps) => {
+  const { signOut } = useAuth();
   const getRoleLabel = (role?: string) => {
     switch (role) {
       case 'ho_admin': return 'HO Admin';
@@ -138,7 +140,8 @@ export const Header = ({ onToggleSidebar, userProfile }: HeaderProps) => {
                 <span>Pengaturan</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">
+              <DropdownMenuItem className="text-red-600" onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" />
                 Keluar
               </DropdownMenuItem>
             </DropdownMenuContent>
