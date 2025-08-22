@@ -111,6 +111,29 @@ const statsData = {
 
 export const StatsOverview = ({ role }: StatsOverviewProps) => {
   const stats = statsData[role];
+  // Route mapping per kartu
+  const getRouteForStat = (title: string) => {
+    const map: Record<string, string> = {
+      'Total Pendapatan': '/reports/transactions',
+      'Cabang Aktif': '/branches',
+      'Total Rider': '/riders',
+      'Produk Terjual': '/reports/transactions',
+      'Pendapatan Cabang': '/reports/transactions',
+      'Rider Aktif': '/riders',
+      'Pesanan Hari Ini': '/reports/transactions',
+      'Level Stok': '/pos',
+      'Penjualan Harian': '/reports/transactions',
+      'Pesanan Selesai': '/reports/transactions',
+      'Komisi': '/reports/transactions',
+      'Sisa Stok': '/mobile-seller'
+    };
+    return map[title] || '/';
+  };
+  
+  // Use navigate lazily to avoid import churn on SSR
+  const handleClick = (path: string) => {
+    import('react-router-dom').then(({ useNavigate }) => {}).catch(()=>{});
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -118,11 +141,13 @@ export const StatsOverview = ({ role }: StatsOverviewProps) => {
         const Icon = stat.icon;
         const isPositive = stat.trend === "up";
         const isNegative = stat.trend === "down";
+        const path = getRouteForStat(stat.title);
         
         return (
-          <div
+          <a
             key={stat.title}
-            className="dashboard-card group hover:scale-105 transition-all duration-300"
+            href={path}
+            className="dashboard-card group hover:scale-105 transition-all duration-300 cursor-pointer block"
             style={{ animationDelay: `${index * 100}ms` }}
           >
             <div className="flex items-start justify-between mb-4">
@@ -155,7 +180,7 @@ export const StatsOverview = ({ role }: StatsOverviewProps) => {
                 {stat.description}
               </p>
             </div>
-          </div>
+          </a>
         );
       })}
     </div>

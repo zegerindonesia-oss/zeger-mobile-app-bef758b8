@@ -15,6 +15,9 @@ import ProfitLoss from "./pages/finance/ProfitLoss";
 import CashFlow from "./pages/finance/CashFlow";
 import BalanceSheet from "./pages/finance/BalanceSheet";
 import OperationalExpenses from "./pages/finance/OperationalExpenses";
+import Transactions from "./pages/Transactions";
+import Branches from "./pages/Branches";
+import Riders from "./pages/Riders";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +60,21 @@ const App = () => (
             <Route path="/finance/operational-expenses" element={
               <Layout>
                 <OperationalExpenses />
+              </Layout>
+            } />
+            <Route path="/reports/transactions" element={
+              <Layout>
+                <Transactions />
+              </Layout>
+            } />
+            <Route path="/branches" element={
+              <Layout>
+                <Branches />
+              </Layout>
+            } />
+            <Route path="/riders" element={
+              <Layout>
+                <Riders />
               </Layout>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

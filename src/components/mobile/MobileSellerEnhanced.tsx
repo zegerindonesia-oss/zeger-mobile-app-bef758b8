@@ -104,7 +104,7 @@ const MobileSellerEnhanced = () => {
         .from('profiles')
         .select('id, branch_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!profile) return;
 
@@ -145,7 +145,7 @@ const MobileSellerEnhanced = () => {
         .from('profiles')
         .select('id, branch_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!profile) throw new Error('Profile not found');
 
@@ -203,7 +203,7 @@ const MobileSellerEnhanced = () => {
         .from('profiles')
         .select('id, branch_id')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       const stockMovements = checkedItems.map(item => ({
         product_id: item.product_id,
@@ -267,7 +267,7 @@ const MobileSellerEnhanced = () => {
         .from('profiles')
         .select('id, branch_id')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       // Calculate transaction totals
       let totalAmount = 0;
@@ -386,7 +386,7 @@ const MobileSellerEnhanced = () => {
         .from('profiles')
         .select('id, branch_id')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       const reportData = {
         rider_id: profile?.id,

@@ -34,13 +34,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data } = await supabase
+      const { data: existing, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      
-      setUserProfile(data);
+
+      if (error) throw error;
+
+      if (!existing) {
+        // Create minimal profile if missing (requires INSERT policy)
+        const { data: { user } } = await supabase.auth.getUser();
+        const fullName = user?.email?.split('@')[0] || 'Pengguna';
+        await supabase.from('profiles').insert({
+          user_id: userId,
+          full_name: fullName,
+          role: 'customer',
+          is_active: true
+        });
+        // Refetch after insert
+        const { data: created } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        setUserProfile(created);
+        return;
+      }
+
+      setUserProfile(existing);
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
