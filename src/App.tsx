@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { AuthProvider } from "@/hooks/useAuth";
+import { RoleBasedRoute } from "@/components/auth/RoleBasedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import POS from "./pages/POS";
@@ -32,12 +33,22 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/mobile-seller" element={<MobileSeller />} />
-            <Route path="/customer-app" element={<CustomerApp />} />
+            <Route path="/mobile-seller" element={
+              <RoleBasedRoute allowedRoles={['rider']}>
+                <MobileSeller />
+              </RoleBasedRoute>
+            } />
+            <Route path="/customer-app" element={
+              <RoleBasedRoute allowedRoles={['customer']}>
+                <CustomerApp />
+              </RoleBasedRoute>
+            } />
             <Route path="/" element={
-              <Layout>
-                <Index />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'finance']}>
+                <Layout>
+                  <Index />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/pos" element={
               <Layout>

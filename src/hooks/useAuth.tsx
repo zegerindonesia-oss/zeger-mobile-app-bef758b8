@@ -104,6 +104,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         setLoading(false);
+        
+        // Handle role-based redirects after login
+        if (event === 'SIGNED_IN' && session?.user) {
+          setTimeout(() => {
+            // Will redirect based on role after profile is fetched
+          }, 100);
+        }
       }
     );
 

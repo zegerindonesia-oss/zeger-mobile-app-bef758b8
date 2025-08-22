@@ -128,34 +128,51 @@ export const UserManagement = ({ role, branchId }: UserManagementProps) => {
 
     setLoading(true);
     try {
-      // Create auth user (this would typically be done through admin SDK)
-      // For now, we'll create the profile directly
-      const profileData = {
-        full_name: newUser.full_name,
-        phone: newUser.phone,
-        role: newUser.role,
-        branch_id: assignedBranchId,
-        is_active: true,
-        user_id: null // Will be set when auth user is created
-      };
-
-      const { error } = await supabase
-        .from('profiles')
-        .insert([profileData]);
-
-      if (error) throw error;
-
-      toast.success("User berhasil dibuat!");
-      setDialogOpen(false);
-      setNewUser({
-        full_name: '',
-        email: '',
-        password: '',
-        phone: '',
-        role: 'rider',
-        branch_id: ''
+      // Create Supabase auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: newUser.full_name,
+            phone: newUser.phone,
+            role: newUser.role
+          }
+        }
       });
-      fetchUsers();
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        // Create profile linked to the auth user
+        const profileData = {
+          user_id: authData.user.id,
+          full_name: newUser.full_name,
+          phone: newUser.phone,
+          role: newUser.role,
+          branch_id: assignedBranchId,
+          is_active: true
+        };
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([profileData]);
+
+        if (profileError) throw profileError;
+
+        toast.success(`User ${newUser.full_name} berhasil dibuat! Email: ${newUser.email}`);
+        setDialogOpen(false);
+        setNewUser({
+          full_name: '',
+          email: '',
+          password: '',
+          phone: '',
+          role: 'rider',
+          branch_id: ''
+        });
+        fetchUsers();
+      }
     } catch (error: any) {
       toast.error("Gagal membuat user: " + error.message);
     } finally {
