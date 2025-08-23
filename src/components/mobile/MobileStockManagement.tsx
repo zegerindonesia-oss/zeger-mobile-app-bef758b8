@@ -106,13 +106,13 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh }: {
       const fileName = `return-${inventoryId}-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('checkpoint-photos')
+        .from('stock-photos')
         .upload(fileName, photo);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('checkpoint-photos')
+        .from('stock-photos')
         .getPublicUrl(fileName);
 
       // Create return stock movement record
@@ -414,17 +414,17 @@ const MobileStockManagement = () => {
 
       if (error) throw error;
 
-      // Create operational expense record if any
-      if (shiftReport.operational_expenses > 0) {
+      // Create operational expense record if any beban operasional
+      if (shiftReport.operational_expenses > 0 && shiftReport.notes.trim()) {
         await supabase
-          .from('operational_expenses')
+          .from('daily_operational_expenses')
           .insert([{
-            branch_id: userProfile?.branch_id,
+            rider_id: userProfile?.id,
+            shift_id: activeShift.id,
+            expense_type: 'operational',
             amount: shiftReport.operational_expenses,
-            expense_category: 'rider_operational',
-            description: `Beban operasional shift - ${shiftReport.notes}`,
-            expense_date: new Date().toISOString().split('T')[0],
-            created_by: userProfile?.id
+            description: shiftReport.notes,
+            expense_date: new Date().toISOString().split('T')[0]
           }]);
       }
 
