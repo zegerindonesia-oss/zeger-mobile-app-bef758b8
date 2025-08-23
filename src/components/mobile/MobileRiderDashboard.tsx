@@ -66,7 +66,7 @@ interface SalesData {
 
 interface ShiftStatus {
   id: string;
-  status: 'active' | 'completed';
+  status: string;
   shift_number: number;
   shift_date: string;
 }
