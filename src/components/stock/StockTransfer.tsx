@@ -39,12 +39,30 @@ interface StockTransferItem {
   branch_id?: string;
   rider_id?: string;
   notes?: string;
+  status: string;
+  verification_photo_url?: string;
+  expected_delivery_date?: string;
+  actual_delivery_date?: string;
+}
+
+interface Rider {
+  id: string;
+  full_name: string;
+  branch_id: string;
+}
+
+interface ShiftInfo {
+  id: string;
+  status: string;
+  report_submitted: boolean;
+  shift_start_time: string;
+  shift_end_time?: string;
 }
 
 export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) => {
   const [transfers, setTransfers] = useState<StockTransferItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [riders, setRiders] = useState<any[]>([]);
+  const [riders, setRiders] = useState<Rider[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -52,6 +70,8 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   const [selectedRider, setSelectedRider] = useState("");
   const [selectedToBranch, setSelectedToBranch] = useState("");
   const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
+  const [riderShifts, setRiderShifts] = useState<Record<string, ShiftInfo>>({});
+  const [activeShift, setActiveShift] = useState<ShiftInfo | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -81,10 +101,57 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         .eq('is_active', true);
       setBranches(branchesData || []);
 
+      // Fetch rider shift statuses
+      await fetchRiderShifts();
+
+      // Fetch active shift for current rider if role is rider
+      if (role === 'rider') {
+        await fetchActiveShift();
+      }
+
       // Fetch stock movements/transfers
       fetchTransfers();
     } catch (error: any) {
       toast.error("Gagal memuat data");
+    }
+  };
+
+  const fetchRiderShifts = async () => {
+    try {
+      const { data: shifts } = await supabase
+        .from('shift_management')
+        .select('rider_id, status, report_submitted, shift_start_time, shift_end_time')
+        .eq('shift_date', new Date().toISOString().split('T')[0]);
+
+      const shiftMap: Record<string, ShiftInfo> = {};
+      shifts?.forEach(shift => {
+        shiftMap[shift.rider_id] = {
+          id: shift.rider_id,
+          status: shift.status,
+          report_submitted: shift.report_submitted,
+          shift_start_time: shift.shift_start_time,
+          shift_end_time: shift.shift_end_time
+        };
+      });
+      setRiderShifts(shiftMap);
+    } catch (error: any) {
+      console.error("Error fetching rider shifts:", error);
+    }
+  };
+
+  const fetchActiveShift = async () => {
+    try {
+      const { data: shift } = await supabase
+        .from('shift_management')
+        .select('*')
+        .eq('rider_id', userId)
+        .eq('shift_date', new Date().toISOString().split('T')[0])
+        .eq('status', 'active')
+        .maybeSingle();
+
+      setActiveShift(shift || null);
+    } catch (error: any) {
+      console.error("Error fetching active shift:", error);
     }
   };
 
@@ -171,6 +238,13 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       return;
     }
 
+    // Check if rider can receive stock (has completed previous shift report)
+    const canReceive = await checkRiderCanReceiveStock(selectedRider);
+    if (!canReceive) {
+      toast.error("Rider belum menyelesaikan laporan shift sebelumnya. Tunggu sampai rider mengirim laporan shift.");
+      return;
+    }
+
     const rows = products
       .map(p => ({ id: p.id, qty: Number(productQuantities[p.id] || 0) }))
       .filter(p => p.qty > 0);
@@ -182,7 +256,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
     setLoading(true);
     try {
-      // Create stock movement records (pending confirmation)
+      const expectedDeliveryDate = new Date();
+      expectedDeliveryDate.setHours(expectedDeliveryDate.getHours() + 1); // Expected 1 hour from now
+
+      // Create stock movement records with status tracking
       const stockMovements = rows.map(p => ({
         product_id: p.id,
         quantity: p.qty,
@@ -190,7 +267,9 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         branch_id: branchId,
         rider_id: selectedRider,
         created_by: userId,
-        notes: null  // null = pending rider confirmation
+        status: 'sent',
+        expected_delivery_date: expectedDeliveryDate.toISOString(),
+        notes: 'Stok dikirim dari branch ke rider'
       }));
 
       const { error: movementError } = await supabase
@@ -199,12 +278,11 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
       if (movementError) throw movementError;
 
-      // Don't pre-populate rider inventory - wait for rider confirmation
-
-      toast.success("Transfer stok ke rider berhasil!");
+      toast.success("Transfer stok ke rider berhasil dikirim!");
       setProductQuantities({});
       setSelectedRider("");
       await fetchTransfers();
+      await fetchRiderShifts();
     } catch (error: any) {
       toast.error("Gagal membuat transfer: " + error.message);
     } finally {
@@ -212,17 +290,38 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
     }
   };
 
+  const checkRiderCanReceiveStock = async (riderId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('can_receive_stock', { rider_uuid: riderId });
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.error("Error checking rider eligibility:", error);
+      return false;
+    }
+  };
+
   const confirmStockReceival = async (transferId: string) => {
     setLoading(true);
     try {
+      const currentTime = new Date().toISOString();
+      
       const { error } = await supabase
         .from('stock_movements')
         .update({ 
-          notes: 'Confirmed by receiver'
+          status: 'received',
+          actual_delivery_date: currentTime,
+          notes: 'Stok diterima dan dikonfirmasi oleh rider'
         })
         .eq('id', transferId);
 
       if (error) throw error;
+
+      // Also update rider inventory
+      const transfer = transfers.find(t => t.id === transferId);
+      if (transfer) {
+        await updateRiderInventory(transfer.product_id, transfer.quantity, 'add');
+      }
 
       toast.success("Stok dikonfirmasi diterima!");
       fetchTransfers();
@@ -230,6 +329,45 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       toast.error("Gagal konfirmasi: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateRiderInventory = async (productId: string, quantity: number, operation: 'add' | 'subtract') => {
+    try {
+      // Check if inventory exists for this rider and product
+      const { data: existingInventory } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('rider_id', userId)
+        .eq('product_id', productId)
+        .maybeSingle();
+
+      if (existingInventory) {
+        // Update existing inventory
+        const newQuantity = operation === 'add' 
+          ? existingInventory.stock_quantity + quantity
+          : Math.max(0, existingInventory.stock_quantity - quantity);
+
+        await supabase
+          .from('inventory')
+          .update({ 
+            stock_quantity: newQuantity,
+            last_updated: new Date().toISOString() 
+          })
+          .eq('id', existingInventory.id);
+      } else if (operation === 'add') {
+        // Create new inventory record
+        await supabase
+          .from('inventory')
+          .insert([{
+            rider_id: userId,
+            product_id: productId,
+            stock_quantity: quantity,
+            branch_id: branchId
+          }]);
+      }
+    } catch (error: any) {
+      console.error("Error updating rider inventory:", error);
     }
   };
 
@@ -244,10 +382,15 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
       if (uploadError) throw uploadError;
 
+      const { data: { publicUrl } } = supabase.storage
+        .from('stock-photos')
+        .getPublicUrl(fileName);
+
       const { error: updateError } = await supabase
         .from('stock_movements')
         .update({ 
-          notes: `Verification photo: ${fileName}`
+          verification_photo_url: publicUrl,
+          notes: 'Foto verifikasi terupload'
         })
         .eq('id', transferId);
 
@@ -257,6 +400,24 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       fetchTransfers();
     } catch (error: any) {
       toast.error("Gagal upload foto: " + error.message);
+    }
+  };
+
+  const canRiderReceiveStock = (riderId: string): boolean => {
+    const shift = riderShifts[riderId];
+    return !shift || shift.report_submitted;
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'sent':
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Dikirim</Badge>;
+      case 'received':
+        return <Badge variant="default" className="bg-green-100 text-green-800">Diterima</Badge>;
+      case 'pending':
+        return <Badge variant="outline">Pending</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -325,11 +486,34 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                           <SelectValue placeholder="Pilih Rider" />
                         </SelectTrigger>
                         <SelectContent>
-                          {riders.filter(r => r.branch_id === branchId).map((rider) => (
-                            <SelectItem key={rider.id} value={rider.id}>
-                              {rider.full_name}
-                            </SelectItem>
-                          ))}
+                          {riders.filter(r => r.branch_id === branchId).map((rider) => {
+                            const shift = riderShifts[rider.id];
+                            const canReceive = canRiderReceiveStock(rider.id);
+                            
+                            return (
+                              <SelectItem 
+                                key={rider.id} 
+                                value={rider.id}
+                                disabled={!canReceive}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span>{rider.full_name}</span>
+                                  <div className="flex items-center gap-2 ml-2">
+                                    {shift?.status === 'active' && !shift.report_submitted && (
+                                      <Badge variant="destructive" className="text-xs">
+                                        Shift Aktif
+                                      </Badge>
+                                    )}
+                                    {canReceive && (
+                                      <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                                        Siap Terima
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -378,48 +562,98 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           <ScrollArea className="h-96">
             <div className="space-y-4">
               {transfers.map((transfer) => (
-                <div key={transfer.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="font-medium">{transfer.product?.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Jumlah: {transfer.quantity}
-                      </p>
+                  <div key={transfer.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-medium">{transfer.product?.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Jumlah: {transfer.quantity}
+                        </p>
+                        {transfer.expected_delivery_date && (
+                          <p className="text-xs text-muted-foreground">
+                            Target: {new Date(transfer.expected_delivery_date).toLocaleString('id-ID')}
+                          </p>
+                        )}
+                        {transfer.actual_delivery_date && (
+                          <p className="text-xs text-green-600">
+                            Diterima: {new Date(transfer.actual_delivery_date).toLocaleString('id-ID')}
+                          </p>
+                        )}
+                      </div>
+                      {getStatusBadge(transfer.status)}
                     </div>
-                    <Badge variant={
-                      transfer.notes?.includes('Confirmed') ? 'default' : 'secondary'
-                    }>
-                      {transfer.notes?.includes('Confirmed') ? 'Diterima' : 'Dikirim'}
-                    </Badge>
-                  </div>
-                  
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {new Date(transfer.created_at).toLocaleString('id-ID')}
-                  </p>
+                    
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Dibuat: {new Date(transfer.created_at).toLocaleString('id-ID')}
+                    </p>
 
-                  {/* Action buttons for different roles */}
-                  <div className="flex gap-2">
-                    {role === 'rider' && !transfer.notes?.includes('Confirmed') && (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={() => confirmStockReceival(transfer.id)}
-                          disabled={loading}
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Konfirmasi Terima
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Camera className="h-4 w-4 mr-1" />
-                          Foto Verifikasi
-                        </Button>
-                      </>
+                    {transfer.notes && (
+                      <p className="text-sm text-muted-foreground mb-3 italic">
+                        {transfer.notes}
+                      </p>
                     )}
+
+                    {/* Verification photo */}
+                    {transfer.verification_photo_url && (
+                      <div className="mb-3">
+                        <img 
+                          src={transfer.verification_photo_url} 
+                          alt="Verification" 
+                          className="max-w-xs rounded-lg border"
+                        />
+                      </div>
+                    )}
+
+                    {/* Action buttons for different roles */}
+                    <div className="flex gap-2">
+                      {role === 'rider' && transfer.status === 'sent' && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => confirmStockReceival(transfer.id)}
+                            disabled={loading}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Konfirmasi Terima
+                          </Button>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            id={`photo-upload-${transfer.id}`}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                uploadVerificationPhoto(transfer.id, file);
+                              }
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => document.getElementById(`photo-upload-${transfer.id}`)?.click()}
+                          >
+                            <Camera className="h-4 w-4 mr-1" />
+                            Foto Verifikasi
+                          </Button>
+                        </>
+                      )}
+
+                      {role === 'branch_manager' && transfer.status === 'sent' && (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-orange-500" />
+                          <span className="text-sm text-orange-600">Menunggu konfirmasi rider</span>
+                        </div>
+                      )}
+
+                      {transfer.status === 'received' && (
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-green-600">Stok berhasil diterima</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
               ))}
             </div>
           </ScrollArea>

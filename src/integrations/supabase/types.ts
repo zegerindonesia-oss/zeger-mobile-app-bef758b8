@@ -467,11 +467,73 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_management: {
+        Row: {
+          branch_id: string
+          cash_collected: number | null
+          created_at: string | null
+          id: string
+          report_submitted: boolean | null
+          report_verified: boolean | null
+          rider_id: string
+          shift_date: string
+          shift_end_time: string | null
+          shift_number: number
+          shift_start_time: string | null
+          status: string
+          total_sales: number | null
+          total_transactions: number | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          cash_collected?: number | null
+          created_at?: string | null
+          id?: string
+          report_submitted?: boolean | null
+          report_verified?: boolean | null
+          rider_id: string
+          shift_date?: string
+          shift_end_time?: string | null
+          shift_number?: number
+          shift_start_time?: string | null
+          status?: string
+          total_sales?: number | null
+          total_transactions?: number | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          branch_id?: string
+          cash_collected?: number | null
+          created_at?: string | null
+          id?: string
+          report_submitted?: boolean | null
+          report_verified?: boolean | null
+          rider_id?: string
+          shift_date?: string
+          shift_end_time?: string | null
+          shift_number?: number
+          shift_start_time?: string | null
+          status?: string
+          total_sales?: number | null
+          total_transactions?: number | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       stock_movements: {
         Row: {
+          actual_delivery_date: string | null
           branch_id: string | null
           created_at: string | null
           created_by: string | null
+          expected_delivery_date: string | null
           id: string
           movement_type: Database["public"]["Enums"]["stock_movement_type"]
           notes: string | null
@@ -480,11 +542,15 @@ export type Database = {
           reference_id: string | null
           reference_type: string | null
           rider_id: string | null
+          status: string | null
+          verification_photo_url: string | null
         }
         Insert: {
+          actual_delivery_date?: string | null
           branch_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          expected_delivery_date?: string | null
           id?: string
           movement_type: Database["public"]["Enums"]["stock_movement_type"]
           notes?: string | null
@@ -493,11 +559,15 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           rider_id?: string | null
+          status?: string | null
+          verification_photo_url?: string | null
         }
         Update: {
+          actual_delivery_date?: string | null
           branch_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          expected_delivery_date?: string | null
           id?: string
           movement_type?: Database["public"]["Enums"]["stock_movement_type"]
           notes?: string | null
@@ -506,6 +576,8 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           rider_id?: string | null
+          status?: string | null
+          verification_photo_url?: string | null
         }
         Relationships: [
           {
@@ -658,6 +730,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_receive_stock: {
+        Args: { rider_uuid: string }
+        Returns: boolean
+      }
       check_user_role: {
         Args: {
           check_user_id: string
@@ -686,6 +762,10 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }
+      }
+      has_active_shift: {
+        Args: { rider_uuid: string }
+        Returns: boolean
       }
       has_role: {
         Args: { required_role: Database["public"]["Enums"]["user_role"] }

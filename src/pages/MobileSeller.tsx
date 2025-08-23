@@ -5,8 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MobileSellerEnhanced from "@/components/mobile/MobileSellerEnhanced";
 import MobileRiderDashboard from "@/components/mobile/MobileRiderDashboard";
 import MobileRiderAnalytics from "@/components/mobile/MobileRiderAnalytics";
+import MobileStockManagement from "@/components/mobile/MobileStockManagement";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
-import { LayoutDashboard, ShoppingCart, Calendar, History, Settings, BarChart3 } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Calendar, History, Settings, BarChart3, Package } from "lucide-react";
 
 export default function MobileSeller() {
   const { user, userProfile, loading } = useAuth();
@@ -47,12 +48,8 @@ export default function MobileSeller() {
             </div>
           </TabsContent>
           
-          <TabsContent value="attendance" className="m-0 h-full p-4">
-            <div className="text-center py-8">
-              <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Absensi</h3>
-              <p className="text-muted-foreground">Fitur absensi tersedia di Dashboard</p>
-            </div>
+          <TabsContent value="attendance" className="m-0 h-full">
+            <MobileStockManagement />
           </TabsContent>
           
           <TabsContent value="analytics" className="m-0 h-full">
@@ -96,8 +93,8 @@ export default function MobileSeller() {
               value="attendance"
               className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600"
             >
-              <Calendar className="h-3 w-3" />
-              <span className="text-xs">Absensi</span>
+              <Package className="h-3 w-3" />
+              <span className="text-xs">Kelola Shift</span>
             </TabsTrigger>
             <TabsTrigger 
               value="history"
