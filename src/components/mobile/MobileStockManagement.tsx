@@ -333,7 +333,8 @@ useEffect(() => {
     setLoading(true);
     try {
       const currentTime = new Date().toISOString();
-      
+
+      // 1) Mark stock movement as received
       const { error } = await supabase
         .from('stock_movements')
         .update({ 
@@ -345,10 +346,55 @@ useEffect(() => {
 
       if (error) throw error;
 
-      toast.success("Stok dikonfirmasi diterima!");
-      fetchStockData();
+      // 2) Update rider inventory so items appear in Selling & Return tabs
+      // Try to get transfer details from current state first
+      const transfer = pendingStock.find((t) => t.id === stockId) || receivedStock.find((t) => t.id === stockId);
+      let productId = transfer?.product_id as string | undefined;
+      let qty = transfer?.quantity as number | undefined;
+
+      if (!productId || !qty) {
+        const { data: fetched } = await supabase
+          .from('stock_movements')
+          .select('product_id, quantity')
+          .eq('id', stockId)
+          .maybeSingle();
+        productId = fetched?.product_id as string | undefined;
+        qty = (fetched?.quantity as number | undefined) ?? 0;
+      }
+
+      if (productId && qty && userProfile?.id) {
+        // Check existing inventory
+        const { data: existingInventory } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('rider_id', userProfile.id)
+          .eq('product_id', productId)
+          .maybeSingle();
+
+        if (existingInventory) {
+          await supabase
+            .from('inventory')
+            .update({
+              stock_quantity: (existingInventory.stock_quantity || 0) + qty,
+              last_updated: new Date().toISOString(),
+            })
+            .eq('id', existingInventory.id);
+        } else {
+          await supabase
+            .from('inventory')
+            .insert([{
+              rider_id: userProfile.id,
+              branch_id: userProfile.branch_id,
+              product_id: productId,
+              stock_quantity: qty,
+            }]);
+        }
+      }
+
+      toast.success('Stok dikonfirmasi diterima dan siap dijual!');
+      await fetchStockData();
     } catch (error: any) {
-      toast.error("Gagal konfirmasi: " + error.message);
+      toast.error('Gagal konfirmasi: ' + error.message);
     } finally {
       setLoading(false);
     }
