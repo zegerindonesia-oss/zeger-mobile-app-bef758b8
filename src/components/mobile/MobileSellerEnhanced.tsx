@@ -129,6 +129,13 @@ const MobileSellerEnhanced = () => {
       return;
     }
 
+    // Check payment proof for non-cash payments
+    const paymentProofInput = document.getElementById('payment-proof') as HTMLInputElement;
+    if ((paymentMethod === 'qris' || paymentMethod === 'transfer') && !paymentProofInput?.files?.[0]) {
+      toast.error("Bukti pembayaran wajib diupload untuk metode pembayaran non-tunai");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -137,6 +144,27 @@ const MobileSellerEnhanced = () => {
         .select('id, branch_id')
         .eq('user_id', user?.id)
         .maybeSingle();
+
+      let paymentProofUrl = '';
+
+      // Upload payment proof if exists
+      if (paymentProofInput?.files?.[0]) {
+        const file = paymentProofInput.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user?.id}/payment-${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('payment-proofs')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('payment-proofs')
+          .getPublicUrl(fileName);
+        
+        paymentProofUrl = publicUrl;
+      }
 
       // Calculate transaction totals
       let totalAmount = 0;
@@ -162,6 +190,7 @@ const MobileSellerEnhanced = () => {
           total_amount: totalAmount,
           final_amount: totalAmount,
           payment_method: paymentMethod,
+          payment_proof_url: paymentProofUrl,
           status: 'completed',
           rider_id: profile?.id,
           branch_id: profile?.branch_id
@@ -371,6 +400,23 @@ const MobileSellerEnhanced = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Payment Proof Upload for Non-Cash */}
+            {(paymentMethod === 'qris' || paymentMethod === 'transfer') && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-red-600">Bukti Pembayaran *</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="payment-proof"
+                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  required
+                />
+                <p className="text-xs text-red-600">
+                  *Wajib upload foto bukti pembayaran untuk {paymentMethod === 'qris' ? 'QRIS' : 'Transfer Bank'}
+                </p>
+              </div>
+            )}
 
             {/* Transaction Button */}
             <Button 

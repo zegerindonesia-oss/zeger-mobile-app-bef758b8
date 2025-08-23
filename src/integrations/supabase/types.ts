@@ -116,6 +116,42 @@ export type Database = {
         }
         Relationships: []
       }
+      checkpoints: {
+        Row: {
+          address_info: string | null
+          branch_id: string
+          checkpoint_name: string | null
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          notes: string | null
+          rider_id: string
+        }
+        Insert: {
+          address_info?: string | null
+          branch_id: string
+          checkpoint_name?: string | null
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          notes?: string | null
+          rider_id: string
+        }
+        Update: {
+          address_info?: string | null
+          branch_id?: string
+          checkpoint_name?: string | null
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          notes?: string | null
+          rider_id?: string
+        }
+        Relationships: []
+      }
       customer_loyalty: {
         Row: {
           created_at: string | null
@@ -156,6 +192,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_operational_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          expense_date: string
+          expense_type: string
+          id: string
+          receipt_photo_url: string | null
+          rider_id: string
+          shift_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          expense_type: string
+          id?: string
+          receipt_photo_url?: string | null
+          rider_id: string
+          shift_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          expense_type?: string
+          id?: string
+          receipt_photo_url?: string | null
+          rider_id?: string
+          shift_id?: string | null
+        }
+        Relationships: []
       }
       daily_reports: {
         Row: {
@@ -665,6 +737,10 @@ export type Database = {
           id: string
           notes: string | null
           payment_method: string | null
+          payment_proof_url: string | null
+          payment_verified: boolean | null
+          payment_verified_at: string | null
+          payment_verified_by: string | null
           rider_id: string | null
           status: Database["public"]["Enums"]["transaction_status"] | null
           total_amount: number
@@ -680,6 +756,10 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
+          payment_verified?: boolean | null
+          payment_verified_at?: string | null
+          payment_verified_by?: string | null
           rider_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"] | null
           total_amount?: number
@@ -695,6 +775,10 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
+          payment_verified?: boolean | null
+          payment_verified_at?: string | null
+          payment_verified_by?: string | null
           rider_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"] | null
           total_amount?: number

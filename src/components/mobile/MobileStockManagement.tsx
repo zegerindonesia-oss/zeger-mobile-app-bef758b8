@@ -288,27 +288,28 @@ const MobileStockManagement = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="stock" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="stock">
-                  Konfirmasi Stok
+            <Tabs defaultValue="receive" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-4 text-xs">
+                <TabsTrigger value="receive">
+                  Terima
                   {pendingStock.length > 0 && (
-                    <Badge variant="destructive" className="ml-2">
+                    <Badge variant="destructive" className="ml-1 text-xs">
                       {pendingStock.length}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="history">Riwayat Stok</TabsTrigger>
+                <TabsTrigger value="return">Kembali</TabsTrigger>
+                <TabsTrigger value="history">Riwayat</TabsTrigger>
                 <TabsTrigger value="shift">
-                  Laporan Shift
+                  Shift
                   {activeShift && !activeShift.report_submitted && (
-                    <Badge variant="destructive" className="ml-2">!</Badge>
+                    <Badge variant="destructive" className="ml-1 text-xs">!</Badge>
                   )}
                 </TabsTrigger>
               </TabsList>
 
-              {/* Stock Confirmation Tab */}
-              <TabsContent value="stock" className="space-y-4">
+              {/* Stock Receive Tab */}
+              <TabsContent value="receive" className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Konfirmasi Stok Masuk</h3>
                   <Button 
@@ -390,6 +391,36 @@ const MobileStockManagement = () => {
                 </ScrollArea>
               </TabsContent>
 
+              {/* Stock Return Tab */}
+              <TabsContent value="return" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Pengembalian Stok</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={fetchStockData}
+                    disabled={loading}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+                
+                <ScrollArea className="h-96">
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Stok yang perlu dikembalikan ke branch di akhir shift:
+                    </p>
+                    
+                    {/* This will show remaining stock from inventory */}
+                    <div className="text-center py-8">
+                      <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">Fitur pengembalian stok akan tersedia setelah shift aktif</p>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
               {/* Stock History Tab */}
               <TabsContent value="history" className="space-y-4">
                 <h3 className="text-lg font-semibold">Riwayat Penerimaan Stok</h3>
@@ -455,30 +486,117 @@ const MobileStockManagement = () => {
                       Catat semua pengeluaran operasional sedama shift ini (es batu, bensin, dll)
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Sales Summary */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <Card className="p-3">
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground">Total Penjualan</p>
+                          <p className="text-lg font-bold text-green-600">
+                            {formatCurrency(shiftReport.total_sales)}
+                          </p>
+                        </div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground">Transaksi</p>
+                          <p className="text-lg font-bold text-blue-600">
+                            {shiftReport.total_transactions}
+                          </p>
+                        </div>
+                      </Card>
+                    </div>
+
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2">Jumlah (Rp)</label>
+                        <label className="block text-sm font-medium mb-2">Beban Operasional (Rp)</label>
                         <Input
                           type="number"
-                          placeholder="5000"
+                          placeholder="0"
                           value={shiftReport.operational_expenses}
                           onChange={(e) => setShiftReport(prev => ({
                             ...prev,
                             operational_expenses: Number(e.target.value)
                           }))}
                         />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Contoh: es batu, bensin, parkir, dll
+                        </p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium mb-2">Foto Nota (Opsional)</label>
+                        <label className="block text-sm font-medium mb-2">Setoran Tunai (Rp)</label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={shiftReport.cash_collected}
+                          onChange={(e) => setShiftReport(prev => ({
+                            ...prev,
+                            cash_collected: Number(e.target.value)
+                          }))}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Total uang tunai yang disetor ke branch
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Catatan</label>
+                        <Textarea
+                          placeholder="Catatan tambahan untuk laporan shift..."
+                          value={shiftReport.notes}
+                          onChange={(e) => setShiftReport(prev => ({
+                            ...prev,
+                            notes: e.target.value
+                          }))}
+                          rows={3}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Foto Nota/Setoran (Opsional)</label>
                         <input
                           type="file"
                           accept="image/*"
                           id="shift-end-photo"
-                          className="block w-full text-sm text-muted-foreground"
+                          className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                         />
                       </div>
                     </div>
+
+                    {/* Calculation Summary */}
+                    <Card className="p-4 bg-blue-50 border-blue-200">
+                      <h4 className="font-semibold text-blue-800 mb-3">Ringkasan Perhitungan</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Total Penjualan:</span>
+                          <span className="font-medium">{formatCurrency(shiftReport.total_sales)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Beban Operasional:</span>
+                          <span className="font-medium text-red-600">-{formatCurrency(shiftReport.operational_expenses)}</span>
+                        </div>
+                        <div className="border-t pt-2 flex justify-between font-bold">
+                          <span>Total Setoran Seharusnya:</span>
+                          <span className="text-green-600">
+                            {formatCurrency(Math.max(0, shiftReport.total_sales - shiftReport.operational_expenses))}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Setoran Aktual:</span>
+                          <span className="font-medium">{formatCurrency(shiftReport.cash_collected)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Selisih:</span>
+                          <span className={`font-medium ${
+                            shiftReport.cash_collected - (shiftReport.total_sales - shiftReport.operational_expenses) >= 0 
+                              ? 'text-green-600' 
+                              : 'text-red-600'
+                          }`}>
+                            {formatCurrency(shiftReport.cash_collected - (shiftReport.total_sales - shiftReport.operational_expenses))}
+                          </span>
+                        </div>
+                      </div>
+                    </Card>
 
                     <div>
                       <label className="block text-sm font-medium mb-2">Deskripsi</label>
