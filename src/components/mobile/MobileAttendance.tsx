@@ -183,7 +183,9 @@ const MobileAttendance = () => {
         document.body.appendChild(button);
         
         setTimeout(() => {
-          document.body.removeChild(button);
+          if (document.body.contains(button)) {
+            document.body.removeChild(button);
+          }
           resolve(undefined);
         }, 10000); // Auto-capture after 10 seconds
       });
@@ -247,7 +249,9 @@ const MobileAttendance = () => {
         document.body.appendChild(button);
         
         setTimeout(() => {
-          document.body.removeChild(button);
+          if (document.body.contains(button)) {
+            document.body.removeChild(button);
+          }
           resolve(undefined);
         }, 10000);
       });

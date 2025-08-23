@@ -112,13 +112,12 @@ const MobileRiderDashboard = () => {
       const today = new Date().toISOString().split('T')[0];
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      // Check today's attendance
+      // Check today's attendance (any status)
       const { data: todayAttendance } = await supabase
         .from('attendance')
         .select('*')
         .eq('rider_id', profile.id)
         .eq('work_date', today)
-        .eq('status', 'checked_in')
         .maybeSingle();
 
       setIsCheckedIn(!!todayAttendance);

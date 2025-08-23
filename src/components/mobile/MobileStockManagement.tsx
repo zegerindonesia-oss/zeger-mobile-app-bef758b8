@@ -45,6 +45,189 @@ interface ShiftReport {
   notes: string;
 }
 
+// Stock Return Component
+const StockReturnTab = ({ userProfile, activeShift, onRefresh }: { 
+  userProfile: any; 
+  activeShift: any; 
+  onRefresh: () => void; 
+}) => {
+  const [returnableStock, setReturnableStock] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeShift) {
+      fetchReturnableStock();
+    }
+  }, [activeShift]);
+
+  const fetchReturnableStock = async () => {
+    try {
+      if (!userProfile?.id) return;
+
+      // Fetch current inventory (remaining stock that needs to be returned)
+      const { data: inventory } = await supabase
+        .from('inventory')
+        .select(`
+          *,
+          products(id, name, category, price)
+        `)
+        .eq('rider_id', userProfile.id)
+        .gt('stock_quantity', 0);
+
+      setReturnableStock(inventory || []);
+    } catch (error: any) {
+      toast.error("Gagal memuat stok untuk dikembalikan");
+    }
+  };
+
+  const handleStockReturn = async (inventoryId: string, quantity: number) => {
+    setLoading(true);
+    try {
+      // Take photo for return verification
+      const photoInput = document.createElement('input');
+      photoInput.type = 'file';
+      photoInput.accept = 'image/*';
+      photoInput.capture = 'environment';
+      
+      const photo = await new Promise<File | null>((resolve) => {
+        photoInput.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          resolve(file || null);
+        };
+        photoInput.click();
+      });
+
+      if (!photo) {
+        toast.error("Foto wajib untuk pengembalian stok");
+        return;
+      }
+
+      // Upload photo
+      const fileExt = photo.name.split('.').pop();
+      const fileName = `return-${inventoryId}-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('checkpoint-photos')
+        .upload(fileName, photo);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('checkpoint-photos')
+        .getPublicUrl(fileName);
+
+      // Create return stock movement record
+      const { error: movementError } = await supabase
+        .from('stock_movements')
+        .insert([{
+          rider_id: userProfile.id,
+          branch_id: userProfile.branch_id,
+          product_id: returnableStock.find(item => item.id === inventoryId)?.product_id,
+          movement_type: 'return',
+          quantity: quantity,
+          status: 'returned',
+          verification_photo_url: publicUrl,
+          notes: 'Pengembalian stok di akhir shift',
+          actual_delivery_date: new Date().toISOString()
+        }]);
+
+      if (movementError) throw movementError;
+
+      // Update inventory to reduce returned stock
+      const { error: inventoryError } = await supabase
+        .from('inventory')
+        .update({ 
+          stock_quantity: 0  // All remaining stock returned
+        })
+        .eq('id', inventoryId);
+
+      if (inventoryError) throw inventoryError;
+
+      toast.success("Stok berhasil dikembalikan!");
+      fetchReturnableStock();
+      onRefresh();
+    } catch (error: any) {
+      toast.error("Gagal mengembalikan stok: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!activeShift) {
+    return (
+      <div className="text-center py-8">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Pengembalian stok hanya tersedia saat shift aktif</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Pengembalian Stok</h3>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={fetchReturnableStock}
+          disabled={loading}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+      
+      <ScrollArea className="h-96">
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            Stok sisa yang harus dikembalikan ke branch di akhir shift:
+          </p>
+          
+          {returnableStock.map((item) => (
+            <Card key={item.id} className="border-l-4 border-l-orange-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="font-medium">{item.products?.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Sisa: {item.stock_quantity} | Kategori: {item.products?.category}
+                    </p>
+                    <p className="text-xs text-orange-600">
+                      Harga: Rp {item.products?.price?.toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                    <Package className="h-3 w-3 mr-1" />
+                    Sisa Stok
+                  </Badge>
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => handleStockReturn(item.id, item.stock_quantity)}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  <Camera className="h-4 w-4 mr-1" />
+                  Kembalikan Stok (Foto Wajib)
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+
+          {returnableStock.length === 0 && (
+            <div className="text-center py-8">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+              <p className="text-green-600 font-medium">Semua stok sudah terjual atau dikembalikan</p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
 const MobileStockManagement = () => {
   const { userProfile } = useAuth();
   const [pendingStock, setPendingStock] = useState<StockItem[]>([]);
@@ -393,32 +576,11 @@ const MobileStockManagement = () => {
 
               {/* Stock Return Tab */}
               <TabsContent value="return" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Pengembalian Stok</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={fetchStockData}
-                    disabled={loading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                </div>
-                
-                <ScrollArea className="h-96">
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Stok yang perlu dikembalikan ke branch di akhir shift:
-                    </p>
-                    
-                    {/* This will show remaining stock from inventory */}
-                    <div className="text-center py-8">
-                      <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">Fitur pengembalian stok akan tersedia setelah shift aktif</p>
-                    </div>
-                  </div>
-                </ScrollArea>
+                <StockReturnTab 
+                  userProfile={userProfile} 
+                  activeShift={activeShift}
+                  onRefresh={fetchStockData}
+                />
               </TabsContent>
 
               {/* Stock History Tab */}
