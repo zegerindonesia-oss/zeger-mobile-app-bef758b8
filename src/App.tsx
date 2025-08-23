@@ -52,60 +52,82 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/pos" element={
-              <Layout>
-                <POS />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+                <Layout>
+                  <POS />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/finance/profit-loss" element={
-              <Layout>
-                <ProfitLoss />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'finance']}>
+                <Layout>
+                  <ProfitLoss />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/finance/cash-flow" element={
-              <Layout>
-                <CashFlow />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'finance']}>
+                <Layout>
+                  <CashFlow />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/finance/balance-sheet" element={
-              <Layout>
-                <BalanceSheet />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'finance']}>
+                <Layout>
+                  <BalanceSheet />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/finance/operational-expenses" element={
-              <Layout>
-                <OperationalExpenses />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'finance']}>
+                <Layout>
+                  <OperationalExpenses />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/reports/transactions" element={
-              <Layout>
-                <Transactions />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'finance']}>
+                <Layout>
+                  <Transactions />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/branches" element={
-              <Layout>
-                <Branches />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin']}>
+                <Layout>
+                  <Branches />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/riders" element={
-              <Layout>
-                <Riders />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+                <Layout>
+                  <Riders />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/inventory" element={
-              <Layout>
-                <Inventory />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+                <Layout>
+                  <Inventory />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/stock-transfer" element={
-              <Layout>
-                {/* Stock transfer between branch and rider */}
-                <StockTransfer />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+                <Layout>
+                  {/* Stock transfer between branch and rider */}
+                  <StockTransfer />
+                </Layout>
+              </RoleBasedRoute>
             } />
             <Route path="/admin/users" element={
-              <Layout>
-                <AdminUsers />
-              </Layout>
+              <RoleBasedRoute allowedRoles={['ho_admin']}>
+                <Layout>
+                  <AdminUsers />
+                </Layout>
+              </RoleBasedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
