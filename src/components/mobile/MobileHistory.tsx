@@ -294,29 +294,31 @@ const MobileHistory = () => {
                 </ScrollArea>
               </TabsContent>
 
-              {/* Transaction History */}
+              {/* Shift Reports - Detailed */}
               <TabsContent value="transactions" className="space-y-4">
+                <h4 className="font-medium">Laporan Shift Harian</h4>
                 <ScrollArea className="h-96">
                   <div className="space-y-3">
                     {transactionHistory.map((item) => (
-                      <Card key={item.id} className="border-l-4 border-l-purple-500">
+                      <Card key={item.id} className="border-l-4 border-l-purple-500 cursor-pointer hover:bg-muted/50" 
+                            onClick={() => {/* Show detailed shift report */}}>
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium">{item.transaction_number}</h4>
+                            <h4 className="font-medium">Shift {formatDate(item.transaction_date)}</h4>
                             {getStatusBadge(item.status)}
                           </div>
                           <div className="space-y-1 text-sm text-muted-foreground">
                             <p className="font-medium text-green-600">
-                              {formatCurrency(item.total_amount)}
+                              Omset: {formatCurrency(item.total_amount)}
                             </p>
                             <p>Metode: {item.payment_method}</p>
-                            <p>{formatDateTime(item.transaction_date)}</p>
+                            <p>Waktu: {formatDateTime(item.transaction_date)}</p>
                             {item.transaction_items && item.transaction_items.length > 0 && (
                               <div className="mt-2">
-                                <p className="text-xs font-medium">Items:</p>
+                                <p className="text-xs font-medium">Produk Terjual:</p>
                                 {item.transaction_items.slice(0, 2).map((txItem, idx) => (
                                   <p key={idx} className="text-xs">
-                                    • {txItem.product?.name} x{txItem.quantity}
+                                    • {txItem.product?.name} x{txItem.quantity} = {formatCurrency(txItem.unit_price * txItem.quantity)}
                                   </p>
                                 ))}
                                 {item.transaction_items.length > 2 && (
@@ -324,6 +326,9 @@ const MobileHistory = () => {
                                 )}
                               </div>
                             )}
+                            <div className="mt-2 pt-2 border-t">
+                              <p className="text-xs font-medium">Klik untuk detail lengkap shift</p>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -331,7 +336,7 @@ const MobileHistory = () => {
                     {transactionHistory.length === 0 && (
                       <div className="text-center py-8">
                         <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">Tidak ada riwayat transaksi</p>
+                        <p className="text-muted-foreground">Tidak ada riwayat shift</p>
                       </div>
                     )}
                   </div>

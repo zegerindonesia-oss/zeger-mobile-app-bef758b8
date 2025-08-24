@@ -14,7 +14,10 @@ import {
   AlertCircle,
   Camera,
   Send,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Trash2,
+  FileText
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,13 +40,17 @@ interface StockItem {
   notes?: string;
 }
 
-interface ShiftReport {
-  cash_collected: number;
-  total_sales: number;
-  cash_sales: number;
-  total_transactions: number;
-  operational_expenses: number;
-  notes: string;
+interface ShiftSummary {
+  totalSales: number;
+  cashSales: number;
+  qrisSales: number;
+  totalTransactions: number;
+}
+
+interface OperationalExpense {
+  type: string;
+  amount: string;
+  description: string;
 }
 
 // Stock Return Component
@@ -57,7 +64,6 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Selalu muat stok sisa agar sinkron dengan halaman penjualan
     fetchReturnableStock();
   }, [userProfile?.id, activeShift]);
 
@@ -147,15 +153,18 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
       toast.success("Stok berhasil dikembalikan!");
       fetchReturnableStock();
       onRefresh();
-      onGoToShift();
+      
+      // Auto-navigate to shift report after stock return
+      setTimeout(() => {
+        onGoToShift();
+        toast.info("Silakan lengkapi laporan shift");
+      }, 1000);
     } catch (error: any) {
       toast.error("Gagal mengembalikan stok: " + error.message);
     } finally {
       setLoading(false);
     }
   };
-
-  /* Pengembalian diizinkan meski shift belum terdeteksi aktif; tetap tampilkan sisa stok */
 
   return (
     <div className="space-y-4">
@@ -230,27 +239,20 @@ const MobileStockManagement = () => {
   const [loading, setLoading] = useState(false);
   const [activeShift, setActiveShift] = useState<any>(null);
   const [tab, setTab] = useState<'receive' | 'return' | 'history' | 'shift'>('receive');
-  const [shiftReport, setShiftReport] = useState<ShiftReport>({
-    cash_collected: 0,
-    total_sales: 0,
-    cash_sales: 0,
-    total_transactions: 0,
-    operational_expenses: 0,
-    notes: ''
+  const [shiftSummary, setShiftSummary] = useState<ShiftSummary>({
+    totalSales: 0,
+    cashSales: 0,
+    qrisSales: 0,
+    totalTransactions: 0
   });
+  const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([
+    { type: '', amount: '', description: '' }
+  ]);
 
-useEffect(() => {
-  setShiftReport(prev => ({
-    ...prev,
-    cash_collected: Math.max(0, (prev.cash_sales || 0) - (prev.operational_expenses || 0))
-  }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [shiftReport.cash_sales, shiftReport.operational_expenses]);
-
-useEffect(() => {
-  fetchStockData();
-  fetchActiveShift();
-}, []);
+  useEffect(() => {
+    fetchStockData();
+    fetchShiftData();
+  }, []);
 
   const fetchStockData = async () => {
     try {
@@ -289,10 +291,11 @@ useEffect(() => {
     }
   };
 
-  const fetchActiveShift = async () => {
+  const fetchShiftData = async () => {
     try {
       if (!userProfile?.id) return;
 
+      // Get active shift
       const { data: shift } = await supabase
         .from('shift_management')
         .select('*')
@@ -303,29 +306,33 @@ useEffect(() => {
 
       setActiveShift(shift);
 
-      if (shift) {
-        // Fetch today's sales data for shift report
-        const today = new Date().toISOString().split('T')[0];
-        const { data: transactions } = await supabase
-          .from('transactions')
-          .select('final_amount, payment_method')
-          .eq('rider_id', userProfile.id)
-          .gte('transaction_date', `${today}T00:00:00`)
-          .lte('transaction_date', `${today}T23:59:59`);
+      // Get today's sales summary
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todaysTransactions } = await supabase
+        .from('transactions')
+        .select('final_amount, payment_method')
+        .eq('rider_id', userProfile.id)
+        .gte('transaction_date', `${today}T00:00:00`)
+        .lte('transaction_date', `${today}T23:59:59`);
 
-        const totalSales = transactions?.reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
-        const cashSales = transactions?.filter((t: any) => t.payment_method === 'cash')
-          .reduce((sum: number, t: any) => sum + Number(t.final_amount), 0) || 0;
+      const cashSales = todaysTransactions
+        ?.filter(t => t.payment_method === 'cash')
+        ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
 
-        setShiftReport(prev => ({
-          ...prev,
-          total_sales: totalSales,
-          cash_sales: cashSales,
-          total_transactions: transactions?.length || 0
-        }));
-      }
+      const qrisSales = todaysTransactions
+        ?.filter(t => t.payment_method === 'qris')
+        ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
+
+      const totalSales = cashSales + qrisSales;
+
+      setShiftSummary({
+        totalSales,
+        cashSales,
+        qrisSales,
+        totalTransactions: todaysTransactions?.length || 0
+      });
     } catch (error: any) {
-      console.error("Error fetching active shift:", error);
+      console.error("Error fetching shift data:", error);
     }
   };
 
@@ -347,7 +354,6 @@ useEffect(() => {
       if (error) throw error;
 
       // 2) Update rider inventory so items appear in Selling & Return tabs
-      // Try to get transfer details from current state first
       const transfer = pendingStock.find((t) => t.id === stockId) || receivedStock.find((t) => t.id === stockId);
       let productId = transfer?.product_id as string | undefined;
       let qty = transfer?.quantity as number | undefined;
@@ -431,92 +437,90 @@ useEffect(() => {
     }
   };
 
-  const submitShiftReport = async () => {
-    if (!activeShift) {
-      toast.error("Tidak ada shift aktif");
+  const addExpense = () => {
+    setOperationalExpenses([...operationalExpenses, { type: '', amount: '', description: '' }]);
+  };
+
+  const removeExpense = (index: number) => {
+    setOperationalExpenses(operationalExpenses.filter((_, i) => i !== index));
+  };
+
+  const updateExpense = (index: number, field: keyof OperationalExpense, value: string) => {
+    const updated = [...operationalExpenses];
+    updated[index][field] = value;
+    setOperationalExpenses(updated);
+  };
+
+  const handleSubmitShiftReport = async () => {
+    if (!userProfile?.id || !activeShift || operationalExpenses.length === 0) {
+      toast.error("Lengkapi semua data terlebih dahulu");
       return;
     }
 
     setLoading(true);
     try {
-      // Upload shift end photo if needed
-      const shiftPhotoInput = document.getElementById('shift-end-photo') as HTMLInputElement;
-      let photoUrl = '';
-      
-      if (shiftPhotoInput?.files?.[0]) {
-        const file = shiftPhotoInput.files[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `shift-end-${activeShift.id}-${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('stock-photos')
-          .upload(fileName, file);
+      // Calculate totals
+      const totalOperationalExpenses = operationalExpenses.reduce((sum, expense) => 
+        sum + parseFloat(expense.amount || '0'), 0
+      );
 
-        if (uploadError) throw uploadError;
+      // Cash deposit = Cash Sales - Operational Expenses (auto-calculated, non-editable)
+      const cashToDeposit = Math.max(0, shiftSummary.cashSales - totalOperationalExpenses);
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('stock-photos')
-          .getPublicUrl(fileName);
-        
-        photoUrl = publicUrl;
+      // Save operational expenses to daily_operational_expenses table
+      const expenseInserts = operationalExpenses
+        .filter(expense => expense.type && expense.amount)
+        .map(expense => ({
+          rider_id: userProfile.id,
+          shift_id: activeShift.id,
+          expense_type: expense.type,
+          amount: parseFloat(expense.amount),
+          description: expense.description,
+          expense_date: new Date().toISOString().split('T')[0]
+        }));
+
+      if (expenseInserts.length > 0) {
+        const { error: expenseError } = await supabase
+          .from('daily_operational_expenses')
+          .insert(expenseInserts);
+
+        if (expenseError) throw expenseError;
       }
 
-      // Update shift with report data
-      const expectedDeposit = Math.max(0, (shiftReport.cash_sales || 0) - (shiftReport.operational_expenses || 0));
+      // Create daily report for branch verification
+      const { error: reportError } = await supabase
+        .from('daily_reports')
+        .insert([{
+          rider_id: userProfile.id,
+          branch_id: userProfile.branch_id,
+          report_date: new Date().toISOString().split('T')[0],
+          total_sales: shiftSummary.totalSales,
+          cash_collected: cashToDeposit,
+          total_transactions: shiftSummary.totalTransactions
+        }]);
 
-      const { error } = await supabase
+      if (reportError) throw reportError;
+
+      // Update shift status to completed
+      const { error: shiftError } = await supabase
         .from('shift_management')
         .update({
-          cash_collected: expectedDeposit,
-          total_sales: shiftReport.total_sales,
-          total_transactions: shiftReport.total_transactions,
-          report_submitted: true,
           status: 'completed',
-          updated_at: new Date().toISOString()
+          report_submitted: true,
+          total_sales: shiftSummary.totalSales,
+          cash_collected: cashToDeposit,
+          total_transactions: shiftSummary.totalTransactions
         })
         .eq('id', activeShift.id);
 
-      if (error) throw error;
+      if (shiftError) throw shiftError;
 
-      // Insert daily report summary for branch verification
-      await supabase
-        .from('daily_reports')
-        .insert([{
-          rider_id: userProfile?.id,
-          branch_id: userProfile?.branch_id,
-          report_date: new Date().toISOString().split('T')[0],
-          total_sales: shiftReport.total_sales,
-          cash_collected: expectedDeposit,
-          total_transactions: shiftReport.total_transactions,
-          photos: photoUrl ? { shift_end_photo: photoUrl } : null
-        }]);
-
-      // Create operational expense record if any beban operasional
-      if (shiftReport.operational_expenses > 0 && shiftReport.notes.trim()) {
-        await supabase
-          .from('daily_operational_expenses')
-          .insert([{
-            rider_id: userProfile?.id,
-            shift_id: activeShift.id,
-            expense_type: 'operational',
-            amount: shiftReport.operational_expenses,
-            description: shiftReport.notes,
-            expense_date: new Date().toISOString().split('T')[0]
-          }]);
-      }
-
-      toast.success("Laporan shift berhasil dikirim!");
+      toast.success("Laporan shift berhasil dikirim dan siap diverifikasi!");
+      setOperationalExpenses([{ type: '', amount: '', description: '' }]);
       setActiveShift(null);
-      setShiftReport({
-        cash_collected: 0,
-        total_sales: 0,
-        cash_sales: 0,
-        total_transactions: 0,
-        operational_expenses: 0,
-        notes: ''
-      });
+      fetchShiftData();
     } catch (error: any) {
-      toast.error("Gagal mengirim laporan: " + error.message);
+      toast.error("Gagal kirim laporan: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -711,181 +715,131 @@ useEffect(() => {
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-5 w-5 text-orange-500" />
                       <h3 className="text-lg font-semibold text-orange-700">
-                        Shift Aktif - Kirim Laporan Pengembalian & Akhiri Shift
+                        Shift Aktif - Laporan Shift
                       </h3>
                     </div>
-                    
-                    <p className="text-sm text-orange-600">
-                      Catat semua pengeluaran operasional sedama shift ini (es batu, bensin, dll)
-                    </p>
 
                     {/* Sales Summary */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <Card className="p-3">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground">Total Penjualan</p>
-                          <p className="text-lg font-bold text-green-600">
-                            {formatCurrency(shiftReport.total_sales)}
-                          </p>
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <p className="text-sm font-medium text-blue-800 mb-2">Resume Penjualan Hari Ini</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Penjualan Tunai:</span>
+                          <span className="font-semibold">{formatCurrency(shiftSummary.cashSales)}</span>
                         </div>
-                      </Card>
-                      <Card className="p-3">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground">Transaksi</p>
-                          <p className="text-lg font-bold text-blue-600">
-                            {shiftReport.total_transactions}
-                          </p>
+                        <div className="flex justify-between">
+                          <span>Penjualan QRIS:</span>
+                          <span className="font-semibold">{formatCurrency(shiftSummary.qrisSales)}</span>
                         </div>
-                      </Card>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Beban Operasional (Rp)</label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={shiftReport.operational_expenses}
-                          onChange={(e) => setShiftReport(prev => ({
-                            ...prev,
-                            operational_expenses: Number(e.target.value)
-                          }))}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Contoh: es batu, bensin, parkir, dll
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Setoran Tunai (otomatis)</label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={shiftReport.cash_collected}
-                          readOnly
-                          disabled
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Otomatis dihitung: penjualan tunai - beban operasional
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Catatan</label>
-                        <Textarea
-                          placeholder="Catatan tambahan untuk laporan shift..."
-                          value={shiftReport.notes}
-                          onChange={(e) => setShiftReport(prev => ({
-                            ...prev,
-                            notes: e.target.value
-                          }))}
-                          rows={3}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Foto Nota/Setoran (Opsional)</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          id="shift-end-photo"
-                          className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                        />
+                        <div className="flex justify-between border-t pt-1">
+                          <span className="font-medium">Total Penjualan:</span>
+                          <span className="font-semibold text-blue-600">{formatCurrency(shiftSummary.totalSales)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Transaksi:</span>
+                          <span className="font-semibold">{shiftSummary.totalTransactions}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Calculation Summary */}
-                    <Card className="p-4 bg-blue-50 border-blue-200">
-                      <h4 className="font-semibold text-blue-800 mb-3">Ringkasan Perhitungan</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Total Penjualan:</span>
-                          <span className="font-medium">{formatCurrency(shiftReport.total_sales)}</span>
+                    {/* Operational Expenses Input */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          Beban Operasional
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {operationalExpenses.map((expense, index) => (
+                          <div key={index} className="border rounded-lg p-3 space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <Input
+                                placeholder="Jenis beban"
+                                value={expense.type}
+                                onChange={(e) => updateExpense(index, 'type', e.target.value)}
+                              />
+                              <Input
+                                type="number"
+                                placeholder="Jumlah"
+                                value={expense.amount}
+                                onChange={(e) => updateExpense(index, 'amount', e.target.value)}
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <Input
+                                placeholder="Deskripsi (opsional)"
+                                value={expense.description}
+                                onChange={(e) => updateExpense(index, 'description', e.target.value)}
+                                className="flex-1"
+                              />
+                              {operationalExpenses.length > 1 && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => removeExpense(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        
+                        <Button
+                          variant="outline"
+                          onClick={addExpense}
+                          className="w-full"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Beban
+                        </Button>
+
+                        {/* Auto-calculated cash deposit */}
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                          <p className="text-sm font-medium text-green-800 mb-2">Setoran Tunai (Otomatis)</p>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>Penjualan Tunai:</span>
+                              <span>{formatCurrency(shiftSummary.cashSales)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Beban Operasional:</span>
+                              <span>-{formatCurrency(operationalExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || '0'), 0))}</span>
+                            </div>
+                            <div className="flex justify-between border-t pt-1 font-bold text-green-700">
+                              <span>Yang Harus Disetor:</span>
+                              <span className="text-lg">
+                                {formatCurrency(Math.max(0, shiftSummary.cashSales - operationalExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || '0'), 0)))}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Beban Operasional:</span>
-                          <span className="font-medium text-red-600">-{formatCurrency(shiftReport.operational_expenses)}</span>
-                        </div>
-                        <div className="border-t pt-2 flex justify-between font-bold">
-                          <span>Total Setoran Seharusnya:</span>
-                          <span className="text-green-600">
-                            {formatCurrency(Math.max(0, shiftReport.cash_sales - shiftReport.operational_expenses))}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Setoran Aktual:</span>
-                          <span className="font-medium">{formatCurrency(shiftReport.cash_collected)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Selisih:</span>
-                          <span className={`font-medium ${
-                            shiftReport.cash_collected - (shiftReport.cash_sales - shiftReport.operational_expenses) >= 0 
-                              ? 'text-green-600' 
-                              : 'text-red-600'
-                          }`}>
-                            {formatCurrency(shiftReport.cash_collected - (shiftReport.cash_sales - shiftReport.operational_expenses))}
-                          </span>
-                        </div>
-                      </div>
+
+                        <Button
+                          onClick={handleSubmitShiftReport}
+                          disabled={loading || !operationalExpenses.some(exp => exp.type && exp.amount)}
+                          className="w-full bg-green-600 hover:bg-green-700"
+                        >
+                          {loading ? "Mengirim..." : "Kirim Laporan Shift"}
+                        </Button>
+                      </CardContent>
                     </Card>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Deskripsi</label>
-                      <Textarea
-                        placeholder="Es batu, bensin, dll"
-                        value={shiftReport.notes}
-                        onChange={(e) => setShiftReport(prev => ({
-                          ...prev,
-                          notes: e.target.value
-                        }))}
-                      />
-                    </div>
-
-                    <div className="bg-muted p-4 rounded-lg">
-                      <h4 className="font-medium mb-2">Ringkasan Shift Hari Ini</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Penjualan Tunai:</span>
-                          <p className="font-medium">{formatCurrency(shiftReport.cash_sales)}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Total Transaksi:</span>
-                          <p className="font-medium">{shiftReport.total_transactions}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Beban Operasional:</span>
-                          <p className="font-medium text-red-600">- {formatCurrency(shiftReport.operational_expenses)}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Setoran Tunai yang diharapkan:</span>
-                          <p className="font-medium text-green-600">
-                            {formatCurrency(Math.max(0, shiftReport.cash_sales - shiftReport.operational_expenses))}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button 
-                      onClick={submitShiftReport} 
-                      disabled={loading}
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Kirim Laporan Pengembalian & Akhiri Shift
-                    </Button>
+                  </div>
+                ) : !activeShift ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-orange-700 mb-2">Tidak Ada Shift Aktif</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Mulai shift dengan check-in untuk mengakses fitur ini
+                    </p>
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-green-700 mb-2">
-                      {activeShift ? 'Laporan Shift Telah Dikirim' : 'Tidak Ada Shift Aktif'}
-                    </h3>
+                    <h3 className="text-lg font-semibold text-green-700 mb-2">Laporan Shift Terkirim</h3>
                     <p className="text-muted-foreground">
-                      {activeShift 
-                        ? 'Terima kasih telah mengirim laporan shift hari ini.'
-                        : 'Mulai shift dengan check-in untuk mengakses fitur ini.'
-                      }
+                      Laporan shift hari ini sudah berhasil dikirim dan menunggu verifikasi branch
                     </p>
                   </div>
                 )}
