@@ -37,7 +37,10 @@ const MobileAttendance = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraActive, setCameraActive] = useState(false);
-
+  
+  // Temporarily disable photo requirement for attendance due to device issues
+  const REQUIRE_PHOTO = false;
+  
   useEffect(() => {
     fetchTodayAttendance();
     getCurrentLocation();
@@ -190,20 +193,18 @@ const MobileAttendance = () => {
 
     setLoading(true);
     try {
-      await startCamera();
-      await waitForVideoReady();
-      // Beri sedikit jeda agar kamera stabil
-      await new Promise((r) => setTimeout(r, 500));
-
-      const photoDataUrl = capturePhoto();
-      if (!photoDataUrl) {
-        throw new Error("Gagal mengambil foto");
+      let photoUrl: string | undefined;
+      if (REQUIRE_PHOTO) {
+        await startCamera();
+        await waitForVideoReady();
+        await new Promise((r) => setTimeout(r, 500));
+        const photoDataUrl = capturePhoto();
+        if (!photoDataUrl) {
+          throw new Error("Gagal mengambil foto");
+        }
+        stopCamera();
+        photoUrl = await uploadPhoto(photoDataUrl, 'check_in');
       }
-
-      stopCamera();
-
-      // Upload photo
-      const photoUrl = await uploadPhoto(photoDataUrl, 'check_in');
 
       // Create attendance record
       const { error } = await supabase
@@ -214,7 +215,7 @@ const MobileAttendance = () => {
           status: 'checked_in',
           check_in_time: new Date().toISOString(),
           check_in_location: locationName || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
-          check_in_photo_url: photoUrl,
+          check_in_photo_url: photoUrl || null,
           work_date: new Date().toISOString().split('T')[0]
         }]);
 
@@ -243,19 +244,18 @@ const MobileAttendance = () => {
 
     setLoading(true);
     try {
-      await startCamera();
-      await waitForVideoReady();
-      await new Promise((r) => setTimeout(r, 500));
-
-      const photoDataUrl = capturePhoto();
-      if (!photoDataUrl) {
-        throw new Error("Gagal mengambil foto");
+      let photoUrl: string | undefined;
+      if (REQUIRE_PHOTO) {
+        await startCamera();
+        await waitForVideoReady();
+        await new Promise((r) => setTimeout(r, 500));
+        const photoDataUrl = capturePhoto();
+        if (!photoDataUrl) {
+          throw new Error("Gagal mengambil foto");
+        }
+        stopCamera();
+        photoUrl = await uploadPhoto(photoDataUrl, 'check_out');
       }
-
-      stopCamera();
-
-      // Upload photo
-      const photoUrl = await uploadPhoto(photoDataUrl, 'check_out');
 
       // Update attendance record
       const { error } = await supabase
@@ -264,7 +264,7 @@ const MobileAttendance = () => {
           status: 'checked_out',
           check_out_time: new Date().toISOString(),
           check_out_location: locationName || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
-          check_out_photo_url: photoUrl
+          check_out_photo_url: photoUrl || null
         })
         .eq('id', todayAttendance.id);
 
