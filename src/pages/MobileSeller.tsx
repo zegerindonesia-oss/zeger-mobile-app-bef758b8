@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MobileSellerEnhanced from "@/components/mobile/MobileSellerEnhanced";
 import MobileRiderDashboard from "@/components/mobile/MobileRiderDashboard";
-import MobileRiderAnalytics from "@/components/mobile/MobileRiderAnalytics";
+import MobileRiderAnalyticsEnhanced from "@/components/mobile/MobileRiderAnalyticsEnhanced";
 import MobileStockManagement from "@/components/mobile/MobileStockManagement";
 import MobileAttendance from "@/components/mobile/MobileAttendance";
 import MobileCheckpoints from "@/components/mobile/MobileCheckpoints";
@@ -64,7 +64,7 @@ export default function MobileSeller() {
           </TabsContent>
           
           <TabsContent value="analytics" className="m-0 h-full">
-            <MobileRiderAnalytics />
+            <MobileRiderAnalyticsEnhanced />
           </TabsContent>
           
           <TabsContent value="attendance" className="m-0 h-full">

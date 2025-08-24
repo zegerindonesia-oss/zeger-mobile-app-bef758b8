@@ -145,9 +145,14 @@ const MobileRiderDashboard = () => {
 
       const stockItems = inventory?.reduce((sum, item) => sum + item.stock_quantity, 0) || 0;
 
-// Tentukan rentang waktu berdasarkan shift aktif
-const startRange = (activeShift?.shift_start_time as string) || `${today}T00:00:00`;
-const endRange = (activeShift?.shift_end_time as string) || new Date().toISOString();
+      // Tentukan rentang waktu berdasarkan shift aktif
+      let startRange = `${today}T00:00:00`;
+      let endRange = new Date().toISOString();
+      
+      // Jika ada shift aktif, gunakan waktu mulai shift
+      if (activeShift?.shift_start_time) {
+        startRange = activeShift.shift_start_time;
+      }
 
 // Fetch stock awal (pergerakan stok diterima dalam rentang shift/hari)
 const { data: stockMovements } = await supabase

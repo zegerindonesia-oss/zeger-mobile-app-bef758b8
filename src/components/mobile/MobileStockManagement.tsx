@@ -452,7 +452,7 @@ const MobileStockManagement = () => {
   };
 
   const handleSubmitShiftReport = async () => {
-    if (!userProfile?.id || !activeShift || operationalExpenses.length === 0) {
+    if (!userProfile?.id || !activeShift) {
       toast.error("Lengkapi semua data terlebih dahulu");
       return;
     }
