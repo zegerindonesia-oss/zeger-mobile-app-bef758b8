@@ -353,18 +353,18 @@ const MobileStockManagement = () => {
         ?.filter(t => t.payment_method === 'cash')
         ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
 
-      const qrisSales = rangeTransactions
-        ?.filter(t => t.payment_method === 'qris')
+      const nonCashSales = rangeTransactions
+        ?.filter(t => t.payment_method && t.payment_method.toLowerCase() !== 'cash')
         ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
 
-      const totalSales = cashSales + qrisSales;
+      const totalSales = cashSales + nonCashSales;
 
-      console.log('Sales summary:', { cashSales, qrisSales, totalSales, count: rangeTransactions?.length });
+      console.log('Sales summary:', { cashSales, nonCashSales, totalSales, count: rangeTransactions?.length });
 
       setShiftSummary({
         totalSales,
         cashSales,
-        qrisSales,
+        qrisSales: nonCashSales,
         totalTransactions: rangeTransactions?.length || 0
       });
     } catch (error: any) {
@@ -558,6 +558,7 @@ const { error: shiftError } = await supabase
       toast.success("Laporan shift berhasil dikirim dan siap diverifikasi!");
       setOperationalExpenses([{ type: '', amount: '', description: '' }]);
       setActiveShift(null);
+      window.dispatchEvent(new Event('shift-updated'));
       fetchShiftData();
     } catch (error: any) {
       toast.error("Gagal kirim laporan: " + error.message);

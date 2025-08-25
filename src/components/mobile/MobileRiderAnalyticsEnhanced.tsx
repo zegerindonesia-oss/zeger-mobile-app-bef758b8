@@ -42,6 +42,15 @@ interface DashboardAnalytics {
   transactions: TransactionDetail[];
 }
 
+interface ShiftInfo {
+  id: string;
+  shift_number: number;
+  shift_date: string;
+  shift_start_time?: string;
+  shift_end_time?: string;
+  status: string;
+}
+
 const MobileRiderAnalyticsEnhanced = () => {
   const [analytics, setAnalytics] = useState<DashboardAnalytics>({
     todaySales: 0,
@@ -97,12 +106,23 @@ const MobileRiderAnalyticsEnhanced = () => {
         .lte('transaction_date', endDate)
         .order('transaction_date', { ascending: false });
 
-      // Get shift info for each transaction
+      // Get shifts of selected date with times
       const { data: shifts } = await supabase
         .from('shift_management')
-        .select('id, shift_date, shift_number')
+        .select('id, shift_date, shift_number, shift_start_time, shift_end_time, status')
         .eq('rider_id', profile.id)
-        .eq('shift_date', selectedDate);
+        .eq('shift_date', selectedDate)
+        .order('shift_start_time', { ascending: true });
+
+      const findShiftNumber = (dateStr: string) => {
+        const t = new Date(dateStr).getTime();
+        const match = (shifts || []).find((s: any) => {
+          const start = s.shift_start_time ? new Date(s.shift_start_time).getTime() : null;
+          const end = s.shift_end_time ? new Date(s.shift_end_time).getTime() : Infinity;
+          return start !== null && t >= start && t <= end;
+        });
+        return match?.shift_number || (shifts && shifts.length > 0 ? shifts[0].shift_number : 1);
+      };
 
       const todaySales = transactions?.reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
       const totalTransactions = transactions?.length || 0;
@@ -115,8 +135,8 @@ const MobileRiderAnalyticsEnhanced = () => {
         transaction_date: transaction.transaction_date,
         final_amount: Number(transaction.final_amount),
         total_transactions: totalTransactions,
-        shift_number: shifts?.[0]?.shift_number || 1,
-        shift_date: shifts?.[0]?.shift_date || selectedDate,
+        shift_number: findShiftNumber(transaction.transaction_date),
+        shift_date: selectedDate,
         status: transaction.status,
         payment_method: transaction.payment_method || 'cash',
         items: transaction.transaction_items?.map(item => ({

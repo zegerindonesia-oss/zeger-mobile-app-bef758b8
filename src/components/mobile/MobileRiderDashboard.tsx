@@ -99,6 +99,12 @@ const MobileRiderDashboard = () => {
     fetchAttendanceHistory();
   }, []);
 
+  useEffect(() => {
+    const handler = () => fetchDashboardData();
+    window.addEventListener('shift-updated', handler);
+    return () => window.removeEventListener('shift-updated', handler);
+  }, []);
+
   const fetchDashboardData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -166,7 +172,7 @@ const { data: stockMovements } = await supabase
   .gte('actual_delivery_date', startRange)
   .lte('actual_delivery_date', endRange);
 
-const stockAwal = stockMovements?.reduce((sum, movement) => sum + movement.quantity, 0) || 0;
+let stockAwal = stockMovements?.reduce((sum, movement) => sum + movement.quantity, 0) || 0;
 
 // Fetch pending stock transfers
 const { data: pendingStock } = await supabase
@@ -187,11 +193,19 @@ const { data: transactions } = await supabase
   .gte('transaction_date', startRange)
   .lte('transaction_date', endRange);
 
-      const totalSales = transactions?.reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
-      const avgPerTransaction = transactions?.length > 0 ? totalSales / transactions.length : 0;
-      const itemsSold = transactions?.reduce((sum, t) => {
+      let totalSales = transactions?.reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
+      let avgPerTransaction = transactions?.length > 0 ? totalSales / transactions.length : 0;
+      let itemsSold = transactions?.reduce((sum, t) => {
         return sum + (t.transaction_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0);
       }, 0) || 0;
+
+      // Jika tidak ada shift aktif, angka pergeseran harus 0 (dashboard per shift)
+      if (!activeShift) {
+        stockAwal = 0;
+        totalSales = 0;
+        avgPerTransaction = 0;
+        itemsSold = 0;
+      }
 
       // Fetch top and worst products
       const { data: productSales } = await supabase
