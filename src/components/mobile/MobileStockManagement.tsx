@@ -310,15 +310,31 @@ const MobileStockManagement = () => {
       const today = new Date().toISOString().split('T')[0];
       let startRange = `${today}T00:00:00`;
       let endRange = new Date().toISOString();
-      if (shift?.shift_start_time) startRange = shift.shift_start_time;
-      if (shift?.shift_end_time) endRange = shift.shift_end_time;
+      
+      // If shift is active, use shift start time and current time
+      if (shift?.shift_start_time) {
+        startRange = shift.shift_start_time;
+        // For active shift, use current time as end range
+        endRange = new Date().toISOString();
+      }
+      
+      console.log('Fetching transactions for rider:', userProfile.id);
+      console.log('Date range:', { startRange, endRange });
 
-      const { data: rangeTransactions } = await supabase
+      const { data: rangeTransactions, error: transactionError } = await supabase
         .from('transactions')
-        .select('final_amount, payment_method')
+        .select('final_amount, payment_method, transaction_date, status')
         .eq('rider_id', userProfile.id)
         .gte('transaction_date', startRange)
-        .lte('transaction_date', endRange);
+        .lte('transaction_date', endRange)
+        .eq('status', 'completed');
+
+      if (transactionError) {
+        console.error('Transaction query error:', transactionError);
+        return;
+      }
+
+      console.log('Found transactions:', rangeTransactions);
 
       const cashSales = rangeTransactions
         ?.filter(t => t.payment_method === 'cash')
@@ -329,6 +345,8 @@ const MobileStockManagement = () => {
         ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
 
       const totalSales = cashSales + qrisSales;
+
+      console.log('Sales summary:', { cashSales, qrisSales, totalSales, count: rangeTransactions?.length });
 
       setShiftSummary({
         totalSales,
