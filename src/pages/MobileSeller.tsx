@@ -9,8 +9,9 @@ import MobileStockManagement from "@/components/mobile/MobileStockManagement";
 import MobileAttendance from "@/components/mobile/MobileAttendance";
 import MobileCheckpoints from "@/components/mobile/MobileCheckpoints";
 import MobileHistory from "@/components/mobile/MobileHistory";
+import { CustomerManagement } from "@/components/customer/CustomerManagement";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
-import { LayoutDashboard, ShoppingCart, Calendar, History, Settings, BarChart3, Package, Clock, MapPin } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Calendar, History, Settings, BarChart3, Package, Clock, MapPin, Users } from "lucide-react";
 
 export default function MobileSeller() {
   const { user, userProfile, loading } = useAuth();
@@ -78,10 +79,16 @@ export default function MobileSeller() {
           <TabsContent value="history" className="m-0 h-full">
             <MobileHistory />
           </TabsContent>
+          
+          <TabsContent value="customers" className="m-0 h-full">
+            <div className="p-4">
+              <CustomerManagement />
+            </div>
+          </TabsContent>
         </div>
 
         <div className="bg-white border-t">
-          <TabsList className="grid w-full grid-cols-7 h-16 bg-transparent">
+          <TabsList className="grid w-full grid-cols-8 h-16 bg-transparent">
             <TabsTrigger value="dashboard" className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600">
               <LayoutDashboard className="h-3 w-3" />
               <span className="text-[10px]">Dashboard</span>
@@ -109,6 +116,10 @@ export default function MobileSeller() {
             <TabsTrigger value="history" className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600">
               <History className="h-3 w-3" />
               <span className="text-[10px]">Riwayat</span>
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="flex flex-col gap-1 data-[state=active]:bg-red-50 data-[state=active]:text-red-600">
+              <Users className="h-3 w-3" />
+              <span className="text-[10px]">Pelanggan</span>
             </TabsTrigger>
           </TabsList>
         </div>

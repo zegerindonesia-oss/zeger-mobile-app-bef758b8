@@ -90,6 +90,22 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
   const handleStockReturn = async (inventoryId: string, quantity: number) => {
     setLoading(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Check if there are active shifts from previous days (same-day validation)
+      const { data: activeShifts } = await supabase
+        .from('shift_management')
+        .select('shift_date')
+        .eq('rider_id', userProfile.id)
+        .eq('status', 'active')
+        .neq('shift_date', today);
+
+      if (activeShifts && activeShifts.length > 0) {
+        toast.error('Selesaikan shift dari hari sebelumnya terlebih dahulu. Pengembalian stok harus di hari yang sama untuk mencegah fraud.');
+        setLoading(false);
+        return;
+      }
+
       // Take photo for return verification
       const photoInput = document.createElement('input');
       photoInput.type = 'file';
@@ -376,6 +392,23 @@ const MobileStockManagement = () => {
     setLoading(true);
     try {
       const currentTime = new Date().toISOString();
+      const today = new Date().toISOString().split('T')[0];
+
+      // Check if stock was sent today (same-day validation)
+      const { data: stockMovement } = await supabase
+        .from('stock_movements')
+        .select('created_at')
+        .eq('id', stockId)
+        .single();
+
+      if (stockMovement) {
+        const sentDate = new Date(stockMovement.created_at).toISOString().split('T')[0];
+        if (sentDate !== today) {
+          toast.error('Penerimaan stok hanya bisa dilakukan di hari yang sama dengan pengiriman untuk mencegah fraud');
+          setLoading(false);
+          return;
+        }
+      }
 
       // 1) Mark stock movement as received
       const { error } = await supabase

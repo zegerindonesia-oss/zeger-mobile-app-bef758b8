@@ -22,6 +22,7 @@ import Riders from "./pages/Riders";
 import Inventory from "./pages/Inventory";
 import AdminUsers from "./pages/AdminUsers";
 import StockTransfer from "./pages/StockTransfer";
+import CustomerManager from "./pages/CustomerManager";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +127,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin']}>
                 <Layout>
                   <AdminUsers />
+                </Layout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/customers" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+                <Layout>
+                  <CustomerManager />
                 </Layout>
               </RoleBasedRoute>
             } />

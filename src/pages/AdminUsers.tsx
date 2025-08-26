@@ -76,7 +76,10 @@ export default function AdminUsers() {
 
       {/* Manajemen User */}
       {userProfile && (
-        <UserManagement role={userProfile.role === 'ho_admin' ? 'ho_admin' : 'branch_manager'} />
+        <UserManagement 
+          role={userProfile.role === 'ho_admin' ? 'ho_admin' : 'branch_manager'} 
+          branchId={userProfile.role === 'branch_manager' ? userProfile.branch_id : undefined}
+        />
       )}
     </main>
   );

@@ -11,7 +11,9 @@ import {
   CreditCard,
   Smartphone,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  X,
+  MapPin
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +35,13 @@ interface StockItem {
   rider_stock: number;
 }
 
+interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+  address?: string;
+}
+
 const MobileSellerEnhanced = () => {
   const { userProfile, signOut } = useAuth();
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
@@ -40,9 +49,14 @@ const MobileSellerEnhanced = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris' | 'transfer'>('cash');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number, name: string} | null>(null);
 
   useEffect(() => {
     fetchSellingStock();
+    fetchCustomers();
+    getCurrentLocation();
   }, []);
 
   const fetchSellingStock = async () => {
@@ -78,6 +92,51 @@ const MobileSellerEnhanced = () => {
       setStockItems(stockItems);
     } catch (error: any) {
       toast.error("Gagal memuat stok penjualan");
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!profile) return;
+
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, name, phone, address')
+        .eq('rider_id', profile.id)
+        .eq('is_active', true)
+        .order('name');
+
+      setCustomers(customers || []);
+    } catch (error: any) {
+      toast.error("Gagal memuat data pelanggan");
+    }
+  };
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation({
+            lat: latitude,
+            lng: longitude,
+            name: `Lokasi ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+          });
+        },
+        (error) => {
+          console.log('Location error:', error);
+          // Don't show error toast for location, it's optional
+        }
+      );
     }
   };
 
@@ -193,7 +252,11 @@ const MobileSellerEnhanced = () => {
           payment_proof_url: paymentProofUrl,
           status: 'completed',
           rider_id: profile?.id,
-          branch_id: profile?.branch_id
+          branch_id: profile?.branch_id,
+          customer_id: selectedCustomer || null,
+          transaction_latitude: currentLocation?.lat || null,
+          transaction_longitude: currentLocation?.lng || null,
+          location_name: currentLocation?.name || null
         }])
         .select()
         .single();
@@ -226,6 +289,7 @@ const MobileSellerEnhanced = () => {
       }
 
       setCart([]);
+      setSelectedCustomer('');
       toast.success("Transaksi berhasil!");
       fetchSellingStock(); // Refresh stock
     } catch (error: any) {
@@ -369,6 +433,31 @@ const MobileSellerEnhanced = () => {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Customer Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Pelanggan (Opsional):</label>
+              <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih pelanggan atau kosongkan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Pelanggan Umum</SelectItem>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name} {customer.phone && `(${customer.phone})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Location Info */}
+            {currentLocation && (
+              <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                📍 {currentLocation.name}
+              </div>
             )}
 
             {/* Payment Method Selection */}

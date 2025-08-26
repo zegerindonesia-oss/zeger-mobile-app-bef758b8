@@ -193,6 +193,57 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          address: string | null
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          rider_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          rider_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          rider_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_operational_expenses: {
         Row: {
           amount: number
@@ -745,6 +796,7 @@ export type Database = {
           discount_amount: number | null
           final_amount: number
           id: string
+          location_name: string | null
           notes: string | null
           payment_method: string | null
           payment_proof_url: string | null
@@ -755,6 +807,8 @@ export type Database = {
           status: Database["public"]["Enums"]["transaction_status"] | null
           total_amount: number
           transaction_date: string | null
+          transaction_latitude: number | null
+          transaction_longitude: number | null
           transaction_number: string
         }
         Insert: {
@@ -764,6 +818,7 @@ export type Database = {
           discount_amount?: number | null
           final_amount?: number
           id?: string
+          location_name?: string | null
           notes?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
@@ -774,6 +829,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["transaction_status"] | null
           total_amount?: number
           transaction_date?: string | null
+          transaction_latitude?: number | null
+          transaction_longitude?: number | null
           transaction_number: string
         }
         Update: {
@@ -783,6 +840,7 @@ export type Database = {
           discount_amount?: number | null
           final_amount?: number
           id?: string
+          location_name?: string | null
           notes?: string | null
           payment_method?: string | null
           payment_proof_url?: string | null
@@ -793,6 +851,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["transaction_status"] | null
           total_amount?: number
           transaction_date?: string | null
+          transaction_latitude?: number | null
+          transaction_longitude?: number | null
           transaction_number?: string
         }
         Relationships: [

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   TrendingUp, Package, DollarSign, ShoppingCart, Calendar, 
-  BarChart3, Receipt, Filter, ChevronRight, Eye
+  BarChart3, Receipt, Filter, ChevronRight, Eye, MapPin, X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,12 +22,23 @@ interface TransactionDetail {
   shift_date: string;
   status: string;
   payment_method: string;
+  location_name?: string;
+  transaction_latitude?: number;
+  transaction_longitude?: number;
+  customer_name?: string;
   items: {
     product_name: string;
     quantity: number;
     unit_price: number;
     total_price: number;
   }[];
+}
+
+interface LocationSales {
+  location_name: string;
+  transaction_count: number;
+  total_sales: number;
+  transactions: TransactionDetail[];
 }
 
 interface DashboardAnalytics {
@@ -40,6 +51,7 @@ interface DashboardAnalytics {
     out_of_stock: number;
   };
   transactions: TransactionDetail[];
+  locationSales: LocationSales[];
 }
 
 interface ShiftInfo {
@@ -57,11 +69,13 @@ const MobileRiderAnalyticsEnhanced = () => {
     totalTransactions: 0,
     averageTransaction: 0,
     stockStatus: { total_items: 0, low_stock: 0, out_of_stock: 0 },
-    transactions: []
+    transactions: [],
+    locationSales: []
   });
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showTransactionDetail, setShowTransactionDetail] = useState<string | null>(null);
+  const [showLocationDetail, setShowLocationDetail] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -94,6 +108,10 @@ const MobileRiderAnalyticsEnhanced = () => {
           final_amount,
           status,
           payment_method,
+          location_name,
+          transaction_latitude,
+          transaction_longitude,
+          customer_id,
           transaction_items (
             quantity,
             unit_price,
@@ -105,6 +123,15 @@ const MobileRiderAnalyticsEnhanced = () => {
         .gte('transaction_date', startDate)
         .lte('transaction_date', endDate)
         .order('transaction_date', { ascending: false });
+
+      // Get customer data separately
+      const customerIds = transactions?.filter(t => t.customer_id).map(t => t.customer_id) || [];
+      const { data: customers } = customerIds.length > 0 ? await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', customerIds) : { data: [] };
+
+      const customerMap = new Map((customers || []).map(c => [c.id, c.name]));
 
       // Get shifts of selected date with times
       const { data: shifts } = await supabase
@@ -139,6 +166,10 @@ const MobileRiderAnalyticsEnhanced = () => {
         shift_date: selectedDate,
         status: transaction.status,
         payment_method: transaction.payment_method || 'cash',
+        location_name: transaction.location_name,
+        transaction_latitude: transaction.transaction_latitude,
+        transaction_longitude: transaction.transaction_longitude,
+        customer_name: customerMap.get(transaction.customer_id),
         items: transaction.transaction_items?.map(item => ({
           product_name: item.products?.name || 'Unknown',
           quantity: item.quantity,
@@ -146,6 +177,30 @@ const MobileRiderAnalyticsEnhanced = () => {
           total_price: Number(item.total_price)
         })) || []
       })) || [];
+
+      // Group transactions by location for location-based analytics
+      const locationSalesMap = new Map<string, LocationSales>();
+      
+      transactionDetails.forEach(transaction => {
+        const locationKey = transaction.location_name || 'Lokasi Tidak Diketahui';
+        
+        if (!locationSalesMap.has(locationKey)) {
+          locationSalesMap.set(locationKey, {
+            location_name: locationKey,
+            transaction_count: 0,
+            total_sales: 0,
+            transactions: []
+          });
+        }
+        
+        const locationData = locationSalesMap.get(locationKey)!;
+        locationData.transaction_count += 1;
+        locationData.total_sales += transaction.final_amount;
+        locationData.transactions.push(transaction);
+      });
+
+      const locationSales = Array.from(locationSalesMap.values())
+        .sort((a, b) => b.total_sales - a.total_sales);
 
       // Fetch stock status
       const { data: inventory } = await supabase
@@ -164,7 +219,8 @@ const MobileRiderAnalyticsEnhanced = () => {
         totalTransactions,
         averageTransaction,
         stockStatus,
-        transactions: transactionDetails
+        transactions: transactionDetails,
+        locationSales: locationSales
       });
 
     } catch (error: any) {
@@ -366,6 +422,99 @@ const MobileRiderAnalyticsEnhanced = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Location-Based Sales Analysis */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Analisis Penjualan per Lokasi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-64">
+              <div className="space-y-3">
+                {analytics.locationSales.map((location, index) => (
+                  <div 
+                    key={location.location_name} 
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => setShowLocationDetail(showLocationDetail === location.location_name ? null : location.location_name)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline">#{index + 1}</Badge>
+                        <h4 className="font-medium">{location.location_name}</h4>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>{location.transaction_count} transaksi</span>
+                        <span>Rp {location.total_sales.toLocaleString('id-ID')}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className={`h-4 w-4 transition-transform ${showLocationDetail === location.location_name ? 'rotate-90' : ''}`} />
+                  </div>
+                ))}
+                
+                {analytics.locationSales.length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Belum ada data lokasi penjualan</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Location Detail Modal */}
+        {showLocationDetail && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Detail: {showLocationDetail}
+                </CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowLocationDetail(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-64">
+                <div className="space-y-3">
+                  {analytics.locationSales
+                    .find(loc => loc.location_name === showLocationDetail)
+                    ?.transactions.map((transaction) => (
+                      <div key={transaction.id} className="border rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">{transaction.transaction_number}</span>
+                          <Badge variant={transaction.status === 'completed' ? 'default' : 'secondary'}>
+                            {transaction.status}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p>💰 Rp {transaction.final_amount.toLocaleString('id-ID')}</p>
+                          <p>💳 {transaction.payment_method.toUpperCase()}</p>
+                          {transaction.customer_name && (
+                            <p>👤 {transaction.customer_name}</p>
+                          )}
+                          <p>🕒 {new Date(transaction.transaction_date).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</p>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </ScrollArea>
   );
