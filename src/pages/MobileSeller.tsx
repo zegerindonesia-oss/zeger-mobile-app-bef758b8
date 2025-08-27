@@ -81,7 +81,11 @@ export default function MobileSeller() {
           </TabsContent>
           
           <TabsContent value="customers" className="m-0 h-full">
-            <div className="p-4">
+            <div className="p-4 h-full bg-gradient-to-br from-white via-red-50/30 to-white">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="h-5 w-5 text-red-600" />
+                <h2 className="text-lg font-semibold">Kelola Pelanggan</h2>
+              </div>
               <CustomerManagement />
             </div>
           </TabsContent>

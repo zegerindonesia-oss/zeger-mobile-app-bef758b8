@@ -51,7 +51,7 @@ export default function AdminUsers() {
         <p className="text-sm text-muted-foreground">Kelola role dan penempatan user.</p>
       </header>
 
-      {userProfile?.role !== 'ho_admin' && (
+      {userProfile?.role !== 'ho_admin' && userProfile?.role !== 'branch_manager' && (
         <Card>
           <CardHeader>
             <CardTitle>Aktifkan Akses Admin</CardTitle>
@@ -75,7 +75,7 @@ export default function AdminUsers() {
       )}
 
       {/* Manajemen User */}
-      {userProfile && (
+      {userProfile && (userProfile.role === 'ho_admin' || userProfile.role === 'branch_manager') && (
         <UserManagement 
           role={userProfile.role === 'ho_admin' ? 'ho_admin' : 'branch_manager'} 
           branchId={userProfile.role === 'branch_manager' ? userProfile.branch_id : undefined}

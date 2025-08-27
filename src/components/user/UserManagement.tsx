@@ -219,11 +219,14 @@ export const UserManagement = ({ role, branchId }: UserManagementProps) => {
       return [
         { value: 'ho_admin', label: 'HO Admin' },
         { value: 'branch_manager', label: 'Branch Manager' },
-        { value: 'rider', label: 'Mobile Seller' }
+        { value: 'rider', label: 'Mobile Seller' },
+        { value: 'finance', label: 'Finance' }
       ];
     } else {
+      // Branch managers can create riders and other branch staff
       return [
-        { value: 'rider', label: 'Mobile Seller' }
+        { value: 'rider', label: 'Mobile Seller' },
+        { value: 'finance', label: 'Finance Staff' }
       ];
     }
   };
@@ -304,6 +307,14 @@ export const UserManagement = ({ role, branchId }: UserManagementProps) => {
                         ))}
                       </SelectContent>
                     </Select>
+                  )}
+
+                  {role === 'branch_manager' && (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        User akan ditambahkan ke branch Anda
+                      </p>
+                    </div>
                   )}
 
                   <div className="flex gap-2">
