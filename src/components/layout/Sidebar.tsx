@@ -45,87 +45,7 @@ interface MenuItem {
   roles?: string[];
 }
 
-const menuItems: MenuItem[] = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    roles: ["ho_admin", "branch_manager", "finance"],
-    children: [
-      { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/" },
-      { id: "analytics", label: "Analytics", icon: PieChart, path: "/analytics" },
-    ]
-  },
-  {
-    id: "sales",
-    label: "Sales",
-    icon: ShoppingCart,
-    roles: ["ho_admin", "branch_manager"],
-    children: [
-      { id: "pos", label: "Point of Sale", icon: ShoppingCart, path: "/pos" },
-      { id: "orders", label: "Orders", icon: FileText, path: "/orders" },
-      { id: "customers", label: "Customers", icon: Database, path: "/customers" },
-    ]
-  },
-  {
-    id: "inventory",
-    label: "Inventory",
-    icon: Package,
-    roles: ["ho_admin", "branch_manager"],
-    children: [
-      { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
-      { id: "stock-transfer", label: "Kirim Stok ke Rider", icon: Truck, path: "/stock-transfer" },
-      { id: "stock-movements", label: "Stock Movements", icon: FileText, path: "/stock-movements" },
-      { id: "stock-returns", label: "Returns", icon: FileText, path: "/returns" },
-    ]
-  },
-  {
-    id: "finance",
-    label: "Finance",
-    icon: Wallet,
-    roles: ["ho_admin", "branch_manager", "finance"],
-    children: [
-      { id: "profit-loss", label: "Laba Rugi", icon: FileText, path: "/finance/profit-loss" },
-      { id: "cash-flow", label: "Arus Kas", icon: PieChart, path: "/finance/cash-flow" },
-      { id: "balance-sheet", label: "Neraca", icon: FileText, path: "/finance/balance-sheet" },
-      { id: "operational-expenses", label: "Beban Operasional", icon: FileText, path: "/finance/operational-expenses" },
-      { id: "transactions", label: "Transactions", icon: FileText, path: "/reports/transactions" },
-      { id: "daily-reports", label: "Daily Reports", icon: FileText, path: "/daily-reports" },
-    ]
-  },
-  {
-    id: "accounting",
-    label: "Accounting",
-    icon: Calculator,
-    roles: ["ho_admin"],
-    children: [
-      { id: "chart-of-accounts", label: "Chart of Accounts", icon: FileText, path: "/chart-accounts" },
-      { id: "journal", label: "Journal Entries", icon: FileText, path: "/journal" },
-    ]
-  },
-  {
-    id: "report",
-    label: "Report",
-    icon: FileText,
-    roles: ["ho_admin", "branch_manager", "finance"],
-    children: [
-      { id: "sales-report", label: "Sales Report", icon: FileText, path: "/reports/sales" },
-      { id: "inventory-report", label: "Inventory Report", icon: FileText, path: "/reports/inventory" },
-      { id: "financial-report", label: "Financial Report", icon: FileText, path: "/reports/financial" },
-    ]
-  },
-  {
-    id: "admin",
-    label: "Admin",
-    icon: Settings,
-    roles: ["ho_admin", "branch_manager"],
-    children: [
-      { id: "user-management", label: "User Management", icon: Users, path: "/admin/users" },
-      { id: "branches", label: "Kelola Cabang", icon: Building2, path: "/branches" },
-      { id: "riders", label: "Kelola Rider", icon: Truck, path: "/riders" }
-    ]
-  }
-];
+// Removed the static menuItems array as it's now dynamic
 
 export const Sidebar = ({ userRole = "customer", isOpen, onToggle }: SidebarProps) => {
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["dashboard"]);
@@ -151,14 +71,100 @@ export const Sidebar = ({ userRole = "customer", isOpen, onToggle }: SidebarProp
     );
   };
 
-  const filteredMenuItems = menuItems.filter(item => 
+  const getMenuItems = (): MenuItem[] => [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      roles: ["ho_admin", "branch_manager", "finance"],
+      children: [
+        { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/" },
+        { id: "analytics", label: "Analytics", icon: PieChart, path: "/analytics" },
+      ]
+    },
+    {
+      id: "sales",
+      label: "Sales",
+      icon: ShoppingCart,
+      roles: ["ho_admin", "branch_manager"],
+      children: [
+        { id: "pos", label: "Point of Sale", icon: ShoppingCart, path: "/pos" },
+        { id: "orders", label: "Orders", icon: FileText, path: "/orders" },
+        { id: "customers", label: "Customers", icon: Database, path: "/customers" },
+      ]
+    },
+    {
+      id: "inventory",
+      label: "Inventory",
+      icon: Package,
+      roles: ["ho_admin", "branch_manager"],
+      children: [
+        { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
+        { id: "stock-transfer", label: "Kirim Stok ke Rider", icon: Truck, path: "/stock-transfer" },
+        { id: "stock-movements", label: "Stock Movements", icon: FileText, path: "/stock-movements" },
+        { id: "stock-returns", label: "Returns", icon: FileText, path: "/returns" },
+      ]
+    },
+    {
+      id: "finance",
+      label: "Finance",
+      icon: Wallet,
+      roles: ["ho_admin", "branch_manager", "finance"],
+      children: [
+        { id: "profit-loss", label: "Laba Rugi", icon: FileText, path: "/finance/profit-loss" },
+        { id: "cash-flow", label: "Arus Kas", icon: PieChart, path: "/finance/cash-flow" },
+        { id: "balance-sheet", label: "Neraca", icon: FileText, path: "/finance/balance-sheet" },
+        { id: "operational-expenses", label: "Beban Operasional", icon: FileText, path: "/finance/operational-expenses" },
+        { id: "transactions", label: "Transactions", icon: FileText, path: "/reports/transactions" },
+        { id: "daily-reports", label: "Daily Reports", icon: FileText, path: "/daily-reports" },
+      ]
+    },
+    {
+      id: "accounting",
+      label: "Accounting",
+      icon: Calculator,
+      roles: ["ho_admin"],
+      children: [
+        { id: "chart-of-accounts", label: "Chart of Accounts", icon: FileText, path: "/chart-accounts" },
+        { id: "journal", label: "Journal Entries", icon: FileText, path: "/journal" },
+      ]
+    },
+    {
+      id: "report",
+      label: "Report",
+      icon: FileText,
+      roles: ["ho_admin", "branch_manager", "finance"],
+      children: [
+        { id: "sales-report", label: "Sales Report", icon: FileText, path: "/reports/sales" },
+        { id: "inventory-report", label: "Inventory Report", icon: FileText, path: "/reports/inventory" },
+        { id: "financial-report", label: "Financial Report", icon: FileText, path: "/reports/financial" },
+      ]
+    },
+    {
+      id: "admin",
+      label: "Admin",
+      icon: Settings,
+      roles: ["ho_admin", "branch_manager"],
+      children: [
+        { id: "user-management", label: "User Management", icon: Users, path: userRole === 'ho_admin' ? "/admin/users" : "/branch/users" },
+        { id: "branches", label: "Kelola Cabang", icon: Building2, path: "/branches", roles: ["ho_admin"] },
+        { id: "riders", label: "Kelola Rider", icon: Truck, path: "/riders" }
+      ]
+    }
+  ];
+
+  const filteredMenuItems = getMenuItems().filter(item => 
     !item.roles || item.roles.includes(userRole)
   );
 
   const renderMenuItem = (item: MenuItem, depth = 0) => {
+    // Filter children based on roles if they have role restrictions
+    const filteredChildren = item.children?.filter(child => 
+      !child.roles || child.roles.includes(userRole)
+    );
     const isExpanded = expandedMenus.includes(item.id);
     const isActive = location.pathname === item.path;
-    const hasChildren = item.children && item.children.length > 0;
+    const hasChildren = filteredChildren && filteredChildren.length > 0;
 
     return (
       <div key={item.id}>
@@ -187,7 +193,7 @@ export const Sidebar = ({ userRole = "customer", isOpen, onToggle }: SidebarProp
         
         {hasChildren && isExpanded && (
           <div className="mt-1">
-            {item.children?.map(child => renderMenuItem(child, depth + 1))}
+            {filteredChildren?.map(child => renderMenuItem(child, depth + 1))}
           </div>
         )}
       </div>

@@ -131,9 +131,16 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/customers" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'rider']}>
                 <Layout>
                   <CustomerManager />
+                </Layout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/branch/users" element={
+              <RoleBasedRoute allowedRoles={['branch_manager']}>
+                <Layout>
+                  <AdminUsers />
                 </Layout>
               </RoleBasedRoute>
             } />

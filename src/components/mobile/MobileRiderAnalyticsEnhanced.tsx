@@ -9,6 +9,7 @@ import {
   TrendingUp, Package, DollarSign, ShoppingCart, Calendar, 
   BarChart3, Receipt, Filter, ChevronRight, Eye, MapPin, X
 } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -52,6 +53,7 @@ interface DashboardAnalytics {
   };
   transactions: TransactionDetail[];
   locationSales: LocationSales[];
+  chartData?: { date: string; sales: number }[];
 }
 
 interface ShiftInfo {
@@ -70,16 +72,18 @@ const MobileRiderAnalyticsEnhanced = () => {
     averageTransaction: 0,
     stockStatus: { total_items: 0, low_stock: 0, out_of_stock: 0 },
     transactions: [],
-    locationSales: []
+    locationSales: [],
+    chartData: []
   });
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [showTransactionDetail, setShowTransactionDetail] = useState<string | null>(null);
   const [showLocationDetail, setShowLocationDetail] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
-  }, [selectedDate]);
+  }, [startDate, endDate]);
 
   const fetchAnalytics = async () => {
     try {
@@ -95,8 +99,8 @@ const MobileRiderAnalyticsEnhanced = () => {
 
       if (!profile) return;
 
-      const startDate = `${selectedDate}T00:00:00`;
-      const endDate = `${selectedDate}T23:59:59`;
+      const startDateTime = `${startDate}T00:00:00`;
+      const endDateTime = `${endDate}T23:59:59`;
 
       // Fetch transactions with detailed data
       const { data: transactions } = await supabase
@@ -120,8 +124,8 @@ const MobileRiderAnalyticsEnhanced = () => {
           )
         `)
         .eq('rider_id', profile.id)
-        .gte('transaction_date', startDate)
-        .lte('transaction_date', endDate)
+        .gte('transaction_date', startDateTime)
+        .lte('transaction_date', endDateTime)
         .order('transaction_date', { ascending: false });
 
       // Get customer data separately
@@ -133,12 +137,13 @@ const MobileRiderAnalyticsEnhanced = () => {
 
       const customerMap = new Map((customers || []).map(c => [c.id, c.name]));
 
-      // Get shifts of selected date with times
+      // Get shifts in date range with times
       const { data: shifts } = await supabase
         .from('shift_management')
         .select('id, shift_date, shift_number, shift_start_time, shift_end_time, status')
         .eq('rider_id', profile.id)
-        .eq('shift_date', selectedDate)
+        .gte('shift_date', startDate)
+        .lte('shift_date', endDate)
         .order('shift_start_time', { ascending: true });
 
       const findShiftNumber = (dateStr: string) => {
@@ -163,7 +168,7 @@ const MobileRiderAnalyticsEnhanced = () => {
         final_amount: Number(transaction.final_amount),
         total_transactions: totalTransactions,
         shift_number: findShiftNumber(transaction.transaction_date),
-        shift_date: selectedDate,
+        shift_date: new Date(transaction.transaction_date).toISOString().split('T')[0],
         status: transaction.status,
         payment_method: transaction.payment_method || 'cash',
         location_name: transaction.location_name,
@@ -202,6 +207,20 @@ const MobileRiderAnalyticsEnhanced = () => {
       const locationSales = Array.from(locationSalesMap.values())
         .sort((a, b) => b.total_sales - a.total_sales);
 
+      // Create chart data by grouping transactions by date
+      const dailySalesMap = new Map<string, number>();
+      transactionDetails.forEach(transaction => {
+        const date = new Date(transaction.transaction_date).toLocaleDateString('id-ID', {
+          month: 'short',
+          day: 'numeric'
+        });
+        dailySalesMap.set(date, (dailySalesMap.get(date) || 0) + transaction.final_amount);
+      });
+
+      const chartData = Array.from(dailySalesMap.entries())
+        .map(([date, sales]) => ({ date, sales }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
       // Fetch stock status
       const { data: inventory } = await supabase
         .from('inventory')
@@ -220,7 +239,8 @@ const MobileRiderAnalyticsEnhanced = () => {
         averageTransaction,
         stockStatus,
         transactions: transactionDetails,
-        locationSales: locationSales
+        locationSales: locationSales,
+        chartData: chartData
       });
 
     } catch (error: any) {
@@ -259,20 +279,35 @@ const MobileRiderAnalyticsEnhanced = () => {
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6">
-        {/* Date Filter */}
+        {/* Date Range Filter */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <Filter className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <Label htmlFor="date-filter">Pilih Tanggal</Label>
-                <Input
-                  id="date-filter"
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="mt-1"
-                />
+                <Label>Filter Periode</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div>
+                    <Label htmlFor="start-date" className="text-xs">Tanggal Awal</Label>
+                    <Input
+                      id="start-date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="end-date" className="text-xs">Tanggal Akhir</Label>
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -337,12 +372,47 @@ const MobileRiderAnalyticsEnhanced = () => {
           </Card>
         </div>
 
+        {/* Sales Growth Chart */}
+        {analytics.chartData && analytics.chartData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Grafik Penjualan Periode
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analytics.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value: number) => [formatCurrency(value), 'Penjualan']}
+                      labelFormatter={(label) => `Tanggal: ${label}`}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="sales" 
+                      stroke="#dc2626" 
+                      strokeWidth={2}
+                      dot={{ fill: '#dc2626', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Transaction History */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Receipt className="h-5 w-5" />
-              History Transaksi - {new Date(selectedDate).toLocaleDateString('id-ID')}
+              History Transaksi - {new Date(startDate).toLocaleDateString('id-ID')} s/d {new Date(endDate).toLocaleDateString('id-ID')}
             </CardTitle>
           </CardHeader>
           <CardContent>
