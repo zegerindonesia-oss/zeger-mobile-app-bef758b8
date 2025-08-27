@@ -62,18 +62,30 @@ const MobileSellerEnhanced = () => {
   const fetchSellingStock = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No user found');
+        return;
+      }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, branch_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!profile) return;
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        toast.error("Gagal memuat profil rider");
+        return;
+      }
+
+      if (!profile) {
+        console.log('No profile found for user');
+        return;
+      }
 
       // Fetch rider's inventory with products for selling
-      const { data: inventory } = await supabase
+      const { data: inventory, error: inventoryError } = await supabase
         .from('inventory')
         .select(`
           *,
@@ -82,16 +94,27 @@ const MobileSellerEnhanced = () => {
         .eq('rider_id', profile.id)
         .gt('stock_quantity', 0);
 
-      const stockItems = inventory?.map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        product: {...item.products, stock_quantity: item.stock_quantity},
-        rider_stock: item.stock_quantity
-      })) || [];
+      if (inventoryError) {
+        console.error('Inventory fetch error:', inventoryError);
+        toast.error("Gagal memuat stok: " + inventoryError.message);
+        return;
+      }
 
+      // Filter out items with null products and map to StockItem format
+      const stockItems = inventory
+        ?.filter(item => item.products !== null && item.products !== undefined)
+        ?.map(item => ({
+          id: item.id,
+          product_id: item.product_id,
+          product: {...item.products, stock_quantity: item.stock_quantity},
+          rider_stock: item.stock_quantity
+        })) || [];
+
+      console.log('Stock items loaded:', stockItems.length);
       setStockItems(stockItems);
     } catch (error: any) {
-      toast.error("Gagal memuat stok penjualan");
+      console.error('fetchSellingStock error:', error);
+      toast.error("Gagal memuat stok penjualan: " + error.message);
     }
   };
 
@@ -253,7 +276,7 @@ const MobileSellerEnhanced = () => {
           status: 'completed',
           rider_id: profile?.id,
           branch_id: profile?.branch_id,
-          customer_id: selectedCustomer || null,
+          customer_id: selectedCustomer && selectedCustomer !== 'general' ? selectedCustomer : null,
           transaction_latitude: currentLocation?.lat || null,
           transaction_longitude: currentLocation?.lng || null,
           location_name: currentLocation?.name || null
@@ -443,8 +466,8 @@ const MobileSellerEnhanced = () => {
                   <SelectValue placeholder="Pilih pelanggan atau kosongkan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Pelanggan Umum</SelectItem>
-                  {customers.map((customer) => (
+                  <SelectItem value="general">Pelanggan Umum</SelectItem>
+                  {customers.filter(customer => customer.id && customer.name).map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name} {customer.phone && `(${customer.phone})`}
                     </SelectItem>
