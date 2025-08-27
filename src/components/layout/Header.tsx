@@ -1,4 +1,4 @@
-import { Bell, Menu, User, Search, LogOut, Building } from "lucide-react";
+import { Bell, Menu, User, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -21,10 +19,6 @@ interface HeaderProps {
     full_name?: string;
     role?: string;
     email?: string;
-    branch?: {
-      name: string;
-      branch_type: string;
-    };
   };
 }
 
@@ -54,18 +48,9 @@ export const Header = ({ onToggleSidebar, userProfile }: HeaderProps) => {
           <Menu className="h-5 w-5" />
         </Button>
 
-        {/* Branch Info & Search */}
-        <div className="flex items-center gap-4 flex-1 max-w-2xl">
-          {userProfile?.branch && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg">
-              <Building className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">
-                {userProfile.branch.name}
-              </span>
-            </div>
-          )}
-          
-          <div className="relative flex-1 max-w-md">
+        {/* Search */}
+        <div className="flex-1 max-w-md">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Cari menu, produk, transaksi..."
