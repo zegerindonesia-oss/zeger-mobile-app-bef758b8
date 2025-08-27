@@ -27,11 +27,6 @@ import { useAuth } from "@/hooks/useAuth";
 interface StockItem {
   id: string;
   product_id: string;
-  products?: {
-    id: string;
-    name: string;
-    category: string;
-  };
   product?: {
     id: string;
     name: string;
@@ -673,19 +668,19 @@ const { error: shiftError } = await supabase
                                </Badge>
                              </div>
                              
-                              <div className="bg-muted/50 p-3 rounded-lg">
-                                <h4 className="text-lg font-bold text-foreground mb-2">{item.products?.name}</h4>
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <Package className="h-4 w-4 text-primary" />
-                                    <span className="font-semibold text-primary">Jumlah: {item.quantity} pcs</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Tag className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Kategori: {item.products?.category}</span>
-                                  </div>
-                                </div>
-                              </div>
+                             <div className="bg-muted/50 p-3 rounded-lg">
+                               <h4 className="text-lg font-bold text-foreground mb-2">{item.product?.name}</h4>
+                               <div className="flex flex-col gap-1">
+                                 <div className="flex items-center gap-2">
+                                   <Package className="h-4 w-4 text-primary" />
+                                   <span className="font-semibold text-primary">Jumlah: {item.quantity} pcs</span>
+                                 </div>
+                                 <div className="flex items-center gap-2">
+                                   <Tag className="h-4 w-4 text-muted-foreground" />
+                                   <span className="text-muted-foreground">Kategori: {item.product?.category}</span>
+                                 </div>
+                               </div>
+                             </div>
                              
                              {item.expected_delivery_date && (
                                <p className="text-xs text-muted-foreground">
@@ -761,9 +756,9 @@ const { error: shiftError } = await supabase
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between mb-3">
                             <div>
-                              <h4 className="font-medium">{item.products?.name}</h4>
+                              <h4 className="font-medium">{item.product?.name}</h4>
                               <p className="text-sm text-muted-foreground">
-                                Jumlah: {item.quantity} | Kategori: {item.products?.category}
+                                Jumlah: {item.quantity} | Kategori: {item.product?.category}
                               </p>
                               {item.actual_delivery_date && (
                                 <p className="text-xs text-green-600">

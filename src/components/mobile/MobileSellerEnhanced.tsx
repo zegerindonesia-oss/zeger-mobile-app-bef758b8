@@ -82,14 +82,12 @@ const MobileSellerEnhanced = () => {
         .eq('rider_id', profile.id)
         .gt('stock_quantity', 0);
 
-      const stockItems = (inventory || [])
-        .filter((item) => !!item.products)
-        .map((item) => ({
-          id: item.id,
-          product_id: item.product_id,
-          product: { ...(item.products as any), stock_quantity: item.stock_quantity },
-          rider_stock: item.stock_quantity,
-        }));
+      const stockItems = inventory?.map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        product: {...item.products, stock_quantity: item.stock_quantity},
+        rider_stock: item.stock_quantity
+      })) || [];
 
       setStockItems(stockItems);
     } catch (error: any) {
