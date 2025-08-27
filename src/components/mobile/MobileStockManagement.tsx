@@ -697,19 +697,23 @@ const { error: shiftError } = await supabase
                                </Badge>
                              </div>
                              
-                             <div className="bg-muted/50 p-3 rounded-lg">
-                               <h4 className="text-lg font-bold text-foreground mb-2">{item.product?.name}</h4>
-                               <div className="flex flex-col gap-1">
-                                 <div className="flex items-center gap-2">
-                                   <Package className="h-4 w-4 text-primary" />
-                                   <span className="font-semibold text-primary">Jumlah: {item.quantity} pcs</span>
-                                 </div>
-                                 <div className="flex items-center gap-2">
-                                   <Tag className="h-4 w-4 text-muted-foreground" />
-                                   <span className="text-muted-foreground">Kategori: {item.product?.category}</span>
-                                 </div>
-                               </div>
-                             </div>
+                              <div className="bg-muted/50 p-3 rounded-lg">
+                                <h4 className="text-lg font-bold text-foreground mb-2">
+                                  {item.product?.name || `Produk ID: ${item.product_id}`}
+                                </h4>
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-primary" />
+                                    <span className="font-semibold text-primary">Jumlah: {item.quantity} pcs</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Tag className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">
+                                      Kategori: {item.product?.category || 'Tidak diketahui'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                              
                              {item.expected_delivery_date && (
                                <p className="text-xs text-muted-foreground">
