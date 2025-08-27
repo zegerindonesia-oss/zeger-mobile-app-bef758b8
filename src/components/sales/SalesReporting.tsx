@@ -95,20 +95,25 @@ export const SalesReporting = ({ role, userId, branchId }: SalesReportingProps) 
 
   const calculateDailyReport = (transactions: SalesTransaction[]) => {
     const cashTransactions = transactions.filter(t => t.payment_method === 'cash');
-    const nonCashTransactions = transactions.filter(t => t.payment_method !== 'cash');
+    const transferTransactions = transactions.filter(t => t.payment_method === 'transfer');
+    const qrisTransactions = transactions.filter(t => t.payment_method === 'qris');
     
     const totalSales = transactions.reduce((sum, t) => sum + t.total_amount, 0);
     const cashCollected = cashTransactions.reduce((sum, t) => sum + t.total_amount, 0);
-    const nonCashAmount = nonCashTransactions.reduce((sum, t) => sum + t.total_amount, 0);
+    const transferAmount = transferTransactions.reduce((sum, t) => sum + t.total_amount, 0);
+    const qrisAmount = qrisTransactions.reduce((sum, t) => sum + t.total_amount, 0);
     
-    // Operational cost calculation (example: 10% of cash sales)
-    const operationalCost = cashCollected * 0.1;
-    const cashDepositRequired = cashCollected - operationalCost;
+    // Total collected includes cash and transfer (both need to be deposited)
+    const totalCollected = cashCollected + transferAmount;
+    
+    // Operational cost calculation (example: 10% of total collected)
+    const operationalCost = totalCollected * 0.1;
+    const cashDepositRequired = totalCollected - operationalCost;
 
     setDailyReport(prev => ({
       ...prev,
       total_sales: totalSales,
-      cash_collected: cashCollected,
+      cash_collected: totalCollected, // Now includes cash + transfer
       total_transactions: transactions.length,
       operational_cost: operationalCost,
       cash_deposit_required: cashDepositRequired
