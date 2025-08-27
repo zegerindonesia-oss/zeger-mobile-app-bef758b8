@@ -171,6 +171,8 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
       toast.success("Stok berhasil dikembalikan!");
       fetchReturnableStock();
       onRefresh();
+      // Beritahu parent untuk refresh status persediaan
+      window.dispatchEvent(new Event('inventory-updated'));
       
       // Auto-navigate to shift report after stock return
       setTimeout(() => {
@@ -264,6 +266,7 @@ const MobileStockManagement = () => {
     transferSales: 0,
     totalTransactions: 0
   });
+  const [remainingStockCount, setRemainingStockCount] = useState<number>(0);
   const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([
     { type: '', amount: '', description: '' }
   ]);
@@ -273,6 +276,12 @@ const MobileStockManagement = () => {
     fetchShiftData();
   }, []);
 
+  // Refresh shift data whenever inventory changes
+  useEffect(() => {
+    const handler = () => fetchShiftData();
+    window.addEventListener('inventory-updated', handler);
+    return () => window.removeEventListener('inventory-updated', handler);
+  }, []);
   const fetchStockData = async () => {
     try {
       if (!userProfile?.id) return;
@@ -336,6 +345,14 @@ const MobileStockManagement = () => {
         // For active shift, use current time as end range
         endRange = new Date().toISOString();
       }
+      
+      // Check remaining rider stock that must be returned before report
+      const { data: remaining } = await supabase
+        .from('inventory')
+        .select('id')
+        .eq('rider_id', userProfile.id)
+        .gt('stock_quantity', 0);
+      setRemainingStockCount(remaining?.length || 0);
       
       console.log('Fetching transactions for rider:', userProfile.id);
       console.log('Date range:', { startRange, endRange });
@@ -531,6 +548,11 @@ const MobileStockManagement = () => {
   const handleSubmitShiftReport = async () => {
     if (!userProfile?.id || !activeShift) {
       toast.error("Lengkapi semua data terlebih dahulu");
+      return;
+    }
+    if (remainingStockCount > 0) {
+      toast.error("Masih ada stok tersisa. Kembalikan stok terlebih dahulu sebelum menutup shift.");
+      setTab('return');
       return;
     }
 
@@ -916,7 +938,7 @@ const { error: shiftError } = await supabase
 
                         <Button
                           onClick={handleSubmitShiftReport}
-                          disabled={loading}
+                          disabled={loading || remainingStockCount > 0}
                           className="w-full bg-green-600 hover:bg-green-700"
                         >
                           {loading ? "Mengirim..." : "Kirim Laporan Shift"}
