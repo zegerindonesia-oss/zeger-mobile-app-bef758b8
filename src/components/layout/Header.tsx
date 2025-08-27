@@ -48,8 +48,13 @@ export const Header = ({ onToggleSidebar, userProfile }: HeaderProps) => {
           <Menu className="h-5 w-5" />
         </Button>
 
+        {/* Branch Name */}
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-primary">Branch Hub Zeger Kemiri</h1>
+        </div>
+
         {/* Search */}
-        <div className="flex-1 max-w-md">
+        <div className="max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input

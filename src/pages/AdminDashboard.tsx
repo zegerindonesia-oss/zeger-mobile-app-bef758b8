@@ -7,13 +7,15 @@ import {
   FileText, 
   Settings,
   BarChart3,
-  ShoppingCart
+  ShoppingCart,
+  TrendingUp
 } from "lucide-react";
 import { UserManagement } from "@/components/user/UserManagement";
 import { StockTransfer } from "@/components/stock/StockTransfer";
 import { SalesReporting } from "@/components/sales/SalesReporting";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import { BranchDashboard } from "@/components/dashboard/BranchDashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -118,8 +120,12 @@ const AdminDashboard = () => {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Manajemen User
@@ -137,6 +143,10 @@ const AdminDashboard = () => {
               Analitik
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard">
+            <BranchDashboard />
+          </TabsContent>
 
           <TabsContent value="users">
             {(profile.role === 'ho_admin' || profile.role === 'branch_manager') && (
