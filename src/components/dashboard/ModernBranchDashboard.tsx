@@ -13,7 +13,7 @@ import {
   Trash2,
   MoreHorizontal
 } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -268,23 +268,46 @@ export const ModernBranchDashboard = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
+              <AreaChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#DC2626" stopOpacity={0.05}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: '#9CA3AF' }}
+                />
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: '#9CA3AF' }}
+                  tickFormatter={(value) => `${value / 1000}k`}
+                />
                 <Tooltip 
                   formatter={(value) => [formatCurrency(Number(value)), 'Sales']}
-                  labelStyle={{ color: '#666' }}
+                  labelStyle={{ color: '#374151', fontWeight: 'medium' }}
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
+                    border: 'none', 
+                    borderRadius: '8px', 
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' 
+                  }}
                 />
-                <Line 
+                <Area 
                   type="monotone" 
                   dataKey="sales" 
                   stroke="#DC2626" 
-                  strokeWidth={3}
-                  dot={{ fill: '#DC2626', strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8, stroke: '#DC2626', strokeWidth: 2 }}
+                  strokeWidth={2}
+                  fill="url(#salesGradient)"
+                  dot={false}
+                  activeDot={{ r: 6, stroke: '#DC2626', strokeWidth: 2, fill: 'white' }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
