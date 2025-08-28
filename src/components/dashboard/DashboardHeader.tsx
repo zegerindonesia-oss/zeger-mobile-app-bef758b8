@@ -2,6 +2,7 @@ import { Building2, Users, Bike, Bell, User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 interface DashboardHeaderProps {
   activeRole: 'ho' | 'branch' | 'rider';
   onRoleChange: (role: 'ho' | 'branch' | 'rider') => void;
@@ -30,6 +31,7 @@ export const DashboardHeader = ({
   activeRole,
   onRoleChange
 }: DashboardHeaderProps) => {
+  const { userProfile } = useAuth();
   const currentConfig = roleConfig[activeRole];
   const CurrentIcon = currentConfig.icon;
   return <div className="glass-card p-6 rounded-3xl animate-slide-up">
@@ -44,7 +46,7 @@ export const DashboardHeader = ({
               Selamat datang kembali!
             </h1>
             <p className="text-muted-foreground">
-              {currentConfig.label} - {currentConfig.description}
+              Branch Hub Zeger Kemiri - {userProfile?.full_name || 'User'}
             </p>
           </div>
         </div>
