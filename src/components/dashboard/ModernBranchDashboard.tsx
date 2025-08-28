@@ -42,6 +42,8 @@ interface ProductSales {
   name: string;
   value: number;
   color: string;
+  quantity: number;
+  revenue: number;
 }
 
 interface Rider {
@@ -152,7 +154,14 @@ export const ModernBranchDashboard = () => {
         .eq('is_active', true);
 
       const totalMembers = memberData?.length || 0;
-      const activeRiders = riders.filter(r => r.is_active).length;
+      // Count active riders with shifts today
+      const { data: activeShiftData } = await supabase
+        .from('shift_management')
+        .select('rider_id')
+        .eq('shift_date', new Date().toISOString().split('T')[0])
+        .eq('status', 'active');
+
+      const activeRiders = activeShiftData?.length || 0;
 
       setStats({
         totalSales,
@@ -229,7 +238,9 @@ export const ModernBranchDashboard = () => {
       const mockProductSales = sortedProducts.map(([name, qty], index) => ({
         name,
         value: Math.round((qty / total) * 100),
-        color: COLORS[index]
+        color: COLORS[index],
+        quantity: qty,
+        revenue: qty * 25000 // Estimate
       }));
 
       setProductSales(mockProductSales);
@@ -237,11 +248,11 @@ export const ModernBranchDashboard = () => {
       console.error("Error fetching product sales:", error);
       // Fallback to mock data
       const mockProductSales = [
-        { name: 'Classic Latte', value: 40, color: COLORS[0] },
-        { name: 'Americano', value: 30, color: COLORS[1] },
-        { name: 'Dolce Latte', value: 15, color: COLORS[2] },
-        { name: 'Caramel Latte', value: 10, color: COLORS[3] },
-        { name: 'Others', value: 5, color: COLORS[4] }
+        { name: 'Classic Latte', value: 40, color: COLORS[0], quantity: 100, revenue: 2500000 },
+        { name: 'Americano', value: 30, color: COLORS[1], quantity: 75, revenue: 1875000 },
+        { name: 'Dolce Latte', value: 15, color: COLORS[2], quantity: 37, revenue: 925000 },
+        { name: 'Caramel Latte', value: 10, color: COLORS[3], quantity: 25, revenue: 625000 },
+        { name: 'Others', value: 5, color: COLORS[4], quantity: 12, revenue: 300000 }
       ];
       setProductSales(mockProductSales);
     }
@@ -480,45 +491,62 @@ export const ModernBranchDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Most Sales Pie Chart */}
+        {/* Top & Worst Selling Products */}
         <Card className="dashboard-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold">Top Selling Products</CardTitle>
-              <p className="text-sm text-muted-foreground">Produk terlaris bulan ini</p>
-            </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-green-600" />
+              Product Performance
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <ResponsiveContainer width="60%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={productSales}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {productSales.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value}%`, 'Sales']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-col space-y-2">
-                {productSales.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-sm text-gray-600">{item.name}</span>
-                    <span className="text-sm font-medium">{item.value}%</span>
-                  </div>
-                ))}
+            <div className="space-y-6">
+              {/* Top 5 Selling */}
+              <div>
+                <h4 className="font-semibold text-green-600 mb-3 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  Top 5 Selling Products
+                </h4>
+                <div className="space-y-2">
+                  {productSales.slice(0, 5).map((product, index) => (
+                    <div key={product.name} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </span>
+                        <span className="font-medium">{product.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-green-600">{product.value}%</div>
+                        <div className="text-xs text-gray-500">{product.quantity} sold</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Worst 5 Selling */}
+              <div>
+                <h4 className="font-semibold text-red-600 mb-3 flex items-center gap-2">
+                  <TrendingDown className="w-4 h-4" />
+                  Worst 5 Selling Products
+                </h4>
+                <div className="space-y-2">
+                  {productSales.slice(-5).reverse().map((product, index) => (
+                    <div key={product.name} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </span>
+                        <span className="font-medium">{product.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-red-600">{product.value}%</div>
+                        <div className="text-xs text-gray-500">{product.quantity} sold</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
