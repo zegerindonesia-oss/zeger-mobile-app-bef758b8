@@ -136,7 +136,7 @@ const Auth = () => {
                   Hey, Hello!
                 </h1>
                 <p className="text-xl font-medium mb-2">
-                  Join The Waitlist For The Design System!
+                  Enjoy A Happiness Coffee From Everywhere, Anywhere Just By Click
                 </p>
               </div>
             </div>
