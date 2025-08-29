@@ -80,7 +80,7 @@ export const ModernLayout = ({ children }: ModernLayoutProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="min-h-screen gradient-bg flex">
       <div className="fixed left-0 top-0 h-full z-50">
         <ModernSidebar 
           userRole={profile.role} 

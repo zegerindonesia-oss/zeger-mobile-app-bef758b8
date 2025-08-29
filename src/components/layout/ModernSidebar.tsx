@@ -208,7 +208,6 @@ export const ModernSidebar = ({ userRole, isOpen, onToggle }: ModernSidebarProps
       <div className={cn(
         "fixed left-0 top-0 h-full bg-primary text-primary-foreground z-50 transition-all duration-300 ease-in-out flex flex-col",
         isOpen ? "w-64" : "w-20",
-        "lg:relative lg:translate-x-0",
         !isOpen && "lg:w-20"
       )}>
         {/* Header */}

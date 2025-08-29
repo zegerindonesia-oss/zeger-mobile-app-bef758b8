@@ -113,48 +113,37 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
         return new Promise<File | null>((resolve) => {
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
           const isAndroid = /Android/.test(navigator.userAgent);
-          
+
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'image/*';
+          fileInput.style.position = 'fixed';
+          fileInput.style.left = '-9999px';
+          fileInput.style.opacity = '0';
+
+          // Append to DOM to satisfy iOS/Safari requirements
+          document.body.appendChild(fileInput);
+
+          // Ask source on mobile devices
           if (isIOS || isAndroid) {
-            // On mobile devices, show action sheet style selection
-            const action = window.confirm('Pilih sumber foto:\nOK = Kamera, Cancel = Galeri');
-            
-            const photoInput = document.createElement('input');
-            photoInput.type = 'file';
-            photoInput.accept = 'image/*';
-            
-            if (action) {
-              // Camera with proper mobile attributes
-              photoInput.setAttribute('capture', 'environment');
-              photoInput.setAttribute('multiple', 'false');
+            const useCamera = window.confirm('Pilih sumber foto:\nOK = Kamera, Cancel = Galeri');
+            if (useCamera) {
+              // Prefer back camera
+              fileInput.setAttribute('capture', 'environment');
+              // Some browsers honor this MIME hint
+              fileInput.accept = 'image/*;capture=camera';
             }
-            
-            photoInput.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              resolve(file || null);
-            };
-            
-            // Handle user cancellation
-            const originalFocus = document.activeElement;
-            photoInput.onclick = () => {
-              setTimeout(() => {
-                if (document.activeElement === originalFocus) {
-                  resolve(null);
-                }
-              }, 1000);
-            };
-            
-            photoInput.click();
-          } else {
-            // Desktop fallback - simple file picker
-            const photoInput = document.createElement('input');
-            photoInput.type = 'file';
-            photoInput.accept = 'image/*';
-            photoInput.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              resolve(file || null);
-            };
-            photoInput.click();
           }
+
+          fileInput.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0] || null;
+            resolve(file);
+            // Clean up
+            setTimeout(() => fileInput.remove(), 0);
+          };
+
+          // Trigger picker within the same user gesture
+          setTimeout(() => fileInput.click(), 0);
         });
       };
 
