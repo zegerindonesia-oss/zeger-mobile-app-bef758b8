@@ -23,7 +23,7 @@ export const ZegerLogo: React.FC<ZegerLogoProps> = ({ className = "", size = "md
       <img
         src="/lovable-uploads/af4d1a9a-5f56-4c8a-81a2-eb098eb7c2cb.png"
         alt="Zeger Coffee logo"
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain filter brightness-0 invert"
         loading="lazy"
       />
     </div>

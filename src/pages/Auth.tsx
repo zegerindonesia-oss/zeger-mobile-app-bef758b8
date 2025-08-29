@@ -124,91 +124,144 @@ const Auth = () => {
       setLoading(false);
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-500 to-red-400">
-      <div className="flex min-h-screen">
+  return <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-500 to-red-400 relative overflow-hidden">
+      <div className="flex min-h-screen items-center justify-center relative">
         {/* Left Side - Brand Content */}
-        <div className="flex-1 flex flex-col justify-center items-center px-8 lg:px-16 text-white">
-          <div className="max-w-lg text-center space-y-8">
-            <div className="space-y-4">
-              <ZegerLogo size="lg" className="mx-auto" />
-              <h1 className="text-5xl font-bold leading-tight">
-                A Happiness Coffee<br />
-                Everywhere, Anywhere<br />
-                Just by Click
-              </h1>
+        <div className="flex-1 flex flex-col justify-center items-start px-8 lg:px-16 text-white max-w-2xl">
+          <div className="space-y-8">
+            <div className="space-y-6">
+              <ZegerLogo size="lg" className="text-white" />
+              <div>
+                <h1 className="text-6xl font-bold leading-tight mb-4">
+                  Hey, Hello!
+                </h1>
+                <p className="text-xl font-medium mb-2">
+                  Join The Waitlist For The Design System!
+                </p>
+              </div>
             </div>
             
-            <p className="text-xl text-white/90 leading-relaxed">
-              We deliver a happiness coffee fresh from original Indonesian coffee
+            <p className="text-lg text-white/80 leading-relaxed max-w-md">
+              We deliver a happiness coffee fresh from original Indonesian coffee without any further requirements
             </p>
 
             {/* 3D Mockups */}
-            
+            <div className="flex space-x-4 mt-8">
+              <img src={iphoneMockup} alt="iPhone Mockup" className="w-20 h-20 object-contain" />
+              <img src={motorcycleMockup} alt="Motorcycle Mockup" className="w-20 h-20 object-contain" />
+              <img src={riderMockup} alt="Rider Mockup" className="w-20 h-20 object-contain" />
+            </div>
+
+            {/* Buka Situs Button */}
+            <Button variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20 rounded-full px-6 py-3 mt-8">
+              <span className="mr-2">↗</span>
+              Buka situs
+            </Button>
           </div>
         </div>
 
-        {/* Right Side - Login Form */}
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-sm flex flex-col justify-center px-8 py-12">
-          <div className="space-y-8">
-            <div className="text-center">
+        {/* Center - Login Form */}
+        <div className="w-full max-w-lg mx-8">
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mx-auto">
+            <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-              
+              <p className="text-gray-600">Let's get started with your 30 days free trial.</p>
             </div>
 
             <Card className="border-0 shadow-none bg-transparent">
               <Tabs defaultValue="signin" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-100">
-                  <TabsTrigger value="signin" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                <TabsList className="grid w-full grid-cols-2 bg-gray-100/80 rounded-full">
+                  <TabsTrigger value="signin" className="data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-full">
                     Login
                   </TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                  <TabsTrigger value="signup" className="data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-full">
                     Sign Up
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="signin" className="mt-6">
-                  <form onSubmit={handleSignIn} className="space-y-4">
+                  <form onSubmit={handleSignIn} className="space-y-5">
                     <div className="space-y-2">
-                      <Label htmlFor="signin-email" className="text-gray-700">Email</Label>
-                      <Input id="signin-email" type="email" placeholder="Enter your email" value={formData.email} onChange={e => handleInputChange("email", e.target.value)} className="bg-gray-50 border-gray-200 focus:border-red-500 focus:ring-red-500" required />
+                      <Input 
+                        id="signin-email" 
+                        type="email" 
+                        placeholder="Username" 
+                        value={formData.email} 
+                        onChange={e => handleInputChange("email", e.target.value)} 
+                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
+                        required 
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signin-password" className="text-gray-700">Password</Label>
-                      <Input id="signin-password" type="password" placeholder="Enter your password" value={formData.password} onChange={e => handleInputChange("password", e.target.value)} className="bg-gray-50 border-gray-200 focus:border-red-500 focus:ring-red-500" required />
+                      <Input 
+                        id="signin-password" 
+                        type="password" 
+                        placeholder="Password" 
+                        value={formData.password} 
+                        onChange={e => handleInputChange("password", e.target.value)} 
+                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
+                        required 
+                      />
                     </div>
                     <div className="text-right">
                       <a href="#" className="text-sm text-red-600 hover:text-red-700">
                         Forgot Password?
                       </a>
                     </div>
-                    <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={loading}>
+                    <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white rounded-full py-6 text-lg font-semibold" disabled={loading}>
                       {loading ? "Signing in..." : "Login"}
                     </Button>
                   </form>
                 </TabsContent>
 
                 <TabsContent value="signup" className="mt-6">
-                  <form onSubmit={handleSignUp} className="space-y-4">
+                  <form onSubmit={handleSignUp} className="space-y-5">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-name" className="text-gray-700">Full Name</Label>
-                      <Input id="signup-name" placeholder="Enter your full name" value={formData.full_name} onChange={e => handleInputChange("full_name", e.target.value)} className="bg-gray-50 border-gray-200 focus:border-red-500 focus:ring-red-500" required />
+                      <Input 
+                        id="signup-name" 
+                        placeholder="Full Name" 
+                        value={formData.full_name} 
+                        onChange={e => handleInputChange("full_name", e.target.value)} 
+                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
+                        required 
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-email" className="text-gray-700">Email</Label>
-                      <Input id="signup-email" type="email" placeholder="Enter your email" value={formData.email} onChange={e => handleInputChange("email", e.target.value)} className="bg-gray-50 border-gray-200 focus:border-red-500 focus:ring-red-500" required />
+                      <Input 
+                        id="signup-email" 
+                        type="email" 
+                        placeholder="Email" 
+                        value={formData.email} 
+                        onChange={e => handleInputChange("email", e.target.value)} 
+                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
+                        required 
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-phone" className="text-gray-700">Phone Number</Label>
-                      <Input id="signup-phone" type="tel" placeholder="Enter your phone number" value={formData.phone} onChange={e => handleInputChange("phone", e.target.value)} className="bg-gray-50 border-gray-200 focus:border-red-500 focus:ring-red-500" />
+                      <Input 
+                        id="signup-phone" 
+                        type="tel" 
+                        placeholder="Phone Number" 
+                        value={formData.phone} 
+                        onChange={e => handleInputChange("phone", e.target.value)} 
+                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password" className="text-gray-700">Password</Label>
-                      <Input id="signup-password" type="password" placeholder="Create a password" value={formData.password} onChange={e => handleInputChange("password", e.target.value)} className="bg-gray-50 border-gray-200 focus:border-red-500 focus:ring-red-500" required />
+                      <Input 
+                        id="signup-password" 
+                        type="password" 
+                        placeholder="Password" 
+                        value={formData.password} 
+                        onChange={e => handleInputChange("password", e.target.value)} 
+                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
+                        required 
+                      />
                     </div>
-                    <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={loading}>
+                    <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white rounded-full py-6 text-lg font-semibold" disabled={loading}>
                       {loading ? "Creating Account..." : "Sign Up"}
                     </Button>
-                    <p className="text-xs text-gray-600 text-center">
+                    <p className="text-xs text-gray-500 text-center">
                       *Sign up is only available for customers. Employee accounts are managed internally.
                     </p>
                   </form>
@@ -217,9 +270,9 @@ const Auth = () => {
             </Card>
 
             <div className="text-center">
-              <p className="text-gray-400 text-sm">OR</p>
-              <div className="flex space-x-4 mt-4">
-                <Button variant="outline" className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50">
+              <p className="text-gray-400 text-sm mb-4">OR</p>
+              <div className="flex space-x-3">
+                <Button variant="outline" className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-full py-3">
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                     <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -228,7 +281,7 @@ const Auth = () => {
                   </svg>
                   Google
                 </Button>
-                <Button variant="outline" className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50">
+                <Button variant="outline" className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-full py-3">
                   <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
@@ -239,7 +292,7 @@ const Auth = () => {
 
             <div className="text-center">
               <p className="text-gray-600 text-sm">
-                Don't have an account? <span className="text-red-600 cursor-pointer">Sign Up</span>
+                Don't have an account? <span className="text-red-600 cursor-pointer font-medium">Sign Up</span>
               </p>
             </div>
           </div>
