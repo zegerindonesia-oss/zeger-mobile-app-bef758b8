@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   FileText, 
   Camera, 
@@ -55,6 +56,7 @@ interface DailyReport {
 }
 
 export const SalesReporting = ({ role, userId, branchId }: SalesReportingProps) => {
+  const [filterPeriod, setFilterPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
 const [dailyReport, setDailyReport] = useState<DailyReport>({
   report_date: new Date().toISOString().split('T')[0],
@@ -243,12 +245,34 @@ setDailyReport({
   if (role === 'rider') {
     return (
       <div className="space-y-6">
+        {/* Filter Period */}
+        <Card className="dashboard-card">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Laporan Penjualan
+              </div>
+              <Select value={filterPeriod} onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setFilterPeriod(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Harian</SelectItem>
+                  <SelectItem value="weekly">Mingguan</SelectItem>
+                  <SelectItem value="monthly">Bulanan</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardTitle>
+          </CardHeader>
+        </Card>
+
         {/* Sales Summary */}
         <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Laporan Penjualan Harian
+              Resume Penjualan {filterPeriod === 'daily' ? 'Harian' : filterPeriod === 'weekly' ? 'Mingguan' : 'Bulanan'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

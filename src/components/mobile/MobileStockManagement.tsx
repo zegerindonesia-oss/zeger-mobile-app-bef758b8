@@ -108,23 +108,57 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
         return;
       }
 
-      // Choose photo source: camera atau galeri
-      const useCamera = window.confirm('Pilih sumber foto:\nOK = Kamera, Cancel = Galeri');
-      const photoInput = document.createElement('input');
-      photoInput.type = 'file';
-      photoInput.accept = 'image/*';
-      if (useCamera) {
-        // @ts-ignore - hint kamera pada perangkat yang mendukung
-        photoInput.capture = 'environment';
-      }
-      
-      const photo = await new Promise<File | null>((resolve) => {
-        photoInput.onchange = (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          resolve(file || null);
-        };
-        photoInput.click();
-      });
+      // Improved camera/gallery functionality with native mobile support
+      const showImageSourceModal = () => {
+        return new Promise<File | null>((resolve) => {
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          const isAndroid = /Android/.test(navigator.userAgent);
+          
+          if (isIOS || isAndroid) {
+            // On mobile devices, show action sheet style selection
+            const action = window.confirm('Pilih sumber foto:\nOK = Kamera, Cancel = Galeri');
+            
+            const photoInput = document.createElement('input');
+            photoInput.type = 'file';
+            photoInput.accept = 'image/*';
+            
+            if (action) {
+              // Camera with proper mobile attributes
+              photoInput.setAttribute('capture', 'environment');
+              photoInput.setAttribute('multiple', 'false');
+            }
+            
+            photoInput.onchange = (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              resolve(file || null);
+            };
+            
+            // Handle user cancellation
+            const originalFocus = document.activeElement;
+            photoInput.onclick = () => {
+              setTimeout(() => {
+                if (document.activeElement === originalFocus) {
+                  resolve(null);
+                }
+              }, 1000);
+            };
+            
+            photoInput.click();
+          } else {
+            // Desktop fallback - simple file picker
+            const photoInput = document.createElement('input');
+            photoInput.type = 'file';
+            photoInput.accept = 'image/*';
+            photoInput.onchange = (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              resolve(file || null);
+            };
+            photoInput.click();
+          }
+        });
+      };
+
+      const photo = await showImageSourceModal();
 
       if (!photo) {
         toast.error("Foto wajib untuk pengembalian stok");

@@ -215,9 +215,7 @@ export const ModernSidebar = ({ userRole, isOpen, onToggle }: ModernSidebarProps
         <div className="p-4 border-b border-primary-light/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-primary font-bold text-sm">gk</span>
-              </div>
+              <ZegerLogo size="sm" className="w-8 h-8" />
               {isOpen && (
                 <div>
                   <h2 className="font-semibold text-sm">Zeger</h2>

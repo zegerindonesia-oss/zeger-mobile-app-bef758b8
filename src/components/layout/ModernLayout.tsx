@@ -81,13 +81,15 @@ export const ModernLayout = ({ children }: ModernLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
-      <ModernSidebar 
-        userRole={profile.role} 
-        isOpen={sidebarOpen} 
-        onToggle={toggleSidebar} 
-      />
+      <div className="fixed left-0 top-0 h-full z-50">
+        <ModernSidebar 
+          userRole={profile.role} 
+          isOpen={sidebarOpen} 
+          onToggle={toggleSidebar} 
+        />
+      </div>
       
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:ml-0' : 'lg:ml-0'}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <ModernHeader 
           profile={profile}
           branch={branch}

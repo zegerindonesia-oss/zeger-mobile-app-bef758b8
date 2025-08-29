@@ -422,7 +422,9 @@ export const ModernBranchDashboard = () => {
                   <div className={`p-3 rounded-lg bg-gray-100 ${stat.color}`}>
                     <Icon className="h-6 w-6" />
                   </div>
-                  <Badge variant={stat.trend === "up" ? "default" : "destructive"} className="flex items-center gap-1">
+                  <Badge variant={stat.trend === "up" ? "default" : "destructive"} className={`flex items-center gap-1 ${
+                    stat.trend === "up" ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200"
+                  }`}>
                     {stat.trend === "up" ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                     {stat.change}
                   </Badge>

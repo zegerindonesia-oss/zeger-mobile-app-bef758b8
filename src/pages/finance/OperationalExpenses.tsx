@@ -24,15 +24,45 @@ export default function OperationalExpenses() {
   const [items, setItems] = useState<Expense[]>([]);
 
   const load = async () => {
+    // Load operational_expenses only for now to avoid relationship errors
     const { data, error } = await supabase
       .from('operational_expenses')
-      .select('id, expense_category, amount, description, expense_date')
+      .select('id, expense_category, amount, description, expense_date, created_by')
       .order('created_at', { ascending: false })
       .limit(20);
+
     if (error) {
       toast.error(error.message);
     }
-    setItems((data || []) as Expense[]);
+
+    // Also load rider expenses separately
+    const { data: riderExpenses } = await supabase
+      .from('daily_operational_expenses')
+      .select('id, expense_type, amount, description, expense_date, rider_id')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    // Combine the data
+    const combinedExpenses = [
+      ...(data || []).map(item => ({
+        id: item.id,
+        expense_category: item.expense_category,
+        amount: item.amount,
+        description: item.description,
+        expense_date: item.expense_date,
+        source: 'operational'
+      })),
+      ...(riderExpenses || []).map(item => ({
+        id: item.id,
+        expense_category: item.expense_type,
+        amount: item.amount,
+        description: `${item.description} (Rider Expense)`,
+        expense_date: item.expense_date,
+        source: 'rider'
+      }))
+    ].sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime());
+
+    setItems(combinedExpenses as Expense[]);
   };
 
   useEffect(() => { load(); }, []);
@@ -93,13 +123,18 @@ export default function OperationalExpenses() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Riwayat</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Riwayat (Termasuk Beban Rider)</CardTitle></CardHeader>
         <CardContent>
           <div className="divide-y">
             {items.map(it => (
               <div key={it.id} className="py-3 flex items-center justify-between">
                 <div>
-                  <div className="font-medium capitalize">{it.expense_category}</div>
+                  <div className="font-medium capitalize flex items-center gap-2">
+                    {it.expense_category}
+                    {(it as any).source === 'rider' && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Rider</span>
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">{it.description || '-'}</div>
                 </div>
                 <div className="text-right">
