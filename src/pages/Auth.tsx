@@ -165,7 +165,7 @@ const Auth = () => {
           <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-              <p className="text-gray-600">Let's get started with your 30 days free trial.</p>
+              <p className="text-gray-600">Let's Get Your Happiness Coffee</p>
             </div>
 
             <Card className="border-0 shadow-none bg-transparent">
