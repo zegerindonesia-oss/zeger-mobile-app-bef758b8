@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -66,50 +67,7 @@ export const Header = ({ onToggleSidebar, userProfile }: HeaderProps) => {
 
         <div className="flex items-center gap-4">
           {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5" />
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                >
-                  3
-                </Badge>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifikasi</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <div className="space-y-1">
-                  <p className="font-medium">Stok hampir habis</p>
-                  <p className="text-sm text-muted-foreground">
-                    Americano tinggal 2 unit di Cabang Jakarta
-                  </p>
-                  <p className="text-xs text-muted-foreground">2 menit yang lalu</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="space-y-1">
-                  <p className="font-medium">Laporan harian menunggu verifikasi</p>
-                  <p className="text-sm text-muted-foreground">
-                    Rider Ahmad - Cabang Bandung
-                  </p>
-                  <p className="text-xs text-muted-foreground">15 menit yang lalu</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="space-y-1">
-                  <p className="font-medium">Transaksi baru</p>
-                  <p className="text-sm text-muted-foreground">
-                    Penjualan Rp 145.000 - Rider Budi
-                  </p>
-                  <p className="text-xs text-muted-foreground">30 menit yang lalu</p>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <NotificationSystem />
 
           {/* User Menu */}
           <DropdownMenu>

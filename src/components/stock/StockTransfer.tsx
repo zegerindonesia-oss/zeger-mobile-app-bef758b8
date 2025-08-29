@@ -284,6 +284,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       setSelectedRider("");
       await fetchTransfers();
       await fetchRiderShifts();
+      window.dispatchEvent(new Event('stock-sent')); // Trigger notification
     } catch (error: any) {
       toast.error("Gagal membuat transfer: " + error.message);
     } finally {
@@ -486,15 +487,17 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih Rider" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-background border border-border shadow-lg z-50">
                           {riders.filter(r => r.branch_id === branchId).map((rider) => {
                             const shift = riderShifts[rider.id];
                             const canReceive = canRiderReceiveStock(rider.id);
+                            const isSelected = selectedRider === rider.id;
                             
                             return (
                               <SelectItem 
                                 key={rider.id} 
                                 value={rider.id}
+                                className={`${isSelected ? 'bg-red-500 text-white' : 'hover:bg-red-50'} cursor-pointer`}
                               >
                                 <div className="flex items-center justify-between w-full">
                                   <span>{rider.full_name}</span>

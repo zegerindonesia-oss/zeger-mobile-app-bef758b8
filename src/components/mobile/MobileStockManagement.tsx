@@ -495,8 +495,37 @@ const MobileStockManagement = () => {
         }
       }
 
+      // AUTO SHIFT IN: Start shift automatically when receiving stock
+      if (userProfile?.id) {
+        // Check if there's already an active shift today
+        const { data: existingShift } = await supabase
+          .from('shift_management')
+          .select('*')
+          .eq('rider_id', userProfile.id)
+          .eq('shift_date', today)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (!existingShift) {
+          // Create new active shift
+          await supabase
+            .from('shift_management')
+            .insert([{
+              rider_id: userProfile.id,
+              branch_id: userProfile.branch_id,
+              shift_date: today,
+              shift_start_time: currentTime,
+              status: 'active'
+            }]);
+          
+          toast.success("Shift otomatis dimulai setelah menerima stok!");
+          fetchShiftData(); // Refresh shift data
+        }
+      }
+
       toast.success('Stok dikonfirmasi diterima dan siap dijual!');
       await fetchStockData();
+      window.dispatchEvent(new Event('stock-received')); // Trigger notification
     } catch (error: any) {
       toast.error('Gagal konfirmasi: ' + error.message);
     } finally {
