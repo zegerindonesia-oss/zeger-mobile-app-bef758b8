@@ -414,7 +414,7 @@ export const ModernBranchDashboard = () => {
           return (
             <Card 
               key={index} 
-              className="dashboard-card hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="dashboard-card hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden stat-card"
               onClick={stat.onClick}
             >
               <CardContent className="p-6">
@@ -475,7 +475,7 @@ export const ModernBranchDashboard = () => {
       {/* Product Performance - Horizontal layout */}
       <div className="col-span-1 lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Sales Report Chart */}
-        <Card className="dashboard-card cursor-pointer" onClick={() => handleCardClick('sales')}>
+        <Card className="stat-card cursor-pointer" onClick={() => handleCardClick('sales')}>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg font-semibold">Sales Report</CardTitle>

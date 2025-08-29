@@ -4,6 +4,20 @@
 
 /* ERP + POS + Mobile Seller Design System - Liquid Glass with Red-White Gradients */
 
+/* Additional utility classes for mobile optimization */
+.mobile-optimized {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  transform: translateZ(0);
+  will-change: scroll-position;
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+
 @layer base {
   :root {
     /* Core Brand Colors - Red Dominance with White Accents */

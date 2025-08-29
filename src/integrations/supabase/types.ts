@@ -522,6 +522,78 @@ export type Database = {
           },
         ]
       }
+      production_batches: {
+        Row: {
+          batch_number: number
+          branch_id: string
+          created_at: string
+          created_by: string
+          id: string
+          produced_at: string
+        }
+        Insert: {
+          batch_number: number
+          branch_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          produced_at?: string
+        }
+        Update: {
+          batch_number?: number
+          branch_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          produced_at?: string
+        }
+        Relationships: []
+      }
+      production_items: {
+        Row: {
+          batch_id: string
+          cost_per_unit: number | null
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          total_cost: number | null
+        }
+        Insert: {
+          batch_id: string
+          cost_per_unit?: number | null
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          total_cost?: number | null
+        }
+        Update: {
+          batch_id?: string
+          cost_per_unit?: number | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          total_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "production_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
