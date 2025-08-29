@@ -296,6 +296,7 @@ const MobileStockManagement = () => {
   const [loading, setLoading] = useState(false);
   const [activeShift, setActiveShift] = useState<any>(null);
   const [tab, setTab] = useState<'receive' | 'return' | 'history' | 'shift'>('receive');
+  const [cashDepositPhoto, setCashDepositPhoto] = useState<File | undefined>(undefined);
   const [shiftSummary, setShiftSummary] = useState<ShiftSummary>({
     totalSales: 0,
     cashSales: 0,
@@ -1049,6 +1050,52 @@ const MobileStockManagement = () => {
                                 {formatCurrency(Math.max(0, shiftSummary.cashSales - operationalExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || '0'), 0)))}
                               </span>
                             </div>
+                          </div>
+                          
+                          {/* Optional Cash Deposit Photo */}
+                          <div className="mt-3 space-y-2">
+                            <Label className="text-sm font-medium text-green-800">
+                              Foto Setoran Tunai (Opsional)
+                            </Label>
+                            <div className="flex gap-2">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                style={{ display: 'none' }}
+                                id="cash-deposit-photo"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setCashDepositPhoto(file);
+                                    toast.success("Foto setoran berhasil diupload!");
+                                  }
+                                }}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => document.getElementById('cash-deposit-photo')?.click()}
+                                className="flex-1"
+                              >
+                                <Camera className="h-4 w-4 mr-2" />
+                                {cashDepositPhoto ? 'Ganti Foto' : 'Ambil Foto'}
+                              </Button>
+                              {cashDepositPhoto && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => setCashDepositPhoto(undefined)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                            {cashDepositPhoto && (
+                              <p className="text-xs text-green-700">
+                                ✓ Foto siap: {cashDepositPhoto.name}
+                              </p>
+                            )}
                           </div>
                         </div>
 

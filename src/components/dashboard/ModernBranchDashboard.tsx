@@ -18,7 +18,7 @@ import {
   ChefHat,
   Building
 } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -55,7 +55,8 @@ interface Rider {
 const COLORS = ['#DC2626', '#EF4444', '#F87171', '#FCA5A5', '#FECACA'];
 
 export const ModernBranchDashboard = () => {
-  const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [salesFilter, setSalesFilter] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [riders, setRiders] = useState<Rider[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     totalSales: 0,
@@ -69,24 +70,28 @@ export const ModernBranchDashboard = () => {
   });
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [productSales, setProductSales] = useState<ProductSales[]>([]);
+  const [riderExpenses, setRiderExpenses] = useState<{rider_name: string, total_expenses: number}[]>([]);
+  const [riderStockData, setRiderStockData] = useState<{rider_name: string, initial_stock: number, sold: number, remaining: number}[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
-  }, [selectedUser]);
+  }, [selectedUser, salesFilter]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
       await Promise.all([
         fetchRiders(),
-        fetchStats(),
+        fetchStats(), 
         fetchSalesChart(),
-        fetchProductSales()
+        fetchProductSales(),
+        fetchRiderExpenses(),
+        fetchRiderStockData()
       ]);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -255,6 +260,101 @@ export const ModernBranchDashboard = () => {
         { name: 'Others', value: 5, color: COLORS[4], quantity: 12, revenue: 300000 }
       ];
       setProductSales(mockProductSales);
+    }
+  };
+
+  const fetchRiderExpenses = async () => {
+    try {
+      const { data: userProfile } = await supabase.auth.getUser();
+      if (!userProfile.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('branch_id')
+        .eq('user_id', userProfile.user.id)
+        .single();
+
+      if (!profile) return;
+
+      const { data: expenses, error } = await supabase
+        .from('daily_operational_expenses')
+        .select(`
+          amount,
+          rider_id,
+          profiles!inner(full_name, branch_id)
+        `)
+        .eq('profiles.branch_id', profile.branch_id)
+        .gte('expense_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // Last 30 days
+
+      if (error) throw error;
+
+      const riderExpenseMap: Record<string, number> = {};
+      expenses?.forEach((expense: any) => {
+        const riderName = expense.profiles.full_name;
+        riderExpenseMap[riderName] = (riderExpenseMap[riderName] || 0) + Number(expense.amount);
+      });
+
+      const riderExpensesList = Object.entries(riderExpenseMap).map(([rider_name, total_expenses]) => ({
+        rider_name,
+        total_expenses
+      }));
+
+      setRiderExpenses(riderExpensesList);
+    } catch (error) {
+      console.error('Error fetching rider expenses:', error);
+    }
+  };
+
+  const fetchRiderStockData = async () => {
+    try {
+      const { data: userProfile } = await supabase.auth.getUser();
+      if (!userProfile.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('branch_id')
+        .eq('user_id', userProfile.user.id)
+        .single();
+
+      if (!profile) return;
+
+      // Get today's riders with their initial stock and sales
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data: riderData, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          inventory(stock_quantity),
+          transactions!rider_id(final_amount)
+        `)
+        .eq('branch_id', profile.branch_id)
+        .eq('role', 'rider')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      const riderStockList = riderData?.map((rider: any) => {
+        const totalInitialStock = rider.inventory?.reduce((sum: number, inv: any) => sum + inv.stock_quantity, 0) || 0;
+        const totalSalesValue = rider.transactions?.reduce((sum: number, tx: any) => sum + Number(tx.final_amount), 0) || 0;
+        
+        // Rough estimation: assuming average item price for stock calculation
+        const estimatedItemPrice = 15000; // Average price assumption
+        const estimatedSoldItems = Math.floor(totalSalesValue / estimatedItemPrice);
+        const remainingStock = Math.max(0, totalInitialStock - estimatedSoldItems);
+        
+        return {
+          rider_name: rider.full_name,
+          initial_stock: totalInitialStock,
+          sold: estimatedSoldItems,
+          remaining: remainingStock
+        };
+      }) || [];
+
+      setRiderStockData(riderStockList);
+    } catch (error) {
+      console.error('Error fetching rider stock data:', error);
     }
   };
 
@@ -440,15 +540,38 @@ export const ModernBranchDashboard = () => {
         })}
       </div>
 
-      {/* Sales Report - Made larger */}
+      {/* Sales Report with Filters */}
       <Card className="col-span-1 lg:col-span-2">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Sales Report</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={salesFilter === 'daily' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSalesFilter('daily')}
+            >
+              Daily
+            </Button>
+            <Button
+              variant={salesFilter === 'weekly' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSalesFilter('weekly')}
+            >
+              Weekly
+            </Button>
+            <Button
+              variant={salesFilter === 'monthly' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSalesFilter('monthly')}
+            >
+              Monthly
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
+              <ComposedChart data={salesData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -460,14 +583,45 @@ export const ModernBranchDashboard = () => {
                   fill="url(#salesGradient)" 
                   strokeWidth={2}
                 />
+                <Bar dataKey="sales" fill="#e11d48" fillOpacity={0.4} />
                 <defs>
                   <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#e11d48" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#e11d48" stopOpacity={0.05}/>
                   </linearGradient>
                 </defs>
-              </AreaChart>
+              </ComposedChart>
             </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Operational Expenses by Rider */}
+      <Card className="dashboard-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingDown className="w-5 h-5 text-red-600" />
+            Total Beban Operasional (30 Hari)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {riderExpenses.map((expense, index) => (
+              <div key={expense.rider_name} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    {index + 1}
+                  </span>
+                  <span className="font-medium">{expense.rider_name}</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-red-600">{formatCurrency(expense.total_expenses)}</div>
+                </div>
+              </div>
+            ))}
+            {riderExpenses.length === 0 && (
+              <p className="text-center text-muted-foreground py-4">Belum ada data beban operasional</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -590,12 +744,12 @@ export const ModernBranchDashboard = () => {
         </Card>
       </div>
 
-      {/* Live Rider Updates */}
+      {/* Live Rider Status with Stock Performance */}
       <Card className="dashboard-card">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg font-semibold">Live Rider Status</CardTitle>
-            <p className="text-sm text-muted-foreground">Real-time mobile seller positions</p>
+            <p className="text-sm text-muted-foreground">Sales vs Stock Performance</p>
           </div>
           <Button onClick={() => navigate('/riders')} className="bg-primary hover:bg-primary-dark">
             View All Riders
@@ -603,15 +757,36 @@ export const ModernBranchDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {riders.slice(0, 6).map((rider) => (
-              <div key={rider.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <div>
-                  <p className="font-medium text-sm">{rider.full_name}</p>
-                  <p className="text-xs text-gray-500">Online - Last transaction: 5 min ago</p>
+            {riderStockData.slice(0, 6).map((rider) => {
+              const stockPercentage = rider.initial_stock > 0 ? Math.round((rider.remaining / rider.initial_stock) * 100) : 0;
+              const soldPercentage = rider.initial_stock > 0 ? Math.round((rider.sold / rider.initial_stock) * 100) : 0;
+              
+              return (
+                <div key={rider.rider_name} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${stockPercentage > 50 ? 'bg-green-500' : stockPercentage > 20 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                    <p className="font-medium text-sm">{rider.rider_name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-600">
+                      Stok: {rider.remaining}/{rider.initial_stock} ({stockPercentage}%)
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Terjual: {soldPercentage}% ({rider.sold} item)
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${stockPercentage > 50 ? 'bg-green-500' : stockPercentage > 20 ? 'bg-yellow-500' : 'bg-red-500'}`} 
+                        style={{ width: `${stockPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            {riderStockData.length === 0 && (
+              <p className="text-center text-muted-foreground py-4 col-span-full">Belum ada data rider</p>
+            )}
           </div>
         </CardContent>
       </Card>

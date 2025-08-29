@@ -14,7 +14,20 @@ interface HubInventory { product_id: string; stock_quantity: number; product?: P
 interface RiderInventory extends HubInventory { rider_id: string }
 interface ReturnMovement { id: string; rider_id: string; product_id: string; quantity: number; status: string; verification_photo_url?: string; created_at: string; product?: Product }
 interface Rider { id: string; full_name: string }
-interface Shift { id: string; rider_id: string; shift_start_time: string | null; shift_end_time: string | null; report_submitted: boolean; report_verified: boolean }
+interface Shift { 
+  id: string; 
+  rider_id: string; 
+  shift_date: string;
+  shift_number: number;
+  shift_start_time: string | null; 
+  shift_end_time: string | null; 
+  total_sales: number;
+  cash_collected: number;
+  total_transactions: number;
+  report_submitted: boolean; 
+  report_verified: boolean;
+  notes?: string;
+}
 
 export default function Inventory() {
   const { userProfile } = useAuth();
@@ -78,7 +91,7 @@ export default function Inventory() {
       const today = new Date().toISOString().split('T')[0];
       const { data: sh } = await supabase
         .from('shift_management')
-        .select('id, rider_id, shift_start_time, shift_end_time, report_submitted, report_verified')
+        .select('id, rider_id, shift_date, shift_number, shift_start_time, shift_end_time, total_sales, cash_collected, total_transactions, report_submitted, report_verified, notes')
         .eq('branch_id', userProfile!.branch_id)
         .eq('shift_date', today)
         .eq('report_submitted', true)
@@ -307,18 +320,62 @@ export default function Inventory() {
                 <CardTitle>Penerimaan Setoran Tunai</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {shifts.map(s => (
-                  <div key={s.id} className="p-3 border rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Rider: {riders[s.rider_id]?.full_name || s.rider_id}</span>
-                      <Badge variant="secondary">Butuh verifikasi</Badge>
+                {shifts.map(s => {
+                  const riderCashPhoto = s.notes?.includes('Cash deposit photo:') ? s.notes.split('Cash deposit photo: ')[1] : null;
+                  return (
+                    <div key={s.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">Rider: {riders[s.rider_id]?.full_name || s.rider_id}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(s.shift_date).toLocaleDateString('id-ID')} • Shift {s.shift_number}
+                          </p>
+                        </div>
+                        <Badge variant="secondary">Butuh verifikasi</Badge>
+                      </div>
+                      
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="details">
+                          <AccordionTrigger className="text-sm">Lihat Rincian</AccordionTrigger>
+                          <AccordionContent className="space-y-2">
+                            <div className="text-sm space-y-1">
+                              <div className="flex justify-between">
+                                <span>Total Penjualan:</span>
+                                <span className="font-medium">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(s.total_sales)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Total Transaksi:</span>
+                                <span className="font-medium">{s.total_transactions}</span>
+                              </div>
+                              <div className="flex justify-between border-t pt-1">
+                                <span className="font-medium">Total Setoran Tunai:</span>
+                                <span className="font-semibold text-green-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(s.cash_collected)}</span>
+                              </div>
+                            </div>
+                            {riderCashPhoto && (
+                              <div className="mt-2">
+                                <p className="text-xs font-medium mb-1">Foto Setoran dari Rider:</p>
+                                <img src={riderCashPhoto} alt="Foto setoran tunai" className="w-full max-w-xs rounded border" />
+                              </div>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                      
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="file" 
+                          accept="image/*" 
+                          placeholder="Foto konfirmasi (opsional)"
+                          onChange={(e) => setDepositPhotos(prev => ({ ...prev, [s.id]: e.target.files?.[0] }))} 
+                        />
+                        <Button size="sm" disabled={loading} onClick={() => approveCashDeposit(s)}>
+                          Terima
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Input type="file" accept="image/*" onChange={(e) => setDepositPhotos(prev => ({ ...prev, [s.id]: e.target.files?.[0] }))} />
-                      <Button size="sm" disabled={loading} onClick={() => approveCashDeposit(s)}>Terima</Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {shifts.length === 0 && <p className="text-sm text-muted-foreground">Tidak ada shift menunggu verifikasi</p>}
               </CardContent>
             </Card>
