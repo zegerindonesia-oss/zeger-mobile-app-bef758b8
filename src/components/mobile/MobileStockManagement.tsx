@@ -178,11 +178,20 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
       // Beritahu parent untuk refresh status persediaan
       window.dispatchEvent(new Event('inventory-updated'));
       
-      // Auto-navigate to shift report after stock return
-      setTimeout(() => {
-        onGoToShift();
-        toast.info("Silakan lengkapi laporan shift");
-      }, 1000);
+      // Check if all stock has been returned
+      const { data: remainingAfterReturn } = await supabase
+        .from('inventory')
+        .select('id')
+        .eq('rider_id', userProfile.id)
+        .gt('stock_quantity', 0);
+
+      // Auto-navigate to shift report only if ALL stock is returned
+      if (!remainingAfterReturn || remainingAfterReturn.length === 0) {
+        setTimeout(() => {
+          onGoToShift();
+          toast.info("Semua stok telah dikembalikan. Silakan lengkapi laporan shift");
+        }, 1000);
+      }
     } catch (error: any) {
       toast.error("Gagal mengembalikan stok: " + error.message);
     } finally {
@@ -693,33 +702,39 @@ const MobileStockManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white p-4">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5" />
+            <h1 className="text-lg font-semibold">Kelola Stok & Shift</h1>
+          </div>
+          
+          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 text-xs">
+              <TabsTrigger value="receive">
+                Terima
+                {pendingStock.length > 0 && (
+                  <Badge variant="destructive" className="ml-1 text-xs">
+                    {pendingStock.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="return">Kembali</TabsTrigger>
+              <TabsTrigger value="history">Riwayat</TabsTrigger>
+              <TabsTrigger value="shift">
+                Shift
+                {activeShift && !activeShift.report_submitted && (
+                  <Badge variant="destructive" className="ml-1 text-xs">!</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Tab Content */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Kelola Stok & Shift
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-4 text-xs">
-                <TabsTrigger value="receive">
-                  Terima
-                  {pendingStock.length > 0 && (
-                    <Badge variant="destructive" className="ml-1 text-xs">
-                      {pendingStock.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="return">Kembali</TabsTrigger>
-                <TabsTrigger value="history">Riwayat</TabsTrigger>
-                <TabsTrigger value="shift">
-                  Shift
-                  {activeShift && !activeShift.report_submitted && (
-                    <Badge variant="destructive" className="ml-1 text-xs">!</Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
 
               {/* Stock Receive Tab */}
               <TabsContent value="receive" className="space-y-4">
@@ -1042,9 +1057,43 @@ const MobileStockManagement = () => {
                 ) : (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-green-700 mb-2">Laporan Shift Terkirim</h3>
-                    <p className="text-muted-foreground">
-                      Laporan shift hari ini sudah berhasil dikirim dan menunggu verifikasi branch
+                    <h3 className="text-lg font-semibold text-green-700 mb-2">Resume Shift</h3>
+                    <div className="bg-green-50 p-4 rounded-lg text-left max-w-md mx-auto">
+                      <p className="text-sm font-medium text-green-800 mb-2">
+                        Shift #{activeShift.shift_number} - {new Date(activeShift.shift_date).toLocaleDateString('id-ID')}
+                      </p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Waktu Mulai:</span>
+                          <span className="font-semibold">
+                            {activeShift.shift_start_time ? 
+                              new Date(activeShift.shift_start_time).toLocaleTimeString('id-ID', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              }) : 
+                              'N/A'
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Waktu Selesai:</span>
+                          <span className="font-semibold">
+                            {activeShift.shift_end_time ? 
+                              new Date(activeShift.shift_end_time).toLocaleTimeString('id-ID', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              }) : 
+                              'N/A'
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between"><span>Total Transaksi:</span><span className="font-semibold">{activeShift.total_transactions || 0}</span></div>
+                        <div className="flex justify-between border-t pt-1"><span className="font-medium">Total Penjualan:</span><span className="font-semibold text-green-600">{formatCurrency(activeShift.total_sales || 0)}</span></div>
+                        <div className="flex justify-between"><span>Kas Disetor:</span><span className="font-semibold">{formatCurrency(activeShift.cash_collected || 0)}</span></div>
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mt-4">
+                      Laporan shift sudah berhasil dikirim dan menunggu verifikasi branch
                     </p>
                   </div>
                 )}

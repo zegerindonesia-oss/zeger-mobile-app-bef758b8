@@ -8,9 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
-import iphoneMockup from "@/assets/iphone-mockup.png";
-import motorcycleMockup from "@/assets/motorcycle-mockup.png";
-import riderMockup from "@/assets/rider-mockup.png";
+import { useIsMobile } from "@/hooks/use-mobile";
 const cleanupAuthState = () => {
   try {
     Object.keys(localStorage).forEach(key => {
@@ -30,6 +28,7 @@ const cleanupAuthState = () => {
   }
 };
 const Auth = () => {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -125,46 +124,42 @@ const Auth = () => {
     }
   };
   return <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-500 to-red-400 relative overflow-hidden">
-      <div className="flex min-h-screen items-center justify-center relative">
-        {/* Left Side - Brand Content */}
-        <div className="flex-1 flex flex-col justify-center items-start px-8 lg:px-16 text-white max-w-2xl">
-          <div className="space-y-8">
-            <div className="space-y-6">
-              <div className="flex justify-start">
-                <ZegerLogo size="lg" className="text-white" />
+      <div className={`flex min-h-screen items-center justify-center relative ${isMobile ? 'p-4' : ''}`}>
+        {/* Left Side - Brand Content - Hidden on mobile */}
+        {!isMobile && (
+          <div className="flex-1 flex flex-col justify-center items-start px-8 lg:px-16 text-white max-w-2xl">
+            <div className="space-y-8">
+              <div className="space-y-6">
+                <div className="flex justify-start">
+                  <ZegerLogo size="lg" className="text-white" />
+                </div>
+                <div>
+                  <h1 className="text-6xl font-bold leading-tight mb-4">
+                    Hey, Hello!
+                  </h1>
+                  <p className="text-xl font-medium mb-2">
+                    Enjoy A Happiness Coffee From Everywhere, Anywhere Just By Click
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-6xl font-bold leading-tight mb-4">
-                  Hey, Hello!
-                </h1>
-                <p className="text-xl font-medium mb-2">
-                  Enjoy A Happiness Coffee From Everywhere, Anywhere Just By Click
-                </p>
-              </div>
+              
+              <p className="text-lg text-white/80 leading-relaxed max-w-md">
+                We deliver a happiness coffee fresh from original Indonesian coffee without any further requirements
+              </p>
             </div>
-            
-            <p className="text-lg text-white/80 leading-relaxed max-w-md">
-              We deliver a happiness coffee fresh from original Indonesian coffee without any further requirements
-            </p>
-
-            {/* 3D Mockups */}
-            <div className="flex space-x-4 mt-8">
-              <img src={iphoneMockup} alt="iPhone Mockup" className="w-20 h-20 object-contain" />
-              <img src={motorcycleMockup} alt="Motorcycle Mockup" className="w-20 h-20 object-contain" />
-              <img src={riderMockup} alt="Rider Mockup" className="w-20 h-20 object-contain" />
-            </div>
-
-            {/* Buka Situs Button */}
-            <Button variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20 rounded-full px-6 py-3 mt-8">
-              <span className="mr-2">↗</span>
-              Buka situs
-            </Button>
           </div>
-        </div>
+        )}
 
         {/* Center - Login Form */}
-        <div className="w-full max-w-lg mx-8">
+        <div className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-lg mx-8'}`}>
           <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mx-auto">
+            {/* Mobile logo */}
+            {isMobile && (
+              <div className="text-center mb-6">
+                <ZegerLogo size="md" className="text-red-600 mx-auto" />
+              </div>
+            )}
+            
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
               <p className="text-gray-600">Let's Get Your Happiness Coffee</p>
