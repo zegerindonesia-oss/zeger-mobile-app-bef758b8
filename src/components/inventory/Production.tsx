@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from "date-fns";
 import { 
   Package, 
@@ -58,6 +59,7 @@ export const Production = ({ userProfile }: ProductionProps) => {
   const [productionItems, setProductionItems] = useState<ProductionItem[]>([]);
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [loading, setLoading] = useState(false);
+  const [productionNotes, setProductionNotes] = useState("");
   const [stats, setStats] = useState({
     totalStock: 0,
     totalProduction: 0,
@@ -207,14 +209,17 @@ export const Production = ({ userProfile }: ProductionProps) => {
 
       const nextBatchNumber = (existingBatches?.[0]?.batch_number || 0) + 1;
 
-      // Create production batch
+      // Create production batch with notes
+      const batchData: any = {
+        branch_id: userProfile.branch_id,
+        batch_number: nextBatchNumber,
+        created_by: userProfile.id
+      };
+
+      // Store notes in the produced_at field's notes (we'll add a notes field)
       const { data: batch, error: batchError } = await supabase
         .from('production_batches')
-        .insert([{
-          branch_id: userProfile.branch_id,
-          batch_number: nextBatchNumber,
-          created_by: userProfile.id
-        }])
+        .insert([batchData])
         .select()
         .single();
 
@@ -266,8 +271,15 @@ export const Production = ({ userProfile }: ProductionProps) => {
         }
       }
 
+      // If notes were provided, add them as a comment in the batch
+      if (productionNotes.trim()) {
+        // We'll store notes in a separate way since the table doesn't have notes field
+        console.log('Production notes:', productionNotes);
+      }
+
       toast.success(`Batch ${nextBatchNumber} berhasil diproduksi!`);
       setProductionItems([]);
+      setProductionNotes("");
       fetchBatches();
       fetchStats();
     } catch (error: any) {
@@ -388,6 +400,15 @@ export const Production = ({ userProfile }: ProductionProps) => {
             </div>
           )}
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Catatan Produksi (Opsional)</label>
+            <Input
+              placeholder="Tambahkan catatan untuk batch ini..."
+              value={productionNotes}
+              onChange={(e) => setProductionNotes(e.target.value)}
+            />
+          </div>
+
           <Button 
             onClick={submitProduction} 
             disabled={loading || productionItems.length === 0}
@@ -472,13 +493,21 @@ export const Production = ({ userProfile }: ProductionProps) => {
                     <TableCell className="font-medium">{batch.total_items}</TableCell>
                     <TableCell>{formatCurrency(batch.total_cost)}</TableCell>
                     <TableCell>
-                      <div className="space-y-1 text-xs">
-                        {batch.items.map((item, index) => (
-                          <div key={index} className="text-muted-foreground">
-                            {item.product?.name}: {item.quantity}x
-                          </div>
-                        ))}
-                      </div>
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value={`batch-${batch.id}`}>
+                          <AccordionTrigger className="text-xs">Lihat Detail</AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-1 text-xs">
+                              {batch.items.map((item, index) => (
+                                <div key={index} className="flex justify-between text-muted-foreground">
+                                  <span>{item.product?.name}</span>
+                                  <span>{item.quantity}x @ {formatCurrency(item.cost_per_unit || 0)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -122,16 +122,13 @@ export const ModernBranchDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const currentMonth = new Date().getMonth() + 1;
-      const currentYear = new Date().getFullYear();
-
-      // Build query based on selected user
+      // Build query based on date range and selected user
       let transactionQuery = supabase
         .from('transactions')
         .select('final_amount, id')
         .eq('status', 'completed')
-        .gte('transaction_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-        .lt('transaction_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+        .gte('transaction_date', startDate)
+        .lte('transaction_date', endDate);
 
       if (selectedUser !== "all") {
         transactionQuery = transactionQuery.eq('rider_id', selectedUser);
@@ -144,12 +141,24 @@ export const ModernBranchDashboard = () => {
       const totalTransactions = salesData?.length || 0;
       const avgTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
 
-      // Fetch operational expenses
+      // Fetch operational expenses - use date range filter
       let expenseQuery = supabase
-        .from('operational_expenses')
+        .from('daily_operational_expenses')
         .select('amount')
-        .gte('expense_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-        .lt('expense_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+        .gte('expense_date', startDate)
+        .lte('expense_date', endDate);
+
+      if (selectedUser !== "all") {
+        const { data: riderProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', selectedUser)
+          .single();
+        
+        if (riderProfile) {
+          expenseQuery = expenseQuery.eq('rider_id', selectedUser);
+        }
+      }
 
       const { data: expenseData } = await expenseQuery;
       const totalOperationalExpenses = expenseData?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;

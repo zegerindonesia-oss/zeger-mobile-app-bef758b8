@@ -219,17 +219,19 @@ export default function Inventory() {
                   <p className="text-sm text-muted-foreground">Total stok</p>
                   <p className="text-2xl font-bold">{hubTotal}</p>
                 </div>
-                <Accordion type="single" collapsible className="w-full">
+                <Accordion type="single" collapsible className="w-full" defaultValue="hub-detail">
                   <AccordionItem value="hub-detail">
                     <AccordionTrigger>Detail Menu</AccordionTrigger>
                     <AccordionContent>
                       <div className="space-y-2">
-                        {hubInventory.map((i, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-sm">
-                            <span>{i.product?.name}</span>
-                            <Badge variant="outline">{i.stock_quantity}</Badge>
-                          </div>
-                        ))}
+                        {[...hubInventory]
+                          .sort((a, b) => b.stock_quantity - a.stock_quantity)
+                          .map((i, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-sm">
+                              <span>{i.product?.name}</span>
+                              <Badge variant="outline">{i.stock_quantity}</Badge>
+                            </div>
+                          ))}
                         {hubInventory.length === 0 && (
                           <p className="text-sm text-muted-foreground">Belum ada stok</p>
                         )}
