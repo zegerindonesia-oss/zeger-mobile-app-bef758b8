@@ -678,6 +678,7 @@ export type Database = {
           cash_collected: number | null
           created_at: string | null
           id: string
+          notes: string | null
           report_submitted: boolean | null
           report_verified: boolean | null
           rider_id: string
@@ -697,6 +698,7 @@ export type Database = {
           cash_collected?: number | null
           created_at?: string | null
           id?: string
+          notes?: string | null
           report_submitted?: boolean | null
           report_verified?: boolean | null
           rider_id: string
@@ -716,6 +718,7 @@ export type Database = {
           cash_collected?: number | null
           created_at?: string | null
           id?: string
+          notes?: string | null
           report_submitted?: boolean | null
           report_verified?: boolean | null
           rider_id?: string

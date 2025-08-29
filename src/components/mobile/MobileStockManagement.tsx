@@ -18,11 +18,13 @@ import {
   Plus,
   Trash2,
   FileText,
-  Tag
+  Tag,
+  X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { Label } from "@/components/ui/label";
 
 interface StockItem {
   id: string;
@@ -652,6 +654,31 @@ const MobileStockManagement = () => {
       // Cash deposit = Cash Sales - Operational Expenses (auto-calculated, non-editable)
       const cashToDeposit = Math.max(0, shiftSummary.cashSales - totalOperationalExpenses);
 
+      // Upload cash deposit photo if provided
+      let cashPhotoUrl: string | undefined;
+      if (cashDepositPhoto) {
+        const ext = cashDepositPhoto.name.split('.').pop();
+        const fileName = `cash-deposit-${activeShift.id}-${Date.now()}.${ext}`;
+        const filePath = `shift-deposits/${userProfile.id}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('payment-proofs')
+          .upload(filePath, cashDepositPhoto, {
+            upsert: true,
+            cacheControl: '3600',
+            contentType: cashDepositPhoto.type
+          });
+
+        if (uploadError) {
+          console.error('Photo upload error:', uploadError);
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('payment-proofs')
+            .getPublicUrl(filePath);
+          cashPhotoUrl = publicUrl;
+        }
+      }
+
       // Save operational expenses to daily_operational_expenses table
       const expenseInserts = operationalExpenses
         .filter(expense => expense.type && expense.amount)
@@ -672,7 +699,7 @@ const MobileStockManagement = () => {
         if (expenseError) throw expenseError;
       }
 
-// Create daily report for branch verification (Upsert by shift_id)
+      // Create daily report for branch verification (Upsert by shift_id)
       const { error: reportError } = await supabase
         .from('daily_reports')
         .upsert({
@@ -690,22 +717,30 @@ const MobileStockManagement = () => {
       if (reportError) throw reportError;
 
       // AUTO SHIFT OUT: Complete shift and end automatically
+      const updateData: any = {
+        status: 'completed',
+        report_submitted: true,
+        total_sales: shiftSummary.totalSales,
+        cash_collected: cashToDeposit,
+        total_transactions: shiftSummary.totalTransactions,
+        shift_end_time: new Date().toISOString()
+      };
+
+      if (cashPhotoUrl) {
+        // Store photo URL in notes field
+        updateData.notes = `Cash deposit photo: ${cashPhotoUrl}`;
+      }
+
       const { error: shiftError } = await supabase
         .from('shift_management')
-        .update({
-          status: 'completed',
-          report_submitted: true,
-          total_sales: shiftSummary.totalSales,
-          cash_collected: cashToDeposit,
-          total_transactions: shiftSummary.totalTransactions,
-          shift_end_time: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', activeShift.id);
 
       if (shiftError) throw shiftError;
 
       toast.success("Laporan shift berhasil dikirim dan siap diverifikasi!");
       setOperationalExpenses([{ type: '', amount: '', description: '' }]);
+      setCashDepositPhoto(undefined);
       setActiveShift(null);
       window.dispatchEvent(new Event('shift-updated'));
       fetchShiftData();

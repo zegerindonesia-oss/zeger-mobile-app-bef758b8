@@ -89,14 +89,20 @@ export default function Inventory() {
 
       // Shifts waiting verification
       const today = new Date().toISOString().split('T')[0];
-      const { data: sh } = await supabase
+      const { data: sh, error: shiftError } = await supabase
         .from('shift_management')
         .select('id, rider_id, shift_date, shift_number, shift_start_time, shift_end_time, total_sales, cash_collected, total_transactions, report_submitted, report_verified, notes')
         .eq('branch_id', userProfile!.branch_id)
         .eq('shift_date', today)
         .eq('report_submitted', true)
         .eq('report_verified', false);
-      setShifts(sh || []);
+      
+      if (shiftError) {
+        console.error('Error fetching shifts:', shiftError);
+        setShifts([]);
+      } else {
+        setShifts(sh || []);
+      }
     } catch (e: any) {
       console.error(e);
       toast.error('Gagal memuat data inventory');
