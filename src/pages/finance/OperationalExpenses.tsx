@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -20,18 +21,21 @@ type Expense = {
   amount: number;
   description: string | null;
   expense_date: string;
+  source?: string;
+  receipt_photo_url?: string | null;
 }
 
 export default function OperationalExpenses() {
   const [category, setCategory] = useState("rent");
   const [amount, setAmount] = useState<string>("");
-  const [description, setDescription] = useState("");
+  const [assignedUser, setAssignedUser] = useState("");
   const [items, setItems] = useState<Expense[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [riders, setRiders] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
 
   const fetchRiders = async () => {
     const { data } = await supabase
@@ -41,6 +45,15 @@ export default function OperationalExpenses() {
       .eq('is_active', true);
     
     setRiders(data || []);
+  };
+
+  const fetchAllUsers = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('is_active', true);
+    
+    setAllUsers(data || []);
   };
 
   const load = async () => {
@@ -65,7 +78,7 @@ export default function OperationalExpenses() {
     // Also load rider expenses separately
     let riderQuery = supabase
       .from('daily_operational_expenses')
-      .select('id, expense_type, amount, description, expense_date, rider_id')
+      .select('id, expense_type, amount, description, expense_date, rider_id, receipt_photo_url')
       .gte('expense_date', startDate.toISOString().split('T')[0])
       .lte('expense_date', endDate.toISOString().split('T')[0])
       .order('created_at', { ascending: false });
@@ -92,7 +105,8 @@ export default function OperationalExpenses() {
         amount: item.amount,
         description: `${item.description} (Rider Expense)`,
         expense_date: item.expense_date,
-        source: 'rider'
+        source: 'rider',
+        receipt_photo_url: item.receipt_photo_url
       }))
     ].sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime());
 
@@ -105,6 +119,7 @@ export default function OperationalExpenses() {
 
   useEffect(() => { 
     fetchRiders();
+    fetchAllUsers();
     load(); 
   }, []);
 
@@ -118,14 +133,23 @@ export default function OperationalExpenses() {
       toast.error('Jumlah tidak valid');
       return;
     }
+    if (!assignedUser) {
+      toast.error('Pilih user yang ditugaskan');
+      return;
+    }
+    
+    const selectedUserName = allUsers.find(u => u.id === assignedUser)?.full_name || '';
+    const description = `${category} - ${selectedUserName}`;
+    
     const { error } = await supabase.from('operational_expenses').insert({
       expense_category: category,
       amount: amt,
-      description: description || null
+      description: description,
+      created_by: assignedUser
     });
     if (error) { toast.error(error.message); return; }
     toast.success('Beban ditambahkan');
-    setAmount(""); setDescription("");
+    setAmount(""); setAssignedUser("");
     load();
   };
 
@@ -252,8 +276,17 @@ export default function OperationalExpenses() {
             <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="cth: 1500000" />
           </div>
           <div className="md:col-span-2">
-            <Label>Keterangan (gunakan untuk beban khusus: Gaji Pak Tri Z-005)</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Gaji Pak Tri Z-005" />
+            <Label>Beban ini menjadi beban siapa?</Label>
+            <Select value={assignedUser} onValueChange={setAssignedUser}>
+              <SelectTrigger><SelectValue placeholder="Pilih user" /></SelectTrigger>
+              <SelectContent>
+                {allUsers.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-4">
             <Button onClick={onAdd}>Simpan</Button>
@@ -276,9 +309,32 @@ export default function OperationalExpenses() {
                   </div>
                   <div className="text-sm text-muted-foreground">{it.description || '-'}</div>
                 </div>
-                <div className="text-right">
-                  <div className="font-semibold">{currency.format(it.amount || 0)}</div>
-                  <div className="text-xs text-muted-foreground">{new Date(it.expense_date).toLocaleDateString('id-ID')}</div>
+                <div className="text-right flex items-center gap-2">
+                  <div>
+                    <div className="font-semibold">{currency.format(it.amount || 0)}</div>
+                    <div className="text-xs text-muted-foreground">{new Date(it.expense_date).toLocaleDateString('id-ID')}</div>
+                  </div>
+                  {it.receipt_photo_url && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Foto Nota - {it.expense_category}</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex justify-center">
+                          <img 
+                            src={it.receipt_photo_url} 
+                            alt="Foto nota" 
+                            className="max-w-full max-h-96 object-contain"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
               </div>
             ))}
