@@ -185,7 +185,7 @@ export const BranchDashboard = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-dashboard min-h-screen">
+    <div className="p-6 space-y-6 bg-white min-h-screen">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="dashboard-card">
@@ -262,12 +262,12 @@ export const BranchDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Report Chart */}
-        <Card className="dashboard-card">
+        {/* Sales Report Chart - with rider data */}
+        <Card className="oval-table">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Sales Report</span>
-              <select className="bg-background border rounded px-3 py-1 text-sm">
+              <span>Sales Report - All Riders</span>
+              <select className="dropdown-content border-0 px-3 py-1 text-sm rounded-lg">
                 <option value="monthly">Monthly</option>
                 <option value="weekly">Weekly</option>
                 <option value="daily">Daily</option>
@@ -275,26 +275,99 @@ export const BranchDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Sales']} />
-                  <Line type="monotone" dataKey="sales" stroke="#dc2626" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="space-y-4">
+              {/* Rider Sales Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-3 px-4 font-semibold text-foreground">Rider</th>
+                      <th className="text-left py-3 px-4 font-semibold text-foreground">Sales</th>
+                      <th className="text-left py-3 px-4 font-semibold text-foreground">Performance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="py-3 px-4 font-medium">Z-005 - Ahmad</td>
+                      <td className="py-3 px-4 font-bold text-primary">Rp 1.250.000</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 bg-muted rounded-full h-2">
+                            <div className="bg-primary h-2 rounded-full" style={{width: '85%'}}></div>
+                          </div>
+                          <span className="text-sm font-medium">85%</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 font-medium">Z-006 - Budi</td>
+                      <td className="py-3 px-4 font-bold text-primary">Rp 980.000</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 bg-muted rounded-full h-2">
+                            <div className="bg-primary h-2 rounded-full" style={{width: '70%'}}></div>
+                          </div>
+                          <span className="text-sm font-medium">70%</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 font-medium">Z-007 - Citra</td>
+                      <td className="py-3 px-4 font-bold text-primary">Rp 1.450.000</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 bg-muted rounded-full h-2">
+                            <div className="bg-primary h-2 rounded-full" style={{width: '95%'}}></div>
+                          </div>
+                          <span className="text-sm font-medium">95%</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 px-4 font-medium">Z-008 - Dedi</td>
+                      <td className="py-3 px-4 font-bold text-primary">Rp 720.000</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 bg-muted rounded-full h-2">
+                            <div className="bg-primary h-2 rounded-full" style={{width: '55%'}}></div>
+                          </div>
+                          <span className="text-sm font-medium">55%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Chart visualization */}
+              <div className="h-60 mt-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={salesData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="month" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip 
+                      formatter={(value) => [formatCurrency(Number(value)), 'Sales']}
+                      contentStyle={{
+                        background: 'white',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Line type="monotone" dataKey="sales" stroke="#dc2626" strokeWidth={3} dot={{fill: '#dc2626', strokeWidth: 2, r: 4}} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Most Sales Pie Chart */}
-        <Card className="dashboard-card">
+        <Card className="oval-table">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Most Sales</span>
-              <select className="bg-background border rounded px-3 py-1 text-sm">
+              <select className="dropdown-content border-0 px-3 py-1 text-sm rounded-lg">
                 <option value="this-month">This Month</option>
                 <option value="this-week">This Week</option>
                 <option value="today">Today</option>
@@ -318,7 +391,13 @@ export const BranchDashboard = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{
+                        background: 'white',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px'
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -339,7 +418,7 @@ export const BranchDashboard = () => {
       </div>
 
       {/* Product Sales Table */}
-      <Card className="dashboard-card">
+      <Card className="oval-table">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Product Sales</span>
@@ -351,20 +430,20 @@ export const BranchDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full oval-table">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Product Name</th>
-                  <th className="text-left py-3 px-4">Product ID</th>
-                  <th className="text-left py-3 px-4">Product Description</th>
-                  <th className="text-left py-3 px-4">Product Type</th>
-                  <th className="text-left py-3 px-4">Price</th>
-                  <th className="text-left py-3 px-4">Action</th>
+                <tr>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">Product Name</th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">Product ID</th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">Product Description</th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">Product Type</th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">Price</th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((product) => (
-                  <tr key={product.id} className="border-b hover:bg-muted/50">
+                  <tr key={product.id}>
                     <td className="py-3 px-4 font-medium">{product.name}</td>
                     <td className="py-3 px-4 text-muted-foreground">#{product.code}</td>
                     <td className="py-3 px-4 text-muted-foreground">{product.description || '-'}</td>

@@ -631,3 +631,52 @@
 .custom-scroll::-webkit-scrollbar-thumb {
   @apply bg-primary/40 rounded-full hover:bg-primary/60;
 }
+
+/* Oval table styles */
+.oval-table {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 2rem;
+  border: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.oval-table th,
+.oval-table td {
+  border: none;
+  padding: 1rem 1.5rem;
+}
+
+.oval-table thead tr {
+  background: rgba(220, 38, 38, 0.05);
+  border: none;
+}
+
+.oval-table tbody tr {
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.oval-table tbody tr:hover {
+  background: rgba(220, 38, 38, 0.02);
+}
+
+/* Dropdown styles - white background */
+.dropdown-content {
+  background: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.dropdown-item {
+  color: hsl(var(--foreground));
+}
+
+.dropdown-item:hover,
+.dropdown-item[data-highlighted] {
+  background: hsl(var(--primary)) !important;
+  color: white !important;
+}
