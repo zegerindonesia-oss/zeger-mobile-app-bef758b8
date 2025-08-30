@@ -36,7 +36,6 @@ export default {
 					DEFAULT: 'hsl(var(--primary))',
 					dark: 'hsl(var(--primary-dark))',
 					light: 'hsl(var(--primary-light))',
-					glow: 'hsl(var(--primary-glow))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
@@ -61,8 +60,6 @@ export default {
 				},
 				accent: {
 					DEFAULT: 'hsl(var(--accent))',
-					orange: 'hsl(var(--accent-orange))',
-					'orange-light': 'hsl(var(--accent-orange-light))',
 					foreground: 'hsl(var(--accent-foreground))'
 				},
 				popover: {
@@ -80,18 +77,14 @@ export default {
 				'gradient-glass': 'var(--gradient-glass)',
 				'gradient-hero': 'var(--gradient-hero)',
 				'gradient-dashboard': 'var(--gradient-dashboard)',
-				'wave-gradient': 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 50%, hsl(var(--accent-orange)) 100%)',
 			},
 			boxShadow: {
 				'glass': 'var(--shadow-glass)',
 				'glow': 'var(--shadow-glow)',
 				'soft': 'var(--shadow-soft)',
-				'floating': 'var(--shadow-floating)',
-				'depth': 'var(--shadow-depth)',
 			},
 			backdropBlur: {
 				'glass': '20px',
-				'intense': '30px',
 				'card': '16px',
 			},
 			borderRadius: {
@@ -117,38 +110,11 @@ export default {
 					to: {
 						height: '0'
 					}
-				},
-				'wave-float': {
-					'0%, 100%': {
-						transform: 'translateY(0px) rotate(0deg)',
-					},
-					'50%': {
-						transform: 'translateY(-10px) rotate(1deg)',
-					}
-				},
-				'glass-shimmer': {
-					'0%': {
-						backgroundPosition: '-200% 0',
-					},
-					'100%': {
-						backgroundPosition: '200% 0',
-					}
-				},
-				'glow-pulse': {
-					'0%, 100%': {
-						boxShadow: '0 0 20px rgba(215, 35, 35, 0.1)',
-					},
-					'50%': {
-						boxShadow: '0 0 40px rgba(215, 35, 35, 0.2)',
-					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
-				'wave-float': 'wave-float 6s ease-in-out infinite',
-				'glass-shimmer': 'glass-shimmer 2s ease-in-out infinite',
-				'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+				'accordion-up': 'accordion-up 0.2s ease-out'
 			}
 		}
 	},

@@ -180,25 +180,25 @@ export const EnhancedQuickActions = ({ role }: EnhancedQuickActionsProps) => {
   };
 
   return (
-    <div className="glass-card-intense rounded-[2rem] p-8 animate-slide-up wave-overlay">
-      <h3 className="text-xl font-bold mb-6 gradient-text">Aksi Cepat</h3>
-      <div className="grid grid-cols-2 gap-5">
+    <div className="dashboard-card animate-slide-up">
+      <h3 className="text-lg font-semibold mb-4 text-foreground">Aksi Cepat</h3>
+      <div className="grid grid-cols-2 gap-3">
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
             <Button
               key={action.label}
               variant="ghost"
-              className="h-auto p-6 flex flex-col items-center gap-4 glass-card-oval hover:scale-105 hover:glow-effect transition-all duration-500 border-0 group"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="h-auto p-4 flex flex-col items-center gap-2 glass-card hover:scale-105 transition-all duration-300"
+              style={{ animationDelay: `${index * 50}ms` }}
               onClick={() => handleActionClick(action)}
             >
-              <div className={`p-4 rounded-[1.2rem] ${action.color} text-white glow-effect relative overflow-hidden group-hover:scale-110 transition-transform duration-300`}>
-                <Icon className="w-6 h-6 relative z-10" />
+              <div className={`p-3 rounded-xl ${action.color} text-white`}>
+                <Icon className="w-5 h-5" />
               </div>
-              <div className="text-center space-y-1">
-                <p className="font-bold text-sm text-foreground group-hover:gradient-text transition-all duration-300">{action.label}</p>
-                <p className="text-xs text-muted-foreground/80 leading-relaxed">{action.description}</p>
+              <div className="text-center">
+                <p className="font-medium text-sm text-foreground">{action.label}</p>
+                <p className="text-xs text-muted-foreground">{action.description}</p>
               </div>
             </Button>
           );
@@ -206,9 +206,9 @@ export const EnhancedQuickActions = ({ role }: EnhancedQuickActionsProps) => {
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="sm:max-w-md glass-card-intense border-0 rounded-[1.5rem]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="gradient-text text-xl">Aksi Cepat</DialogTitle>
+            <DialogTitle>Aksi Cepat</DialogTitle>
           </DialogHeader>
           {getDialogContent()}
         </DialogContent>
