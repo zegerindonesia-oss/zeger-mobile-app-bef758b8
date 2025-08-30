@@ -139,12 +139,12 @@ export default function OperationalExpenses() {
     }
     
     const selectedUserName = allUsers.find(u => u.id === assignedUser)?.full_name || '';
-    const description = `${category} - ${selectedUserName}`;
+    const expenseDescription = `${category} - ${selectedUserName}`;
     
     const { error } = await supabase.from('operational_expenses').insert({
       expense_category: category,
       amount: amt,
-      description: description,
+      description: expenseDescription,
       created_by: assignedUser
     });
     if (error) { toast.error(error.message); return; }
