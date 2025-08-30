@@ -13,7 +13,8 @@ import {
   Clock,
   AlertCircle,
   Camera,
-  Upload
+  Upload,
+  CheckCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -632,104 +633,76 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           <CardTitle>Riwayat Transfer Stok</CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-96">
-            <div className="space-y-4">
-              {transfers.map((transfer) => (
-                  <div key={transfer.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="font-medium">{transfer.product?.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Jumlah: {transfer.quantity}
-                        </p>
-                        {transfer.expected_delivery_date && (
-                          <p className="text-xs text-muted-foreground">
-                            Target: {new Date(transfer.expected_delivery_date).toLocaleString('id-ID')}
-                          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Tanggal</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Jam</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Nama Menu</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Jumlah</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                  {role === 'rider' && <th className="text-left py-3 px-4 font-medium text-gray-600">Action</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {transfers.map((transfer) => (
+                  <tr key={transfer.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-gray-600">
+                      {new Date(transfer.created_at).toLocaleDateString('id-ID')}
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {new Date(transfer.created_at).toLocaleTimeString('id-ID', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">{transfer.product?.name}</td>
+                    <td className="py-3 px-4 text-gray-600">{transfer.quantity}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        {transfer.status === 'received' && (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="text-sm">Berhasil diterima rider</span>
+                          </div>
                         )}
-                        {transfer.actual_delivery_date && (
-                          <p className="text-xs text-green-600">
-                            Diterima: {new Date(transfer.actual_delivery_date).toLocaleString('id-ID')}
-                          </p>
+                        {transfer.status === 'sent' && (
+                          <Badge variant="secondary">Pending</Badge>
+                        )}
+                        {transfer.status === 'rejected' && (
+                          <Badge variant="destructive">Ditolak</Badge>
                         )}
                       </div>
-                      {getStatusBadge(transfer.status)}
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Dibuat: {new Date(transfer.created_at).toLocaleString('id-ID')}
-                    </p>
-
-                    {transfer.notes && (
-                      <p className="text-sm text-muted-foreground mb-3 italic">
-                        {transfer.notes}
-                      </p>
+                    </td>
+                    {role === 'rider' && (
+                      <td className="py-3 px-4">
+                        {transfer.status === 'sent' && (
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => confirmStockReceival(transfer.id)}
+                              disabled={loading}
+                              className="text-xs px-2 py-1"
+                            >
+                              Terima
+                            </Button>
+                          </div>
+                        )}
+                      </td>
                     )}
-
-                    {/* Verification photo */}
-                    {transfer.verification_photo_url && (
-                      <div className="mb-3">
-                        <img 
-                          src={transfer.verification_photo_url} 
-                          alt="Verification" 
-                          className="max-w-xs rounded-lg border"
-                        />
-                      </div>
-                    )}
-
-                    {/* Action buttons for different roles */}
-                    <div className="flex gap-2">
-                      {role === 'rider' && transfer.status === 'sent' && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => confirmStockReceival(transfer.id)}
-                            disabled={loading}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Konfirmasi Terima
-                          </Button>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                            id={`photo-upload-${transfer.id}`}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                uploadVerificationPhoto(transfer.id, file);
-                              }
-                            }}
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => document.getElementById(`photo-upload-${transfer.id}`)?.click()}
-                          >
-                            <Camera className="h-4 w-4 mr-1" />
-                            Foto Verifikasi
-                          </Button>
-                        </>
-                      )}
-
-                      {role === 'branch_manager' && transfer.status === 'sent' && (
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-orange-500" />
-                          <span className="text-sm text-orange-600">Menunggu konfirmasi rider</span>
-                        </div>
-                      )}
-
-                      {transfer.status === 'received' && (
-                        <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
-                          <span className="text-sm text-green-600">Stok berhasil diterima</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-              ))}
-            </div>
-          </ScrollArea>
+                  </tr>
+                ))}
+                {transfers.length === 0 && (
+                  <tr>
+                    <td colSpan={role === 'rider' ? 6 : 5} className="py-8 text-center text-gray-500">
+                      Tidak ada riwayat transfer ditemukan
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

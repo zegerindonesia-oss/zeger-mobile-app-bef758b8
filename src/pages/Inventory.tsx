@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,15 @@ interface Shift {
   notes?: string;
 }
 
+interface TransferHistory {
+  id: string;
+  created_at: string;
+  product_name: string;
+  quantity: number;
+  rider_name: string;
+  status: string;
+}
+
 export default function Inventory() {
   const { userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState("stock");
@@ -45,9 +54,11 @@ export default function Inventory() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Add missing state variables for date filters
+  // Add missing state variables for date filters and transfer history
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [transferHistory, setTransferHistory] = useState<TransferHistory[]>([]);
 
   useEffect(() => {
     document.title = 'Inventori | Zeger ERP';
@@ -201,6 +212,49 @@ export default function Inventory() {
     } catch (e: any) {
       toast.error('Gagal konfirmasi setoran: ' + e.message);
     } finally { setLoading(false); }
+  };
+
+  const fetchTransferHistory = async () => {
+    try {
+      let query = supabase
+        .from('stock_movements')
+        .select(`
+          id,
+          created_at,
+          quantity,
+          status,
+          rider_id,
+          product_id,
+          products(name),
+          profiles!stock_movements_rider_id_fkey(full_name)
+        `)
+        .eq('branch_id', userProfile!.branch_id)
+        .in('movement_type', ['transfer', 'return'])
+        .gte('created_at', startDate.toISOString().split('T')[0])
+        .lte('created_at', endDate.toISOString().split('T')[0] + 'T23:59:59')
+        .order('created_at', { ascending: false });
+
+      if (selectedUser !== "all") {
+        query = query.eq('rider_id', selectedUser);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const formattedData: TransferHistory[] = (data || []).map((item: any) => ({
+        id: item.id,
+        created_at: item.created_at,
+        product_name: item.products?.name || 'Unknown Product',
+        quantity: item.quantity,
+        rider_name: item.profiles?.full_name || 'Unknown Rider',
+        status: item.status === 'completed' ? 'completed' : item.status
+      }));
+
+      setTransferHistory(formattedData);
+    } catch (error) {
+      console.error('Error fetching transfer history:', error);
+      toast.error('Gagal memuat riwayat transfer');
+    }
   };
 
   if (!userProfile) return null;
@@ -425,14 +479,17 @@ export default function Inventory() {
               <div className="flex gap-4 items-end">
                 <div>
                   <Label>Filter User:</Label>
-                  <Select>
+                  <Select value={selectedUser} onValueChange={setSelectedUser}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Semua User" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua User</SelectItem>
-                      <SelectItem value="pak-fajar">Pak Fajar</SelectItem>
-                      <SelectItem value="pak-budi">Pak Budi</SelectItem>
+                      {Object.values(riders).map((rider) => (
+                        <SelectItem key={rider.id} value={rider.id}>
+                          {rider.full_name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -464,45 +521,67 @@ export default function Inventory() {
                     </PopoverContent>
                   </Popover>
                 </div>
+                <div>
+                  <Button onClick={fetchTransferHistory} className="bg-primary hover:bg-primary-dark">
+                    Apply Filter
+                  </Button>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-white border border-border/40">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="font-medium">30/08/2025 - Pak Fajar</h4>
-                      <p className="text-sm text-muted-foreground">Transfer & Penjualan Harian</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="space-y-2">
-                      <h5 className="font-medium text-green-600">Stok Diterima:</h5>
-                      <ul className="space-y-1">
-                        <li>• Kopi Arabica: 20 pcs</li>
-                        <li>• Gula: 10 kg</li>
-                        <li>• Susu: 15 liter</li>
-                      </ul>
-                      <p className="font-medium">Total: 45 items</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h5 className="font-medium text-blue-600">Terjual:</h5>
-                      <ul className="space-y-1">
-                        <li>• Americano: 15 cup</li>
-                        <li>• Cappuccino: 8 cup</li>
-                        <li>• Latte: 12 cup</li>
-                      </ul>
-                      <p className="font-medium">Total: 35 items</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h5 className="font-medium text-red-600">Dikembalikan:</h5>
-                      <ul className="space-y-1">
-                        <li>• Kopi Arabica: 5 pcs</li>
-                        <li>• Gula: 2 kg</li>
-                      </ul>
-                      <p className="font-medium">Total: 7 items</p>
-                    </div>
-                  </div>
-                </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Tanggal</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Jam</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Nama Menu</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Jumlah</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Rider</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transferHistory.map((transfer) => (
+                      <tr key={transfer.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 text-gray-600">
+                          {new Date(transfer.created_at).toLocaleDateString('id-ID')}
+                        </td>
+                        <td className="py-3 px-4 text-gray-600">
+                          {new Date(transfer.created_at).toLocaleTimeString('id-ID', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </td>
+                        <td className="py-3 px-4 text-gray-600">{transfer.product_name}</td>
+                        <td className="py-3 px-4 text-gray-600">{transfer.quantity}</td>
+                        <td className="py-3 px-4 text-gray-600">{transfer.rider_name}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            {transfer.status === 'completed' && (
+                              <div className="flex items-center gap-1 text-green-600">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="text-sm">Berhasil diterima rider</span>
+                              </div>
+                            )}
+                            {transfer.status === 'pending' && (
+                              <Badge variant="secondary">Pending</Badge>
+                            )}
+                            {transfer.status === 'rejected' && (
+                              <Badge variant="destructive">Ditolak</Badge>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {transferHistory.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                          Tidak ada riwayat transfer ditemukan
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>

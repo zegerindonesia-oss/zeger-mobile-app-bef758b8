@@ -50,6 +50,7 @@ export const TransactionsEnhanced = () => {
   
   // Filter states
   const [selectedRider, setSelectedRider] = useState(searchParams.get('rider') || "all");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setDate(1); // First day of current month
@@ -68,7 +69,7 @@ export const TransactionsEnhanced = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [selectedRider, startDate, endDate]);
+  }, [selectedRider, selectedPaymentMethod, startDate, endDate]);
 
   const fetchRiders = async () => {
     try {
@@ -106,6 +107,10 @@ export const TransactionsEnhanced = () => {
 
       if (selectedRider !== "all") {
         query = query.eq('rider_id', selectedRider);
+      }
+
+      if (selectedPaymentMethod !== "all") {
+        query = query.eq('payment_method', selectedPaymentMethod);
       }
 
       const { data, error } = await query;
@@ -281,7 +286,7 @@ export const TransactionsEnhanced = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">User/Rider</label>
               <Select value={selectedRider} onValueChange={setSelectedRider}>
@@ -295,6 +300,22 @@ export const TransactionsEnhanced = () => {
                       {rider.full_name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Metode Bayar</label>
+              <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih metode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Metode</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="transfer">Transfer</SelectItem>
+                  <SelectItem value="qris">QRIS</SelectItem>
+                  <SelectItem value="credit_card">Kartu Kredit</SelectItem>
                 </SelectContent>
               </Select>
             </div>
