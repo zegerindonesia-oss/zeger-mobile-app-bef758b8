@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Line, LineChart, Pie, PieChart, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { Line, LineChart, Pie, PieChart, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from "recharts";
 
 interface DashboardStats {
   totalSales: number;
@@ -184,11 +184,18 @@ export const BranchDashboard = () => {
     );
   }
 
+  const riderPerformanceData = [
+    { rider: 'Z-005', sales: 850000, orders: 45 },
+    { rider: 'Z-006', sales: 720000, orders: 38 },
+    { rider: 'Z-010', sales: 920000, orders: 52 },
+    { rider: 'Z-013', sales: 640000, orders: 34 }
+  ];
+
   return (
-    <div className="p-6 space-y-6 bg-gradient-dashboard min-h-screen">
+    <div className="p-6 space-y-6 bg-white min-h-screen">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="dashboard-card">
+        <Card className="glass-card rounded-[30px] border-0 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -206,7 +213,7 @@ export const BranchDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card">
+        <Card className="glass-card rounded-[30px] border-0 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -224,7 +231,7 @@ export const BranchDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card">
+        <Card className="glass-card rounded-[30px] border-0 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -242,7 +249,7 @@ export const BranchDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card">
+        <Card className="glass-card rounded-[30px] border-0 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -262,12 +269,12 @@ export const BranchDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Report Chart */}
-        <Card className="dashboard-card">
+        {/* Rider Performance Chart */}
+        <Card className="glass-card rounded-[30px] border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Sales Report</span>
-              <select className="bg-background border rounded px-3 py-1 text-sm">
+              <span>Rider Performance</span>
+              <select className="bg-white border rounded px-3 py-1 text-sm">
                 <option value="monthly">Monthly</option>
                 <option value="weekly">Weekly</option>
                 <option value="daily">Daily</option>
@@ -277,20 +284,44 @@ export const BranchDashboard = () => {
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
+                <BarChart data={riderPerformanceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="rider" />
                   <YAxis />
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Sales']} />
-                  <Line type="monotone" dataKey="sales" stroke="#dc2626" strokeWidth={2} />
-                </LineChart>
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      name === 'sales' ? formatCurrency(Number(value)) : value,
+                      name === 'sales' ? 'Sales' : 'Orders'
+                    ]} 
+                  />
+                  <Bar 
+                    dataKey="sales" 
+                    fill="url(#salesGradient)" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <defs>
+                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#dc2626" />
+                      <stop offset="100%" stopColor="#b91c1c" />
+                    </linearGradient>
+                  </defs>
+                </BarChart>
               </ResponsiveContainer>
+              {/* Rider labels with sales amounts */}
+              <div className="grid grid-cols-4 gap-2 mt-4">
+                {riderPerformanceData.map(rider => (
+                  <div key={rider.rider} className="text-center">
+                    <div className="font-medium text-sm">{rider.rider}</div>
+                    <div className="text-xs text-muted-foreground">{formatCurrency(rider.sales)}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Most Sales Pie Chart */}
-        <Card className="dashboard-card">
+        <Card className="glass-card rounded-[30px] border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Most Sales</span>
@@ -339,7 +370,7 @@ export const BranchDashboard = () => {
       </div>
 
       {/* Product Sales Table */}
-      <Card className="dashboard-card">
+      <Card className="glass-card rounded-[30px] border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Product Sales</span>
@@ -353,7 +384,7 @@ export const BranchDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
+                <tr>
                   <th className="text-left py-3 px-4">Product Name</th>
                   <th className="text-left py-3 px-4">Product ID</th>
                   <th className="text-left py-3 px-4">Product Description</th>
@@ -364,7 +395,7 @@ export const BranchDashboard = () => {
               </thead>
               <tbody>
                 {products.map((product) => (
-                  <tr key={product.id} className="border-b hover:bg-muted/50">
+                  <tr key={product.id} className="hover:bg-muted/30 rounded-lg">
                     <td className="py-3 px-4 font-medium">{product.name}</td>
                     <td className="py-3 px-4 text-muted-foreground">#{product.code}</td>
                     <td className="py-3 px-4 text-muted-foreground">{product.description || '-'}</td>
