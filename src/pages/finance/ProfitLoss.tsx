@@ -19,8 +19,19 @@ interface Rider {
 
 export default function ProfitLoss() {
   const [loading, setLoading] = useState(true);
-  const [revenue, setRevenue] = useState(0);
-  const [expenses, setExpenses] = useState(0);
+  const [revenue, setRevenue] = useState({
+    cash: 0,
+    nonCash: 0,
+    total: 0
+  });
+  const [expenses, setExpenses] = useState({
+    rawMaterial: 0,
+    operationalDaily: 0,
+    salary: 0,
+    other: 0,
+    mdr: 0,
+    total: 0
+  });
   const [riders, setRiders] = useState<Rider[]>([]);
   const [selectedRider, setSelectedRider] = useState<string>("all");
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -39,35 +50,105 @@ export default function ProfitLoss() {
   const loadData = async () => {
     setLoading(true);
     
-    let revQuery = supabase
-      .from('financial_transactions')
-      .select('amount, created_by')
-      .eq('transaction_type', 'revenue')
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+    try {
+      // Load transactions for revenue calculation
+      let transQuery = supabase
+        .from('transactions')
+        .select('final_amount, payment_method')
+        .eq('status', 'completed')
+        .gte('transaction_date', startDate.toISOString())
+        .lte('transaction_date', endDate.toISOString());
 
-    let expQuery = supabase
-      .from('operational_expenses')
-      .select('amount, created_by')
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+      if (selectedRider !== "all") {
+        transQuery = transQuery.eq('rider_id', selectedRider);
+      }
 
-    if (selectedRider !== "all") {
-      revQuery = revQuery.eq('created_by', selectedRider);
-      expQuery = expQuery.eq('created_by', selectedRider);
+      const { data: transactions } = await transQuery;
+
+      // Calculate revenue breakdown
+      let cashRevenue = 0;
+      let nonCashRevenue = 0;
+      let mdrAmount = 0;
+
+      (transactions || []).forEach((trans: any) => {
+        const amount = Number(trans.final_amount || 0);
+        if (trans.payment_method === 'cash') {
+          cashRevenue += amount;
+        } else if (trans.payment_method === 'qris' || trans.payment_method === 'transfer') {
+          nonCashRevenue += amount;
+          if (trans.payment_method === 'qris') {
+            mdrAmount += amount * 0.007; // 0.7% MDR
+          }
+        }
+      });
+
+      // Load expenses
+      let rawMaterialCost = 0;
+      let operationalDaily = 0;
+      let salaryCost = 0;
+      let otherCost = 0;
+
+      // Production costs (raw materials)
+      const { data: prodItems } = await supabase
+        .from('production_items')
+        .select('quantity, cost_per_unit, production_batches!inner(produced_at)')
+        .gte('production_batches.produced_at', startDate.toISOString())
+        .lte('production_batches.produced_at', endDate.toISOString());
+
+      rawMaterialCost = (prodItems || []).reduce((sum: number, item: any) => 
+        sum + (item.quantity * item.cost_per_unit), 0);
+
+      // Daily operational expenses from riders
+      let dailyExpQuery = supabase
+        .from('daily_operational_expenses')
+        .select('amount')
+        .gte('expense_date', startDate.toISOString().split('T')[0])
+        .lte('expense_date', endDate.toISOString().split('T')[0]);
+
+      if (selectedRider !== "all") {
+        dailyExpQuery = dailyExpQuery.eq('rider_id', selectedRider);
+      }
+
+      const { data: dailyExp } = await dailyExpQuery;
+      operationalDaily = (dailyExp || []).reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
+
+      // Operational expenses (salary, other)
+      let opExpQuery = supabase
+        .from('operational_expenses')
+        .select('amount, expense_category')
+        .gte('expense_date', startDate.toISOString().split('T')[0])
+        .lte('expense_date', endDate.toISOString().split('T')[0]);
+
+      const { data: opExp } = await opExpQuery;
+      (opExp || []).forEach((exp: any) => {
+        const amount = Number(exp.amount || 0);
+        if (exp.expense_category === 'salary') {
+          salaryCost += amount;
+        } else {
+          otherCost += amount;
+        }
+      });
+
+      setRevenue({
+        cash: cashRevenue,
+        nonCash: nonCashRevenue,
+        total: cashRevenue + nonCashRevenue
+      });
+
+      setExpenses({
+        rawMaterial: rawMaterialCost,
+        operationalDaily,
+        salary: salaryCost,
+        other: otherCost,
+        mdr: mdrAmount,
+        total: rawMaterialCost + operationalDaily + salaryCost + otherCost + mdrAmount
+      });
+
+    } catch (error) {
+      console.error("Error loading profit/loss data:", error);
+    } finally {
+      setLoading(false);
     }
-
-    const [{ data: rev }, { data: ops }] = await Promise.all([
-      revQuery,
-      expQuery
-    ]);
-
-    const totalRev = (rev || []).reduce((acc: number, r: any) => acc + Number(r.amount || 0), 0);
-    const totalExp = (ops || []).reduce((acc: number, r: any) => acc + Number(r.amount || 0), 0);
-
-    setRevenue(totalRev);
-    setExpenses(totalExp);
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -78,7 +159,7 @@ export default function ProfitLoss() {
     loadData();
   }, [selectedRider, startDate, endDate]);
 
-  const profit = revenue - expenses;
+  const profit = revenue.total - expenses.total;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -183,28 +264,70 @@ export default function ProfitLoss() {
               <div>
                 <h3 className="text-lg font-semibold mb-3">PENDAPATAN</h3>
                 <div className="space-y-2 pl-4">
-                  <div className="flex justify-between">
-                    <span>Pendapatan Penjualan</span>
-                    <span className="font-medium">{currency.format(revenue)}</span>
+                  <div className="text-sm font-medium mb-2">Pendapatan Penjualan:</div>
+                  <div className="space-y-1 pl-4">
+                    <div className="flex justify-between text-sm">
+                      <span>- Tunai</span>
+                      <span>{currency.format(revenue.cash)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>- Non Tunai (QRIS + Transfer)</span>
+                      <span>{currency.format(revenue.nonCash)}</span>
+                    </div>
                   </div>
                   <div className="flex justify-between border-t pt-2 font-semibold">
                     <span>Total Pendapatan</span>
-                    <span>{currency.format(revenue)}</span>
+                    <span>{currency.format(revenue.total)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* BEBAN */}
+              {/* BEBAN POKOK PENJUALAN */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">BEBAN</h3>
+                <h3 className="text-lg font-semibold mb-3">BEBAN POKOK PENJUALAN</h3>
                 <div className="space-y-2 pl-4">
                   <div className="flex justify-between">
-                    <span>Beban Operasional</span>
-                    <span className="font-medium">{currency.format(expenses)}</span>
+                    <span>MDR (QRIS 0.7%)</span>
+                    <span className="font-medium">({currency.format(expenses.mdr)})</span>
                   </div>
                   <div className="flex justify-between border-t pt-2 font-semibold">
-                    <span>Total Beban</span>
-                    <span>{currency.format(expenses)}</span>
+                    <span>Total Beban Pokok Penjualan</span>
+                    <span>({currency.format(expenses.mdr)})</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* LABA KOTOR */}
+              <div className="bg-muted/50 p-3 rounded">
+                <div className="flex justify-between font-semibold">
+                  <span>LABA KOTOR</span>
+                  <span className="text-green-600">{currency.format(revenue.total - expenses.mdr)}</span>
+                </div>
+              </div>
+
+              {/* BEBAN OPERASIONAL */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">BEBAN OPERASIONAL</h3>
+                <div className="space-y-2 pl-4">
+                  <div className="flex justify-between">
+                    <span>Beban Bahan Baku</span>
+                    <span className="font-medium">({currency.format(expenses.rawMaterial)})</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Beban Operasional Harian</span>
+                    <span className="font-medium">({currency.format(expenses.operationalDaily)})</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Beban Gaji</span>
+                    <span className="font-medium">({currency.format(expenses.salary)})</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Beban Lainnya</span>
+                    <span className="font-medium">({currency.format(expenses.other)})</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2 font-semibold">
+                    <span>Total Beban Operasional</span>
+                    <span>({currency.format(expenses.total - expenses.mdr)})</span>
                   </div>
                 </div>
               </div>

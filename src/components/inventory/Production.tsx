@@ -209,7 +209,7 @@ export const Production = ({ userProfile }: ProductionProps) => {
 
     setLoading(true);
     try {
-      // Get next batch number for today
+      // Get next batch number for today (reset daily)
       const today = new Date().toISOString().split('T')[0];
       const { data: existingBatches } = await supabase
         .from('production_batches')
@@ -220,6 +220,7 @@ export const Production = ({ userProfile }: ProductionProps) => {
         .order('batch_number', { ascending: false })
         .limit(1);
 
+      // Reset batch number daily - start from 1 each day
       const nextBatchNumber = (existingBatches?.[0]?.batch_number || 0) + 1;
 
       // Create production batch with notes

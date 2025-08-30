@@ -4,8 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -22,25 +27,54 @@ export default function OperationalExpenses() {
   const [amount, setAmount] = useState<string>("");
   const [description, setDescription] = useState("");
   const [items, setItems] = useState<Expense[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [riders, setRiders] = useState<any[]>([]);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+
+  const fetchRiders = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'rider')
+      .eq('is_active', true);
+    
+    setRiders(data || []);
+  };
 
   const load = async () => {
-    // Load operational_expenses only for now to avoid relationship errors
-    const { data, error } = await supabase
+    // Load operational_expenses with date and user filters
+    let opQuery = supabase
       .from('operational_expenses')
       .select('id, expense_category, amount, description, expense_date, created_by')
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .gte('expense_date', startDate.toISOString().split('T')[0])
+      .lte('expense_date', endDate.toISOString().split('T')[0])
+      .order('created_at', { ascending: false });
+
+    if (selectedUser !== "all") {
+      opQuery = opQuery.eq('created_by', selectedUser);
+    }
+
+    const { data, error } = await opQuery;
 
     if (error) {
       toast.error(error.message);
     }
 
     // Also load rider expenses separately
-    const { data: riderExpenses } = await supabase
+    let riderQuery = supabase
       .from('daily_operational_expenses')
       .select('id, expense_type, amount, description, expense_date, rider_id')
-      .order('created_at', { ascending: false })
-      .limit(10);
+      .gte('expense_date', startDate.toISOString().split('T')[0])
+      .lte('expense_date', endDate.toISOString().split('T')[0])
+      .order('created_at', { ascending: false });
+
+    if (selectedUser !== "all") {
+      riderQuery = riderQuery.eq('rider_id', selectedUser);
+    }
+
+    const { data: riderExpenses } = await riderQuery;
 
     // Combine the data
     const combinedExpenses = [
@@ -63,9 +97,20 @@ export default function OperationalExpenses() {
     ].sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime());
 
     setItems(combinedExpenses as Expense[]);
+    
+    // Calculate total expenses
+    const total = combinedExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    setTotalExpenses(total);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { 
+    fetchRiders();
+    load(); 
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [selectedUser, startDate, endDate]);
 
   const onAdd = async () => {
     const amt = Number(amount);
@@ -91,6 +136,100 @@ export default function OperationalExpenses() {
         <p className="text-muted-foreground">Catat beban biaya: sewa, listrik, gaji, dll</p>
       </header>
 
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>User</Label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih user" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua User</SelectItem>
+                  {riders.map((rider) => (
+                    <SelectItem key={rider.id} value={rider.id}>
+                      {rider.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Tanggal Awal</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => date && setStartDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label>Tanggal Akhir</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => date && setEndDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Total Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Resume Total Beban</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-red-600">
+            {currency.format(totalExpenses)}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Periode {format(startDate, "dd/MM/yyyy")} - {format(endDate, "dd/MM/yyyy")}
+          </p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader><CardTitle>Tambah Beban</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -113,8 +252,8 @@ export default function OperationalExpenses() {
             <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="cth: 1500000" />
           </div>
           <div className="md:col-span-2">
-            <Label>Keterangan</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Opsional" />
+            <Label>Keterangan (gunakan untuk beban khusus: Gaji Pak Tri Z-005)</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Gaji Pak Tri Z-005" />
           </div>
           <div className="md:col-span-4">
             <Button onClick={onAdd}>Simpan</Button>
