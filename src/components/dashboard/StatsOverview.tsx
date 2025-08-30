@@ -136,7 +136,7 @@ export const StatsOverview = ({ role }: StatsOverviewProps) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         const isPositive = stat.trend === "up";
@@ -147,22 +147,18 @@ export const StatsOverview = ({ role }: StatsOverviewProps) => {
           <a
             key={stat.title}
             href={path}
-            className="dashboard-card group hover:scale-105 transition-all duration-300 cursor-pointer block"
+            className="glass-card-intense rounded-3xl p-6 group hover:scale-105 hover:shadow-floating transition-all duration-300 cursor-pointer block fade-in"
             style={{ animationDelay: `${index * 100}ms` }}
           >
             <div className="flex items-start justify-between mb-4">
               <div className={`p-3 rounded-2xl ${
-                isPositive ? 'bg-success/10 text-success' :
-                isNegative ? 'bg-destructive/10 text-destructive' :
-                'bg-primary/10 text-primary'
-              }`}>
+                isPositive ? 'bg-success/20 text-success border border-success/30' :
+                isNegative ? 'bg-destructive/20 text-destructive border border-destructive/30' :
+                'bg-primary/20 text-primary border border-primary/30'
+              } backdrop-blur-sm`}>
                 <Icon className="w-6 h-6" />
               </div>
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
-                isPositive ? 'bg-success/10 text-success' :
-                isNegative ? 'bg-destructive/10 text-destructive' :
-                'bg-muted text-muted-foreground'
-              }`}>
+              <div className={`pill-${isPositive ? 'active' : isNegative ? 'inactive' : 'inactive'} text-xs font-medium`}>
                 {isPositive && <TrendingUp className="w-3 h-3" />}
                 {isNegative && <TrendingDown className="w-3 h-3" />}
                 {stat.change}
@@ -170,13 +166,13 @@ export const StatsOverview = ({ role }: StatsOverviewProps) => {
             </div>
             
             <div>
-              <p className="text-2xl font-bold text-foreground mb-1">
+              <p className="text-2xl font-bold text-foreground mb-1 group-hover:gradient-text transition-all">
                 {stat.value}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mb-1">
+              <p className="text-sm font-semibold text-muted-foreground mb-1">
                 {stat.title}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/80">
                 {stat.description}
               </p>
             </div>

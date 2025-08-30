@@ -180,7 +180,7 @@ export const EnhancedQuickActions = ({ role }: EnhancedQuickActionsProps) => {
   };
 
   return (
-    <div className="dashboard-card animate-slide-up">
+    <div className="glass-card-intense rounded-3xl p-6 animate-slide-up">
       <h3 className="text-lg font-semibold mb-4 text-foreground">Aksi Cepat</h3>
       <div className="grid grid-cols-2 gap-3">
         {actions.map((action, index) => {
@@ -189,15 +189,15 @@ export const EnhancedQuickActions = ({ role }: EnhancedQuickActionsProps) => {
             <Button
               key={action.label}
               variant="ghost"
-              className="h-auto p-4 flex flex-col items-center gap-2 glass-card hover:scale-105 transition-all duration-300"
+              className="h-auto p-4 flex flex-col items-center gap-3 glass-card rounded-2xl hover:scale-105 hover:shadow-glow transition-all duration-300 border-0"
               style={{ animationDelay: `${index * 50}ms` }}
               onClick={() => handleActionClick(action)}
             >
-              <div className={`p-3 rounded-xl ${action.color} text-white`}>
+              <div className={`p-3 rounded-2xl ${action.color} text-white shadow-glow`}>
                 <Icon className="w-5 h-5" />
               </div>
               <div className="text-center">
-                <p className="font-medium text-sm text-foreground">{action.label}</p>
+                <p className="font-semibold text-sm text-foreground">{action.label}</p>
                 <p className="text-xs text-muted-foreground">{action.description}</p>
               </div>
             </Button>
@@ -206,9 +206,9 @@ export const EnhancedQuickActions = ({ role }: EnhancedQuickActionsProps) => {
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass-card-intense border-0">
           <DialogHeader>
-            <DialogTitle>Aksi Cepat</DialogTitle>
+            <DialogTitle className="gradient-text">Aksi Cepat</DialogTitle>
           </DialogHeader>
           {getDialogContent()}
         </DialogContent>

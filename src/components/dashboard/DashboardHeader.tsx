@@ -34,46 +34,55 @@ export const DashboardHeader = ({
   const { userProfile } = useAuth();
   const currentConfig = roleConfig[activeRole];
   const CurrentIcon = currentConfig.icon;
-  return <div className="glass-card p-6 rounded-3xl animate-slide-up">
+  return (
+    <div className="glass-card-intense p-6 rounded-3xl animate-slide-up border border-glass-border">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left Side - Role & Welcome */}
         <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-2xl ${currentConfig.color}`}>
+          <div className={`p-4 rounded-2xl glass-card ${currentConfig.color} shadow-glow`}>
             <CurrentIcon className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold gradient-text">
               Selamat datang kembali!
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground font-medium">
               Branch Hub Zeger Kemiri - {userProfile?.full_name || 'User'}
             </p>
           </div>
         </div>
 
-        {/* Center - Role Switcher */}
-        
-
         {/* Right Side - User Actions */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative glass-card w-10 h-10 rounded-xl hover:scale-105 transition-transform">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative glass-card w-12 h-12 rounded-2xl hover:scale-105 hover:shadow-glow transition-all duration-300 border-0"
+          >
             <Bell className="w-5 h-5" />
-            <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-primary">
+            <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-gradient-primary border-0 text-white">
               3
             </Badge>
           </Button>
           
-          <Button variant="ghost" size="icon" className="glass-card w-10 h-10 rounded-xl hover:scale-105 transition-transform">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="glass-card w-12 h-12 rounded-2xl hover:scale-105 hover:shadow-glow transition-all duration-300 border-0"
+          >
             <Settings className="w-5 h-5" />
           </Button>
 
-          <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-            <AvatarImage src="/placeholder-avatar.jpg" />
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              <User className="w-5 h-5" />
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="w-12 h-12 ring-2 ring-primary/30 shadow-glow">
+              <AvatarFallback className="bg-gradient-primary text-white border-0">
+                <User className="w-6 h-6" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-white shadow-sm"></div>
+          </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
