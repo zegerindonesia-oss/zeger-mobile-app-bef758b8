@@ -499,48 +499,51 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           {/* Create Transfer Form */}
           {(role === 'ho_admin' || role === 'branch_manager') && (
             <div className="space-y-4">
-              {role === 'ho_admin' && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih Produk" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {role === 'ho_admin' && (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih Produk" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                  <Input
-                    type="number"
-                    placeholder="Jumlah"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    min="1"
-                  />
+                      <Input
+                        type="number"
+                        placeholder="Jumlah"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        min="1"
+                      />
 
-                  <Select value={selectedToBranch} onValueChange={setSelectedToBranch}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ke Branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name} ({branch.branch_type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <Select value={selectedToBranch} onValueChange={setSelectedToBranch}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Ke Branch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name} ({branch.branch_type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                  <Button onClick={createStockTransfer} disabled={loading}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Kirim
-                  </Button>
-                </div>
-              )}
+                      <Button onClick={createStockTransfer} disabled={loading}>
+                        <Send className="h-4 w-4 mr-2" />
+                        Kirim
+                      </Button>
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total item: {Number(quantity || 0)}</div>
+                  </div>
+                )}
 
               {role === 'branch_manager' && (
                 <div className="space-y-4">
@@ -610,6 +613,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                           />
                         </div>
                       ))}
+                    </div>
+                    <div className="flex items-center justify-between mt-3 text-sm">
+                      <span className="text-muted-foreground">Total item yang akan dikirim:</span>
+                      <span className="font-medium">{Object.values(productQuantities).reduce((s, v) => s + (Number(v) || 0), 0)} item</span>
                     </div>
                   </div>
                 </div>

@@ -570,8 +570,15 @@ export const ModernBranchDashboard = () => {
     }
   ];
 
+  const riderPerformanceData = [
+    { rider: 'Z-005', sales: 850000, orders: 45 },
+    { rider: 'Z-006', sales: 720000, orders: 38 },
+    { rider: 'Z-010', sales: 920000, orders: 52 },
+    { rider: 'Z-013', sales: 640000, orders: 34 }
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-white min-h-screen">
       {/* Filters */}
       <Card className="dashboard-card">
         <CardContent className="p-4">
@@ -656,58 +663,41 @@ export const ModernBranchDashboard = () => {
         })}
       </div>
 
-      {/* Sales Report with Filters */}
+      {/* Rider Performance */}
       <Card className="col-span-1 lg:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Sales Report</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={salesFilter === 'daily' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSalesFilter('daily')}
-            >
-              Daily
-            </Button>
-            <Button
-              variant={salesFilter === 'weekly' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSalesFilter('weekly')}
-            >
-              Weekly
-            </Button>
-            <Button
-              variant={salesFilter === 'monthly' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSalesFilter('monthly')}
-            >
-              Monthly
-            </Button>
-          </div>
+          <CardTitle>Rider Performance</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
+              <BarChart data={riderPerformanceData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="rider" />
                 <YAxis />
-                <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Sales']} />
-                <Area 
-                  type="monotone" 
-                  dataKey="sales" 
-                  stroke="#e11d48" 
-                  fill="url(#salesGradient)" 
-                  strokeWidth={2}
+                <Tooltip 
+                  formatter={(value, name) => [
+                    name === 'sales' ? formatCurrency(Number(value)) : value,
+                    name === 'sales' ? 'Sales' : 'Orders'
+                  ]}
                 />
-                <Bar dataKey="sales" fill="#e11d48" fillOpacity={0.4} />
                 <defs>
-                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#e11d48" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#e11d48" stopOpacity={0.05}/>
+                  <linearGradient id="riderRedGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={`hsl(var(--primary))`} />
+                    <stop offset="100%" stopColor={`hsl(var(--primary-dark))`} />
                   </linearGradient>
                 </defs>
-              </ComposedChart>
+                <Bar dataKey="sales" fill="url(#riderRedGradient)" radius={[6,6,0,0]} />
+              </BarChart>
             </ResponsiveContainer>
+            <div className="grid grid-cols-4 gap-2 mt-4">
+              {riderPerformanceData.map((r) => (
+                <div key={r.rider} className="text-center">
+                  <div className="font-medium text-sm">{r.rider}</div>
+                  <div className="text-xs text-muted-foreground">{formatCurrency(r.sales)}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

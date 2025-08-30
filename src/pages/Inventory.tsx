@@ -203,9 +203,10 @@ export default function Inventory() {
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="stock">Stok Management</TabsTrigger>
           <TabsTrigger value="laporan">Laporan Shift</TabsTrigger>
+          <TabsTrigger value="transfer-history">Riwayat Transfer Stock</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stock">
@@ -404,6 +405,97 @@ export default function Inventory() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+        <TabsContent value="transfer-history">
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle>Riwayat Transfer Stock</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-4 items-end">
+                <div>
+                  <Label>Filter User:</Label>
+                  <Select>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Semua User" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua User</SelectItem>
+                      <SelectItem value="pak-fajar">Pak Fajar</SelectItem>
+                      <SelectItem value="pak-budi">Pak Budi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tanggal Awal:</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-40">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {format(startDate, "dd/MM/yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={startDate} onSelect={(date) => date && setStartDate(date)} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label>Tanggal Akhir:</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-40">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {format(endDate, "dd/MM/yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={endDate} onSelect={(date) => date && setEndDate(date)} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-white border border-border/40">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-medium">30/08/2025 - Pak Fajar</h4>
+                      <p className="text-sm text-muted-foreground">Transfer & Penjualan Harian</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-green-600">Stok Diterima:</h5>
+                      <ul className="space-y-1">
+                        <li>• Kopi Arabica: 20 pcs</li>
+                        <li>• Gula: 10 kg</li>
+                        <li>• Susu: 15 liter</li>
+                      </ul>
+                      <p className="font-medium">Total: 45 items</p>
+                    </div>
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-blue-600">Terjual:</h5>
+                      <ul className="space-y-1">
+                        <li>• Americano: 15 cup</li>
+                        <li>• Cappuccino: 8 cup</li>
+                        <li>• Latte: 12 cup</li>
+                      </ul>
+                      <p className="font-medium">Total: 35 items</p>
+                    </div>
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-red-600">Dikembalikan:</h5>
+                      <ul className="space-y-1">
+                        <li>• Kopi Arabica: 5 pcs</li>
+                        <li>• Gula: 2 kg</li>
+                      </ul>
+                      <p className="font-medium">Total: 7 items</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </main>
