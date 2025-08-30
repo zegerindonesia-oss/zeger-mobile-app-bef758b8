@@ -11,10 +11,21 @@ import {
   Calendar,
   Download,
   Filter,
-  Search
+  Search,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
+
+interface TransactionItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  products?: { name: string };
+}
 
 interface Transaction {
   id: string;
@@ -25,6 +36,7 @@ interface Transaction {
   payment_method: string;
   customers?: { name: string };
   profiles?: { full_name: string };
+  transaction_items?: TransactionItem[];
 }
 
 interface Summary {
@@ -62,6 +74,7 @@ export const TransactionsEnhanced = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchRiders();
@@ -120,6 +133,7 @@ export const TransactionsEnhanced = () => {
       const transactionsWithDetails = await Promise.all((data || []).map(async (transaction) => {
         let customerName = '-';
         let riderName = '-';
+        let transactionItems: TransactionItem[] = [];
 
         if (transaction.customer_id) {
           const { data: customer } = await supabase
@@ -139,10 +153,31 @@ export const TransactionsEnhanced = () => {
           riderName = rider?.full_name || '-';
         }
 
+        // Fetch transaction items
+        const { data: items } = await supabase
+          .from('transaction_items')
+          .select(`
+            id,
+            product_id,
+            quantity,
+            unit_price,
+            total_price,
+            products:product_id (name)
+          `)
+          .eq('transaction_id', transaction.id);
+
+        if (items) {
+          transactionItems = items.map(item => ({
+            ...item,
+            products: { name: item.products?.name || 'Unknown Product' }
+          }));
+        }
+
         return {
           ...transaction,
           customers: { name: customerName },
-          profiles: { full_name: riderName }
+          profiles: { full_name: riderName },
+          transaction_items: transactionItems
         };
       }));
 
@@ -191,8 +226,18 @@ export const TransactionsEnhanced = () => {
     });
   };
 
+  const toggleRowExpansion = (transactionId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(transactionId)) {
+      newExpanded.delete(transactionId);
+    } else {
+      newExpanded.add(transactionId);
+    }
+    setExpandedRows(newExpanded);
+  };
+
   const exportToCSV = () => {
-    const headers = ['No. Transaksi', 'Tanggal', 'Pelanggan', 'Rider', 'Jumlah', 'Status', 'Metode Bayar'];
+    const headers = ['No. Transaksi', 'Tanggal', 'Pelanggan', 'Rider', 'Jumlah', 'Status', 'Metode Bayar', 'Items'];
     const csvData = transactions.map(t => [
       t.transaction_number,
       formatDate(t.transaction_date),
@@ -200,7 +245,8 @@ export const TransactionsEnhanced = () => {
       t.profiles?.full_name || '-',
       t.final_amount,
       t.status,
-      t.payment_method || '-'
+      t.payment_method || '-',
+      t.transaction_items?.map(item => `${item.products?.name} (${item.quantity}x ${formatCurrency(item.unit_price)})`).join('; ') || '-'
     ]);
 
     const csvContent = [headers, ...csvData]
@@ -380,6 +426,7 @@ export const TransactionsEnhanced = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-medium text-gray-600 w-8"></th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">No. Transaksi</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Tanggal</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Pelanggan</th>
@@ -391,23 +438,62 @@ export const TransactionsEnhanced = () => {
                 </thead>
                 <tbody>
                   {transactions.map((transaction) => (
-                    <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-primary">{transaction.transaction_number}</td>
-                      <td className="py-3 px-4 text-gray-600">{formatDate(transaction.transaction_date)}</td>
-                      <td className="py-3 px-4 text-gray-600">{transaction.customers?.name || '-'}</td>
-                      <td className="py-3 px-4 text-gray-600">{transaction.profiles?.full_name || '-'}</td>
-                      <td className="py-3 px-4 font-medium text-gray-900">{formatCurrency(transaction.final_amount)}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={transaction.status === 'completed' ? 'default' : 'secondary'}>
-                          {transaction.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">{transaction.payment_method || '-'}</td>
-                    </tr>
+                    <>
+                      <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4">
+                          {transaction.transaction_items && transaction.transaction_items.length > 0 && (
+                            <button
+                              onClick={() => toggleRowExpansion(transaction.id)}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              {expandedRows.has(transaction.id) ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-primary">{transaction.transaction_number}</td>
+                        <td className="py-3 px-4 text-gray-600">{formatDate(transaction.transaction_date)}</td>
+                        <td className="py-3 px-4 text-gray-600">{transaction.customers?.name || '-'}</td>
+                        <td className="py-3 px-4 text-gray-600">{transaction.profiles?.full_name || '-'}</td>
+                        <td className="py-3 px-4 font-medium text-gray-900">{formatCurrency(transaction.final_amount)}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={transaction.status === 'completed' ? 'default' : 'secondary'}>
+                            {transaction.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-gray-600">{transaction.payment_method || '-'}</td>
+                      </tr>
+                      {expandedRows.has(transaction.id) && transaction.transaction_items && (
+                        <tr>
+                          <td colSpan={8} className="py-0">
+                            <div className="bg-gray-50 p-4 border-l-4 border-primary">
+                              <h4 className="font-medium text-gray-900 mb-3">Detail Menu:</h4>
+                              <div className="grid gap-2">
+                                {transaction.transaction_items.map((item) => (
+                                  <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded border">
+                                    <div>
+                                      <span className="font-medium text-gray-900">{item.products?.name}</span>
+                                      <span className="text-gray-500 ml-2">x{item.quantity}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
+                                      <div className="text-sm text-gray-500">@{formatCurrency(item.unit_price)}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                   {transactions.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-500">
+                      <td colSpan={8} className="py-8 text-center text-gray-500">
                         Tidak ada transaksi ditemukan
                       </td>
                     </tr>
