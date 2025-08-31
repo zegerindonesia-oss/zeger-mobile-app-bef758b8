@@ -186,7 +186,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         .from('stock_movements')
         .select(`
           *,
-          products(id, name, category, price),
+          products!inner(id, name, category, price),
           profiles!stock_movements_rider_id_fkey(id, full_name),
           branches!stock_movements_branch_id_fkey(id, name, branch_type)
         `)
@@ -202,17 +202,17 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       const { data, error } = await query;
       if (error) throw error;
 
-      // Group transfers by date and rider for better organization
+      // Group transfers by reference_id for better organization
       const groupedTransfers: Record<string, StockTransferGroup> = {};
       
       data?.forEach((transfer) => {
         const date = transfer.created_at.split('T')[0];
-        const groupKey = `${date}_${transfer.rider_id || 'no_rider'}_${transfer.reference_id || transfer.id}`;
+        const groupKey = transfer.reference_id || `single_${transfer.id}`;
         
         if (!groupedTransfers[groupKey]) {
           groupedTransfers[groupKey] = {
             id: groupKey,
-            transaction_id: `TRF-${date.replace(/-/g, '')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+            transaction_id: transfer.reference_id || `TRF-${date.replace(/-/g, '')}-${transfer.id.slice(-4).toUpperCase()}`,
             created_at: transfer.created_at,
             status: transfer.status,
             rider_id: transfer.rider_id,
@@ -229,13 +229,16 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         const itemValue = (transfer.products?.price || 0) * transfer.quantity;
         groupedTransfers[groupKey].items.push({
           ...transfer,
-          item_value: itemValue
+          item_value: itemValue,
+          product: transfer.products
         });
         groupedTransfers[groupKey].total_quantity += transfer.quantity;
         groupedTransfers[groupKey].total_value += itemValue;
       });
 
-      setTransfers(Object.values(groupedTransfers));
+      setTransfers(Object.values(groupedTransfers).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ));
     } catch (error: any) {
       toast.error("Gagal memuat transfer stok");
     }

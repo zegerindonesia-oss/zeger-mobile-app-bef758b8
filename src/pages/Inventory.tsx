@@ -36,13 +36,30 @@ interface Shift {
   notes?: string;
 }
 
-interface TransferHistory {
+interface TransferHistoryItem {
   id: string;
-  created_at: string;
-  product_name: string;
+  product_id: string;
+  product?: { id: string; name: string; category: string; price?: number };
   quantity: number;
-  rider_name: string;
+  movement_type: 'transfer' | 'return';
+  created_at: string;
   status: string;
+  item_value?: number;
+}
+
+interface TransferHistoryGroup {
+  id: string;
+  transaction_id: string;
+  created_at: string;
+  status: string;
+  rider_id?: string;
+  branch_id?: string;
+  total_quantity: number;
+  total_value?: number;
+  rider_name?: string;
+  branch_name?: string;
+  branch_type?: string;
+  items: TransferHistoryItem[];
 }
 
 export default function Inventory() {
@@ -59,7 +76,7 @@ export default function Inventory() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedUser, setSelectedUser] = useState<string>("all");
-  const [transferHistory, setTransferHistory] = useState<TransferHistory[]>([]);
+  const [transferHistory, setTransferHistory] = useState<TransferHistoryGroup[]>([]);
 
   useEffect(() => {
     document.title = 'Inventori | Zeger ERP';
@@ -220,14 +237,10 @@ export default function Inventory() {
       let query = supabase
         .from('stock_movements')
         .select(`
-          id,
-          created_at,
-          quantity,
-          status,
-          rider_id,
-          product_id,
-          products(name),
-          profiles!stock_movements_rider_id_fkey(full_name)
+          *,
+          products!inner(id, name, category, price),
+          profiles!stock_movements_rider_id_fkey(id, full_name),
+          branches!stock_movements_branch_id_fkey(id, name, branch_type)
         `)
         .eq('branch_id', userProfile!.branch_id)
         .in('movement_type', ['transfer', 'return'])
@@ -242,16 +255,50 @@ export default function Inventory() {
       const { data, error } = await query;
       if (error) throw error;
 
-      const formattedData: TransferHistory[] = (data || []).map((item: any) => ({
-        id: item.id,
-        created_at: item.created_at,
-        product_name: item.products?.name || 'Unknown Product',
-        quantity: item.quantity,
-        rider_name: item.profiles?.full_name || 'Unknown Rider',
-        status: item.status === 'completed' ? 'completed' : item.status
-      }));
+      // Group transfers by reference_id for better organization
+      const groupedTransfers: Record<string, TransferHistoryGroup> = {};
+      
+      data?.forEach((transfer) => {
+        const date = transfer.created_at.split('T')[0];
+        const groupKey = transfer.reference_id || `single_${transfer.id}`;
+        
+        if (!groupedTransfers[groupKey]) {
+          groupedTransfers[groupKey] = {
+            id: groupKey,
+            transaction_id: transfer.reference_id || `TRF-${date.replace(/-/g, '')}-${transfer.id.slice(-4).toUpperCase()}`,
+            created_at: transfer.created_at,
+            status: transfer.status,
+            rider_id: transfer.rider_id,
+            branch_id: transfer.branch_id,
+            total_quantity: 0,
+            total_value: 0,
+            rider_name: transfer.profiles?.full_name || 'Unknown Rider',
+            branch_name: transfer.branches?.name || 'Branch Hub',
+            branch_type: transfer.branches?.branch_type || 'hub',
+            items: []
+          };
+        }
+        
+        const itemValue = (transfer.products?.price || 0) * transfer.quantity;
+        groupedTransfers[groupKey].items.push({
+          id: transfer.id,
+          product_id: transfer.product_id,
+          quantity: transfer.quantity,
+          movement_type: transfer.movement_type as 'transfer' | 'return',
+          created_at: transfer.created_at,
+          status: transfer.status,
+          item_value: itemValue,
+          product: transfer.products
+        });
+        groupedTransfers[groupKey].total_quantity += transfer.quantity;
+        groupedTransfers[groupKey].total_value = (groupedTransfers[groupKey].total_value || 0) + itemValue;
+      });
 
-      setTransferHistory(formattedData);
+      const sortedGroups = Object.values(groupedTransfers).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setTransferHistory(sortedGroups);
     } catch (error) {
       console.error('Error fetching transfer history:', error);
       toast.error('Gagal memuat riwayat transfer');
@@ -529,60 +576,84 @@ export default function Inventory() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Tanggal</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Jam</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Nama Menu</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Jumlah</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Rider</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transferHistory.map((transfer) => (
-                      <tr key={transfer.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 text-gray-600">
-                          {new Date(transfer.created_at).toLocaleDateString('id-ID')}
-                        </td>
-                        <td className="py-3 px-4 text-gray-600">
-                          {new Date(transfer.created_at).toLocaleTimeString('id-ID', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </td>
-                        <td className="py-3 px-4 text-gray-600">{transfer.product_name}</td>
-                        <td className="py-3 px-4 text-gray-600">{transfer.quantity}</td>
-                        <td className="py-3 px-4 text-gray-600">{transfer.rider_name}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {transfer.status === 'completed' && (
-                              <div className="flex items-center gap-1 text-green-600">
-                                <CheckCircle className="h-4 w-4" />
-                                <span className="text-sm">Berhasil diterima rider</span>
-                              </div>
-                            )}
-                            {transfer.status === 'pending' && (
-                              <Badge variant="secondary">Pending</Badge>
-                            )}
-                            {transfer.status === 'rejected' && (
-                              <Badge variant="destructive">Ditolak</Badge>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {transferHistory.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-500">
-                          Tidak ada riwayat transfer ditemukan
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              <div className="space-y-4">
+                {transferHistory.map((transferGroup) => (
+                  <Card key={transferGroup.id} className="border-l-4 border-l-primary">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Badge variant="outline" className="mb-1">
+                            {transferGroup.transaction_id}
+                          </Badge>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(transferGroup.created_at).toLocaleDateString('id-ID')} - 
+                            {transferGroup.items.length} item(s)
+                          </p>
+                          <p className="text-sm font-medium text-blue-600">
+                            {transferGroup.branch_name} → {transferGroup.rider_name || 'Branch Tujuan'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge 
+                            variant={
+                              transferGroup.status === 'received' ? 'default' :
+                              transferGroup.status === 'sent' ? 'secondary' : 'outline'
+                            }
+                            className={
+                              transferGroup.status === 'received' ? 'bg-green-100 text-green-800' :
+                              transferGroup.status === 'sent' ? 'bg-blue-100 text-blue-800' : ''
+                            }
+                          >
+                            {transferGroup.status === 'received' ? 'Diterima' :
+                             transferGroup.status === 'sent' ? 'Dikirim' : transferGroup.status}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Total: {transferGroup.total_quantity} unit
+                          </p>
+                          {transferGroup.total_value && transferGroup.total_value > 0 && (
+                            <p className="text-xs font-medium text-green-600">
+                              Nilai: Rp {transferGroup.total_value.toLocaleString('id-ID')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="details" className="border-none">
+                          <AccordionTrigger className="text-sm font-medium text-primary hover:text-primary/80 py-2">
+                            Lihat Detail Item
+                          </AccordionTrigger>
+                          <AccordionContent className="pt-2">
+                            <div className="space-y-2 text-sm">
+                              {transferGroup.items.map((item, index) => (
+                                <div key={index} className="flex justify-between items-center py-3 border-b last:border-b-0">
+                                  <div className="flex-1">
+                                    <span className="font-medium">{item.product?.name || 'Unknown Product'}</span>
+                                    <p className="text-xs text-muted-foreground">{item.product?.category}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium">{item.quantity} unit</p>
+                                    {item.item_value && item.item_value > 0 && (
+                                      <p className="text-xs text-green-600 font-medium">
+                                        Rp {item.item_value.toLocaleString('id-ID')}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </CardContent>
+                  </Card>
+                ))}
+                {transferHistory.length === 0 && (
+                  <div className="py-8 text-center text-gray-500">
+                    Tidak ada riwayat transfer ditemukan
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
