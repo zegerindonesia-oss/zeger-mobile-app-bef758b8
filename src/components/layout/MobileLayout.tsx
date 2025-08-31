@@ -83,18 +83,20 @@ export const MobileLayout = ({ children }: MobileLayoutProps) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-white via-red-50/30 to-white">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-white via-red-50/30 to-white overflow-x-hidden">
         <MobileSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col max-w-full">
           <MobileHeader 
             onToggleSidebar={toggleSidebar}
             profile={profile}
             branch={branch}
           />
           
-          <main className="flex-1 overflow-auto pb-16 mt-16">
-            {children || <Outlet />}
+          <main className="flex-1 overflow-auto pb-16 mt-16 px-safe">
+            <div className="max-w-full overflow-x-hidden">
+              {children || <Outlet />}
+            </div>
           </main>
           
           {/* Fixed Shopping Cart Shortcut */}

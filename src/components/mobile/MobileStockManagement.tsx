@@ -779,10 +779,10 @@ const MobileStockManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white overflow-x-hidden">
+      <div className="w-full max-w-md mx-auto space-y-6 px-4 py-4">
         {/* Sticky Header */}
-        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4">
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4 -mx-4 mb-2">
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-5 w-5" />
             <h1 className="text-lg font-semibold">Kelola Stok & Shift</h1>

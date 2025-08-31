@@ -297,8 +297,8 @@ const MobileSellerEnhanced = () => {
       return total + (stockItem ? stockItem.product.price * cartItem.quantity : 0);
     }, 0);
   };
-  return <div className="max-w-md mx-auto min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white">
-      <div className="bg-white/95 backdrop-blur-md text-gray-800 min-h-screen p-4">
+  return <div className="w-full max-w-md mx-auto min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white overflow-x-hidden">
+      <div className="bg-white/95 backdrop-blur-md text-gray-800 min-h-screen p-4 max-w-full">
         {/* Header */}
         
 
@@ -417,26 +417,35 @@ const MobileSellerEnhanced = () => {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Tunai
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="qris">
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="h-4 w-4" />
-                      QRIS
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="transfer">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      Transfer Bank
-                    </div>
-                  </SelectItem>
-                </SelectContent>
+                 <SelectContent className="bg-white border border-gray-200 shadow-lg z-50">
+                   <SelectItem 
+                     value="cash"
+                     className="data-[state=checked]:bg-red-50 data-[state=checked]:text-red-600 data-[highlighted]:bg-red-100"
+                   >
+                     <div className="flex items-center gap-2">
+                       <DollarSign className="h-4 w-4" />
+                       Tunai
+                     </div>
+                   </SelectItem>
+                   <SelectItem 
+                     value="qris"
+                     className="data-[state=checked]:bg-red-50 data-[state=checked]:text-red-600 data-[highlighted]:bg-red-100"
+                   >
+                     <div className="flex items-center gap-2">
+                       <Smartphone className="h-4 w-4" />
+                       QRIS
+                     </div>
+                   </SelectItem>
+                   <SelectItem 
+                     value="transfer"
+                     className="data-[state=checked]:bg-red-50 data-[state=checked]:text-red-600 data-[highlighted]:bg-red-100"
+                   >
+                     <div className="flex items-center gap-2">
+                       <CreditCard className="h-4 w-4" />
+                       Transfer Bank
+                     </div>
+                   </SelectItem>
+                 </SelectContent>
               </Select>
             </div>
 
@@ -450,7 +459,7 @@ const MobileSellerEnhanced = () => {
               </div>}
 
             {/* Transaction Button */}
-            <Button className="w-full h-12 bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700" onClick={processTransaction} disabled={cart.length === 0 || loading}>
+            <Button className="w-full h-12 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700" onClick={processTransaction} disabled={cart.length === 0 || loading}>
               {loading ? "Memproses..." : `Proses Transaksi (Rp ${calculateCartTotal().toLocaleString('id-ID')})`}
             </Button>
 
