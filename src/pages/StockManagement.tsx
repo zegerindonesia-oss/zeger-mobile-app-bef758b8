@@ -79,11 +79,17 @@ export default function StockManagement() {
   const [notes, setNotes] = useState("");
   const [wasteQuantity, setWasteQuantity] = useState("");
   const [wasteNotes, setWasteNotes] = useState("");
+  
+  // Inventory adjustment states
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [adjustmentHistory, setAdjustmentHistory] = useState<any[]>([]);
 
   useEffect(() => {
     document.title = 'Stock Management | Zeger ERP';
     fetchProducts();
     fetchStockData();
+    fetchInventoryItems();
+    fetchAdjustmentHistory();
   }, [startDate, endDate]);
 
   const fetchProducts = async () => {
@@ -248,6 +254,126 @@ export default function StockManagement() {
       currency: 'IDR',
       minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  const fetchInventoryItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select(`
+          *,
+          products (id, name, code, category, price, cost_price)
+        `)
+        .eq('branch_id', 'your-branch-id') // Replace with actual branch ID
+        .order('products.name');
+        
+      if (error) throw error;
+      
+      // Add real_stock field initialized with current stock_quantity
+      const itemsWithRealStock = data?.map(item => ({
+        ...item,
+        real_stock: item.stock_quantity,
+        variance: 0,
+        variance_value: 0
+      })) || [];
+      
+      setInventoryItems(itemsWithRealStock);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      toast.error('Gagal memuat data inventory');
+    }
+  };
+
+  const fetchAdjustmentHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stock_movements')
+        .select(`
+          *,
+          products (name, code, cost_price)
+        `)
+        .eq('movement_type', 'adjustment')
+        .eq('reference_type', 'inventory_adjustment')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      setAdjustmentHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching adjustment history:', error);
+    }
+  };
+
+  const updateRealStock = (itemId: string, realStock: number) => {
+    setInventoryItems(prev => 
+      prev.map(item => {
+        if (item.id === itemId) {
+          const variance = realStock - item.stock_quantity;
+          const varianceValue = variance * (item.products?.cost_price || 0);
+          return {
+            ...item,
+            real_stock: realStock,
+            variance,
+            variance_value: varianceValue
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleInventoryAdjustment = async () => {
+    const itemsToAdjust = inventoryItems.filter(item => item.variance !== 0);
+    
+    if (itemsToAdjust.length === 0) {
+      toast.error('Tidak ada perbedaan stock untuk disesuaikan');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Create adjustment movements
+      const adjustmentMovements = itemsToAdjust.map(item => ({
+        product_id: item.product_id,
+        quantity: Math.abs(item.variance),
+        movement_type: item.variance > 0 ? 'in' : 'adjustment',
+        notes: `Stock opname adjustment: ${item.variance > 0 ? 'tambah' : 'kurang'} ${Math.abs(item.variance)} items`,
+        reference_type: 'inventory_adjustment',
+        branch_id: 'your-branch-id' // Replace with actual branch ID
+      }));
+
+      const { error: movementError } = await supabase
+        .from('stock_movements')
+        .insert(adjustmentMovements);
+
+      if (movementError) throw movementError;
+
+      // Update inventory quantities
+      for (const item of itemsToAdjust) {
+        const { error: updateError } = await supabase
+          .from('inventory')
+          .update({
+            stock_quantity: item.real_stock,
+            last_updated: new Date().toISOString()
+          })
+          .eq('id', item.id);
+
+        if (updateError) throw updateError;
+      }
+
+      toast.success(`${itemsToAdjust.length} item berhasil disesuaikan`);
+      fetchInventoryItems();
+      fetchAdjustmentHistory();
+      fetchStockData();
+      
+    } catch (error) {
+      console.error('Error adjusting inventory:', error);
+      toast.error('Gagal melakukan penyesuaian inventory');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const exportToCSV = () => {
@@ -456,9 +582,10 @@ export default function StockManagement() {
 
       {/* Stock Management Tabs */}
       <Tabs defaultValue="stock-in" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="stock-in">Stok Masuk</TabsTrigger>
           <TabsTrigger value="waste">Waste Stock</TabsTrigger>
+          <TabsTrigger value="inventory-adjustment">Inventory Adjustment</TabsTrigger>
           <TabsTrigger value="movements">Riwayat Pergerakan</TabsTrigger>
           <TabsTrigger value="transfer-history">Riwayat Transfer Stock</TabsTrigger>
         </TabsList>
@@ -622,6 +749,137 @@ export default function StockManagement() {
                     </div>
                   ))
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="inventory-adjustment">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="w-5 h-5" />
+                Inventory Adjustment (Stock Opname)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Current Inventory with Real Stock Input */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg">Stock Opname</h4>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-border">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="border border-border p-2 text-left">Produk</th>
+                        <th className="border border-border p-2 text-center">Stok Sistem</th>
+                        <th className="border border-border p-2 text-center">Stok Real</th>
+                        <th className="border border-border p-2 text-center">Selisih</th>
+                        <th className="border border-border p-2 text-center">Nilai Selisih</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inventoryItems.map((item) => (
+                        <tr key={item.id}>
+                          <td className="border border-border p-2">
+                            <div>
+                              <p className="font-medium">{item.products?.name}</p>
+                              <p className="text-sm text-muted-foreground">{item.products?.code}</p>
+                            </div>
+                          </td>
+                          <td className="border border-border p-2 text-center font-medium">
+                            {item.stock_quantity}
+                          </td>
+                          <td className="border border-border p-2">
+                            <Input
+                              type="number"
+                              value={item.real_stock}
+                              onChange={(e) => updateRealStock(item.id, parseInt(e.target.value) || 0)}
+                              className="w-20 mx-auto text-center"
+                            />
+                          </td>
+                          <td className={cn(
+                            "border border-border p-2 text-center font-medium",
+                            item.variance > 0 ? "text-green-600" : 
+                            item.variance < 0 ? "text-red-600" : "text-muted-foreground"
+                          )}>
+                            {item.variance > 0 ? '+' : ''}{item.variance}
+                          </td>
+                          <td className={cn(
+                            "border border-border p-2 text-center font-medium",
+                            item.variance_value > 0 ? "text-green-600" : 
+                            item.variance_value < 0 ? "text-red-600" : "text-muted-foreground"
+                          )}>
+                            {formatCurrency(item.variance_value)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Summary */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h5 className="font-semibold text-blue-800 mb-2">Total Variance</h5>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-blue-600">Total Items dengan Selisih:</p>
+                      <p className="font-bold text-blue-800">
+                        {inventoryItems.filter(item => item.variance !== 0).length} items
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-blue-600">Total Nilai Selisih:</p>
+                      <p className="font-bold text-blue-800">
+                        {formatCurrency(inventoryItems.reduce((sum, item) => sum + item.variance_value, 0))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleInventoryAdjustment}
+                  disabled={loading || inventoryItems.filter(item => item.variance !== 0).length === 0}
+                  className="w-full"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Proses Penyesuaian Inventory
+                </Button>
+              </div>
+
+              {/* Adjustment History */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg">Riwayat Penyesuaian</h4>
+                
+                <div className="space-y-3">
+                  {loading ? (
+                    <div className="text-center py-4">Loading...</div>
+                  ) : adjustmentHistory.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">
+                      Belum ada riwayat penyesuaian
+                    </div>
+                  ) : (
+                    adjustmentHistory.map((adjustment) => (
+                      <div key={adjustment.id} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{adjustment.products?.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(adjustment.created_at), 'dd/MM/yyyy HH:mm')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{adjustment.notes}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={adjustment.movement_type === 'in' ? 'default' : 'destructive'}>
+                            {adjustment.movement_type === 'in' ? '+' : '-'}{adjustment.quantity}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatCurrency((adjustment.products?.cost_price || 0) * adjustment.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

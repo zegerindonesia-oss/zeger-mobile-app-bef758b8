@@ -301,6 +301,10 @@ const MobileStockManagement = () => {
     { type: '', amount: '', description: '' }
   ]);
   const [expensePhotos, setExpensePhotos] = useState<(File | undefined)[]>([undefined]);
+  
+  // New state for checkbox bulk confirmation
+  const [selectedStockIds, setSelectedStockIds] = useState<Set<string>>(new Set());
+  const [bulkConfirmPhoto, setBulkConfirmPhoto] = useState<File | undefined>(undefined);
 
   useEffect(() => {
     fetchStockData();
@@ -770,6 +774,40 @@ const MobileStockManagement = () => {
     }
   };
 
+  const handleBulkConfirmation = async () => {
+    if (selectedStockIds.size === 0) {
+      toast.error("Pilih minimal satu stok untuk dikonfirmasi");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const selectedItems = pendingStock.filter(item => selectedStockIds.has(item.id));
+      
+      for (const item of selectedItems) {
+        await confirmStockReceival(item.id);
+      }
+
+      // Upload bulk photo if provided
+      if (bulkConfirmPhoto) {
+        // Upload to first selected item as representative
+        const firstItemId = Array.from(selectedStockIds)[0];
+        await uploadVerificationPhoto(firstItemId, bulkConfirmPhoto);
+      }
+
+      // Clear selections
+      setSelectedStockIds(new Set());
+      setBulkConfirmPhoto(undefined);
+      
+      toast.success(`${selectedItems.length} stok berhasil dikonfirmasi!`);
+      
+    } catch (error: any) {
+      toast.error("Gagal konfirmasi stok: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -781,15 +819,15 @@ const MobileStockManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white overflow-x-hidden">
       <div className="w-full max-w-md mx-auto space-y-6 px-4 py-4">
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4 -mx-4 mb-2">
+        {/* Sticky Header - Enhanced for lock */}
+        <div className="sticky top-0 z-50 bg-white border-b shadow-md p-4 -mx-4 mb-2">
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-5 w-5" />
             <h1 className="text-lg font-semibold">Kelola Stok & Shift</h1>
           </div>
           
           <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 text-xs">
+            <TabsList className="grid w-full grid-cols-4 text-xs bg-muted">
               <TabsTrigger value="receive">
                 Terima
                 {pendingStock.length > 0 && (
@@ -815,7 +853,7 @@ const MobileStockManagement = () => {
           <CardContent className="p-4">
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
 
-              {/* Stock Receive Tab */}
+              {/* Stock Receive Tab - Enhanced with checkbox bulk confirmation */}
               <TabsContent value="receive" className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Konfirmasi Stok Masuk</h3>
@@ -837,10 +875,26 @@ const MobileStockManagement = () => {
                          <CardContent className="p-4">
                            <div className="space-y-3">
                              <div className="flex items-center justify-between">
-                               <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                                 <Clock className="h-3 w-3 mr-1" />
-                                 Menunggu
-                               </Badge>
+                               <div className="flex items-center gap-3">
+                                 <input
+                                   type="checkbox"
+                                   className="w-4 h-4 rounded border-2 border-primary"
+                                   checked={selectedStockIds.has(item.id)}
+                                   onChange={(e) => {
+                                     const newSelected = new Set(selectedStockIds);
+                                     if (e.target.checked) {
+                                       newSelected.add(item.id);
+                                     } else {
+                                       newSelected.delete(item.id);
+                                     }
+                                     setSelectedStockIds(newSelected);
+                                   }}
+                                 />
+                                 <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                                   <Clock className="h-3 w-3 mr-1" />
+                                   Menunggu
+                                 </Badge>
+                               </div>
                              </div>
                              
                               <div className="bg-muted/50 p-3 rounded-lg">
@@ -867,39 +921,6 @@ const MobileStockManagement = () => {
                                </p>
                              )}
                            </div>
-
-                           <div className="flex gap-2 mt-4">
-                             <Button
-                               size="sm"
-                               onClick={() => confirmStockReceival(item.id)}
-                               disabled={loading}
-                               className="flex-1"
-                             >
-                               <CheckCircle className="h-4 w-4 mr-1" />
-                               Terima Stok
-                             </Button>
-                            
-                            <input
-                              type="file"
-                              accept="image/*"
-                              style={{ display: 'none' }}
-                              id={`photo-${item.id}`}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  uploadVerificationPhoto(item.id, file);
-                                }
-                              }}
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => document.getElementById(`photo-${item.id}`)?.click()}
-                            >
-                              <Camera className="h-4 w-4 mr-1" />
-                              Foto
-                            </Button>
-                          </div>
                         </CardContent>
                       </Card>
                     ))}
@@ -912,6 +933,57 @@ const MobileStockManagement = () => {
                     )}
                   </div>
                 </ScrollArea>
+
+                {/* Bulk confirmation section */}
+                {selectedStockIds.size > 0 && (
+                  <div className="sticky bottom-0 bg-white border-t p-4 -mx-4 space-y-4">
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-blue-800 mb-2">Total Stok yang Akan Diterima:</p>
+                      <div className="text-lg font-bold text-blue-600">
+                        {pendingStock
+                          .filter(item => selectedStockIds.has(item.id))
+                          .reduce((total, item) => total + item.quantity, 0)} items
+                      </div>
+                      <div className="text-xs text-blue-600 mt-1">
+                        {selectedStockIds.size} produk dipilih
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{ display: 'none' }}
+                        id="bulk-photo"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setBulkConfirmPhoto(file);
+                            toast.success("Foto bukti berhasil diambil!");
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('bulk-photo')?.click()}
+                      >
+                        <Camera className="h-4 w-4 mr-1" />
+                        Foto (Opsional)
+                      </Button>
+                      
+                      <Button
+                        className="flex-1 rounded-full"
+                        onClick={handleBulkConfirmation}
+                        disabled={loading || selectedStockIds.size === 0}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Konfirmasi Penerimaan Stok ({selectedStockIds.size})
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               {/* Stock Return Tab */}
