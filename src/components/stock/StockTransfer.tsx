@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useSearchParams } from "react-router-dom";
 import { 
   Package, 
@@ -16,7 +17,8 @@ import {
   AlertCircle,
   Camera,
   Upload,
-  CheckCircle
+  CheckCircle,
+  ChevronDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -47,6 +49,18 @@ interface StockTransferItem {
   verification_photo_url?: string;
   expected_delivery_date?: string;
   actual_delivery_date?: string;
+  reference_id?: string;
+}
+
+interface StockTransferGroup {
+  id: string;
+  transaction_id: string;
+  created_at: string;
+  status: string;
+  rider_id?: string;
+  branch_id?: string;
+  total_quantity: number;
+  items: StockTransferItem[];
 }
 
 interface Rider {
@@ -64,7 +78,7 @@ interface ShiftInfo {
 }
 
 export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) => {
-  const [transfers, setTransfers] = useState<StockTransferItem[]>([]);
+  const [transfers, setTransfers] = useState<StockTransferGroup[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
@@ -179,7 +193,31 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       const { data, error } = await query;
       if (error) throw error;
 
-      setTransfers(data || []);
+      // Group transfers by date and rider for better organization
+      const groupedTransfers: Record<string, StockTransferGroup> = {};
+      
+      data?.forEach((transfer) => {
+        const date = transfer.created_at.split('T')[0];
+        const groupKey = `${date}_${transfer.rider_id || 'no_rider'}_${transfer.reference_id || transfer.id}`;
+        
+        if (!groupedTransfers[groupKey]) {
+          groupedTransfers[groupKey] = {
+            id: groupKey,
+            transaction_id: `TRF-${date.replace(/-/g, '')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+            created_at: transfer.created_at,
+            status: transfer.status,
+            rider_id: transfer.rider_id,
+            branch_id: transfer.branch_id,
+            total_quantity: 0,
+            items: []
+          };
+        }
+        
+        groupedTransfers[groupKey].items.push(transfer);
+        groupedTransfers[groupKey].total_quantity += transfer.quantity;
+      });
+
+      setTransfers(Object.values(groupedTransfers));
     } catch (error: any) {
       toast.error("Gagal memuat transfer stok");
     }
@@ -305,6 +343,9 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       const expectedDeliveryDate = new Date();
       expectedDeliveryDate.setHours(expectedDeliveryDate.getHours() + 1);
 
+      // Generate unique reference ID for this batch transfer
+      const referenceId = `BATCH-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+
       // Create stock movement records
       const stockMovements = rows.map(p => ({
         product_id: p.id,
@@ -314,6 +355,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         rider_id: selectedRider,
         created_by: userId,
         status: 'sent',
+        reference_id: referenceId,
         expected_delivery_date: expectedDeliveryDate.toISOString(),
         notes: 'Stok dikirim dari branch ke rider'
       }));
@@ -386,7 +428,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       if (error) throw error;
 
       // Also update rider inventory
-      const transfer = transfers.find(t => t.id === transferId);
+      const transfer = transfers
+        .flatMap(group => group.items)
+        .find(t => t.id === transferId);
+      
       if (transfer) {
         await updateRiderInventory(transfer.product_id, transfer.quantity, 'add');
       }
@@ -489,6 +534,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
     }
   };
 
+  const getTotalStockToSend = () => {
+    return Object.values(productQuantities).reduce((sum, qty) => sum + (qty || 0), 0);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="dashboard-card">
@@ -499,131 +548,91 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Create Transfer Form */}
-          {(role === 'ho_admin' || role === 'branch_manager') && (
+          {/* Bulk Transfer Form for Branch Manager */}
+          {role === 'branch_manager' && (
             <div className="space-y-4">
-                {role === 'ho_admin' && (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih Produk" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Input
-                        type="number"
-                        placeholder="Jumlah"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        min="1"
-                      />
-
-                      <Select value={selectedToBranch} onValueChange={setSelectedToBranch}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Ke Branch" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {branches.map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id}>
-                              {branch.name} ({branch.branch_type})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Button onClick={createStockTransfer} disabled={loading}>
-                        <Send className="h-4 w-4 mr-2" />
-                        Kirim
-                      </Button>
-                    </div>
-                    <div className="text-sm text-muted-foreground">Total item: {Number(quantity || 0)}</div>
-                  </div>
-                )}
-
-              {role === 'branch_manager' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div className="md:col-span-2">
-                      <Select value={selectedRider} onValueChange={setSelectedRider}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih Rider" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border border-border shadow-lg z-50">
-                          {riders.filter(r => r.branch_id === branchId).map((rider) => {
-                            const shift = riderShifts[rider.id];
-                            const canReceive = canRiderReceiveStock(rider.id);
-                            const isSelected = selectedRider === rider.id;
-                            
-                            return (
-                              <SelectItem 
-                                key={rider.id} 
-                                value={rider.id}
-                                className={`${isSelected ? 'bg-red-500 text-white' : 'hover:bg-red-50'} cursor-pointer`}
-                              >
-                                <div className="flex items-center justify-between w-full">
-                                  <span>{rider.full_name}</span>
-                                  <div className="flex items-center gap-2 ml-2">
-                                    {shift?.status === 'active' && !shift.report_submitted && (
-                                      <Badge variant="destructive" className="text-xs">
-                                        Shift Aktif
-                                      </Badge>
-                                    )}
-                                    {canReceive && (
-                                      <Badge variant="default" className="text-xs bg-green-100 text-green-800">
-                                        Siap Terima
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Button onClick={createBulkTransferForRider} disabled={loading || !selectedRider} className="w-full">
-                        <Send className="h-4 w-4 mr-2" />
-                        Berikan Stok ke Rider
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground mb-3">Masukkan jumlah per produk</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {products.map((product) => (
-                        <div key={product.id} className="flex items-center justify-between gap-3 border rounded-md p-3">
-                          <div className="min-w-0">
-                            <p className="font-medium truncate">{product.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{product.category}</p>
-                          </div>
-                          <Input
-                            type="number"
-                            inputMode="numeric"
-                            min="0"
-                            className="w-24"
-                            value={productQuantities[product.id] ?? 0}
-                            onChange={(e) => setProductQuantities(prev => ({ ...prev, [product.id]: Math.max(0, Number(e.target.value)) }))}
-                          />
+              <h3 className="text-lg font-semibold">Kirim Stok ke Rider</h3>
+              
+              <Select value={selectedRider} onValueChange={setSelectedRider}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih rider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {riders
+                    .filter(rider => rider.branch_id === branchId)
+                    .map((rider) => (
+                      <SelectItem 
+                        key={rider.id} 
+                        value={rider.id}
+                        disabled={!canRiderReceiveStock(rider.id)}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>{rider.full_name}</span>
+                          {!canRiderReceiveStock(rider.id) && (
+                            <Badge variant="destructive" className="ml-2 text-xs">
+                              Belum laporan shift
+                            </Badge>
+                          )}
                         </div>
-                      ))}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+
+              {/* Total Stock Summary - Highlighted */}
+              {getTotalStockToSend() > 0 && (
+                <Card className="bg-red-50 border-red-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-red-800">Total Stok yang Akan Dikirim:</span>
+                      <span className="text-lg font-bold text-red-600">
+                        {getTotalStockToSend()} unit
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between mt-3 text-sm">
-                      <span className="text-muted-foreground">Total item yang akan dikirim:</span>
-                      <span className="font-medium">{Object.values(productQuantities).reduce((s, v) => s + (Number(v) || 0), 0)} item</span>
+                    <div className="mt-2 text-sm text-red-700">
+                      {Object.entries(productQuantities)
+                        .filter(([id, qty]) => qty > 0)
+                        .map(([id, qty]) => {
+                          const product = products.find(p => p.id === id);
+                          return `${product?.name}: ${qty}`;
+                        })
+                        .join(', ')
+                      }
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               )}
+
+              <Button 
+                onClick={createBulkTransferForRider} 
+                disabled={loading || !selectedRider}
+                className="w-full"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {loading ? "Mengirim..." : "Berikan Stok ke Rider"}
+              </Button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {products.map((product) => (
+                  <div key={product.id} className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-sm text-muted-foreground">{product.category}</p>
+                    </div>
+                    <Input
+                      type="number"
+                      placeholder="Qty"
+                      min="0"
+                      className="w-20"
+                      value={productQuantities[product.id] || ''}
+                      onChange={(e) => setProductQuantities(prev => ({
+                        ...prev,
+                        [product.id]: parseInt(e.target.value) || 0
+                      }))}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -635,76 +644,101 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           <CardTitle>Riwayat Transfer Stok</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Tanggal</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Jam</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Nama Menu</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Jumlah</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                  {role === 'rider' && <th className="text-left py-3 px-4 font-medium text-gray-600">Action</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {transfers.map((transfer) => (
-                  <tr key={transfer.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-600">
-                      {new Date(transfer.created_at).toLocaleDateString('id-ID')}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">
-                      {new Date(transfer.created_at).toLocaleTimeString('id-ID', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">{transfer.product?.name}</td>
-                    <td className="py-3 px-4 text-gray-600">{transfer.quantity}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        {transfer.status === 'received' && (
-                          <div className="flex items-center gap-1 text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="text-sm">Berhasil diterima rider</span>
-                          </div>
-                        )}
-                        {transfer.status === 'sent' && (
-                          <Badge variant="secondary">Pending</Badge>
-                        )}
-                        {transfer.status === 'rejected' && (
-                          <Badge variant="destructive">Ditolak</Badge>
-                        )}
+          <ScrollArea className="h-96">
+            <div className="space-y-4">
+              {transfers.map((transferGroup) => (
+                <Card key={transferGroup.id} className="border-l-4 border-l-primary">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Badge variant="outline" className="mb-1">
+                          {transferGroup.transaction_id}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(transferGroup.created_at).toLocaleDateString('id-ID')} - 
+                          {transferGroup.items.length} item(s)
+                        </p>
                       </div>
-                    </td>
-                    {role === 'rider' && (
-                      <td className="py-3 px-4">
-                        {transfer.status === 'sent' && (
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              onClick={() => confirmStockReceival(transfer.id)}
-                              disabled={loading}
-                              className="text-xs px-2 py-1"
-                            >
-                              Terima
-                            </Button>
+                      <div className="text-right">
+                        {getStatusBadge(transferGroup.status)}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Total: {transferGroup.total_quantity} unit
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="details" className="border-none">
+                        <AccordionTrigger className="text-sm font-medium text-primary hover:text-primary/80 py-2">
+                          Lihat Detail Item
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-2">
+                          <div className="space-y-2 text-sm">
+                            {transferGroup.items.map((item, index) => (
+                              <div key={index} className="flex justify-between py-2 border-b last:border-b-0">
+                                <div>
+                                  <span className="font-medium">{item.product?.name || 'Unknown Product'}</span>
+                                  <p className="text-xs text-muted-foreground">{item.product?.category}</p>
+                                </div>
+                                <span className="font-medium">{item.quantity} unit</span>
+                              </div>
+                            ))}
                           </div>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-                {transfers.length === 0 && (
-                  <tr>
-                    <td colSpan={role === 'rider' ? 6 : 5} className="py-8 text-center text-gray-500">
-                      Tidak ada riwayat transfer ditemukan
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                          {role === 'rider' && transferGroup.status === 'sent' && transferGroup.rider_id === userId && (
+                            <div className="mt-4 pt-3 border-t">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button size="sm" variant="outline" className="w-full">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Konfirmasi Penerimaan Batch
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                  <div className="space-y-4">
+                                    <h4 className="font-medium">Konfirmasi Penerimaan Batch</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      Konfirmasi bahwa Anda telah menerima seluruh item dalam batch ini
+                                    </p>
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-medium">Upload Foto Verifikasi</label>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file && transferGroup.items[0]) {
+                                            uploadVerificationPhoto(transferGroup.items[0].id, file);
+                                          }
+                                        }}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary"
+                                      />
+                                    </div>
+                                    <Button
+                                      onClick={() => {
+                                        transferGroup.items.forEach((item) => {
+                                          confirmStockReceival(item.id);
+                                        });
+                                      }}
+                                      className="w-full"
+                                      size="sm"
+                                    >
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Konfirmasi Terima Batch
+                                    </Button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          )}
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

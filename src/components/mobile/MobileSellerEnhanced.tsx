@@ -255,7 +255,7 @@ const MobileSellerEnhanced = () => {
         status: 'completed',
         rider_id: profile?.id,
         branch_id: profile?.branch_id,
-        customer_id: selectedCustomer && selectedCustomer !== 'general' ? selectedCustomer : null,
+        customer_id: selectedCustomer && selectedCustomer !== 'general' && selectedCustomer !== '' ? selectedCustomer : null,
         transaction_latitude: currentLocation?.lat || null,
         transaction_longitude: currentLocation?.lng || null,
         location_name: currentLocation?.name || null
