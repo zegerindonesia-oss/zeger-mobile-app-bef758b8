@@ -947,13 +947,24 @@ const MobileStockManagement = () => {
 
               {/* Shift Report Tab */}
               <TabsContent value="shift" className="space-y-4">
-                {activeShift && !activeShift.report_submitted ? (
+                {activeShift ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-orange-500" />
-                      <h3 className="text-lg font-semibold text-orange-700">
-                        Shift Aktif - Laporan Shift
-                      </h3>
+                      {!activeShift.report_submitted ? (
+                        <>
+                          <AlertCircle className="h-5 w-5 text-orange-500" />
+                          <h3 className="text-lg font-semibold text-orange-700">
+                            Shift Aktif - Laporan Shift
+                          </h3>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          <h3 className="text-lg font-semibold text-green-700">
+                            Resume Shift - Edit Laporan
+                          </h3>
+                        </>
+                      )}
                     </div>
 
                     {/* Sales Summary */}
@@ -1129,7 +1140,7 @@ const MobileStockManagement = () => {
                           disabled={loading || remainingStockCount > 0}
                           className="w-full bg-green-600 hover:bg-green-700"
                         >
-                          {loading ? "Mengirim..." : "Kirim Laporan Shift"}
+                          {loading ? "Mengirim..." : !activeShift.report_submitted ? "Kirim Laporan Shift" : "Update Laporan Shift"}
                         </Button>
                       </CardContent>
                     </Card>
