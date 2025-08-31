@@ -147,12 +147,11 @@ export const Production = ({ userProfile }: ProductionProps) => {
 
   const fetchStats = async () => {
     try {
-      // Current inventory total (only for branch hub, not riders)
+      // Current inventory total
       const { data: inventory } = await supabase
         .from('inventory')
         .select('stock_quantity')
-        .eq('branch_id', userProfile.branch_id)
-        .is('rider_id', null);
+        .eq('branch_id', userProfile.branch_id);
 
       const totalStock = inventory?.reduce((sum, item) => sum + item.stock_quantity, 0) || 0;
 
