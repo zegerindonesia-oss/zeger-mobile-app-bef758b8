@@ -1184,6 +1184,10 @@ const MobileStockManagement = () => {
                           </span>
                         </div>
                         <div className="flex justify-between"><span>Total Transaksi:</span><span className="font-semibold">{activeShift.total_transactions || 0}</span></div>
+                        {/* Breakdown penjualan agar tetap terlihat setelah laporan dikirim */}
+                        <div className="flex justify-between"><span>Penjualan Tunai:</span><span className="font-semibold">{formatCurrency(shiftSummary.cashSales)}</span></div>
+                        <div className="flex justify-between"><span>Penjualan QRIS:</span><span className="font-semibold">{formatCurrency(shiftSummary.qrisSales)}</span></div>
+                        <div className="flex justify-between"><span>Penjualan Transfer:</span><span className="font-semibold">{formatCurrency(shiftSummary.transferSales)}</span></div>
                         <div className="flex justify-between border-t pt-1"><span className="font-medium">Total Penjualan:</span><span className="font-semibold text-green-600">{formatCurrency(activeShift.total_sales || 0)}</span></div>
                         <div className="flex justify-between"><span>Kas Disetor:</span><span className="font-semibold">{formatCurrency(activeShift.cash_collected || 0)}</span></div>
                       </div>
