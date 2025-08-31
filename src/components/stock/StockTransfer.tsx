@@ -365,7 +365,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       expectedDeliveryDate.setHours(expectedDeliveryDate.getHours() + 1);
 
       // Generate unique reference ID for this batch transfer
-      const referenceId = `BATCH-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+      const referenceId = crypto.randomUUID();
 
       // Create stock movement records
       const stockMovements = rows.map(p => ({
