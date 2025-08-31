@@ -538,8 +538,8 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   };
 
   const canRiderReceiveStock = (riderId: string): boolean => {
-    const shift = riderShifts[riderId];
-    return !shift || shift.report_submitted;
+    // Allow transfers even during active shifts (per user request)
+    return true;
   };
 
   const getStatusBadge = (status: string) => {
@@ -575,23 +575,23 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
               <h3 className="text-lg font-semibold">Kirim Stok ke Rider</h3>
               
               <Select value={selectedRider} onValueChange={setSelectedRider}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background border-input hover:bg-accent">
                   <SelectValue placeholder="Pilih rider" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border-input shadow-lg z-50">
                   {riders
                     .filter(rider => rider.branch_id === branchId)
                     .map((rider) => (
                       <SelectItem 
                         key={rider.id} 
                         value={rider.id}
-                        disabled={!canRiderReceiveStock(rider.id)}
+                        className="hover:bg-red-50 hover:text-red-700 focus:bg-red-100 focus:text-red-800"
                       >
                         <div className="flex items-center justify-between w-full">
                           <span>{rider.full_name}</span>
-                          {!canRiderReceiveStock(rider.id) && (
-                            <Badge variant="destructive" className="ml-2 text-xs">
-                              Belum laporan shift
+                          {riderShifts[rider.id] && (
+                            <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700">
+                              {riderShifts[rider.id].status === 'active' ? 'Shift Aktif' : 'Shift Selesai'}
                             </Badge>
                           )}
                         </div>
@@ -627,7 +627,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
               <Button 
                 onClick={createBulkTransferForRider} 
                 disabled={loading || !selectedRider}
-                className="w-full"
+                className="w-full rounded-full hover:bg-primary/90"
               >
                 <Send className="h-4 w-4 mr-2" />
                 {loading ? "Mengirim..." : "Berikan Stok ke Rider"}
@@ -724,59 +724,59 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                           {role === 'rider' && transferGroup.status === 'sent' && transferGroup.rider_id === userId && (
                             <div className="mt-4 pt-3 border-t">
                               <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button size="sm" variant="outline" className="w-full">
-                                    <Check className="h-3 w-3 mr-1" />
-                                    Konfirmasi Penerimaan Batch
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80">
-                                  <div className="space-y-4">
-                                    <h4 className="font-medium">Konfirmasi Penerimaan Batch</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                      Konfirmasi bahwa Anda telah menerima seluruh item dalam batch ini
-                                    </p>
-                                    <div className="space-y-2">
-                                      <label className="text-sm font-medium">Upload Foto Verifikasi</label>
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0];
-                                          if (file && transferGroup.items[0]) {
-                                            uploadVerificationPhoto(transferGroup.items[0].id, file);
-                                          }
-                                        }}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary"
-                                      />
+                                 <PopoverTrigger asChild>
+                                   <Button size="sm" variant="outline" className="w-full rounded-full hover:bg-accent">
+                                     <Check className="h-3 w-3 mr-1" />
+                                     Konfirmasi Penerimaan Batch
+                                   </Button>
+                                 </PopoverTrigger>
+                                 <PopoverContent className="w-80 bg-background border-input shadow-lg z-50">
+                                   <div className="space-y-4">
+                                     <h4 className="font-medium">Konfirmasi Penerimaan Batch</h4>
+                                     <p className="text-sm text-muted-foreground">
+                                       Konfirmasi bahwa Anda telah menerima seluruh item dalam batch ini
+                                     </p>
+                                     <div className="space-y-2">
+                                       <label className="text-sm font-medium">Upload Foto Verifikasi</label>
+                                       <input
+                                         type="file"
+                                         accept="image/*"
+                                         onChange={(e) => {
+                                           const file = e.target.files?.[0];
+                                           if (file && transferGroup.items[0]) {
+                                             uploadVerificationPhoto(transferGroup.items[0].id, file);
+                                           }
+                                         }}
+                                         className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary"
+                                       />
+                                     </div>
+                                     <Button
+                                       onClick={() => {
+                                         transferGroup.items.forEach((item) => {
+                                           confirmStockReceival(item.id);
+                                         });
+                                       }}
+                                       className="w-full rounded-full hover:bg-primary/90"
+                                       size="sm"
+                                     >
+                                       <CheckCircle className="h-3 w-3 mr-1" />
+                                       Konfirmasi Terima Batch
+                                     </Button>
                                     </div>
-                                    <Button
-                                      onClick={() => {
-                                        transferGroup.items.forEach((item) => {
-                                          confirmStockReceival(item.id);
-                                        });
-                                      }}
-                                      className="w-full"
-                                      size="sm"
-                                    >
-                                      <CheckCircle className="h-3 w-3 mr-1" />
-                                      Konfirmasi Terima Batch
-                                    </Button>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                           )}
+                         </AccordionContent>
+                       </AccordionItem>
+                     </Accordion>
+                   </CardContent>
+                 </Card>
+               ))}
+             </div>
+           </ScrollArea>
+         </CardContent>
+       </Card>
+     </div>
+   );
+ };
