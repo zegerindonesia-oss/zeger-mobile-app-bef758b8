@@ -300,6 +300,7 @@ const MobileStockManagement = () => {
   const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([
     { type: '', amount: '', description: '' }
   ]);
+  const [expensePhotos, setExpensePhotos] = useState<(File | undefined)[]>([undefined]);
 
   useEffect(() => {
     fetchStockData();
@@ -611,10 +612,12 @@ const MobileStockManagement = () => {
 
   const addExpense = () => {
     setOperationalExpenses([...operationalExpenses, { type: '', amount: '', description: '' }]);
+    setExpensePhotos([...expensePhotos, undefined]);
   };
 
   const removeExpense = (index: number) => {
     setOperationalExpenses(operationalExpenses.filter((_, i) => i !== index));
+    setExpensePhotos(expensePhotos.filter((_, i) => i !== index));
   };
 
   const updateExpense = (index: number, field: keyof OperationalExpense, value: string) => {
@@ -669,42 +672,67 @@ const MobileStockManagement = () => {
         }
       }
 
-      // Save operational expenses to daily_operational_expenses table
-      const expenseInserts = operationalExpenses
-        .filter(expense => expense.type && expense.amount)
-        .map(expense => ({
-          rider_id: userProfile.id,
-          shift_id: activeShift.id,
-          expense_type: expense.type,
-          amount: parseFloat(expense.amount),
-          description: expense.description,
-          expense_date: new Date().toISOString().split('T')[0]
-        }));
+      // Save operational expenses to daily_operational_expenses table (with optional receipt photo)
+      let expenseInserts: any[] = [];
+      if (operationalExpenses.length > 0) {
+        expenseInserts = await Promise.all(
+          operationalExpenses
+            .filter(expense => expense.type && expense.amount)
+            .map(async (expense, idx) => {
+              let receiptPath: string | undefined;
+              const photo = expensePhotos[idx];
+              if (photo) {
+                const ext = photo.name.split('.').pop();
+                const fileName = `receipt-${activeShift.id}-${idx}-${Date.now()}.${ext}`;
+                receiptPath = `receipts/${userProfile.id}/${fileName}`;
+                const { error: recErr } = await supabase.storage
+                  .from('expense-receipts')
+                  .upload(receiptPath, photo, { upsert: true, cacheControl: '3600', contentType: photo.type });
+                if (recErr) console.error('Upload receipt error:', recErr);
+              }
+              return {
+                rider_id: userProfile.id,
+                shift_id: activeShift.id,
+                expense_type: expense.type,
+                amount: parseFloat(expense.amount),
+                description: expense.description,
+                expense_date: new Date().toISOString().split('T')[0],
+                receipt_photo_url: receiptPath
+              };
+            })
+        );
+      }
 
       if (expenseInserts.length > 0) {
         const { error: expenseError } = await supabase
           .from('daily_operational_expenses')
           .insert(expenseInserts);
-
         if (expenseError) throw expenseError;
       }
 
-      // Create daily report for branch verification (Upsert by shift_id)
-      const { error: reportError } = await supabase
+      // Create daily report for branch verification once (skip updates due to RLS)
+      const { data: existingReport, error: checkError } = await supabase
         .from('daily_reports')
-        .upsert({
-          rider_id: userProfile.id,
-          shift_id: activeShift.id,
-          branch_id: userProfile.branch_id,
-          report_date: new Date().toISOString().split('T')[0],
-          total_sales: shiftSummary.totalSales,
-          cash_collected: cashToDeposit,
-          total_transactions: shiftSummary.totalTransactions
-        }, {
-          onConflict: 'rider_id, shift_id'
-        });
+        .select('id')
+        .eq('rider_id', userProfile.id)
+        .eq('shift_id', activeShift.id)
+        .maybeSingle();
+      if (checkError) throw checkError;
 
-      if (reportError) throw reportError;
+      if (!existingReport) {
+        const { error: reportError } = await supabase
+          .from('daily_reports')
+          .insert({
+            rider_id: userProfile.id,
+            shift_id: activeShift.id,
+            branch_id: userProfile.branch_id,
+            report_date: new Date().toISOString().split('T')[0],
+            total_sales: shiftSummary.totalSales,
+            cash_collected: cashToDeposit,
+            total_transactions: shiftSummary.totalTransactions
+          });
+        if (reportError) throw reportError;
+      }
 
       // AUTO SHIFT OUT: Complete shift and end automatically
       const updateData: any = {
@@ -730,6 +758,7 @@ const MobileStockManagement = () => {
 
       toast.success("Laporan shift berhasil dikirim dan siap diverifikasi!");
       setOperationalExpenses([{ type: '', amount: '', description: '' }]);
+      setExpensePhotos([undefined]);
       setCashDepositPhoto(undefined);
       setActiveShift(null);
       window.dispatchEvent(new Event('shift-updated'));
