@@ -13,7 +13,8 @@ import {
   Filter,
   Search,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Package
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
@@ -43,6 +44,7 @@ interface Summary {
   totalSales: number;
   totalTransactions: number;
   avgPerTransaction: number;
+  totalItemsSold: number;
 }
 
 interface Rider {
@@ -57,7 +59,8 @@ export const TransactionsEnhanced = () => {
   const [summary, setSummary] = useState<Summary>({
     totalSales: 0,
     totalTransactions: 0,
-    avgPerTransaction: 0
+    avgPerTransaction: 0,
+    totalItemsSold: 0
   });
   
   // Filter states
@@ -194,11 +197,15 @@ export const TransactionsEnhanced = () => {
       const totalSales = filteredData.reduce((sum, t) => sum + (t.final_amount || 0), 0);
       const totalTransactions = filteredData.length;
       const avgPerTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+      const totalItemsSold = filteredData.reduce((sum, t) => 
+        sum + (t.transaction_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0
+      );
 
       setSummary({
         totalSales,
         totalTransactions,
-        avgPerTransaction
+        avgPerTransaction,
+        totalItemsSold
       });
 
     } catch (error) {
@@ -276,7 +283,7 @@ export const TransactionsEnhanced = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="dashboard-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -317,6 +324,21 @@ export const TransactionsEnhanced = () => {
                 <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.avgPerTransaction)}</p>
                 <p className="text-sm font-medium text-gray-900">Rata-rata per Transaksi</p>
                 <p className="text-xs text-gray-500">Nilai rata-rata</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="p-3 rounded-lg bg-gray-100 text-green-600">
+                <Package className="h-6 w-6" />
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-gray-900">{summary.totalItemsSold}</p>
+                <p className="text-sm font-medium text-gray-900">Total Item Terjual</p>
+                <p className="text-xs text-gray-500">Jumlah item terjual</p>
               </div>
             </div>
           </CardContent>
