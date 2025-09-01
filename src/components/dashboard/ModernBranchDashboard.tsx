@@ -675,44 +675,48 @@ export const ModernBranchDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
-              title: "Total Sales",
+              title: "Total Pendapatan",
               value: formatCurrency(stats.totalSales),
               change: "+2.08%",
               icon: DollarSign,
-              description: "Products vs last month",
+              description: "Revenue bulan ini",
               bgColor: "bg-gradient-to-br from-red-500 to-red-600",
-              textColor: "text-white"
+              textColor: "text-white",
+              route: "/transactions"
             },
             {
-              title: "Total Orders", 
+              title: "Total Transaksi", 
               value: stats.totalTransactions.toString(),
               change: "+12.4%",
-              icon: ShoppingCart,
-              description: "Orders vs last month",
+              icon: Receipt,
+              description: "Jumlah transaksi",
               bgColor: "bg-white",
-              textColor: "text-gray-900"
+              textColor: "text-gray-900",
+              route: "/transactions"
             },
             {
-              title: "Visitor",
-              value: stats.totalMembers.toString(),
+              title: "Rata-rata per Transaksi",
+              value: formatCurrency(stats.avgTransactionValue),
               change: "-2.08%",
               changeColor: "text-red-500",
-              icon: Users,
-              description: "Users vs last month",
+              icon: Calculator,
+              description: "Nilai rata-rata",
               bgColor: "bg-white",
-              textColor: "text-gray-900"
+              textColor: "text-gray-900",
+              route: "/transactions"
             },
             {
-              title: "Total Sold Products",
-              value: stats.totalProfit ? formatCurrency(stats.totalProfit) : "0",
+              title: "Total Food Cost",
+              value: formatCurrency(stats.totalFoodCost),
               change: "+12.1%",
-              icon: Package,
-              description: "Products vs last month",
+              icon: ChefHat,
+              description: "Biaya bahan",
               bgColor: "bg-white",
-              textColor: "text-gray-900"
+              textColor: "text-gray-900",
+              route: "/finance/operational-expenses"
             }
           ].map((item, index) => (
-            <Card key={index} className={`${item.bgColor} ${item.textColor} rounded-2xl border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer`} onClick={() => handleCardClick(item.title)}>
+            <Card key={index} className={`${item.bgColor} ${item.textColor} rounded-2xl border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer`} onClick={() => navigate(item.route)}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-xl ${index === 0 ? 'bg-white/20' : 'bg-gray-100'}`}>
@@ -736,14 +740,83 @@ export const ModernBranchDashboard = () => {
           ))}
         </div>
 
-        {/* Product Statistic and Customer Habits Section */}
+        {/* Second Row Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              title: "Total Beban Operasional",
+              value: formatCurrency(stats.totalOperationalExpenses),
+              change: "-2%",
+              changeColor: "text-red-500",
+              icon: Building,
+              description: "Biaya operasional",
+              bgColor: "bg-white",
+              textColor: "text-gray-900",
+              route: "/finance/operational-expenses"
+            },
+            {
+              title: "Total Profit", 
+              value: formatCurrency(stats.totalProfit),
+              change: "+15%",
+              icon: TrendingUp,
+              description: "Keuntungan bersih",
+              bgColor: "bg-white",
+              textColor: "text-gray-900",
+              route: "/finance/profit-loss"
+            },
+            {
+              title: "Total Member",
+              value: stats.totalMembers.toString(),
+              change: "+25%",
+              icon: Users,
+              description: "Pelanggan terdaftar",
+              bgColor: "bg-white",
+              textColor: "text-gray-900",
+              route: "/customers"
+            },
+            {
+              title: "Rider Aktif",
+              value: stats.activeRiders.toString(),
+              change: "0%",
+              icon: UserCheck,
+              description: "Mobile seller online",
+              bgColor: "bg-white",
+              textColor: "text-gray-900",
+              route: "/riders"
+            }
+          ].map((item, index) => (
+            <Card key={index} className={`${item.bgColor} ${item.textColor} rounded-2xl border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer`} onClick={() => navigate(item.route)}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-gray-100">
+                    <item.icon className="h-6 w-6 text-gray-600" />
+                  </div>
+                  <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                    item.changeColor === 'text-red-500' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {item.change}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold text-gray-900">{item.value}</p>
+                  <p className="text-lg font-medium text-gray-700">{item.title}</p>
+                  <p className="text-sm text-gray-500">{item.description}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Menu Terjual and Jam Terjual Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Product Statistic - Main Circle Chart */}
-          <Card className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all">
+          {/* Menu Terjual - Main Circle Chart */}
+          <Card className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate('/transactions')}>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-semibold text-gray-900">Product Statistic</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-gray-900">Menu Terjual</CardTitle>
                   <p className="text-sm text-gray-500">Track your product sales</p>
                 </div>
                 <Select defaultValue="today">
@@ -825,13 +898,13 @@ export const ModernBranchDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Sales by Hour - Customer Habits Style */}
-          <Card className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all">
+          {/* Jam Terjual - Sales by Hour Style */}
+          <Card className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate('/transactions')}>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-semibold text-gray-900">Customer Habits</CardTitle>
-                  <p className="text-sm text-gray-500">Track your customer habits</p>
+                  <CardTitle className="text-lg font-semibold text-gray-900">Jam Terjual</CardTitle>
+                  <p className="text-sm text-gray-500">Track your sales by hour</p>
                 </div>
                 <Select defaultValue="thisyear">
                   <SelectTrigger className="w-24 h-8 text-xs border-gray-200">
@@ -892,10 +965,10 @@ export const ModernBranchDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Rider Performance - Smaller Card */}
-          <Card className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all">
+          {/* Performa Rider - Smaller Card */}
+          <Card className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate('/riders')}>
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold text-gray-900">Rider Performance</CardTitle>
+              <CardTitle className="text-lg font-semibold text-gray-900">Performa Rider</CardTitle>
               <p className="text-sm text-gray-500">Track rider performance</p>
             </CardHeader>
             <CardContent className="pt-0">
