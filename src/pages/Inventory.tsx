@@ -397,97 +397,181 @@ export default function Inventory() {
         <TabsContent value="adjustment">
           <Card className="dashboard-card">
             <CardHeader>
-              <CardTitle>Inventory Adjustment - Branch Hub</CardTitle>
-              <p className="text-sm text-muted-foreground">Penyesuaian stok antara sistem dan stok fisik</p>
+              <CardTitle>Stock Opname Detail</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Filters and Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="category">Product Category</Label>
+                  <Select defaultValue="all">
+                    <SelectTrigger>
+                      <SelectValue placeholder="- All -" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">- All -</SelectItem>
+                      <SelectItem value="makanan">Makanan</SelectItem>
+                      <SelectItem value="minuman">Minuman</SelectItem>
+                      <SelectItem value="snack">Snack</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subcategory">Product Sub Category</Label>
+                  <Select defaultValue="all">
+                    <SelectTrigger>
+                      <SelectValue placeholder="- All -" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">- All -</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                    Export
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file">File Upload</Label>
+                  <Button variant="outline" className="w-full bg-teal-600 hover:bg-teal-700 text-white border-teal-600">
+                    📁 Browse ...
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                    ✓ Upload
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stock Opname Table */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Stock Comparison</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse border border-gray-200">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-4 py-2 text-left">Product</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">System Stock</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Real Stock</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Variance</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Value (Rp)</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Product Name</th>
+                        <th className="border border-gray-200 px-4 py-2 text-center">Product Code</th>
+                        <th className="border border-gray-200 px-4 py-2 text-center">Unit</th>
+                        <th className="border border-gray-200 px-4 py-2 text-center">Stock</th>
+                        <th className="border border-gray-200 px-4 py-2 text-center">Current Stock</th>
+                        <th className="border border-gray-200 px-4 py-2 text-center">Estimated Value per Unit (IDR)</th>
+                        <th className="border border-gray-200 px-4 py-2 text-center">Estimated Total (IDR)</th>
                         <th className="border border-gray-200 px-4 py-2 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {hubInventory.map((item, idx) => {
-                        const realStock = item.stock_quantity; // This would be input by user
-                        const variance = realStock - item.stock_quantity;
-                        const productPrice = 25000; // Default price, should come from products table
-                        const value = variance * productPrice;
-                        
-                        return (
-                          <tr key={idx} className="hover:bg-gray-50">
-                            <td className="border border-gray-200 px-4 py-2">{item.product?.name}</td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">{item.stock_quantity}</td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              <Input 
-                                type="number" 
-                                defaultValue={item.stock_quantity}
-                                className="w-20 text-center"
-                                min="0"
-                              />
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              <span className={variance > 0 ? 'text-green-600' : variance < 0 ? 'text-red-600' : 'text-gray-600'}>
-                                {variance > 0 ? '+' : ''}{variance}
-                              </span>
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              <span className={value > 0 ? 'text-green-600' : value < 0 ? 'text-red-600' : 'text-gray-600'}>
-                                {value > 0 ? '+' : ''}Rp {value.toLocaleString('id-ID')}
-                              </span>
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2 text-center">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-xs"
-                                onClick={() => {
-                                  toast.info('Adjustment akan diimplementasikan');
-                                }}
-                              >
-                                Adjust
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {hubInventory.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-200 px-4 py-2">
+                            <Button variant="outline" size="sm" className="bg-teal-600 hover:bg-teal-700 text-white border-teal-600">
+                              ...
+                            </Button>
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            <Input
+                              type="text"
+                              defaultValue={item.product?.name || ''}
+                              className="w-full text-center border-gray-300"
+                              readOnly
+                            />
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            <Input
+                              type="text"
+                              defaultValue="pcs"
+                              className="w-full text-center border-gray-300"
+                            />
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            <Input
+                              type="number"
+                              defaultValue={item.stock_quantity}
+                              className="w-full text-center border-gray-300"
+                            />
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            <Input
+                              type="number"
+                              defaultValue={item.stock_quantity}
+                              className="w-full text-center border-gray-300"
+                            />
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            <Input
+                              type="number"
+                              defaultValue="0"
+                              className="w-full text-center border-gray-300"
+                            />
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            <Input
+                              type="number"
+                              defaultValue="0"
+                              className="w-full text-center border-gray-300"
+                              readOnly
+                            />
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            <Button variant="destructive" size="sm" className="bg-red-500 hover:bg-red-600 text-white">
+                              ✕
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {hubInventory.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="border border-gray-200 px-4 py-8 text-center text-muted-foreground">
+                            Tidak ada data inventory
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
+                </div>
+                
+                {/* Add Product Button */}
+                <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                  + Add Product
+                </Button>
+              </div>
+
+              {/* Transaction Summary and Additional Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold bg-gray-100 p-3 rounded">Transaction Summary</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="additional-info">Additional Information</Label>
+                    <textarea
+                      id="additional-info"
+                      className="w-full h-32 p-3 border border-gray-300 rounded resize-none"
+                      placeholder="Enter additional information..."
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-gray-100 p-4 rounded">
+                    <h3 className="text-lg font-semibold mb-2">Estimated Stock Opname Total</h3>
+                    <div className="text-right text-2xl font-bold">0,0000</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Riwayat Stock Opname</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-200">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-4 py-2 text-left">Date</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left">Product</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">System</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Real</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Variance</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Value</th>
-                        <th className="border border-gray-200 px-4 py-2 text-left">Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="text-center text-gray-500">
-                        <td colSpan={7} className="border border-gray-200 px-4 py-8">
-                          Belum ada riwayat stock opname
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-4">
+                <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                  📋 Save as Draft
+                </Button>
+                <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                  💾 Save
+                </Button>
+                <Button variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">
+                  ✕ Cancel
+                </Button>
               </div>
             </CardContent>
           </Card>
