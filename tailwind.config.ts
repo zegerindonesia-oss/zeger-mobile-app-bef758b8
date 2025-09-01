@@ -91,8 +91,18 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)',
-				'2xl': '1rem',
-				'3xl': '1.5rem',
+				'2xl': '2rem',
+				'3xl': '2.5rem',
+			},
+			fontSize: {
+				'xs': ['0.7rem', { lineHeight: '1rem' }],
+				'sm': ['0.8rem', { lineHeight: '1.25rem' }],
+				'base': ['0.9rem', { lineHeight: '1.5rem' }],
+				'lg': ['1rem', { lineHeight: '1.75rem' }],
+				'xl': ['1.1rem', { lineHeight: '1.75rem' }],
+				'2xl': ['1.4rem', { lineHeight: '2rem' }],
+				'3xl': ['1.7rem', { lineHeight: '2.25rem' }],
+				'4xl': ['2rem', { lineHeight: '2.5rem' }],
 			},
 			keyframes: {
 				'accordion-down': {

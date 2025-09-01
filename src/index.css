@@ -75,6 +75,9 @@
     /* Animation Variables */
     --duration: 0.3s;
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Border Radius System - More Oval */
+    --radius: 1.5rem;
   }
 
   .dark {
@@ -123,7 +126,8 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    line-height: 1.6;
+    line-height: 1.4;
+    font-size: 0.85rem;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -183,9 +187,9 @@
            transition-all duration-200 rounded-full;
   }
 
-  /* Card Enhancements - Oval Highlights */
+  /* Card Enhancements - More Oval */
   .dashboard-card {
-    @apply glass-card rounded-2xl p-6 hover:shadow-xl transition-all duration-300
+    @apply glass-card rounded-3xl p-5 hover:shadow-xl transition-all duration-300
            border border-border/50 hover:border-primary/20;
   }
 
