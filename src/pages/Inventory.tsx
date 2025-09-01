@@ -9,18 +9,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, CheckCircle, Search } from "lucide-react";
+import { CalendarIcon, CheckCircle, Search, ChevronDown, Upload, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Product { id: string; name: string; category: string; }
+interface Product { id: string; name: string; category: string; code: string; cost_price?: number; }
 interface HubInventory { product_id: string; stock_quantity: number; product?: Product }
 interface RiderInventory extends HubInventory { rider_id: string }
 interface ReturnMovement { id: string; rider_id: string; product_id: string; quantity: number; status: string; verification_photo_url?: string; created_at: string; product?: Product }
 interface Rider { id: string; full_name: string }
+
+interface StockAdjustmentItem {
+  product_id: string;
+  product?: Product;
+  system_stock: number;
+  real_stock: number;
+  variance: number;
+  unit_value: number;
+  total_value: number;
+}
+
+interface StockOpnameHistory {
+  id: string;
+  transaction_id: string;
+  created_at: string;
+  total_variance: number;
+  total_value: number;
+  items: StockAdjustmentItem[];
+  created_by?: string;
+  notes?: string;
+}
 interface Shift { 
   id: string; 
   rider_id: string; 
@@ -77,6 +98,11 @@ export default function Inventory() {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [transferHistory, setTransferHistory] = useState<TransferHistoryGroup[]>([]);
+  
+  // Inventory adjustment states
+  const [stockAdjustmentItems, setStockAdjustmentItems] = useState<StockAdjustmentItem[]>([]);
+  const [stockOpnameHistory, setStockOpnameHistory] = useState<StockOpnameHistory[]>([]);
+  const [adjustmentNotes, setAdjustmentNotes] = useState("");
 
   useEffect(() => {
     document.title = 'Inventori | Zeger ERP';
@@ -92,15 +118,27 @@ export default function Inventory() {
       // Hub inventory (branch, rider null)
       const { data: hub } = await supabase
         .from('inventory')
-        .select('stock_quantity, product_id, products(id, name, category)')
+        .select('stock_quantity, product_id, products(id, name, category, code, cost_price)')
         .eq('branch_id', userProfile!.branch_id)
         .is('rider_id', null);
       setHubInventory((hub || []).map(i => ({ product_id: i.product_id, stock_quantity: i.stock_quantity, product: (i as any).products })));
+      
+      // Initialize stock adjustment items from hub inventory
+      const adjustmentItems: StockAdjustmentItem[] = (hub || []).map(i => ({
+        product_id: i.product_id,
+        product: (i as any).products,
+        system_stock: i.stock_quantity,
+        real_stock: i.stock_quantity,
+        variance: 0,
+        unit_value: (i as any).products?.cost_price || 0,
+        total_value: 0
+      }));
+      setStockAdjustmentItems(adjustmentItems);
 
       // Rider inventory in branch
       const { data: riderInv } = await supabase
         .from('inventory')
-        .select('stock_quantity, product_id, rider_id, products(id, name, category)')
+        .select('stock_quantity, product_id, rider_id, products(id, name, category, code, cost_price)')
         .eq('branch_id', userProfile!.branch_id)
         .not('rider_id', 'is', null);
       setRiderInventory((riderInv || []).map(i => ({ product_id: i.product_id, stock_quantity: i.stock_quantity, rider_id: (i as any).rider_id, product: (i as any).products })));
@@ -144,6 +182,49 @@ export default function Inventory() {
     } catch (e: any) {
       console.error(e);
       toast.error('Gagal memuat data inventory');
+    }
+  };
+
+  const updateStockAdjustmentItem = (index: number, field: keyof StockAdjustmentItem, value: any) => {
+    const updatedItems = [...stockAdjustmentItems];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // Recalculate variance and total value
+    const item = updatedItems[index];
+    item.variance = item.real_stock - item.system_stock;
+    item.total_value = Math.abs(item.variance) * item.unit_value;
+    
+    setStockAdjustmentItems(updatedItems);
+  };
+
+  const saveStockOpname = async () => {
+    if (!userProfile) return;
+    setLoading(true);
+    
+    try {
+      const totalVariance = stockAdjustmentItems.reduce((sum, item) => sum + Math.abs(item.variance), 0);
+      const totalValue = stockAdjustmentItems.reduce((sum, item) => sum + item.total_value, 0);
+      
+      const transactionId = `SO-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
+      
+      const opnameRecord: StockOpnameHistory = {
+        id: crypto.randomUUID(),
+        transaction_id: transactionId,
+        created_at: new Date().toISOString(),
+        total_variance: totalVariance,
+        total_value: totalValue,
+        items: stockAdjustmentItems.filter(item => item.variance !== 0),
+        created_by: userProfile.full_name,
+        notes: adjustmentNotes
+      };
+      
+      setStockOpnameHistory(prev => [opnameRecord, ...prev]);
+      toast.success('Stock opname berhasil disimpan');
+      setAdjustmentNotes("");
+    } catch (error) {
+      toast.error('Gagal menyimpan stock opname');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -397,15 +478,15 @@ export default function Inventory() {
         <TabsContent value="adjustment">
           <Card className="dashboard-card">
             <CardHeader>
-              <CardTitle>Stock Opname Detail</CardTitle>
+              <CardTitle className="text-lg">Stock Opname Detail</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               {/* Filters and Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Product Category</Label>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                <div className="space-y-1">
+                  <Label htmlFor="category" className="text-sm">Product Category</Label>
                   <Select defaultValue="all">
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm rounded-full">
                       <SelectValue placeholder="- All -" />
                     </SelectTrigger>
                     <SelectContent>
@@ -416,10 +497,10 @@ export default function Inventory() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory">Product Sub Category</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="subcategory" className="text-sm">Product Sub Category</Label>
                   <Select defaultValue="all">
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm rounded-full">
                       <SelectValue placeholder="- All -" />
                     </SelectTrigger>
                     <SelectContent>
@@ -427,104 +508,100 @@ export default function Inventory() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>&nbsp;</Label>
-                  <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                <div className="space-y-1">
+                  <Label className="text-sm opacity-0">Export</Label>
+                  <Button className="w-full h-9 text-sm rounded-full bg-teal-600 hover:bg-teal-700 text-white">
+                    <Download className="h-4 w-4 mr-1" />
                     Export
                   </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file">File Upload</Label>
-                  <Button variant="outline" className="w-full bg-teal-600 hover:bg-teal-700 text-white border-teal-600">
-                    📁 Browse ...
+                <div className="space-y-1">
+                  <Label htmlFor="file" className="text-sm">File Upload</Label>
+                  <Button variant="outline" className="w-full h-9 text-sm rounded-full bg-teal-600 hover:bg-teal-700 text-white border-teal-600">
+                    <Upload className="h-4 w-4 mr-1" />
+                    Browse ...
                   </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label>&nbsp;</Label>
-                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                    ✓ Upload
+                <div className="space-y-1">
+                  <Label className="text-sm opacity-0">Upload</Label>
+                  <Button className="w-full h-9 text-sm rounded-full bg-green-600 hover:bg-green-700 text-white">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Upload
                   </Button>
                 </div>
               </div>
 
               {/* Stock Opname Table */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-200">
+                  <table className="w-full">
                     <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-200 px-4 py-2 text-left">Product Name</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Product Code</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Unit</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Stock</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Current Stock</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Estimated Value per Unit (IDR)</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Estimated Total (IDR)</th>
-                        <th className="border border-gray-200 px-4 py-2 text-center">Action</th>
+                      <tr className="bg-muted/30">
+                        <th className="px-3 py-2 text-left text-sm font-medium">Product Name</th>
+                        <th className="px-3 py-2 text-center text-sm font-medium">Product Code</th>
+                        <th className="px-3 py-2 text-center text-sm font-medium">Unit</th>
+                        <th className="px-3 py-2 text-center text-sm font-medium">Stock</th>
+                        <th className="px-3 py-2 text-center text-sm font-medium">Current Stock</th>
+                        <th className="px-3 py-2 text-center text-sm font-medium">Estimated Value per Unit (IDR)</th>
+                        <th className="px-3 py-2 text-center text-sm font-medium">Estimated Total (IDR)</th>
+                        <th className="px-3 py-2 text-center text-sm font-medium">Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {hubInventory.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="border border-gray-200 px-4 py-2">
-                            <Button variant="outline" size="sm" className="bg-teal-600 hover:bg-teal-700 text-white border-teal-600">
-                              ...
-                            </Button>
+                      {stockAdjustmentItems.map((item, index) => (
+                        <tr key={index} className="hover:bg-muted/20">
+                          <td className="px-3 py-2">
+                            <div className="text-sm font-medium">{item.product?.name || 'Unknown Product'}</div>
                           </td>
-                          <td className="border border-gray-200 px-4 py-2 text-center">
-                            <Input
-                              type="text"
-                              defaultValue={item.product?.name || ''}
-                              className="w-full text-center border-gray-300"
-                              readOnly
-                            />
+                          <td className="px-3 py-2 text-center">
+                            <div className="text-sm">{item.product?.code || 'N/A'}</div>
                           </td>
-                          <td className="border border-gray-200 px-4 py-2 text-center">
+                          <td className="px-3 py-2 text-center">
                             <Input
                               type="text"
                               defaultValue="pcs"
-                              className="w-full text-center border-gray-300"
+                              className="w-20 h-8 text-xs text-center rounded-full"
                             />
                           </td>
-                          <td className="border border-gray-200 px-4 py-2 text-center">
+                          <td className="px-3 py-2 text-center">
                             <Input
                               type="number"
-                              defaultValue={item.stock_quantity}
-                              className="w-full text-center border-gray-300"
-                            />
-                          </td>
-                          <td className="border border-gray-200 px-4 py-2 text-center">
-                            <Input
-                              type="number"
-                              defaultValue={item.stock_quantity}
-                              className="w-full text-center border-gray-300"
-                            />
-                          </td>
-                          <td className="border border-gray-200 px-4 py-2 text-center">
-                            <Input
-                              type="number"
-                              defaultValue="0"
-                              className="w-full text-center border-gray-300"
-                            />
-                          </td>
-                          <td className="border border-gray-200 px-4 py-2 text-center">
-                            <Input
-                              type="number"
-                              defaultValue="0"
-                              className="w-full text-center border-gray-300"
+                              value={item.system_stock}
+                              className="w-20 h-8 text-xs text-center rounded-full bg-muted"
                               readOnly
                             />
                           </td>
-                          <td className="border border-gray-200 px-4 py-2 text-center">
-                            <Button variant="destructive" size="sm" className="bg-red-500 hover:bg-red-600 text-white">
+                          <td className="px-3 py-2 text-center">
+                            <Input
+                              type="number"
+                              value={item.real_stock}
+                              onChange={(e) => updateStockAdjustmentItem(index, 'real_stock', parseInt(e.target.value) || 0)}
+                              className="w-20 h-8 text-xs text-center rounded-full"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <Input
+                              type="number"
+                              value={item.unit_value}
+                              onChange={(e) => updateStockAdjustmentItem(index, 'unit_value', parseFloat(e.target.value) || 0)}
+                              className="w-24 h-8 text-xs text-center rounded-full"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <div className="text-sm font-medium">
+                              {new Intl.NumberFormat('id-ID').format(item.total_value)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <Button variant="destructive" size="sm" className="h-8 w-8 rounded-full bg-red-500 hover:bg-red-600 text-white">
                               ✕
                             </Button>
                           </td>
                         </tr>
                       ))}
-                      {hubInventory.length === 0 && (
+                      {stockAdjustmentItems.length === 0 && (
                         <tr>
-                          <td colSpan={8} className="border border-gray-200 px-4 py-8 text-center text-muted-foreground">
+                          <td colSpan={8} className="px-3 py-8 text-center text-sm text-muted-foreground">
                             Tidak ada data inventory
                           </td>
                         </tr>
@@ -532,46 +609,140 @@ export default function Inventory() {
                     </tbody>
                   </table>
                 </div>
-                
-                {/* Add Product Button */}
-                <Button className="bg-teal-600 hover:bg-teal-700 text-white">
-                  + Add Product
-                </Button>
               </div>
 
               {/* Transaction Summary and Additional Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold bg-gray-100 p-3 rounded">Transaction Summary</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold bg-muted/30 p-2 rounded-full">Transaction Summary</h3>
                   <div className="space-y-2">
-                    <Label htmlFor="additional-info">Additional Information</Label>
+                    <Label htmlFor="additional-info" className="text-sm">Additional Information</Label>
                     <textarea
                       id="additional-info"
-                      className="w-full h-32 p-3 border border-gray-300 rounded resize-none"
+                      value={adjustmentNotes}
+                      onChange={(e) => setAdjustmentNotes(e.target.value)}
+                      className="w-full h-24 p-2 text-sm border rounded-lg resize-none"
                       placeholder="Enter additional information..."
                     />
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="bg-gray-100 p-4 rounded">
-                    <h3 className="text-lg font-semibold mb-2">Estimated Stock Opname Total</h3>
-                    <div className="text-right text-2xl font-bold">0,0000</div>
+                <div className="space-y-3">
+                  <div className="bg-muted/30 p-3 rounded-lg">
+                    <h3 className="text-sm font-semibold mb-1">Estimated Stock Opname Total</h3>
+                    <div className="text-right text-lg font-bold">
+                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
+                        stockAdjustmentItems.reduce((sum, item) => sum + item.total_value, 0)
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end space-x-4">
-                <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+              <div className="flex justify-end space-x-3">
+                <Button 
+                  variant="outline" 
+                  className="rounded-full text-sm"
+                  disabled={loading}
+                >
                   📋 Save as Draft
                 </Button>
-                <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+                <Button 
+                  className="rounded-full text-sm bg-teal-600 hover:bg-teal-700 text-white"
+                  onClick={saveStockOpname}
+                  disabled={loading}
+                >
                   💾 Save
                 </Button>
-                <Button variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">
+                <Button 
+                  variant="destructive" 
+                  className="rounded-full text-sm bg-red-500 hover:bg-red-600 text-white"
+                >
                   ✕ Cancel
                 </Button>
+              </div>
+
+              {/* Stock Opname History */}
+              <div className="mt-8 space-y-4">
+                <h3 className="text-lg font-semibold">Riwayat Stock Opname</h3>
+                <div className="space-y-3">
+                  {stockOpnameHistory.map((record) => (
+                    <Card key={record.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium">{record.transaction_id}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {new Date(record.created_at).toLocaleDateString('id-ID')}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {new Date(record.created_at).toLocaleTimeString('id-ID')}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Total Variance: {record.total_variance} items • Value: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(record.total_value)}
+                          </div>
+                        </div>
+                        <Accordion type="single" collapsible>
+                          <AccordionItem value="details" className="border-none">
+                            <AccordionTrigger className="py-0 hover:no-underline">
+                              <Button variant="outline" size="sm" className="rounded-full text-xs">
+                                <ChevronDown className="h-3 w-3 mr-1" />
+                                Details
+                              </Button>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-3">
+                              <div className="space-y-2">
+                                <div className="text-xs text-muted-foreground">
+                                  <strong>Created by:</strong> {record.created_by}
+                                </div>
+                                {record.notes && (
+                                  <div className="text-xs text-muted-foreground">
+                                    <strong>Notes:</strong> {record.notes}
+                                  </div>
+                                )}
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="bg-muted/20">
+                                        <th className="px-2 py-1 text-left">Product</th>
+                                        <th className="px-2 py-1 text-center">System</th>
+                                        <th className="px-2 py-1 text-center">Real</th>
+                                        <th className="px-2 py-1 text-center">Variance</th>
+                                        <th className="px-2 py-1 text-center">Value</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {record.items.map((item, idx) => (
+                                        <tr key={idx}>
+                                          <td className="px-2 py-1">{item.product?.name}</td>
+                                          <td className="px-2 py-1 text-center">{item.system_stock}</td>
+                                          <td className="px-2 py-1 text-center">{item.real_stock}</td>
+                                          <td className="px-2 py-1 text-center font-medium">
+                                            {item.variance > 0 ? '+' : ''}{item.variance}
+                                          </td>
+                                          <td className="px-2 py-1 text-center">
+                                            {new Intl.NumberFormat('id-ID').format(item.total_value)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </div>
+                    </Card>
+                  ))}
+                  {stockOpnameHistory.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground py-8">
+                      Belum ada riwayat stock opname
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
