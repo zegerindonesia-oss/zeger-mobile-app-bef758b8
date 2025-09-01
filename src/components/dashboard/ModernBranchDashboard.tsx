@@ -632,92 +632,111 @@ export const ModernBranchDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6 bg-white min-h-screen">
-      {/* Filters */}
-      <Card className="dashboard-card">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div>
-              <Label htmlFor="user-filter" className="text-sm font-medium">Filter by User:</Label>
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih user" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua User</SelectItem>
-                  {riders.map((rider) => (
-                    <SelectItem key={rider.id} value={rider.id}>
-                      {rider.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="start-date" className="text-sm font-medium">Tanggal Awal:</Label>
-              <Input 
-                id="start-date"
-                type="date" 
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="end-date" className="text-sm font-medium">Tanggal Akhir:</Label>
-              <Input 
-                id="end-date"
-                type="date" 
-                value={endDate} 
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            
-            <Button 
-              onClick={fetchDashboardData}
-              className="bg-primary hover:bg-primary/90"
-            >
-              Filter Data
-            </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Sales Report</h1>
+            <p className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-4">
+            <Select value={selectedUser} onValueChange={setSelectedUser}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="All Users" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                {riders.map((rider) => (
+                  <SelectItem key={rider.id} value={rider.id}>
+                    {rider.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-40"
+            />
+            <Input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-40"
+            />
+          </div>
+        </div>
+      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card 
-              key={index} 
-              className="dashboard-card hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden stat-card"
-              onClick={stat.onClick}
-            >
+      <div className="p-6 space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              title: "Total Sales",
+              value: formatCurrency(stats.totalSales),
+              change: "+2.08%",
+              icon: DollarSign,
+              description: "Products vs last month",
+              bgColor: "bg-gradient-to-br from-red-500 to-red-600",
+              textColor: "text-white"
+            },
+            {
+              title: "Total Orders", 
+              value: stats.totalTransactions.toString(),
+              change: "+12.4%",
+              icon: ShoppingCart,
+              description: "Orders vs last month",
+              bgColor: "bg-white",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Visitor",
+              value: stats.totalMembers.toString(),
+              change: "-2.08%",
+              changeColor: "text-red-500",
+              icon: Users,
+              description: "Users vs last month",
+              bgColor: "bg-white",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Total Sold Products",
+              value: stats.totalProfit ? formatCurrency(stats.totalProfit) : "0",
+              change: "+12.1%",
+              icon: Package,
+              description: "Products vs last month",
+              bgColor: "bg-white",
+              textColor: "text-gray-900"
+            }
+          ].map((item, index) => (
+            <Card key={index} className={`${item.bgColor} ${item.textColor} rounded-2xl border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer`} onClick={() => handleCardClick(item.title)}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-lg bg-gray-100 ${stat.color}`}>
-                    <Icon className="h-6 w-6" />
+                  <div className={`p-3 rounded-xl ${index === 0 ? 'bg-white/20' : 'bg-gray-100'}`}>
+                    <item.icon className={`h-6 w-6 ${index === 0 ? 'text-white' : 'text-gray-600'}`} />
                   </div>
-                  <Badge variant={stat.trend === "up" ? "default" : "destructive"} className={`flex items-center gap-1 ${
-                    stat.trend === "up" ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200"
+                  <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                    item.changeColor === 'text-red-500' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'bg-green-100 text-green-700'
                   }`}>
-                    {stat.trend === "up" ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {stat.change}
-                  </Badge>
+                    {item.change}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-sm font-medium text-gray-900 mt-1">{stat.title}</p>
-                  <p className="text-xs text-gray-500">{stat.subtitle}</p>
+                <div className="space-y-1">
+                  <p className={`text-3xl font-bold ${index === 0 ? 'text-white' : 'text-gray-900'}`}>{item.value}</p>
+                  <p className={`text-lg font-medium ${index === 0 ? 'text-white' : 'text-gray-700'}`}>{item.title}</p>
+                  <p className={`text-sm ${index === 0 ? 'text-white/80' : 'text-gray-500'}`}>{item.description}</p>
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          ))}
+        </div>
 
-      {/* Modern 3D Charts Section */}
+        {/* Modern 3D Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PieChart3D 
           data={productSales.slice(0, 8).map((product, index) => ({
@@ -979,6 +998,7 @@ export const ModernBranchDashboard = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
