@@ -646,49 +646,75 @@ export const ModernBranchDashboard = () => {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              {/* Main Circle Chart */}
-              <div className="relative flex items-center justify-center mb-6">
-                <div className="relative w-48 h-48">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                    {/* Background circles */}
-                    <circle cx="60" cy="60" r="50" fill="none" stroke="#f1f5f9" strokeWidth="8" />
-                    <circle cx="60" cy="60" r="40" fill="none" stroke="#f1f5f9" strokeWidth="8" />
-                    <circle cx="60" cy="60" r="30" fill="none" stroke="#f1f5f9" strokeWidth="8" />
-                    
-                    {/* Progress circles */}
-                    <circle cx="60" cy="60" r="50" fill="none" stroke="#3b82f6" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 50 * 0.7} ${2 * Math.PI * 50}`} className="transition-all duration-1000" />
-                    <circle cx="60" cy="60" r="40" fill="none" stroke="#ef4444" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 40 * 0.4} ${2 * Math.PI * 40}`} className="transition-all duration-1000" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-3xl font-bold text-gray-900">
-                      {productSales.reduce((sum, product) => sum + product.quantity, 0)}
+                {/* Main Circle Chart */}
+                <div className="relative flex items-center justify-center mb-6">
+                  <div className="relative w-48 h-48">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                      {/* Background circles */}
+                      <circle cx="60" cy="60" r="50" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                      <circle cx="60" cy="60" r="40" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                      <circle cx="60" cy="60" r="30" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                      
+                      {/* Progress circles with real data percentages */}
+                      {productSales.slice(0, 2).map((product, index) => {
+                        const radius = 50 - (index * 10);
+                        const circumference = 2 * Math.PI * radius;
+                        const strokeDasharray = `${circumference * (product.value / 100)} ${circumference}`;
+                        const colors = ['#3b82f6', '#ef4444', '#10b981'];
+                        return (
+                          <circle
+                            key={product.name}
+                            cx="60"
+                            cy="60"
+                            r={radius}
+                            fill="none"
+                            stroke={colors[index]}
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            strokeDasharray={strokeDasharray}
+                            className="transition-all duration-1000"
+                          />
+                        );
+                      })}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <div className="text-3xl font-bold text-gray-900">
+                        {productSales.reduce((sum, product) => sum + product.quantity, 0)}
+                      </div>
+                      <div className="text-sm text-gray-500">Products Sales</div>
+                      <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full mt-1">
+                        {productSales.length > 0 ? `+${productSales[0].value}%` : '+0%'}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500">Products Sales</div>
-                    <div className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full mt-1">+5,34%</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Category List */}
-              <div className="space-y-3">
-                {productSales.slice(0, 3).map((product, index) => {
-                const icons = ['☕', '🥤', '🧊'];
-                const colors = ['text-gray-700', 'text-blue-600', 'text-green-600'];
-                const changes = ['+1,5%', '+2,3%', '-1,04%'];
-                return <div key={product.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className={`text-lg ${colors[index]}`}>{icons[index]}</span>
-                        <span className="font-medium text-gray-700">{product.name.substring(0, 10)}</span>
+                {/* Category List */}
+                <div className="space-y-3">
+                  {productSales.slice(0, 5).map((product, index) => {
+                    const icons = ['☕', '🥤', '🧊', '🍪', '🍰'];
+                    const iconColors = ['#8B4513', '#1E90FF', '#32CD32', '#FF6347', '#FF69B4'];
+                    return (
+                      <div key={product.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: product.color }}
+                          ></div>
+                          <span className="font-medium text-gray-700">
+                            {product.name.length > 10 ? `${product.name.substring(0, 10)}...` : product.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900">{product.quantity}</span>
+                          <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                            {product.value}%
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900">{product.quantity}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${index === 2 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                          {changes[index]}
-                        </span>
-                      </div>
-                    </div>;
-              })}
-              </div>
+                    );
+                  })}
+                </div>
             </CardContent>
           </Card>
 

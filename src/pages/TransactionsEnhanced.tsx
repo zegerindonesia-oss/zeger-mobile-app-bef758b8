@@ -283,16 +283,16 @@ export const TransactionsEnhanced = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="dashboard-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-lg bg-gray-100 text-primary">
-                <DollarSign className="h-6 w-6" />
+              <div className="p-2 rounded-lg bg-gray-100 text-primary">
+                <DollarSign className="h-4 w-4" />
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalSales)}</p>
-                <p className="text-sm font-medium text-gray-900">Total Penjualan</p>
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalSales)}</p>
+                <p className="text-xs font-medium text-gray-900">Total Penjualan</p>
                 <p className="text-xs text-gray-500">Omset periode ini</p>
               </div>
             </div>
@@ -300,14 +300,14 @@ export const TransactionsEnhanced = () => {
         </Card>
 
         <Card className="dashboard-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-lg bg-gray-100 text-blue-600">
-                <Receipt className="h-6 w-6" />
+              <div className="p-2 rounded-lg bg-gray-100 text-blue-600">
+                <Receipt className="h-4 w-4" />
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">{summary.totalTransactions}</p>
-                <p className="text-sm font-medium text-gray-900">Total Transaksi</p>
+                <p className="text-lg font-bold text-gray-900">{summary.totalTransactions}</p>
+                <p className="text-xs font-medium text-gray-900">Total Transaksi</p>
                 <p className="text-xs text-gray-500">Jumlah transaksi</p>
               </div>
             </div>
@@ -315,14 +315,14 @@ export const TransactionsEnhanced = () => {
         </Card>
 
         <Card className="dashboard-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-lg bg-gray-100 text-purple-600">
-                <Calculator className="h-6 w-6" />
+              <div className="p-2 rounded-lg bg-gray-100 text-purple-600">
+                <Calculator className="h-4 w-4" />
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.avgPerTransaction)}</p>
-                <p className="text-sm font-medium text-gray-900">Rata-rata per Transaksi</p>
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.avgPerTransaction)}</p>
+                <p className="text-xs font-medium text-gray-900">Rata-rata per Transaksi</p>
                 <p className="text-xs text-gray-500">Nilai rata-rata</p>
               </div>
             </div>
@@ -330,14 +330,14 @@ export const TransactionsEnhanced = () => {
         </Card>
 
         <Card className="dashboard-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="p-3 rounded-lg bg-gray-100 text-green-600">
-                <Package className="h-6 w-6" />
+              <div className="p-2 rounded-lg bg-gray-100 text-green-600">
+                <Package className="h-4 w-4" />
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">{summary.totalItemsSold}</p>
-                <p className="text-sm font-medium text-gray-900">Total Item Terjual</p>
+                <p className="text-lg font-bold text-gray-900">{summary.totalItemsSold}</p>
+                <p className="text-xs font-medium text-gray-900">Total Item Terjual</p>
                 <p className="text-xs text-gray-500">Jumlah item terjual</p>
               </div>
             </div>
@@ -347,13 +347,13 @@ export const TransactionsEnhanced = () => {
 
       {/* Filters */}
       <Card className="dashboard-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Filter className="h-5 w-5" />
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Filter className="h-4 w-4" />
             Filter Transaksi
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">User/Rider</label>
