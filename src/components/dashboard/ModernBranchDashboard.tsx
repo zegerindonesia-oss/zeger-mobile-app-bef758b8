@@ -713,13 +713,7 @@ export const ModernBranchDashboard = () => {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="flex items-center gap-4 mb-6">
-                
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span className="text-xs text-gray-500">Sales</span>
-                </div>
-              </div>
+              
 
               <div className="space-y-4">
                 {hourlyData.map((shift, index) => <div key={shift.name} className="flex items-center justify-between">
