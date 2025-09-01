@@ -36,7 +36,8 @@ interface Rider {
   full_name: string;
   is_active: boolean;
 }
-const COLORS = ['#DC2626', '#EF4444', '#F87171', '#FCA5A5', '#FECACA'];
+const COLORS = ['#3B82F6', '#DC2626', '#EF4444', '#F87171', '#FCA5A5']; // Blue, Red, Orange, Pink, Light Pink
+const SHIFT_COLORS = ['#10B981', '#3B82F6', '#DC2626']; // Green, Blue, Red
 export const ModernBranchDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [salesFilter, setSalesFilter] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
@@ -256,15 +257,32 @@ export const ModernBranchDashboard = () => {
           productQuantities[productName].revenue += item.quantity * 25000; // Estimate price
         });
       });
-      const sortedProducts = Object.entries(productQuantities).sort(([, a], [, b]) => b.quantity - a.quantity).slice(0, 5);
-      const total = sortedProducts.reduce((sum, [, data]) => sum + data.quantity, 0);
-      const productSalesData = sortedProducts.map(([name, data], index) => ({
+      // Get top 4 and group others as "Lainnya"
+      const sortedProducts = Object.entries(productQuantities).sort(([, a], [, b]) => b.quantity - a.quantity);
+      const top4 = sortedProducts.slice(0, 4);
+      const others = sortedProducts.slice(4);
+      
+      const total = Object.values(productQuantities).reduce((sum, data) => sum + data.quantity, 0);
+      
+      const productSalesData = top4.map(([name, data], index) => ({
         name,
         value: total > 0 ? Math.round(data.quantity / total * 100) : 0,
         color: COLORS[index],
         quantity: data.quantity,
         revenue: data.revenue
       }));
+      
+      // Add "Lainnya" if there are more than 4 products
+      if (others.length > 0) {
+        const othersTotal = others.reduce((sum, [, data]) => sum + data.quantity, 0);
+        productSalesData.push({
+          name: 'Lainnya',
+          value: total > 0 ? Math.round(othersTotal / total * 100) : 0,
+          color: COLORS[4],
+          quantity: othersTotal,
+          revenue: others.reduce((sum, [, data]) => sum + data.revenue, 0)
+        });
+      }
       setProductSales(productSalesData);
     } catch (error) {
       console.error("Error fetching product sales:", error);
@@ -602,7 +620,7 @@ export const ModernBranchDashboard = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {kpiData.map((item, index) => <Card key={index} className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => handleCardClick(item.type)}>
+          {kpiData.map((item, index) => <Card key={index} className="rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => handleCardClick(item.type)}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="p-3 rounded-2xl bg-red-500">
@@ -626,7 +644,7 @@ export const ModernBranchDashboard = () => {
         {/* Menu Terjual and Jam Terjual Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Menu Terjual - Main Circle Chart */}
-          <Card className="bg-white rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => handleCardClick('transactions')}>
+          <Card className="rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => handleCardClick('transactions')}>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -719,7 +737,7 @@ export const ModernBranchDashboard = () => {
           </Card>
 
           {/* Jam Terjual */}
-          <Card className="bg-white rounded-3xl shadow-sm border-0">
+          <Card className="rounded-3xl shadow-sm border-0">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -744,7 +762,10 @@ export const ModernBranchDashboard = () => {
               <div className="space-y-4">
                 {hourlyData.map((shift, index) => <div key={shift.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                     <div 
+                       className="w-3 h-3 rounded-full"
+                       style={{ backgroundColor: SHIFT_COLORS[index] || '#DC2626' }}
+                     ></div>
                       <div>
                         <p className="font-medium text-gray-700">{shift.name} ({shift.hours})</p>
                         <p className="text-xs text-gray-500">{(shift.count / hourlyData.reduce((sum, s) => sum + s.count, 1) * 100).toFixed(1)}% of total</p>
@@ -767,7 +788,7 @@ export const ModernBranchDashboard = () => {
           </Card>
 
           {/* Performa Rider */}
-          <Card className="bg-white rounded-3xl shadow-sm border-0">
+          <Card className="rounded-3xl shadow-sm border-0">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -827,7 +848,7 @@ export const ModernBranchDashboard = () => {
                   <p className="text-xl font-bold text-green-600">
                     {formatCurrency(riderStockData.reduce((sum, rider) => sum + rider.revenue, 0))}
                   </p>
-                  <p className="text-xs text-gray-600">Omset</p>
+                  <p className="text-xs text-gray-600">Sales</p>
                 </div>
               </div>
             </CardContent>
