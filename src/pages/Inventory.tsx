@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MobileStockConfirmationGrouped } from "@/components/mobile/MobileStockConfirmationGrouped";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, CheckCircle, Search, ChevronDown, Upload, Download } from "lucide-react";
@@ -84,7 +85,7 @@ interface TransferHistoryGroup {
 }
 
 export default function Inventory() {
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState("stock");
   const [hubInventory, setHubInventory] = useState<HubInventory[]>([]);
   const [riderInventory, setRiderInventory] = useState<RiderInventory[]>([]);
@@ -749,70 +750,14 @@ export default function Inventory() {
         </TabsContent>
 
         <TabsContent value="laporan">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Konfirmasi Pengembalian Stok</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {returns.map(ret => (
-                  <div key={ret.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{ret.product?.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Rider: {riders[ret.rider_id]?.full_name || ret.rider_id} • Qty {ret.quantity}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(ret.created_at).toLocaleDateString('id-ID')} {new Date(ret.created_at).toLocaleTimeString('id-ID')}
-                        </p>
-                      </div>
-                      <Badge variant="outline">{ret.status}</Badge>
-                    </div>
-                    
-                    <Accordion type="single" collapsible className="w-full">
-                      <AccordionItem value="details">
-                        <AccordionTrigger className="text-sm">Lihat Rincian</AccordionTrigger>
-                        <AccordionContent className="space-y-2">
-                          <div className="text-sm space-y-1">
-                            <div className="flex justify-between">
-                              <span>Produk:</span>
-                              <span className="font-medium">{ret.product?.name}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Kategori:</span>
-                              <span className="font-medium">{ret.product?.category || '-'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Jumlah:</span>
-                              <span className="font-medium">{ret.quantity} item</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Status:</span>
-                              <Badge variant="outline">{ret.status}</Badge>
-                            </div>
-                          </div>
-                          {ret.verification_photo_url && (
-                            <div className="mt-2">
-                              <p className="text-xs font-medium mb-1">Foto Verifikasi:</p>
-                              <img src={ret.verification_photo_url} alt="Foto verifikasi pengembalian" className="w-full max-w-xs rounded border" />
-                            </div>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" disabled={loading} onClick={() => approveReturn(ret)}>
-                        Terima
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {returns.length === 0 && <p className="text-sm text-muted-foreground">Tidak ada pengembalian menunggu persetujuan</p>}
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 gap-6">
+            {/* New Enhanced Stock Confirmation Component */}
+            <MobileStockConfirmationGrouped 
+              userProfileId={userProfile?.id || ''}
+              branchId={userProfile?.branch_id || ''}
+            />
 
+            {/* Existing cash deposit verification */}
             <Card className="dashboard-card">
               <CardHeader>
                 <CardTitle>Penerimaan Setoran Tunai</CardTitle>

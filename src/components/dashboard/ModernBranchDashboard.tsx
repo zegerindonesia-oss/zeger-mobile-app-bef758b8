@@ -42,11 +42,16 @@ export const ModernBranchDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [salesFilter, setSalesFilter] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
 
-  // Set default dates: start of month to today
-  const currentDate = new Date();
-  const firstOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const [startDate, setStartDate] = useState<string>(firstOfMonth.toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState<string>(currentDate.toISOString().split('T')[0]);
+  // Set default dates: start of month to today - updates dynamically
+  const getCurrentDate = () => new Date();
+  const getFirstOfMonth = () => {
+    const now = getCurrentDate();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  };
+  
+  const [startDate, setStartDate] = useState<string>(getFirstOfMonth().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState<string>(getCurrentDate().toISOString().split('T')[0]);
+  const [dateFilter, setDateFilter] = useState<'today' | 'weekly' | 'monthly'>('monthly');
 
   // Individual filters for each section
   const [menuFilter, setMenuFilter] = useState<'today' | 'week' | 'month'>('today');
@@ -81,11 +86,25 @@ export const ModernBranchDashboard = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   useEffect(() => {
-    // Update end date to today automatically
-    const today = new Date().toISOString().split('T')[0];
-    if (endDate !== today) {
+    // Update dates automatically based on dateFilter
+    const today = getCurrentDate().toISOString().split('T')[0];
+    const firstOfThisMonth = getFirstOfMonth().toISOString().split('T')[0];
+    
+    if (dateFilter === 'today') {
+      setStartDate(today);
+      setEndDate(today);
+    } else if (dateFilter === 'weekly') {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      setStartDate(weekAgo.toISOString().split('T')[0]);
+      setEndDate(today);
+    } else if (dateFilter === 'monthly') {
+      setStartDate(firstOfThisMonth);
       setEndDate(today);
     }
+  }, [dateFilter]);
+
+  useEffect(() => {
     fetchDashboardData();
   }, [selectedUser, salesFilter, startDate, endDate, menuFilter, hourlyFilter, riderFilter]);
   const getDateRange = (filter: 'today' | 'week' | 'month') => {
@@ -354,19 +373,19 @@ export const ModernBranchDashboard = () => {
 
       // Group by time shifts
       const shifts = [{
-        name: 'Shift 1',
+        name: 'Pagi',
         hours: '06:00 - 10:00',
         start: 6,
         end: 10,
         count: 0
       }, {
-        name: 'Shift 2',
+        name: 'Siang',
         hours: '10:00 - 15:00',
         start: 10,
         end: 15,
         count: 0
       }, {
-        name: 'Shift 3',
+        name: 'Sore',
         hours: '15:00 - 21:00',
         start: 15,
         end: 21,
@@ -385,19 +404,19 @@ export const ModernBranchDashboard = () => {
     } catch (error) {
       console.error("Error fetching hourly data:", error);
       setHourlyData([{
-        name: 'Shift 1',
+        name: 'Pagi',
         hours: '06:00 - 10:00',
         start: 6,
         end: 10,
         count: 0
       }, {
-        name: 'Shift 2',
+        name: 'Siang',
         hours: '10:00 - 15:00',
         start: 10,
         end: 15,
         count: 0
       }, {
-        name: 'Shift 3',
+        name: 'Sore',
         hours: '15:00 - 21:00',
         start: 15,
         end: 21,
@@ -597,7 +616,12 @@ export const ModernBranchDashboard = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Sales Report</h1>
-              <p className="text-sm text-gray-500">Monday, September 1, 2025</p>
+              <p className="text-sm text-gray-500">{new Date().toLocaleDateString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
             </div>
             
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
@@ -610,6 +634,18 @@ export const ModernBranchDashboard = () => {
                   {riders.map(rider => <SelectItem key={rider.id} value={rider.id}>
                       {rider.full_name}
                     </SelectItem>)}
+                </SelectContent>
+              </Select>
+              
+              {/* Quick Filter Dropdown */}
+              <Select value={dateFilter} onValueChange={(value: any) => setDateFilter(value)}>
+                <SelectTrigger className="w-24 h-8 text-xs border-gray-200 rounded-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
                 </SelectContent>
               </Select>
               

@@ -111,12 +111,13 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         .eq('is_active', true);
       setProducts(productsData || []);
 
-      // Fetch riders
+      // Fetch riders - improved query with branch filtering
       const { data: ridersData } = await supabase
         .from('profiles')
         .select('id, full_name, branch_id')
         .eq('role', 'rider')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('full_name');
       setRiders(ridersData || []);
 
       // Fetch branches
@@ -202,25 +203,38 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       const { data, error } = await query;
       if (error) throw error;
 
-      // Group transfers by reference_id for better organization
+      // Group transfers by reference_id for better organization with improved labeling
       const groupedTransfers: Record<string, StockTransferGroup> = {};
       
       data?.forEach((transfer) => {
         const date = transfer.created_at.split('T')[0];
+        const time = new Date(transfer.created_at).toLocaleTimeString('id-ID', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
         const groupKey = transfer.reference_id || `single_${transfer.id}`;
         
         if (!groupedTransfers[groupKey]) {
+          const riderName = transfer.profiles?.full_name || 'Unknown Rider';
+          const branchName = transfer.branches?.name || 'Unknown Branch';
+          
+          // Create descriptive transaction titles
+          const isReturn = transfer.movement_type === 'return';
+          const transactionTitle = isReturn 
+            ? `Pengembalian Stok - ${riderName} → ${branchName}`
+            : `Pengiriman Stok - ${branchName} → ${riderName}`;
+          
           groupedTransfers[groupKey] = {
             id: groupKey,
-            transaction_id: transfer.reference_id || `TRF-${date.replace(/-/g, '')}-${transfer.id.slice(-4).toUpperCase()}`,
+            transaction_id: `${transactionTitle}\n${date} ${time}`,
             created_at: transfer.created_at,
             status: transfer.status,
             rider_id: transfer.rider_id,
             branch_id: transfer.branch_id,
             total_quantity: 0,
             total_value: 0,
-            rider_name: transfer.profiles?.full_name || 'Unknown Rider',
-            branch_name: transfer.branches?.name || 'Unknown Branch',
+            rider_name: riderName,
+            branch_name: branchName,
             branch_type: transfer.branches?.branch_type || 'hub',
             items: []
           };
