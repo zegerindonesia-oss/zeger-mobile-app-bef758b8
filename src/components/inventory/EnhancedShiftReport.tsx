@@ -321,6 +321,47 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           const photos = Array.isArray(rep.photos) ? rep.photos : [];
           photosByShift[rep.shift_id] = photos as string[];
         });
+
+        // Calculate payment breakdown per rider per date from transactions
+        const startStr = format(startDate, 'yyyy-MM-dd');
+        const endStr = format(endDate, 'yyyy-MM-dd');
+        const { data: transData, error: transError } = await supabase
+          .from('transactions')
+          .select('final_amount, payment_method, rider_id, status, transaction_date')
+          .eq('status', 'completed')
+          .in('rider_id', shiftsData.map((s: any) => s.rider_id))
+          .gte('transaction_date', `${startStr}T00:00:00`)
+          .lte('transaction_date', `${endStr}T23:59:59`);
+        if (transError) throw transError;
+
+        const salesByRiderDate: Record<string, { cash: number; qris: number; transfer: number; total: number }>= {};
+        (transData || []).forEach((t: any) => {
+          const key = `${t.rider_id}-${new Date(t.transaction_date).toDateString()}`;
+          if (!salesByRiderDate[key]) salesByRiderDate[key] = { cash: 0, qris: 0, transfer: 0, total: 0 };
+          const amt = Number(t.final_amount || 0);
+          const method = (t.payment_method || '').toLowerCase();
+          if (method === 'cash') salesByRiderDate[key].cash += amt;
+          else if (method === 'qris') salesByRiderDate[key].qris += amt;
+          else if (method === 'transfer') salesByRiderDate[key].transfer += amt;
+          salesByRiderDate[key].total += amt;
+        });
+
+        // Get daily operational expenses (exclude food) per shift
+        const { data: opsData, error: opsError } = await supabase
+          .from('daily_operational_expenses')
+          .select('amount, expense_type, shift_id')
+          .in('shift_id', shiftIds);
+        if (opsError) throw opsError;
+        const opsByShift: Record<string, number> = {};
+        (opsData || []).forEach((op: any) => {
+          if ((op.expense_type || '').toLowerCase() !== 'food') {
+            opsByShift[op.shift_id] = (opsByShift[op.shift_id] || 0) + Number(op.amount || 0);
+          }
+        });
+
+        // Attach aggregates to each shift record below via closure
+        (window as any).__salesByRiderDate = salesByRiderDate;
+        (window as any).__opsByShift = opsByShift;
       }
 
       const records = (shiftsData || []).map((shift: any) => {
@@ -334,6 +375,11 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 
           '';
         
+        const salesMap = (window as any).__salesByRiderDate || {};
+        const opsMap = (window as any).__opsByShift || {};
+        const key = `${shift.rider_id}-${new Date(shift.shift_date).toDateString()}`;
+        const sales = salesMap[key] || { cash: 0, qris: 0, transfer: 0, total: 0 };
+        const ops = opsMap[shift.id] || 0;
         return {
           ...shift,
           rider_name: riders[shift.rider_id]?.full_name || 'Unknown Rider',
@@ -341,7 +387,10 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           products_unsold: unsoldTotal,
           products_returned: returnedVerified,
           shift_date_time: `${format(new Date(shift.shift_date), 'dd/MM/yyyy')} ${shiftStartTime}`.trim(),
-          deposit_photos: photosByShift[shift.id] || []
+          deposit_photos: photosByShift[shift.id] || [],
+          sales_breakdown: sales,
+          operational_daily: ops,
+          calculated_cash_deposit: Math.max(0, (sales.cash || 0) - (ops || 0))
         };
       });
 
