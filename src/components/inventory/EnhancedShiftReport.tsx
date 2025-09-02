@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Check, Package, CalendarIcon, History, DollarSign, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -268,18 +269,66 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         `)
         .eq('branch_id', branchId)
         .eq('report_verified', true)
-        .gte('shift_date', startDate.toISOString().split('T')[0])
-        .lte('shift_date', endDate.toISOString().split('T')[0])
+        .gte('shift_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('shift_date', format(endDate, 'yyyy-MM-dd'))
         .order('verified_at', { ascending: false });
 
       if (selectedUser !== "all") {
         query = query.eq('rider_id', selectedUser);
       }
 
-      const { data, error } = await query;
+      const { data: shiftsData, error } = await query;
       if (error) throw error;
 
-      setShiftHistory(data || []);
+      const shiftIds = (shiftsData || []).map((s: any) => s.id);
+      let returnsByShift: Record<string, any[]> = {};
+      let photosByShift: Record<string, string[]> = {};
+
+      if (shiftIds.length > 0) {
+        const [returnsRes, reportsRes] = await Promise.all([
+          supabase
+            .from('stock_movements')
+            .select(`
+              id, product_id, quantity, status, verification_photo_url, created_at, reference_id,
+              products(name, category)
+            `)
+            .eq('branch_id', branchId)
+            .eq('movement_type', 'return')
+            .in('reference_id', shiftIds),
+          supabase
+            .from('daily_reports')
+            .select('id, shift_id, photos')
+            .in('shift_id', shiftIds)
+        ]);
+
+        if (returnsRes.error) throw returnsRes.error;
+        if (reportsRes.error) throw reportsRes.error;
+
+        returnsRes.data?.forEach((item: any) => {
+          const key = item.reference_id;
+          if (!returnsByShift[key]) returnsByShift[key] = [];
+          returnsByShift[key].push(item);
+        });
+
+        reportsRes.data?.forEach((rep: any) => {
+          const photos = Array.isArray(rep.photos) ? rep.photos : [];
+          photosByShift[rep.shift_id] = photos as string[];
+        });
+      }
+
+      const records = (shiftsData || []).map((shift: any) => {
+        const items = returnsByShift[shift.id] || [];
+        const productsReturned = items.reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
+        return {
+          ...shift,
+          rider_name: (shift as any).profiles?.full_name || 'Unknown Rider',
+          return_items: items,
+          products_returned: productsReturned,
+          deposit_photos: photosByShift[shift.id] || []
+        };
+      });
+
+      setShiftHistory(records);
     } catch (error: any) {
       console.error('Error fetching shift history:', error);
       toast.error('Gagal memuat riwayat shift');
@@ -502,47 +551,66 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             Apply Filter
           </Button>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Rider</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Penjualan</TableHead>
-                <TableHead>Setoran</TableHead>
-                <TableHead>Detail</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shiftHistory.map((shift) => (
-                <TableRow key={shift.id}>
-                  <TableCell>
-                    {format(new Date(shift.shift_date), "dd/MM/yyyy", { locale: id })}
-                  </TableCell>
-                  <TableCell>{(shift.profiles as any)?.full_name || 'Unknown Rider'}</TableCell>
-                  <TableCell>
+          <div className="hidden md:grid grid-cols-6 gap-2 mb-2 p-2 rounded-lg bg-muted/30">
+            <div>Id Trx</div>
+            <div>Sales</div>
+            <div>Produk tidak terjual</div>
+            <div>Produk Kembali</div>
+            <div>Setoran Tunai</div>
+            <div>Status</div>
+          </div>
+          <Accordion type="multiple" className="w-full">
+            {shiftHistory.map((shift: any) => (
+              <AccordionItem key={shift.id} value={shift.id}>
+                <AccordionTrigger>
+                  <div className="grid grid-cols-6 gap-2 w-full text-left items-center">
+                    <span className="font-mono text-xs md:text-sm">{shift.id}</span>
+                    <span className="font-semibold">Rp {Number(shift.total_sales || 0).toLocaleString('id-ID')}</span>
+                    <span>{Number(shift.products_returned || 0)}</span>
+                    <span>{Number(shift.products_returned || 0)}</span>
+                    <span className="font-semibold text-green-600">Rp {Number(shift.cash_collected || 0).toLocaleString('id-ID')}</span>
                     <Badge variant="default">Terverifikasi</Badge>
-                  </TableCell>
-                  <TableCell>
-                    Rp {shift.total_sales.toLocaleString('id-ID')}
-                  </TableCell>
-                  <TableCell>
-                    Rp {shift.cash_collected.toLocaleString('id-ID')}
-                  </TableCell>
-                  <TableCell>
-                    <Select>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Detail" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="view">Lihat Detail</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4">
+                    {shift.return_items?.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Pengembalian Barang</h4>
+                        <div className="space-y-3">
+                          {shift.return_items.map((item: any) => (
+                            <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/20">
+                              {item.verification_photo_url && (
+                                <img src={item.verification_photo_url} alt={item.products?.name || 'Foto pengembalian'} className="w-16 h-16 object-cover rounded-md border" loading="lazy" />
+                              )}
+                              <div className="flex-1">
+                                <div className="font-medium">{item.products?.name}</div>
+                                <div className="text-sm text-muted-foreground">Qty: {item.quantity}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-semibold mb-2">Setoran Tunai</h4>
+                      <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                        <span className="font-medium">Total Setoran</span>
+                        <span className="font-bold text-green-600">Rp {Number(shift.cash_collected || 0).toLocaleString('id-ID')}</span>
+                      </div>
+                      {shift.deposit_photos?.length > 0 && (
+                        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {shift.deposit_photos.map((url: string, idx: number) => (
+                            <img key={idx} src={url} alt={`Foto setoran ${idx + 1}`} className="w-full h-24 object-cover rounded-md border" loading="lazy" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
 
           {shiftHistory.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">

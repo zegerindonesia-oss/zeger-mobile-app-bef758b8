@@ -445,7 +445,7 @@ export default function Inventory() {
               <CardContent>
                 <Accordion type="multiple" className="w-full">
                   {/* Show all riders who have inventory, even if not in the riders map */}
-                  {[...new Set([...Object.keys(riders), ...riderInventory.map(i => i.rider_id)])].map(rid => (
+                  {[...new Set([...Object.keys(riders), ...riderInventory.map(i => i.rider_id), ...returns.map(r => r.rider_id)])].map(rid => (
                     <AccordionItem key={rid} value={rid}>
                       <AccordionTrigger>
                         <div className="flex items-center justify-between w-full">
@@ -468,7 +468,7 @@ export default function Inventory() {
                       </AccordionContent>
                     </AccordionItem>
                   ))}
-                  {[...new Set([...Object.keys(riders), ...riderInventory.map(i => i.rider_id)])].length === 0 && (
+                  {[...new Set([...Object.keys(riders), ...riderInventory.map(i => i.rider_id), ...returns.map(r => r.rider_id)])].length === 0 && (
                     <p className="text-sm text-muted-foreground">Tidak ada stok rider</p>
                   )}
                 </Accordion>
