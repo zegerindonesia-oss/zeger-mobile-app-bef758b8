@@ -125,7 +125,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         .eq('is_active', true);
       setProducts(productsData || []);
 
-      // Fetch riders - ensure we get all active riders
+      // Fetch riders - include all active riders regardless of branch_id for stock transfers
       console.log('Fetching riders...');
       const { data: ridersData, error: ridersError } = await supabase
         .from('profiles')

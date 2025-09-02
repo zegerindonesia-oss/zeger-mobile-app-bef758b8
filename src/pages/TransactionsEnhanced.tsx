@@ -45,6 +45,9 @@ interface Summary {
   totalTransactions: number;
   avgPerTransaction: number;
   totalItemsSold: number;
+  totalFoodCost: number;
+  cashSales: number;
+  nonCashSales: number;
 }
 
 interface Rider {
@@ -60,7 +63,10 @@ export const TransactionsEnhanced = () => {
     totalSales: 0,
     totalTransactions: 0,
     avgPerTransaction: 0,
-    totalItemsSold: 0
+    totalItemsSold: 0,
+    totalFoodCost: 0,
+    cashSales: 0,
+    nonCashSales: 0
   });
   
   // Filter states
@@ -201,11 +207,37 @@ export const TransactionsEnhanced = () => {
         sum + (t.transaction_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0
       );
 
+      // Calculate cash vs non-cash sales
+      const cashSales = filteredData
+        .filter(t => t.payment_method === 'cash')
+        .reduce((sum, t) => sum + (t.final_amount || 0), 0);
+      const nonCashSales = filteredData
+        .filter(t => t.payment_method === 'qris' || t.payment_method === 'transfer')
+        .reduce((sum, t) => sum + (t.final_amount || 0), 0);
+
+      // Fetch food costs for the same period and riders
+      let foodCostQuery = supabase
+        .from('daily_operational_expenses')
+        .select('amount, rider_id, expense_date')
+        .eq('expense_type', 'food')
+        .gte('expense_date', startDate)
+        .lte('expense_date', endDate);
+
+      if (selectedRider !== "all") {
+        foodCostQuery = foodCostQuery.eq('rider_id', selectedRider);
+      }
+
+      const { data: foodCosts } = await foodCostQuery;
+      const totalFoodCost = (foodCosts || []).reduce((sum: number, cost: any) => sum + Number(cost.amount || 0), 0);
+
       setSummary({
         totalSales,
         totalTransactions,
         avgPerTransaction,
-        totalItemsSold
+        totalItemsSold,
+        totalFoodCost,
+        cashSales,
+        nonCashSales
       });
 
     } catch (error) {
@@ -283,7 +315,7 @@ export const TransactionsEnhanced = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
         <Card className="dashboard-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -339,6 +371,51 @@ export const TransactionsEnhanced = () => {
                 <p className="text-lg font-bold text-gray-900">{summary.totalItemsSold}</p>
                 <p className="text-xs font-medium text-gray-900">Total Item Terjual</p>
                 <p className="text-xs text-gray-500">Jumlah item terjual</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="p-2 rounded-lg bg-gray-100 text-red-600">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalFoodCost)}</p>
+                <p className="text-xs font-medium text-gray-900">Biaya Bahan Baku</p>
+                <p className="text-xs text-gray-500">Food cost periode ini</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="p-2 rounded-lg bg-gray-100 text-green-600">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.cashSales)}</p>
+                <p className="text-xs font-medium text-gray-900">Penjualan Tunai</p>
+                <p className="text-xs text-gray-500">Pembayaran cash</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="p-2 rounded-lg bg-gray-100 text-blue-600">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.nonCashSales)}</p>
+                <p className="text-xs font-medium text-gray-900">Non Tunai</p>
+                <p className="text-xs text-gray-500">QRIS + Transfer</p>
               </div>
             </div>
           </CardContent>

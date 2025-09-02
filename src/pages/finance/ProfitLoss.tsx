@@ -98,7 +98,7 @@ export default function ProfitLoss() {
       const productionCost = (prodItems || []).reduce((sum: number, item: any) => 
         sum + (item.quantity * item.cost_per_unit), 0);
 
-      // Add daily food costs from rider expenses (filtered by date and rider if applicable)
+      // Food costs from daily operational expenses (this is the main source of food cost data)
       let foodCostQuery = supabase
         .from('daily_operational_expenses')
         .select('amount')
@@ -113,9 +113,10 @@ export default function ProfitLoss() {
       const { data: foodCosts } = await foodCostQuery;
       const dailyFoodCost = (foodCosts || []).reduce((sum: number, cost: any) => sum + Number(cost.amount || 0), 0);
 
-      rawMaterialCost = productionCost + dailyFoodCost;
+      // Raw material cost is primarily food costs from daily operational expenses
+      rawMaterialCost = dailyFoodCost + productionCost;
 
-      // Daily operational expenses from riders
+      // Other operational expenses from riders (exclude food costs since they're counted in raw materials)
       let dailyExpQuery = supabase
         .from('daily_operational_expenses')
         .select('amount')
