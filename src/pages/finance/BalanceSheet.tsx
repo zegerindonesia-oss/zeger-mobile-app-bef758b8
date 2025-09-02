@@ -36,24 +36,30 @@ export default function BalanceSheet() {
   };
 
   const loadData = async () => {
-    let query = supabase
-      .from('financial_transactions')
-      .select('transaction_type, amount, created_by')
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+    // Connect to actual sales transactions (Jakarta date range)
+    const toJkt = (d: Date) => new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
+    const s = toJkt(startDate);
+    const e = toJkt(endDate);
+
+    let tx = supabase
+      .from('transactions')
+      .select('final_amount, payment_method, rider_id, status, transaction_date')
+      .eq('status', 'completed')
+      .gte('transaction_date', `${s}T00:00:00+07:00`)
+      .lte('transaction_date', `${e}T23:59:59+07:00`);
 
     if (selectedRider !== "all") {
-      query = query.eq('created_by', selectedRider);
+      tx = tx.eq('rider_id', selectedRider);
     }
 
-    const { data } = await query;
-    const list = data || [];
-    
-    const assetsVal = list.filter((r: any) => r.transaction_type === 'asset').reduce((a: number, r: any) => a + Number(r.amount || 0), 0);
-    const liabVal = list.filter((r: any) => r.transaction_type === 'liability').reduce((a: number, r: any) => a + Number(r.amount || 0), 0);
-    
+    const { data: transactions } = await tx;
+    // Treat cash sales as current assets (cash & equivalents)
+    const assetsVal = (transactions || [])
+      .filter((t: any) => t.payment_method === 'cash')
+      .reduce((sum: number, t: any) => sum + Number(t.final_amount || 0), 0);
+
     setAssets(assetsVal);
-    setLiabilities(liabVal);
+    setLiabilities(0); // Placeholder until liabilities mapping is defined
   };
 
   useEffect(() => {

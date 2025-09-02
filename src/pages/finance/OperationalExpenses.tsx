@@ -335,25 +335,30 @@ export default function OperationalExpenses() {
                     </div>
                   </div>
                   {it.receipt_photo_url && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Foto Nota - {it.expense_category}</DialogTitle>
-                        </DialogHeader>
-                        <div className="flex justify-center">
-                          <img 
-                            src={it.receipt_photo_url} 
-                            alt="Foto nota" 
-                            className="max-w-full max-h-96 object-contain"
-                          />
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <div className="flex items-center gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" aria-label="Lihat nota (popup)">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Foto Nota - {it.expense_category}</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex justify-center">
+                            <img 
+                              src={it.receipt_photo_url} 
+                              alt="Foto nota" 
+                              className="max-w-full max-h-96 object-contain"
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <Button variant="link" size="sm" asChild>
+                        <a href={it.receipt_photo_url!} target="_blank" rel="noreferrer">Buka Nota</a>
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

@@ -51,13 +51,18 @@ export default function ProfitLoss() {
     setLoading(true);
     
     try {
-      // Load transactions for revenue calculation
+      // Prepare Jakarta date strings to avoid timezone drift
+      const toJakartaDateStr = (d: Date) => new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
+      const startStr = toJakartaDateStr(startDate);
+      const endStr = toJakartaDateStr(endDate);
+
+      // Load transactions for revenue calculation (Jakarta day range)
       let transQuery = supabase
         .from('transactions')
-        .select('final_amount, payment_method')
+        .select('final_amount, payment_method, rider_id, status, transaction_date')
         .eq('status', 'completed')
-        .gte('transaction_date', startDate.toISOString())
-        .lte('transaction_date', endDate.toISOString());
+        .gte('transaction_date', `${startStr}T00:00:00+07:00`)
+        .lte('transaction_date', `${endStr}T23:59:59+07:00`);
 
       if (selectedRider !== "all") {
         transQuery = transQuery.eq('rider_id', selectedRider);
@@ -82,70 +87,39 @@ export default function ProfitLoss() {
         }
       });
 
-      // Load expenses
-      let rawMaterialCost = 0;
-      let operationalDaily = 0;
-      let salaryCost = 0;
-      let otherCost = 0;
-
-      // Production costs (raw materials) - include both production items and daily food costs
-      const { data: prodItems } = await supabase
-        .from('production_items')
-        .select('quantity, cost_per_unit, production_batches!inner(produced_at)')
-        .gte('production_batches.produced_at', startDate.toISOString())
-        .lte('production_batches.produced_at', endDate.toISOString());
-
-      const productionCost = (prodItems || []).reduce((sum: number, item: any) => 
-        sum + (item.quantity * item.cost_per_unit), 0);
-
-      // Food costs from daily operational expenses (this is the main source of food cost data)
+      // Load expenses based on rider daily expenses
+      // Raw material = FOODCOST only
       let foodCostQuery = supabase
         .from('daily_operational_expenses')
         .select('amount')
         .eq('expense_type', 'food')
-        .gte('expense_date', startDate.toISOString().split('T')[0])
-        .lte('expense_date', endDate.toISOString().split('T')[0]);
+        .gte('expense_date', startStr)
+        .lte('expense_date', endStr);
 
       if (selectedRider !== "all") {
         foodCostQuery = foodCostQuery.eq('rider_id', selectedRider);
       }
 
       const { data: foodCosts } = await foodCostQuery;
-      const dailyFoodCost = (foodCosts || []).reduce((sum: number, cost: any) => sum + Number(cost.amount || 0), 0);
+      const rawMaterialCost = (foodCosts || []).reduce((sum: number, cost: any) => sum + Number(cost.amount || 0), 0);
 
-      // Raw material cost is primarily food costs from daily operational expenses
-      rawMaterialCost = dailyFoodCost + productionCost;
-
-      // Other operational expenses from riders (exclude food costs since they're counted in raw materials)
-      let dailyExpQuery = supabase
+      // Operational other = rider daily expenses EXCLUDING food
+      let riderOtherQuery = supabase
         .from('daily_operational_expenses')
         .select('amount')
-        .gte('expense_date', startDate.toISOString().split('T')[0])
-        .lte('expense_date', endDate.toISOString().split('T')[0]);
+        .neq('expense_type', 'food')
+        .gte('expense_date', startStr)
+        .lte('expense_date', endStr);
 
       if (selectedRider !== "all") {
-        dailyExpQuery = dailyExpQuery.eq('rider_id', selectedRider);
+        riderOtherQuery = riderOtherQuery.eq('rider_id', selectedRider);
       }
 
-      const { data: dailyExp } = await dailyExpQuery;
-      operationalDaily = (dailyExp || []).reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
+      const { data: riderOther } = await riderOtherQuery;
+      const operationalDaily = (riderOther || []).reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
 
-      // Operational expenses (salary, other)
-      let opExpQuery = supabase
-        .from('operational_expenses')
-        .select('amount, expense_category')
-        .gte('expense_date', startDate.toISOString().split('T')[0])
-        .lte('expense_date', endDate.toISOString().split('T')[0]);
-
-      const { data: opExp } = await opExpQuery;
-      (opExp || []).forEach((exp: any) => {
-        const amount = Number(exp.amount || 0);
-        if (exp.expense_category === 'salary') {
-          salaryCost += amount;
-        } else {
-          otherCost += amount;
-        }
-      });
+      const salaryCost = 0; // Not counted per request
+      const otherCost = 0;  // Not counted; "lainnya" already included in operationalDaily
 
       setRevenue({
         cash: cashRevenue,

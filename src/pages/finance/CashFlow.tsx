@@ -40,25 +40,39 @@ export default function CashFlow() {
   const loadData = async () => {
     setLoading(true);
     
-    let query = supabase
-      .from('financial_transactions')
-      .select('transaction_type, account_type, amount, created_by')
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+    // Use Jakarta day boundaries and compute from transactions + rider expenses
+    const toJkt = (d: Date) => new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
+    const s = toJkt(startDate);
+    const e = toJkt(endDate);
+
+    // Cash in from sales transactions
+    let salesQuery = supabase
+      .from('transactions')
+      .select('final_amount, payment_method, rider_id, status, transaction_date')
+      .eq('status', 'completed')
+      .gte('transaction_date', `${s}T00:00:00+07:00`)
+      .lte('transaction_date', `${e}T23:59:59+07:00`);
 
     if (selectedRider !== "all") {
-      query = query.eq('created_by', selectedRider);
+      salesQuery = salesQuery.eq('rider_id', selectedRider);
     }
 
-    const { data } = await query;
-    const list = data || [];
-    
-    const inVal = list
-      .filter((r: any) => r.account_type === 'cash' && (r.transaction_type === 'asset' || r.transaction_type === 'revenue'))
-      .reduce((a: number, r: any) => a + Number(r.amount || 0), 0);
-    const outVal = list
-      .filter((r: any) => r.transaction_type === 'expense')
-      .reduce((a: number, r: any) => a + Number(r.amount || 0), 0);
+    const { data: sales } = await salesQuery;
+    const inVal = (sales || []).reduce((sum: number, t: any) => sum + Number(t.final_amount || 0), 0);
+
+    // Cash out from rider daily expenses (all types)
+    let riderExpQuery = supabase
+      .from('daily_operational_expenses')
+      .select('amount, rider_id, expense_date')
+      .gte('expense_date', s)
+      .lte('expense_date', e);
+
+    if (selectedRider !== "all") {
+      riderExpQuery = riderExpQuery.eq('rider_id', selectedRider);
+    }
+
+    const { data: riderExp } = await riderExpQuery;
+    const outVal = (riderExp || []).reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
 
     setCashIn(inVal);
     setCashOut(outVal);
