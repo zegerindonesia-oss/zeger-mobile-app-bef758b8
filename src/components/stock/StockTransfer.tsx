@@ -614,9 +614,8 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                 <SelectTrigger className="bg-background/95 backdrop-blur-md border-red-500 hover:bg-red-50 rounded-full">
                   <SelectValue placeholder="Pilih rider" />
                 </SelectTrigger>
-                <SelectContent className="bg-background/95 backdrop-blur-md border-red-500 shadow-lg z-50 rounded-2xl">
+                <SelectContent className="bg-white border-red-500 shadow-lg z-50 rounded-2xl">
                   {riders
-                    .filter(rider => rider.branch_id === branchId)
                     .map((rider) => (
                       <SelectItem 
                         key={rider.id} 

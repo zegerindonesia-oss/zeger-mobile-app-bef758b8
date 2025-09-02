@@ -59,7 +59,7 @@ export default function ProfitLoss() {
       // Load transactions for revenue calculation (Jakarta day range)
       let transQuery = supabase
         .from('transactions')
-        .select('final_amount, payment_method, rider_id, status, transaction_date')
+        .select('id, final_amount, payment_method, rider_id, status, transaction_date')
         .eq('status', 'completed')
         .gte('transaction_date', `${startStr}T00:00:00+07:00`)
         .lte('transaction_date', `${endStr}T23:59:59+07:00`);
@@ -87,21 +87,20 @@ export default function ProfitLoss() {
         }
       });
 
-      // Load expenses based on rider daily expenses
-      // Raw material = FOODCOST only
-      let foodCostQuery = supabase
-        .from('daily_operational_expenses')
-        .select('amount')
-        .eq('expense_type', 'food')
-        .gte('expense_date', startStr)
-        .lte('expense_date', endStr);
-
-      if (selectedRider !== "all") {
-        foodCostQuery = foodCostQuery.eq('rider_id', selectedRider);
+      // Raw material cost from sold items (sum of qty * product cost)
+      let rawMaterialCost = 0;
+      const transactionIds = (transactions || []).map((t: any) => t.id);
+      if (transactionIds.length > 0) {
+        const { data: itemCosts } = await supabase
+          .from('transaction_items')
+          .select('quantity, product_id, products:product_id (cost_price)')
+          .in('transaction_id', transactionIds);
+        rawMaterialCost = (itemCosts || []).reduce((sum: number, item: any) => {
+          const qty = Number(item.quantity || 0);
+          const cost = Number(item.products?.cost_price || 0);
+          return sum + qty * cost;
+        }, 0);
       }
-
-      const { data: foodCosts } = await foodCostQuery;
-      const rawMaterialCost = (foodCosts || []).reduce((sum: number, cost: any) => sum + Number(cost.amount || 0), 0);
 
       // Operational other = rider daily expenses EXCLUDING food
       let riderOtherQuery = supabase

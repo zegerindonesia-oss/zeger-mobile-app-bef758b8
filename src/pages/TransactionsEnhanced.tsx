@@ -25,7 +25,7 @@ interface TransactionItem {
   quantity: number;
   unit_price: number;
   total_price: number;
-  products?: { name: string };
+  products?: { name: string; cost_price?: number };
 }
 
 interface Transaction {
@@ -171,14 +171,14 @@ export const TransactionsEnhanced = () => {
             quantity,
             unit_price,
             total_price,
-            products:product_id (name)
+            products:product_id (name, cost_price)
           `)
           .eq('transaction_id', transaction.id);
 
         if (items) {
           transactionItems = items.map(item => ({
             ...item,
-            products: { name: item.products?.name || 'Unknown Product' }
+            products: { name: item.products?.name || 'Unknown Product', cost_price: item.products?.cost_price }
           }));
         }
 
@@ -215,20 +215,14 @@ export const TransactionsEnhanced = () => {
         .filter(t => t.payment_method === 'qris' || t.payment_method === 'transfer')
         .reduce((sum, t) => sum + (t.final_amount || 0), 0);
 
-      // Fetch food costs for the same period and riders
-      let foodCostQuery = supabase
-        .from('daily_operational_expenses')
-        .select('amount, rider_id, expense_date')
-        .eq('expense_type', 'food')
-        .gte('expense_date', startDate)
-        .lte('expense_date', endDate);
-
-      if (selectedRider !== "all") {
-        foodCostQuery = foodCostQuery.eq('rider_id', selectedRider);
-      }
-
-      const { data: foodCosts } = await foodCostQuery;
-      const totalFoodCost = (foodCosts || []).reduce((sum: number, cost: any) => sum + Number(cost.amount || 0), 0);
+      // Calculate food cost from sold items (qty * product cost)
+      const totalFoodCost = filteredData.reduce((sum, t) => {
+        const tc = t.transaction_items?.reduce((s, item) => {
+          const cost = Number(item.products?.cost_price || 0);
+          return s + Number(item.quantity || 0) * cost;
+        }, 0) || 0;
+        return sum + tc;
+      }, 0);
 
       setSummary({
         totalSales,
