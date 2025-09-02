@@ -260,6 +260,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           rider_id,
           shift_date,
           shift_number,
+          shift_start_time,
+          shift_end_time,
           total_sales,
           cash_collected,
           report_verified,
@@ -284,32 +286,38 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
       let photosByShift: Record<string, string[]> = {};
 
       if (shiftIds.length > 0) {
-        const [returnsRes, reportsRes] = await Promise.all([
-          supabase
-            .from('stock_movements')
-            .select(`
-              id, product_id, quantity, status, verification_photo_url, created_at, reference_id,
-              products(name, category)
-            `)
-            .eq('branch_id', branchId)
-            .eq('movement_type', 'return')
-            .in('reference_id', shiftIds),
-          supabase
-            .from('daily_reports')
-            .select('id, shift_id, photos')
-            .in('shift_id', shiftIds)
-        ]);
+        // Get stock returns for these shifts (using rider_id and created date to match shifts)
+        const { data: returnsRes, error: returnsError } = await supabase
+          .from('stock_movements')
+          .select(`
+            id, product_id, quantity, status, verification_photo_url, created_at, rider_id,
+            products(name, category)
+          `)
+          .eq('branch_id', branchId)
+          .eq('movement_type', 'return')
+          .in('rider_id', shiftsData.map((s: any) => s.rider_id));
 
-        if (returnsRes.error) throw returnsRes.error;
-        if (reportsRes.error) throw reportsRes.error;
+        if (returnsError) throw returnsError;
 
-        returnsRes.data?.forEach((item: any) => {
-          const key = item.reference_id;
-          if (!returnsByShift[key]) returnsByShift[key] = [];
-          returnsByShift[key].push(item);
+        // Match returns to shifts by rider and date
+        shiftsData.forEach((shift: any) => {
+          const shiftDate = new Date(shift.shift_date).toDateString();
+          const matchingReturns = (returnsRes || []).filter((ret: any) => {
+            const returnDate = new Date(ret.created_at).toDateString();
+            return ret.rider_id === shift.rider_id && returnDate === shiftDate;
+          });
+          returnsByShift[shift.id] = matchingReturns;
         });
 
-        reportsRes.data?.forEach((rep: any) => {
+        // Get photos from daily_reports
+        const { data: reportsRes, error: reportsError } = await supabase
+          .from('daily_reports')
+          .select('id, shift_id, photos')
+          .in('shift_id', shiftIds);
+
+        if (reportsError) throw reportsError;
+
+        reportsRes?.forEach((rep: any) => {
           const photos = Array.isArray(rep.photos) ? rep.photos : [];
           photosByShift[rep.shift_id] = photos as string[];
         });
@@ -321,13 +329,18 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         const returnedVerified = items
           .filter((it: any) => ['approved', 'received'].includes((it.status || '').toLowerCase()))
           .reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
+        
+        const shiftStartTime = shift.shift_start_time ? 
+          new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 
+          '';
+        
         return {
           ...shift,
           rider_name: riders[shift.rider_id]?.full_name || 'Unknown Rider',
           return_items: items,
           products_unsold: unsoldTotal,
           products_returned: returnedVerified,
-          shift_date_time: `${shift.shift_date} ${shift.shift_start_time ? new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}`.trim(),
+          shift_date_time: `${format(new Date(shift.shift_date), 'dd/MM/yyyy')} ${shiftStartTime}`.trim(),
           deposit_photos: photosByShift[shift.id] || []
         };
       });

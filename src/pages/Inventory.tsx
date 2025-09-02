@@ -144,17 +144,7 @@ export default function Inventory() {
         .not('rider_id', 'is', null);
       setRiderInventory((riderInv || []).map(i => ({ product_id: i.product_id, stock_quantity: i.stock_quantity, rider_id: (i as any).rider_id, product: (i as any).products })));
 
-      // Riders map
-      const { data: riderProfiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .eq('branch_id', userProfile!.branch_id)
-        .eq('role', 'rider');
-      const map: Record<string, Rider> = {};
-      (riderProfiles || []).forEach(r => { map[r.id] = r as Rider; });
-      setRiders(map);
-
-      // Pending returns
+      // Pending returns (needed before building riders map)
       const { data: ret } = await supabase
         .from('stock_movements')
         .select('id, rider_id, product_id, quantity, status, verification_photo_url, created_at, products(id, name, category)')
@@ -163,6 +153,31 @@ export default function Inventory() {
         .in('status', ['pending', 'returned'])
         .order('created_at', { ascending: false });
       setReturns((ret || []).map(r => ({ ...r, product: (r as any).products })) as any);
+
+      // Riders map - include ALL riders with activity, not just from current branch
+      const { data: riderProfiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'rider')
+        .eq('is_active', true);
+      const map: Record<string, Rider> = {};
+      (riderProfiles || []).forEach(r => { map[r.id] = r as Rider; });
+      
+      // Include riders from inventory and returns who might not be in profiles
+      const allRiderIds = new Set([
+        ...Object.keys(map),
+        ...(riderInv || []).map((i: any) => i.rider_id),
+        ...(ret || []).map((r: any) => r.rider_id)
+      ]);
+      
+      // For missing riders, create placeholder entries
+      allRiderIds.forEach(riderId => {
+        if (!map[riderId]) {
+          map[riderId] = { id: riderId, full_name: `Rider ${riderId.slice(-4)}` };
+        }
+      });
+      
+      setRiders(map);
 
       // Shifts waiting verification
       const today = new Date().toISOString().split('T')[0];
