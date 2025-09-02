@@ -79,7 +79,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
   useEffect(() => {
     fetchCombinedReports();
-  }, [branchId]);
+    fetchShiftHistory();
+  }, [branchId, selectedUser, startDate, endDate]);
 
   const fetchCombinedReports = async () => {
     try {
