@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileSuccessModal } from "./MobileSuccessModal";
 import { MobileCustomerQuickAdd } from "./MobileCustomerQuickAdd";
+import { cn } from "@/lib/utils";
 interface Product {
   id: string;
   name: string;
@@ -43,7 +44,7 @@ const MobileSellerEnhanced = () => {
   }[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris' | 'transfer'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris' | 'transfer' | ''>('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [currentLocation, setCurrentLocation] = useState<{
@@ -189,6 +190,11 @@ const MobileSellerEnhanced = () => {
   const processTransaction = async () => {
     if (cart.length === 0) {
       toast.error("Keranjang kosong");
+      return;
+    }
+
+    if (!paymentMethod) {
+      toast.error("Pilih metode pembayaran terlebih dahulu");
       return;
     }
 
@@ -411,42 +417,55 @@ const MobileSellerEnhanced = () => {
               </div>}
 
             {/* Payment Method Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Metode Pembayaran:</label>
-              <Select value={paymentMethod} onValueChange={(value: 'cash' | 'qris' | 'transfer') => setPaymentMethod(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                 <SelectContent className="bg-white border border-gray-200 shadow-lg z-50">
-                   <SelectItem 
-                     value="cash"
-                     className="data-[state=checked]:bg-red-50 data-[state=checked]:text-red-600 data-[highlighted]:bg-red-100"
-                   >
-                     <div className="flex items-center gap-2">
-                       <DollarSign className="h-4 w-4" />
-                       Tunai
-                     </div>
-                   </SelectItem>
-                   <SelectItem 
-                     value="qris"
-                     className="data-[state=checked]:bg-red-50 data-[state=checked]:text-red-600 data-[highlighted]:bg-red-100"
-                   >
-                     <div className="flex items-center gap-2">
-                       <Smartphone className="h-4 w-4" />
-                       QRIS
-                     </div>
-                   </SelectItem>
-                   <SelectItem 
-                     value="transfer"
-                     className="data-[state=checked]:bg-red-50 data-[state=checked]:text-red-600 data-[highlighted]:bg-red-100"
-                   >
-                     <div className="flex items-center gap-2">
-                       <CreditCard className="h-4 w-4" />
-                       Transfer Bank
-                     </div>
-                   </SelectItem>
-                 </SelectContent>
-              </Select>
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Metode Pembayaran: <span className="text-red-500">*</span></label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                  onClick={() => setPaymentMethod('cash')}
+                  className={cn(
+                    "flex-1 rounded-full h-12 font-medium transition-all",
+                    paymentMethod === 'cash' 
+                      ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
+                      : "border-red-200 text-red-600 hover:bg-red-50"
+                  )}
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Tunai
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'qris' ? 'default' : 'outline'}
+                  onClick={() => setPaymentMethod('qris')}
+                  className={cn(
+                    "flex-1 rounded-full h-12 font-medium transition-all",
+                    paymentMethod === 'qris' 
+                      ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
+                      : "border-red-200 text-red-600 hover:bg-red-50"
+                  )}
+                >
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  QRIS
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
+                  onClick={() => setPaymentMethod('transfer')}
+                  className={cn(
+                    "flex-1 rounded-full h-12 font-medium transition-all",
+                    paymentMethod === 'transfer' 
+                      ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
+                      : "border-red-200 text-red-600 hover:bg-red-50"
+                  )}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Transfer Bank
+                </Button>
+              </div>
+              {!paymentMethod && (
+                <p className="text-xs text-red-500">* Pilih metode pembayaran sebelum memproses transaksi</p>
+              )}
             </div>
 
             {/* Payment Proof Upload for Non-Cash */}
@@ -459,7 +478,11 @@ const MobileSellerEnhanced = () => {
               </div>}
 
             {/* Transaction Button */}
-            <Button className="w-full h-12 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700" onClick={processTransaction} disabled={cart.length === 0 || loading}>
+            <Button 
+              className="w-full h-12 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500" 
+              onClick={processTransaction} 
+              disabled={cart.length === 0 || loading || !paymentMethod}
+            >
               {loading ? "Memproses..." : `Proses Transaksi (Rp ${calculateCartTotal().toLocaleString('id-ID')})`}
             </Button>
 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MobileStockConfirmationGrouped } from "@/components/mobile/MobileStockConfirmationGrouped";
+import { EnhancedShiftReport } from "@/components/inventory/EnhancedShiftReport";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, CheckCircle, Search, ChevronDown, Upload, Download } from "lucide-react";
@@ -750,73 +750,11 @@ export default function Inventory() {
         </TabsContent>
 
         <TabsContent value="laporan">
-          <div className="grid grid-cols-1 gap-6">
-            {/* New Enhanced Stock Confirmation Component */}
-            <MobileStockConfirmationGrouped 
-              userProfileId={userProfile?.id || ''}
-              branchId={userProfile?.branch_id || ''}
-            />
-
-            {/* Existing cash deposit verification */}
-            <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Penerimaan Setoran Tunai</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {shifts.map(s => {
-                  const riderCashPhoto = s.notes?.includes('Cash deposit photo:') ? s.notes.split('Cash deposit photo: ')[1] : null;
-                  return (
-                    <div key={s.id} className="p-4 border rounded-lg space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Rider: {riders[s.rider_id]?.full_name || s.rider_id}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(s.shift_date).toLocaleDateString('id-ID')} • Shift {s.shift_number}
-                          </p>
-                        </div>
-                        <Badge variant="secondary">Butuh verifikasi</Badge>
-                      </div>
-                      
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="details">
-                          <AccordionTrigger className="text-sm">Lihat Rincian</AccordionTrigger>
-                          <AccordionContent className="space-y-2">
-                            <div className="text-sm space-y-1">
-                              <div className="flex justify-between">
-                                <span>Total Penjualan:</span>
-                                <span className="font-medium">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(s.total_sales)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Total Transaksi:</span>
-                                <span className="font-medium">{s.total_transactions}</span>
-                              </div>
-                              <div className="flex justify-between border-t pt-1">
-                                <span className="font-medium">Total Setoran Tunai:</span>
-                                <span className="font-semibold text-green-600">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(s.cash_collected)}</span>
-                              </div>
-                            </div>
-                            {riderCashPhoto && (
-                              <div className="mt-2">
-                                <p className="text-xs font-medium mb-1">Foto Setoran dari Rider:</p>
-                                <img src={riderCashPhoto} alt="Foto setoran tunai" className="w-full max-w-xs rounded border" />
-                              </div>
-                            )}
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" disabled={loading} onClick={() => approveCashDeposit(s)}>
-                          Terima
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {shifts.length === 0 && <p className="text-sm text-muted-foreground">Tidak ada shift menunggu verifikasi</p>}
-              </CardContent>
-            </Card>
-          </div>
+          <EnhancedShiftReport 
+            userProfileId={userProfile?.id || ''}
+            branchId={userProfile?.branch_id || ''}
+            riders={riders}
+          />
         </TabsContent>
         <TabsContent value="transfer-history">
           <Card className="dashboard-card">
