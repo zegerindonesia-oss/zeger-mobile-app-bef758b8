@@ -125,13 +125,20 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         .eq('is_active', true);
       setProducts(productsData || []);
 
-      // Fetch riders - improved query with branch filtering
-      const { data: ridersData } = await supabase
+      // Fetch riders - ensure we get all active riders
+      console.log('Fetching riders...');
+      const { data: ridersData, error: ridersError } = await supabase
         .from('profiles')
         .select('id, full_name, branch_id')
         .eq('role', 'rider')
         .eq('is_active', true)
         .order('full_name');
+      
+      if (ridersError) {
+        console.error('Error fetching riders:', ridersError);
+      } else {
+        console.log('Riders fetched:', ridersData);
+      }
       setRiders(ridersData || []);
 
       // Fetch branches
@@ -690,7 +697,18 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       {/* Transfers List */}
       <Card className="dashboard-card">
         <CardHeader>
-          <CardTitle>Riwayat Transfer Stok</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Riwayat Transfer Stok</CardTitle>
+            <Select value={historyType} onValueChange={(value: 'transfer' | 'return') => setHistoryType(value)}>
+              <SelectTrigger className="w-48 bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="transfer">Pengiriman Stok</SelectItem>
+                <SelectItem value="return">Pengembalian Stok</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-96">

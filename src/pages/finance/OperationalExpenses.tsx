@@ -31,8 +31,15 @@ export default function OperationalExpenses() {
   const [assignedUser, setAssignedUser] = useState("");
   const [items, setItems] = useState<Expense[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("all");
-  const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  // Use Indonesian timezone for dates
+  const getJakartaDate = () => {
+    const now = new Date();
+    const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    return jakartaTime;
+  };
+  
+  const [startDate, setStartDate] = useState<Date>(new Date(getJakartaDate().getFullYear(), getJakartaDate().getMonth(), 1));
+  const [endDate, setEndDate] = useState<Date>(getJakartaDate());
   const [riders, setRiders] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -57,12 +64,23 @@ export default function OperationalExpenses() {
   };
 
   const load = async () => {
+    // Format dates properly for Jakarta timezone
+    const formatDateForQuery = (date: Date) => {
+      const jakartaDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+      return jakartaDate.toISOString().split('T')[0];
+    };
+    
+    const startDateStr = formatDateForQuery(startDate);
+    const endDateStr = formatDateForQuery(endDate);
+    
+    console.log('Filtering from', startDateStr, 'to', endDateStr);
+    
     // Load operational_expenses with date and user filters
     let opQuery = supabase
       .from('operational_expenses')
       .select('id, expense_category, amount, description, expense_date, created_by')
-      .gte('expense_date', startDate.toISOString().split('T')[0])
-      .lte('expense_date', endDate.toISOString().split('T')[0])
+      .gte('expense_date', startDateStr)
+      .lte('expense_date', endDateStr)
       .order('created_at', { ascending: false });
 
     if (selectedUser !== "all") {
@@ -79,8 +97,8 @@ export default function OperationalExpenses() {
     let riderQuery = supabase
       .from('daily_operational_expenses')
       .select('id, expense_type, amount, description, expense_date, rider_id, receipt_photo_url')
-      .gte('expense_date', startDate.toISOString().split('T')[0])
-      .lte('expense_date', endDate.toISOString().split('T')[0])
+      .gte('expense_date', startDateStr)
+      .lte('expense_date', endDateStr)
       .order('created_at', { ascending: false });
 
     if (selectedUser !== "all") {
@@ -312,7 +330,9 @@ export default function OperationalExpenses() {
                 <div className="text-right flex items-center gap-2">
                   <div>
                     <div className="font-semibold">{currency.format(it.amount || 0)}</div>
-                    <div className="text-xs text-muted-foreground">{new Date(it.expense_date).toLocaleDateString('id-ID')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(it.expense_date + 'T00:00:00+07:00').toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}
+                    </div>
                   </div>
                   {it.receipt_photo_url && (
                     <Dialog>
