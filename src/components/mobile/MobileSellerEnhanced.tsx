@@ -366,23 +366,35 @@ const MobileSellerEnhanced = () => {
                 {stockItems.filter(item => item.product.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => {
               const cartItem = cart.find(c => c.product_id === item.product_id);
               const inCartQuantity = cartItem?.quantity || 0;
-              return <div key={item.id} className="flex items-center justify-between p-4 bg-card rounded-lg border">
-                        <div className="flex-1">
-                          <p className="font-medium">{item.product.name}</p>
-                          <p className="text-lg font-bold text-primary">Rp {item.product.price.toLocaleString('id-ID')}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Stok: {item.rider_stock} | Di keranjang: {inCartQuantity}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {inCartQuantity > 0 && <Button variant="outline" size="sm" onClick={() => removeFromCart(item.product_id)}>
-                              -
-                            </Button>}
-                          <Button disabled={inCartQuantity >= item.rider_stock || item.rider_stock <= 0} onClick={() => addToCart(item.product_id)} size="sm">
-                            +
-                          </Button>
-                        </div>
-                      </div>;
+                return <div 
+                          key={item.id} 
+                          className="flex items-center justify-between p-4 bg-card rounded-lg border cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                          onClick={() => addToCart(item.product_id)}
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium">{item.product.name}</p>
+                            <p className="text-lg font-bold text-primary">Rp {item.product.price.toLocaleString('id-ID')}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Stok: {item.rider_stock} | Di keranjang: {inCartQuantity}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {inCartQuantity > 0 && <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={(e) => { e.stopPropagation(); removeFromCart(item.product_id); }}
+                            >
+                                -
+                              </Button>}
+                            <Button 
+                              disabled={inCartQuantity >= item.rider_stock || item.rider_stock <= 0} 
+                              onClick={(e) => { e.stopPropagation(); addToCart(item.product_id); }} 
+                              size="sm"
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>;
             })}
               </div>
             </ScrollArea>
@@ -425,13 +437,13 @@ const MobileSellerEnhanced = () => {
                   variant={paymentMethod === 'cash' ? 'default' : 'outline'}
                   onClick={() => setPaymentMethod('cash')}
                   className={cn(
-                    "flex-1 rounded-full h-12 font-medium transition-all",
+                    "flex-1 rounded-full h-14 text-lg font-semibold transition-all",
                     paymentMethod === 'cash' 
                       ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
                       : "border-red-200 text-red-600 hover:bg-red-50"
                   )}
                 >
-                  <DollarSign className="h-4 w-4 mr-2" />
+                  <DollarSign className="h-5 w-5 mr-2" />
                   Tunai
                 </Button>
                 <Button
@@ -439,13 +451,13 @@ const MobileSellerEnhanced = () => {
                   variant={paymentMethod === 'qris' ? 'default' : 'outline'}
                   onClick={() => setPaymentMethod('qris')}
                   className={cn(
-                    "flex-1 rounded-full h-12 font-medium transition-all",
+                    "flex-1 rounded-full h-14 text-lg font-semibold transition-all",
                     paymentMethod === 'qris' 
                       ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
                       : "border-red-200 text-red-600 hover:bg-red-50"
                   )}
                 >
-                  <Smartphone className="h-4 w-4 mr-2" />
+                  <Smartphone className="h-5 w-5 mr-2" />
                   QRIS
                 </Button>
                 <Button
@@ -453,13 +465,13 @@ const MobileSellerEnhanced = () => {
                   variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
                   onClick={() => setPaymentMethod('transfer')}
                   className={cn(
-                    "flex-1 rounded-full h-12 font-medium transition-all",
+                    "flex-1 rounded-full h-14 text-lg font-semibold transition-all",
                     paymentMethod === 'transfer' 
                       ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
                       : "border-red-200 text-red-600 hover:bg-red-50"
                   )}
                 >
-                  <CreditCard className="h-4 w-4 mr-2" />
+                  <CreditCard className="h-5 w-5 mr-2" />
                   Transfer Bank
                 </Button>
               </div>

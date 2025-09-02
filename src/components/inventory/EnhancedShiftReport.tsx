@@ -120,7 +120,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         `)
         .eq('movement_type', 'return')
         .eq('branch_id', branchId)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'returned'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -164,14 +164,13 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
   const fetchPendingShifts = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('shift_management')
         .select('*')
         .eq('branch_id', branchId)
-        .eq('shift_date', today)
         .eq('report_submitted', true)
-        .eq('report_verified', false);
+        .eq('report_verified', false)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setShifts(data || []);
@@ -332,6 +331,29 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
     } catch (error: any) {
       console.error('Error approving cash deposit:', error);
       toast.error('Gagal verifikasi setoran tunai');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAcceptForRider = async (riderId: string) => {
+    setLoading(true);
+    try {
+      // Konfirmasi semua pengembalian untuk rider ini
+      const riderGroups = groupedReturns.filter(g => g.items.some(i => i.rider_id === riderId));
+      for (const g of riderGroups) {
+        await confirmStockReturn(g.reference_id);
+      }
+      // Verifikasi setoran tunai jika ada shift-nya
+      const riderShift = shifts.find(s => s.rider_id === riderId);
+      if (riderShift) {
+        await approveCashDeposit(riderShift);
+      }
+      toast.success('Laporan shift diterima');
+      await Promise.all([fetchPendingReturns(), fetchPendingShifts()]);
+    } catch (error: any) {
+      console.error('Error accepting rider report:', error);
+      toast.error('Gagal menerima laporan shift');
     } finally {
       setLoading(false);
     }

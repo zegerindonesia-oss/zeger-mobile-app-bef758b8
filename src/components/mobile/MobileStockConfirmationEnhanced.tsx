@@ -389,15 +389,17 @@ export const MobileStockConfirmationEnhanced = ({ riderId, branchId }: MobileSto
                           {group.items.map((item) => (
                             <div 
                               key={item.id}
-                              className={`p-3 border rounded-lg transition-colors ${
+                              className={`p-3 border rounded-lg transition-colors cursor-pointer ${
                                 selectedItems[item.id] ? 'bg-primary/5 border-primary/30' : 'hover:bg-muted/50'
                               }`}
+                              onClick={() => handleSelectItem(item.id, !(selectedItems[item.id] || false))}
                             >
                               <div className="flex items-start space-x-3">
                                 <Checkbox
                                   id={`item-${item.id}`}
-                                  checked={selectedItems[item.id] || false}
+                                  checked={!!selectedItems[item.id]}
                                   onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
+                                  onClick={(e) => e.stopPropagation()}
                                 />
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between">
