@@ -452,25 +452,10 @@ const MobileStockManagement = () => {
     setLoading(true);
     try {
       const currentTime = new Date().toISOString();
-      const today = new Date().toISOString().split('T')[0];
-
-      // Check if stock was sent today (same-day validation)
-      const { data: stockMovement } = await supabase
-        .from('stock_movements')
-        .select('created_at')
-        .eq('id', stockId)
-        .single();
-
-      if (stockMovement) {
-        const sentDate = new Date(stockMovement.created_at).toISOString().split('T')[0];
-        if (sentDate !== today) {
-          toast.error('Penerimaan stok hanya bisa dilakukan di hari yang sama dengan pengiriman untuk mencegah fraud');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 1) Mark stock movement as received
+      // NOTE: Allow confirming stocks regardless of the day they were sent to avoid blocking
+      // previous pending transfers. This restores previous behavior.
+      // (Removed strict same-day validation)
+      
       const { error } = await supabase
         .from('stock_movements')
         .update({ 
@@ -528,6 +513,7 @@ const MobileStockManagement = () => {
 
       // AUTO SHIFT IN: Start shift automatically when receiving stock
       if (userProfile?.id) {
+        const today = new Date().toISOString().split('T')[0];
         // Check if there's already an active shift today
         const { data: existingShift } = await supabase
           .from('shift_management')
