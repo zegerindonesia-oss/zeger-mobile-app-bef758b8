@@ -317,12 +317,17 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
       const records = (shiftsData || []).map((shift: any) => {
         const items = returnsByShift[shift.id] || [];
-        const productsReturned = items.reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
+        const unsoldTotal = items.reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
+        const returnedVerified = items
+          .filter((it: any) => ['approved', 'received'].includes((it.status || '').toLowerCase()))
+          .reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
         return {
           ...shift,
           rider_name: riders[shift.rider_id]?.full_name || 'Unknown Rider',
           return_items: items,
-          products_returned: productsReturned,
+          products_unsold: unsoldTotal,
+          products_returned: returnedVerified,
+          shift_date_time: `${shift.shift_date} ${shift.shift_start_time ? new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}`.trim(),
           deposit_photos: photosByShift[shift.id] || []
         };
       });
@@ -550,9 +555,11 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             Apply Filter
           </Button>
 
-          <div className="hidden md:grid grid-cols-6 gap-2 mb-2 p-2 rounded-lg bg-muted/30">
+          <div className="hidden md:grid grid-cols-8 gap-2 mb-2 p-2 rounded-lg bg-muted/30">
             <div>No. Transaksi</div>
-            <div>Sales</div>
+            <div>Nama Rider</div>
+            <div>Shift</div>
+            <div>Tanggal</div>
             <div>Produk tidak terjual</div>
             <div>Produk Kembali</div>
             <div>Setoran Tunai</div>
@@ -561,11 +568,13 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           <Accordion type="multiple" className="w-full">
             {shiftHistory.map((shift: any) => (
               <AccordionItem key={shift.id} value={shift.id}>
-                <AccordionTrigger>
-                  <div className="grid grid-cols-6 gap-2 w-full text-left items-center">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="grid grid-cols-8 gap-2 w-full text-left items-center">
                     <span className="font-mono text-xs md:text-sm">{shift.id}</span>
-                    <span className="font-semibold">Rp {Number(shift.total_sales || 0).toLocaleString('id-ID')}</span>
-                    <span>{Number(shift.products_returned || 0)}</span>
+                    <span>{shift.rider_name}</span>
+                    <span className="font-medium">#{shift.shift_number}</span>
+                    <span>{shift.shift_date_time}</span>
+                    <span>{Number(shift.products_unsold || 0)}</span>
                     <span>{Number(shift.products_returned || 0)}</span>
                     <span className="font-semibold text-green-600">Rp {Number(shift.cash_collected || 0).toLocaleString('id-ID')}</span>
                     <Badge variant="default">Telah diterima</Badge>

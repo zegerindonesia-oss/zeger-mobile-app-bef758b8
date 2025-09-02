@@ -447,7 +447,7 @@ export default function Inventory() {
                   {/* Show all riders who have inventory, even if not in the riders map */}
                   {[...new Set([...Object.keys(riders), ...riderInventory.map(i => i.rider_id), ...returns.map(r => r.rider_id)])].map(rid => (
                     <AccordionItem key={rid} value={rid}>
-                      <AccordionTrigger>
+                      <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center justify-between w-full">
                           <span>{riders[rid]?.full_name || `Rider ${rid}`}</span>
                           <Badge variant="secondary">{riderTotalsByRider[rid] || 0} item</Badge>

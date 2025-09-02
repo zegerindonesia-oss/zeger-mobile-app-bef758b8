@@ -9,6 +9,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -19,6 +20,7 @@ interface Rider {
 
 export default function ProfitLoss() {
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [revenue, setRevenue] = useState({
     cash: 0,
     nonCash: 0,
