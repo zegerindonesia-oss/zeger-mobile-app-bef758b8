@@ -250,7 +250,7 @@ export const ModernBranchDashboard = () => {
   };
   const fetchProductSales = async () => {
     try {
-      const dateRange = getDateRange(menuFilter);
+      // Use the main date filters instead of separate menuFilter
       const {
         data: transactions
       } = await supabase.from('transactions').select(`
@@ -261,7 +261,7 @@ export const ModernBranchDashboard = () => {
             quantity,
             products!inner(name)
           )
-        `).eq('status', 'completed').gte('transaction_date', `${dateRange.start}T00:00:00`).lte('transaction_date', `${dateRange.end}T23:59:59`);
+        `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00`).lte('transaction_date', `${endDate}T23:59:59`);
       if (!transactions) {
         setProductSales([]);
         return;
@@ -358,7 +358,7 @@ export const ModernBranchDashboard = () => {
   };
   const fetchHourlyData = async () => {
     try {
-      const dateRange = getDateRange(hourlyFilter);
+      // Use the main date filters instead of separate hourlyFilter
       const {
         data: transactions
       } = await supabase.from('transactions').select(`
@@ -368,7 +368,7 @@ export const ModernBranchDashboard = () => {
             quantity,
             products!inner(name)
           )
-        `).eq('status', 'completed').gte('transaction_date', `${dateRange.start}T00:00:00`).lte('transaction_date', `${dateRange.end}T23:59:59`);
+        `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00`).lte('transaction_date', `${endDate}T23:59:59`);
       if (!transactions) {
         setHourlyData([]);
         return;
@@ -432,8 +432,7 @@ export const ModernBranchDashboard = () => {
   };
   const fetchRiderStockData = async () => {
     try {
-      const dateRange = getDateRange(riderFilter);
-
+      // Use the main date filters instead of separate riderFilter
       // Fetch riders and their transactions
       const {
         data: ridersData
@@ -446,7 +445,7 @@ export const ModernBranchDashboard = () => {
         // Fetch transactions for this rider in the date range
         const {
           data: transactions
-        } = await supabase.from('transactions').select('id, final_amount').eq('rider_id', rider.id).eq('status', 'completed').gte('transaction_date', `${dateRange.start}T00:00:00`).lte('transaction_date', `${dateRange.end}T23:59:59`);
+        } = await supabase.from('transactions').select('id, final_amount').eq('rider_id', rider.id).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00`).lte('transaction_date', `${endDate}T23:59:59`);
         const transactionIds = transactions?.map(t => t.id) || [];
         let totalItemsSold = 0;
         let totalOrders = transactions?.length || 0;

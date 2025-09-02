@@ -61,6 +61,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     children: [
       { id: "pos", label: "Point of Sale", icon: ShoppingCart, path: "/pos" },
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
+      { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
       { id: "customers", label: "Customers", icon: Database, path: "/customers" }
     ]
   },
