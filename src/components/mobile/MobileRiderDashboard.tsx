@@ -700,77 +700,42 @@ const startShift = async () => {
           </Card>
         </div>
 
-        {/* Sales Overview Chart - Red Line Style */}
+        {/* Sales Chart - Enhanced Bar Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Sales Overview
+              Grafik Penjualan 7 Hari
             </CardTitle>
-            <p className="text-sm text-muted-foreground">7 hari penjualan terakhir</p>
           </CardHeader>
           <CardContent>
-            {dailySales.length > 0 ? (
-              <div className="relative h-48 bg-gradient-to-b from-red-50 to-white rounded-lg p-4">
-                <svg viewBox="0 0 300 120" className="w-full h-full">
-                  <defs>
-                    <linearGradient id="salesGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#dc2626" stopOpacity="0.3"/>
-                      <stop offset="100%" stopColor="#dc2626" stopOpacity="0.05"/>
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Grid Lines */}
-                  <g stroke="#e5e7eb" strokeWidth="0.5">
-                    {[0, 30, 60, 90, 120].map(y => (
-                      <line key={y} x1="0" y1={y} x2="300" y2={y} />
-                    ))}
-                  </g>
-                  
-                  {/* Sales Line */}
-                  <polyline
-                    fill="url(#salesGradient)"
-                    stroke="#dc2626"
-                    strokeWidth="2"
-                    points={dailySales.map((data, index) => {
-                      const maxAmount = Math.max(...dailySales.map(d => d.amount));
-                      const x = (index / (dailySales.length - 1)) * 300;
-                      const y = 120 - ((data.amount / maxAmount) * 100);
-                      return `${x},${y}`;
-                    }).join(' ')}
-                  />
-                  
-                  {/* Data Points */}
-                  {dailySales.map((data, index) => {
-                    const maxAmount = Math.max(...dailySales.map(d => d.amount));
-                    const x = (index / (dailySales.length - 1)) * 300;
-                    const y = 120 - ((data.amount / maxAmount) * 100);
-                    return (
-                      <circle
-                        key={index}
-                        cx={x}
-                        cy={y}
-                        r="3"
-                        fill="#dc2626"
-                        stroke="white"
-                        strokeWidth="2"
-                      />
-                    );
-                  })}
-                </svg>
-                
-                {/* Date Labels */}
-                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                  {dailySales.map((data, index) => (
-                    <span key={index}>{formatDateShort(data.date)}</span>
-                  ))}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {dailySales.length > 0 ? (
+                dailySales.map((data, index) => {
+                  const maxAmount = Math.max(...dailySales.map(d => d.amount));
+                  const height = maxAmount > 0 ? Math.max(20, (data.amount / maxAmount) * 120) : 20;
+                  return (
+                    <div key={data.date} className="flex flex-col items-center">
+                      <div 
+                        className="bg-blue-500 rounded-t w-full transition-all duration-300 flex items-end justify-center"
+                        style={{ height: `${height}px` }}
+                      >
+                        <span className="text-xs text-white font-semibold mb-1">
+                          {data.transactions}
+                        </span>
+                      </div>
+                      <div className="text-xs text-center mt-1">
+                        {formatDateShort(data.date)}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-7 text-center text-muted-foreground py-8">
+                  Belum ada data penjualan
                 </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                Belum ada data penjualan
-              </div>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
 

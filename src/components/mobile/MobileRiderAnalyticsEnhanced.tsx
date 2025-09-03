@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   TrendingUp, Package, DollarSign, ShoppingCart, Calendar, 
-  BarChart3, Receipt, Filter, ChevronRight, Eye, MapPin, X, Clock, User
+  BarChart3, Receipt, Filter, ChevronRight, Eye, MapPin, X
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
@@ -376,257 +376,40 @@ const MobileRiderAnalyticsEnhanced = () => {
           </Card>
         </div>
 
-        {/* Sales Overview Chart - Red Line Style */}
+        {/* Sales Growth Chart */}
         {analytics.chartData && analytics.chartData.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Sales Overview
+                Grafik Penjualan Periode
               </CardTitle>
-              <p className="text-sm text-muted-foreground">Performa penjualan dalam periode</p>
             </CardHeader>
             <CardContent>
-              <div className="relative h-48 bg-gradient-to-b from-red-50 to-white rounded-lg p-4">
-                <svg viewBox="0 0 300 120" className="w-full h-full">
-                  <defs>
-                    <linearGradient id="salesGradientAnalytics" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#dc2626" stopOpacity="0.3"/>
-                      <stop offset="100%" stopColor="#dc2626" stopOpacity="0.05"/>
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Grid Lines */}
-                  <g stroke="#e5e7eb" strokeWidth="0.5">
-                    {[0, 30, 60, 90, 120].map(y => (
-                      <line key={y} x1="0" y1={y} x2="300" y2={y} />
-                    ))}
-                  </g>
-                  
-                  {/* Sales Line */}
-                  <polyline
-                    fill="url(#salesGradientAnalytics)"
-                    stroke="#dc2626"
-                    strokeWidth="2"
-                    points={analytics.chartData.map((data, index) => {
-                      const maxAmount = Math.max(...analytics.chartData!.map(d => d.sales));
-                      const x = (index / (analytics.chartData!.length - 1)) * 300;
-                      const y = 120 - ((data.sales / maxAmount) * 100);
-                      return `${x},${y}`;
-                    }).join(' ')}
-                  />
-                  
-                  {/* Data Points */}
-                  {analytics.chartData.map((data, index) => {
-                    const maxAmount = Math.max(...analytics.chartData!.map(d => d.sales));
-                    const x = (index / (analytics.chartData!.length - 1)) * 300;
-                    const y = 120 - ((data.sales / maxAmount) * 100);
-                    return (
-                      <circle
-                        key={index}
-                        cx={x}
-                        cy={y}
-                        r="3"
-                        fill="#dc2626"
-                        stroke="white"
-                        strokeWidth="2"
-                      />
-                    );
-                  })}
-                </svg>
-                
-                {/* Date Labels */}
-                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                  {analytics.chartData.map((data, index) => (
-                    <span key={index}>{data.date}</span>
-                  ))}
-                </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analytics.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value: number) => [formatCurrency(value), 'Penjualan']}
+                      labelFormatter={(label) => `Tanggal: ${label}`}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="sales" 
+                      stroke="#dc2626" 
+                      strokeWidth={2}
+                      dot={{ fill: '#dc2626', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
         )}
-
-        {/* New Analytics Tables - Menu Terjual, Jam Terjual, Performa Rider */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Menu Terjual */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                Menu Terjual
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Track your product sales</p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-center">
-                  <div className="relative w-20 h-20">
-                    <div className="w-20 h-20 rounded-full border-8 border-red-200 relative">
-                      <div className="absolute inset-0 rounded-full border-r-8 border-t-8 border-red-500 animate-pulse"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <p className="text-xl font-bold text-red-600">
-                            {analytics.transactions.reduce((sum, t) => sum + t.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Products Sales</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-green-600 text-sm font-medium">+29%</p>
-                </div>
-                
-                {/* Top Products List */}
-                <div className="space-y-2">
-                  {analytics.transactions
-                    .reduce((acc: any[], transaction) => {
-                      transaction.items.forEach(item => {
-                        const existing = acc.find(p => p.name === item.product_name);
-                        if (existing) {
-                          existing.quantity += item.quantity;
-                          existing.percentage += Math.round(Math.random() * 10);
-                        } else {
-                          acc.push({
-                            name: item.product_name,
-                            quantity: item.quantity,
-                            percentage: Math.round(Math.random() * 30) + 15,
-                            color: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'][acc.length % 5]
-                          });
-                        }
-                      });
-                      return acc;
-                    }, [])
-                    .sort((a, b) => b.quantity - a.quantity)
-                    .slice(0, 5)
-                    .map((product: any, index) => (
-                      <div key={product.name} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: product.color }}
-                          />
-                          <span className="truncate max-w-20">{product.name}</span>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{product.quantity}</p>
-                          <p className="text-xs text-muted-foreground">{product.percentage}%</p>
-                        </div>
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Jam Terjual */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Jam Terjual
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Track your sales by hour</p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Time-based Sales */}
-                {[
-                  { time: 'Pagi (06:00 - 10:00)', percentage: 23.8, count: Math.round(analytics.totalTransactions * 0.238), color: '#10b981' },
-                  { time: 'Siang (10:00 - 15:00)', percentage: 28.7, count: Math.round(analytics.totalTransactions * 0.287), color: '#3b82f6' },
-                  { time: 'Sore (15:00 - 21:00)', percentage: 47.8, count: Math.round(analytics.totalTransactions * 0.478), color: '#ef4444' }
-                ].map((period, index) => (
-                  <div key={period.time} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: period.color }}
-                        />
-                        <span className="text-sm font-medium">{period.time.split(' ')[0]}</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">{period.count}</p>
-                        <p className="text-xs text-muted-foreground">{period.percentage}% of total</p>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full transition-all duration-300"
-                        style={{ 
-                          width: `${period.percentage}%`,
-                          backgroundColor: period.color 
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-                
-                <div className="text-center pt-2 border-t">
-                  <p className="text-xl font-bold">{analytics.transactions.reduce((sum, t) => sum + t.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0)}</p>
-                  <p className="text-sm text-muted-foreground">Total Produk Terjual</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Performa Rider */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Performa Rider
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Track your rider sales habits</p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Performance Metrics */}
-                <div className="grid grid-cols-4 gap-1 text-center">
-                  <div className="bg-blue-50 p-2 rounded">
-                    <p className="text-xs text-muted-foreground">Z</p>
-                    <p className="font-bold text-blue-600">-</p>
-                  </div>
-                  <div className="bg-blue-100 p-2 rounded">
-                    <p className="text-xs text-muted-foreground">Z-006</p>
-                    <p className="font-bold text-blue-600">{Math.round(analytics.totalTransactions * 0.3)}</p>
-                  </div>
-                  <div className="bg-blue-200 p-2 rounded">
-                    <p className="text-xs text-muted-foreground">Z-010</p>
-                    <p className="font-bold text-blue-600">{Math.round(analytics.totalTransactions * 0.8)}</p>
-                  </div>
-                  <div className="bg-blue-300 p-2 rounded">
-                    <p className="text-xs text-muted-foreground">Z-013</p>
-                    <p className="font-bold text-blue-600">{Math.round(analytics.totalTransactions * 0.6)}</p>
-                  </div>
-                  <div className="bg-blue-400 p-2 rounded">
-                    <p className="text-xs text-muted-foreground">Z-005</p>
-                    <p className="font-bold text-white">{analytics.totalTransactions}</p>
-                  </div>
-                </div>
-                
-                <div className="text-center space-y-2">
-                  <div className="flex justify-center space-x-4">
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-blue-600">{analytics.transactions.reduce((sum, t) => sum + t.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0)}</p>
-                      <p className="text-xs text-muted-foreground">Products</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-red-600">{analytics.totalTransactions}</p>
-                      <p className="text-xs text-muted-foreground">Orders</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-green-600">{formatCurrency(analytics.todaySales).replace('Rp', 'Rp ')}</p>
-                      <p className="text-xs text-muted-foreground">Sales</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Transaction History */}
         <Card>
@@ -714,7 +497,7 @@ const MobileRiderAnalyticsEnhanced = () => {
           </CardContent>
         </Card>
 
-        {/* Location-Based Sales Analysis with Map */}
+        {/* Location-Based Sales Analysis */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -723,84 +506,6 @@ const MobileRiderAnalyticsEnhanced = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Map Visualization */}
-            <div className="mb-6">
-              <div className="relative bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg h-48 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-blue-100/80" />
-                
-                {/* Mock Map with Location Points */}
-                <div className="relative h-full p-4">
-                  <div className="text-center mb-2">
-                    <h3 className="font-semibold text-sm text-blue-900">Jakarta</h3>
-                    <div className="flex justify-center items-center gap-2 mt-2">
-                      <span className="text-xs bg-white px-2 py-1 rounded">Today</span>
-                      <span className="text-xs text-blue-700">24</span>
-                      <span className="text-xs text-blue-700">25</span>
-                      <span className="text-xs text-blue-700">26</span>
-                      <span className="text-xs text-blue-700">27</span>
-                    </div>
-                  </div>
-                  
-                  {/* Location Pins */}
-                  {analytics.locationSales.slice(0, 5).map((location, index) => {
-                    const positions = [
-                      { top: '20%', left: '25%' },
-                      { top: '35%', left: '60%' },
-                      { top: '55%', left: '40%' },
-                      { top: '70%', left: '70%' },
-                      { top: '45%', left: '20%' }
-                    ];
-                    const position = positions[index] || positions[0];
-                    
-                    return (
-                      <div 
-                        key={location.location_name}
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                        style={{ top: position.top, left: position.left }}
-                      >
-                        <div className="relative">
-                          <div className="bg-white rounded-full p-2 shadow-lg border-2 border-green-500">
-                            <div className="w-3 h-3 bg-green-500 rounded-full" />
-                          </div>
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow-lg text-xs font-semibold whitespace-nowrap">
-                            {formatCurrency(location.total_sales).replace('Rp', '$').replace('.', '')}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  
-                  {/* Map Areas */}
-                  <div className="absolute bottom-4 left-4 text-xs text-blue-700 space-y-1">
-                    <p className="font-medium">UPPER WEST SIDE</p>
-                    <p className="text-blue-600">MANHATTAN</p>
-                  </div>
-                  
-                  <div className="absolute top-4 right-4 text-xs text-blue-700">
-                    <p className="font-medium">CARNEGIE HILL</p>
-                  </div>
-                  
-                  <div className="absolute bottom-4 right-4 text-xs text-blue-700">
-                    <p className="font-medium">UPPER EAST SIDE</p>
-                  </div>
-                  
-                  {/* Time Controls */}
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-2">
-                    <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full" />
-                    </div>
-                    <span className="text-xs text-blue-700">8 AM</span>
-                    <div className="w-12 h-1 bg-green-400 rounded" />
-                    <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full" />
-                    </div>
-                    <span className="text-xs text-blue-700">8 PM</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Location List */}
             <ScrollArea className="h-64">
               <div className="space-y-3">
                 {analytics.locationSales.map((location, index) => (
