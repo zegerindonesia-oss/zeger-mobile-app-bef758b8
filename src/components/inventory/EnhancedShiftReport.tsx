@@ -638,7 +638,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                     <span>{shift.shift_date_time}</span>
                     <span>{Number(shift.products_unsold || 0)}</span>
                     <span>{Number(shift.products_returned || 0)}</span>
-                    <span className="font-semibold text-green-600">Rp {Number(shift.cash_collected || 0).toLocaleString('id-ID')}</span>
+                    <span className="font-semibold text-green-600">Rp {Number(shift.calculated_cash_deposit || 0).toLocaleString('id-ID')}</span>
                     <Badge variant="default">Telah diterima</Badge>
                   </div>
                 </AccordionTrigger>

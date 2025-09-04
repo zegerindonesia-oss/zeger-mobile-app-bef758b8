@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { UserManagement } from "@/components/user/UserManagement";
+import { SyncButton } from "@/components/common/SyncButton";
 
 export default function AdminUsers() {
   const { user, userProfile } = useAuth();
@@ -70,6 +71,18 @@ export default function AdminUsers() {
           </CardHeader>
           <CardContent className="flex gap-2">
             <Button onClick={createDummyBranch} disabled={creating}>Buat Cabang Dummy: Branch OTW</Button>
+            <SyncButton variant="outline" />
+          </CardContent>
+        </Card>
+      )}
+
+      {userProfile?.role === 'branch_manager' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SyncButton />
           </CardContent>
         </Card>
       )}

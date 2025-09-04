@@ -294,6 +294,7 @@ const MobileSellerEnhanced = () => {
         }
       }
       setCart([]);
+      setPaymentMethod(''); // Reset payment method to force selection
       setSelectedCustomer('');
       setDiscountValue(0);
       setShowSuccessModal(true);

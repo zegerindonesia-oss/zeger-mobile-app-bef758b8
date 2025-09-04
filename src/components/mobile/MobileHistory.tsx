@@ -74,6 +74,15 @@ interface ShiftReportHistory {
   total_transactions: number;
   status: string;
   report_submitted: boolean;
+  actualSalesBreakdown?: {
+    cash: number;
+    qris: number;
+    transfer: number;
+    total: number;
+  };
+  actualTransactions?: number;
+  operationalExpenses?: number;
+  actualCashDeposit?: number;
 }
 
 const MobileHistory = () => {
@@ -557,19 +566,18 @@ const MobileHistory = () => {
                 <ScrollArea className="h-96">
                   <div className="space-y-4">
                     {shiftReports.map((shift) => {
-                      // Calculate detailed shift data
-                      const estimatedCash = Math.round(shift.total_sales * 0.4); // Assuming 40% cash
-                      const estimatedQris = Math.round(shift.total_sales * 0.35); // Assuming 35% QRIS
-                      const estimatedTransfer = shift.total_sales - estimatedCash - estimatedQris;
-                      const estimatedExpenses = Math.round(estimatedCash * 0.1); // Assuming 10% expenses
+                      // Use actual data instead of estimates
+                      const salesData = shift.actualSalesBreakdown || { cash: 0, qris: 0, transfer: 0, total: 0 };
+                      const operationalExpenses = shift.operationalExpenses || 0;
+                      const cashDeposit = shift.actualCashDeposit || 0;
 
                       return (
                         <Card key={shift.id} className="border-l-4 border-l-blue-500">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-3">
                               <h4 className="font-medium">Shift {shift.shift_number} - {formatDate(shift.shift_date)}</h4>
-                              <Badge variant={shift.status === 'completed' ? 'default' : 'secondary'}>
-                                {shift.status === 'completed' ? 'Selesai' : 'Active'}
+                              <Badge variant="default">
+                                Selesai
                               </Badge>
                             </div>
 
@@ -578,14 +586,14 @@ const MobileHistory = () => {
                                 <p className="text-blue-600 font-medium mb-2">Waktu Kerja</p>
                                 <div className="space-y-1">
                                   {shift.shift_start_time && (
-                                    <p>🕒 Mulai: {new Date(shift.shift_start_time).toLocaleTimeString('id-ID')}</p>
+                                    <p>🕒 Mulai: {new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
                                   )}
                                 </div>
                               </div>
                               <div>
                                 <p className="text-green-600 font-medium mb-2">Transaksi</p>
                                 <div className="space-y-1">
-                                  <p>📊 Total: {shift.total_transactions}</p>
+                                  <p>📊 Total: {shift.actualTransactions || shift.total_transactions}</p>
                                 </div>
                               </div>
                             </div>
@@ -597,19 +605,19 @@ const MobileHistory = () => {
                                 <div className="space-y-2 text-sm">
                                   <div className="flex justify-between">
                                     <span>Penjualan Tunai:</span>
-                                    <span className="font-medium">{formatCurrency(estimatedCash)}</span>
+                                    <span className="font-medium">{formatCurrency(salesData.cash)}</span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>QRIS:</span>
-                                    <span className="font-medium">{formatCurrency(estimatedQris)}</span>
+                                    <span className="font-medium">{formatCurrency(salesData.qris)}</span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Transfer Bank:</span>
-                                    <span className="font-medium">{formatCurrency(estimatedTransfer)}</span>
+                                    <span className="font-medium">{formatCurrency(salesData.transfer)}</span>
                                   </div>
                                   <div className="border-t pt-2 flex justify-between font-bold text-green-700">
                                     <span>Total Penjualan:</span>
-                                    <span>{formatCurrency(shift.total_sales)}</span>
+                                    <span>{formatCurrency(salesData.total)}</span>
                                   </div>
                                 </div>
                               </div>
@@ -619,15 +627,15 @@ const MobileHistory = () => {
                                 <div className="space-y-2 text-sm">
                                   <div className="flex justify-between">
                                     <span>Penjualan Tunai:</span>
-                                    <span className="font-medium">{formatCurrency(estimatedCash)}</span>
+                                    <span className="font-medium">{formatCurrency(salesData.cash)}</span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Beban Operasional:</span>
-                                    <span className="font-medium text-red-600">({formatCurrency(estimatedExpenses)})</span>
+                                    <span className="font-medium text-red-600">({formatCurrency(operationalExpenses)})</span>
                                   </div>
                                   <div className="border-t pt-2 flex justify-between font-bold text-blue-700">
                                     <span>Setoran Tunai:</span>
-                                    <span>{formatCurrency(shift.cash_collected)}</span>
+                                    <span>{formatCurrency(cashDeposit)}</span>
                                   </div>
                                 </div>
                               </div>

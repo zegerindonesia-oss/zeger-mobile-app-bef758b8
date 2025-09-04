@@ -4,9 +4,10 @@ import { MobileSidebar } from "./MobileSidebar";
 import { MobileHeader } from "./MobileHeader";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { SyncButton } from "@/components/common/SyncButton";
 
 interface Profile {
   id: string;
@@ -99,8 +100,12 @@ export const MobileLayout = ({ children }: MobileLayoutProps) => {
             </div>
           </main>
           
-          {/* Fixed Shopping Cart Shortcut */}
-          <div className="fixed bottom-4 right-4 z-50">
+          {/* Fixed Bottom Action Buttons */}
+          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+            {/* Sync Button */}
+            <SyncButton variant="outline" size="icon" className="rounded-full w-12 h-12 bg-white border-2 border-blue-200 shadow-lg hover:bg-blue-50" />
+            
+            {/* Shopping Cart Button */}
             <Button
               size="lg"
               className="rounded-full w-14 h-14 bg-red-600 hover:bg-red-700 shadow-lg"

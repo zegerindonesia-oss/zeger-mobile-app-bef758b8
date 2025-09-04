@@ -54,6 +54,7 @@ interface DashboardAnalytics {
   transactions: TransactionDetail[];
   locationSales: LocationSales[];
   chartData?: { date: string; sales: number }[];
+  productsSold?: { name: string; quantity: number; revenue: number }[];
 }
 
 interface ShiftInfo {
@@ -73,15 +74,22 @@ const MobileRiderAnalyticsEnhanced = () => {
     stockStatus: { total_items: 0, low_stock: 0, out_of_stock: 0 },
     transactions: [],
     locationSales: [],
-    chartData: []
+    chartData: [],
+    productsSold: []
   });
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(() => {
+    // Set to Indonesia timezone (UTC+7)
     const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const indonesiaTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    const firstDayOfMonth = new Date(indonesiaTime.getFullYear(), indonesiaTime.getMonth(), 1);
     return firstDayOfMonth.toISOString().split('T')[0];
   });
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => {
+    const now = new Date();
+    const indonesiaTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    return indonesiaTime.toISOString().split('T')[0];
+  });
   const [showTransactionDetail, setShowTransactionDetail] = useState<string | null>(null);
   const [showLocationDetail, setShowLocationDetail] = useState<string | null>(null);
 
@@ -225,7 +233,7 @@ const MobileRiderAnalyticsEnhanced = () => {
         .map(([date, sales]) => ({ date, sales }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Fetch stock status
+      // Fetch stock status and product sales summary
       const { data: inventory } = await supabase
         .from('inventory')
         .select('stock_quantity, min_stock_level')
@@ -237,6 +245,23 @@ const MobileRiderAnalyticsEnhanced = () => {
         out_of_stock: inventory?.filter(item => item.stock_quantity === 0).length || 0
       };
 
+      // Calculate products sold summary
+      const productSalesMap = new Map<string, { name: string; quantity: number; revenue: number }>();
+      transactionDetails.forEach(transaction => {
+        transaction.items.forEach(item => {
+          const key = item.product_name;
+          if (!productSalesMap.has(key)) {
+            productSalesMap.set(key, { name: key, quantity: 0, revenue: 0 });
+          }
+          const product = productSalesMap.get(key)!;
+          product.quantity += item.quantity;
+          product.revenue += item.total_price;
+        });
+      });
+      
+      const productsSold = Array.from(productSalesMap.values())
+        .sort((a, b) => b.quantity - a.quantity);
+
       setAnalytics({
         todaySales,
         totalTransactions,
@@ -244,7 +269,8 @@ const MobileRiderAnalyticsEnhanced = () => {
         stockStatus,
         transactions: transactionDetails,
         locationSales: locationSales,
-        chartData: chartData
+        chartData: chartData,
+        productsSold: productsSold
       });
 
     } catch (error: any) {
@@ -407,6 +433,41 @@ const MobileRiderAnalyticsEnhanced = () => {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Products Sold Summary */}
+        {analytics.productsSold && analytics.productsSold.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Total Produk Terjual
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-64">
+                <div className="space-y-2">
+                  {analytics.productsSold.map((product, index) => (
+                    <div key={product.name} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">#{index + 1}</Badge>
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Revenue: {formatCurrency(product.revenue)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-red-600">{product.quantity}</p>
+                        <p className="text-xs text-muted-foreground">pcs</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         )}
