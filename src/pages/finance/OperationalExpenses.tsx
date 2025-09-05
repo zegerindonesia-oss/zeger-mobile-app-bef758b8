@@ -64,24 +64,26 @@ export default function OperationalExpenses() {
   };
 
   const load = async () => {
-    // Format dates properly for Jakarta timezone
+    // Format dates to YYYY-MM-DD for proper filtering
     const formatDateForQuery = (date: Date) => {
-      const jakartaDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+      // Use Indonesia timezone offset (UTC+7)
+      const offset = 7 * 60; // 7 hours in minutes
+      const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
       return jakartaDate.toISOString().split('T')[0];
     };
     
     const startDateStr = formatDateForQuery(startDate);
     const endDateStr = formatDateForQuery(endDate);
     
-    console.log('Filtering from', startDateStr, 'to', endDateStr);
+    console.log('Filtering expenses from', startDateStr, 'to', endDateStr);
     
-    // Load operational_expenses with date and user filters
+    // Load operational_expenses with proper date filtering
     let opQuery = supabase
       .from('operational_expenses')
       .select('id, expense_category, amount, description, expense_date, created_by')
       .gte('expense_date', startDateStr)
       .lte('expense_date', endDateStr)
-      .order('created_at', { ascending: false });
+      .order('expense_date', { ascending: false });
 
     if (selectedUser !== "all") {
       opQuery = opQuery.eq('created_by', selectedUser);
@@ -93,13 +95,13 @@ export default function OperationalExpenses() {
       toast.error(error.message);
     }
 
-    // Also load rider expenses separately
+    // Also load rider expenses separately with same date filtering
     let riderQuery = supabase
       .from('daily_operational_expenses')
       .select('id, expense_type, amount, description, expense_date, rider_id, receipt_photo_url')
       .gte('expense_date', startDateStr)
       .lte('expense_date', endDateStr)
-      .order('created_at', { ascending: false });
+      .order('expense_date', { ascending: false });
 
     if (selectedUser !== "all") {
       riderQuery = riderQuery.eq('rider_id', selectedUser);
@@ -331,7 +333,12 @@ export default function OperationalExpenses() {
                   <div>
                     <div className="font-semibold">{currency.format(it.amount || 0)}</div>
                     <div className="text-xs text-muted-foreground">
-                      {new Date(it.expense_date + 'T00:00:00+07:00').toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}
+                      {new Date(it.expense_date).toLocaleDateString('id-ID', { 
+                        timeZone: 'Asia/Jakarta',
+                        day: '2-digit',
+                        month: '2-digit', 
+                        year: 'numeric'
+                      })}
                     </div>
                   </div>
                   {it.receipt_photo_url && (

@@ -98,13 +98,19 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   const [riderShifts, setRiderShifts] = useState<Record<string, ShiftInfo>>({});
   const [activeShift, setActiveShift] = useState<ShiftInfo | null>(null);
   const [historyType, setHistoryType] = useState<'transfer' | 'return'>('transfer');
+  const [filterType, setFilterType] = useState<'sent' | 'received' | 'all'>('all');
 
-  // Timezone helpers (Asia/Jakarta)
-  const getJakartaNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  // Use Jakarta timezone for all date operations
+  const getJakartaNow = () => {
+    const now = new Date();
+    return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  };
+  
   const formatYMD = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const jakartaDate = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const y = jakartaDate.getFullYear();
+    const m = String(jakartaDate.getMonth() + 1).padStart(2, '0');
+    const day = String(jakartaDate.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
 
@@ -166,10 +172,12 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
   const fetchRiderShifts = async () => {
     try {
+      // Fetch rider shift statuses using Jakarta timezone
+      const jakartaToday = formatYMD(getJakartaNow());
       const { data: shifts } = await supabase
         .from('shift_management')
         .select('rider_id, status, report_submitted, shift_start_time, shift_end_time')
-        .eq('shift_date', new Date().toISOString().split('T')[0]);
+        .eq('shift_date', jakartaToday);
 
       const shiftMap: Record<string, ShiftInfo> = {};
       shifts?.forEach(shift => {
@@ -189,11 +197,13 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
   const fetchActiveShift = async () => {
     try {
+      // Fetch active shift for current rider if role is rider using Jakarta timezone
+      const jakartaToday = formatYMD(getJakartaNow());
       const { data: shift } = await supabase
         .from('shift_management')
         .select('*')
         .eq('rider_id', userId)
-        .eq('shift_date', new Date().toISOString().split('T')[0])
+        .eq('shift_date', jakartaToday)
         .eq('status', 'active')
         .maybeSingle();
 
@@ -215,6 +225,11 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         `)
         .eq('movement_type', historyType)
         .order('created_at', { ascending: false });
+      
+      // Apply filter by status if not 'all'
+      if (filterType !== 'all') {
+        query = query.eq('status', filterType);
+      }
 
       if (role === 'branch_manager' && branchId) {
         query = query.eq('branch_id', branchId);
@@ -240,15 +255,16 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           const riderName = transfer.profiles?.full_name || 'Unknown Rider';
           const branchName = transfer.branches?.name || 'Unknown Branch';
           
-          // Create descriptive transaction titles
+          // Create descriptive transaction titles based on status and type
           const isReturn = transfer.movement_type === 'return';
+          const statusText = transfer.status === 'sent' ? 'Pengiriman Stok' : 'Pengembalian Stok';
           const transactionTitle = isReturn 
-            ? `Pengembalian Stok - ${riderName} → ${branchName}`
-            : `Pengiriman Stok - ${branchName} → ${riderName}`;
+            ? `Pengembalian Stok - ${riderName} → ${branchName} ${date} ${time}`
+            : `${statusText} - ${branchName} → ${riderName} ${date} ${time}`;
           
           groupedTransfers[groupKey] = {
             id: groupKey,
-            transaction_id: `${transactionTitle}\n${date} ${time}`,
+            transaction_id: transactionTitle,
             created_at: transfer.created_at,
             status: transfer.status,
             rider_id: transfer.rider_id,
@@ -699,15 +715,29 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Riwayat Transfer Stok</CardTitle>
-            <Select value={historyType} onValueChange={(value: 'transfer' | 'return') => setHistoryType(value)}>
-              <SelectTrigger className="w-48 bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="transfer">Pengiriman Stok</SelectItem>
-                <SelectItem value="return">Pengembalian Stok</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={historyType} onValueChange={(value: 'transfer' | 'return') => setHistoryType(value)}>
+                <SelectTrigger className="w-48 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="transfer">Pengiriman Stok</SelectItem>
+                  <SelectItem value="return">Pengembalian Stok</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={filterType} onValueChange={(value: 'sent' | 'received' | 'all') => setFilterType(value)}>
+                <SelectTrigger className="w-32 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="sent">Terkirim</SelectItem>
+                  <SelectItem value="received">Diterima</SelectItem>
+                  <SelectItem value="rejected">Ditolak</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -718,16 +748,17 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                   <CardHeader className="pb-2">
                      <div className="flex items-center justify-between">
                        <div>
-                         <Badge variant="outline" className="mb-1">
-                           {transferGroup.transaction_id}
-                         </Badge>
-                         <p className="text-sm text-muted-foreground">
-                           {new Date(transferGroup.created_at).toLocaleDateString('id-ID')} - 
-                           {transferGroup.items.length} item(s)
-                         </p>
-                         <p className="text-sm font-medium text-blue-600">
-                           {transferGroup.branch_name} → {transferGroup.rider_name || 'Branch Tujuan'}
-                         </p>
+                        <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                          <div className="font-medium text-red-800 mb-1">
+                            {transferGroup.transaction_id}
+                          </div>
+                          <div className="text-sm text-red-600">
+                            {transferGroup.items.length} item(s) • Total: {transferGroup.total_quantity} unit
+                            {transferGroup.total_value && (
+                              <span className="ml-2">• Nilai: Rp {transferGroup.total_value.toLocaleString('id-ID')}</span>
+                            )}
+                          </div>
+                        </div>
                        </div>
                        <div className="text-right">
                          {getStatusBadge(transferGroup.status)}

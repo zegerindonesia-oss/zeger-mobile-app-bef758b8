@@ -159,9 +159,9 @@ const MobileHistory = () => {
         .eq('rider_id', userProfile.id)
         .gte('shift_date', dateFilter.from)
         .lte('shift_date', dateFilter.to)
-        .eq('report_submitted', true)
-        .neq('status', 'active')
-        .order('shift_date', { ascending: false });
+        .eq('status', 'completed')
+        .order('shift_date', { ascending: false })
+        .order('shift_number', { ascending: false });
 
       // For each shift, calculate proper totals
       const shiftsWithTotals = await Promise.all(
@@ -179,16 +179,16 @@ const MobileHistory = () => {
             .from('daily_operational_expenses')
             .select('amount')
             .eq('rider_id', userProfile.id)
-            .eq('expense_date', shift.shift_date);
-
+            .eq('shift_id', shift.id);
+          
           const totalExpenses = expenses?.reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
           
-          // Calculate totals
+          // Calculate totals by payment method
           const cashSales = shiftTransactions?.filter(t => t.payment_method === 'cash')
             .reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
           const qrisSales = shiftTransactions?.filter(t => t.payment_method === 'qris')
             .reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
-          const transferSales = shiftTransactions?.filter(t => t.payment_method === 'transfer')
+          const transferSales = shiftTransactions?.filter(t => t.payment_method === 'bank_transfer')
             .reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
           
           const totalSales = cashSales + qrisSales + transferSales;
@@ -197,8 +197,16 @@ const MobileHistory = () => {
           return {
             ...shift,
             total_sales: totalSales,
-            cash_collected: totalCashDeposit,
-            total_transactions: shiftTransactions?.length || 0
+            cash_collected: Math.max(0, cashSales - totalExpenses),
+            actualSalesBreakdown: {
+              cash: cashSales,
+              qris: qrisSales,
+              transfer: transferSales,
+              total: totalSales
+            },
+            operationalExpenses: totalExpenses,
+            actualCashDeposit: Math.max(0, cashSales - totalExpenses),
+            actualTransactions: shiftTransactions?.length || 0
           };
         })
       );
@@ -209,9 +217,7 @@ const MobileHistory = () => {
       setCheckpointHistory(checkpoints || []);
       setShiftReports(shiftsWithTotals);
     } catch (error: any) {
-      toast.error("Gagal memuat riwayat");
-    } finally {
-      setLoading(false);
+      console.error('Error loading history:', error);
     }
   };
 
