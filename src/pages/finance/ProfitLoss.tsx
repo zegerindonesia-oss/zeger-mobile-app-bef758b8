@@ -40,8 +40,7 @@ const [revenue, setRevenue] = useState({
   
   // Use Indonesian timezone for dates
   const getJakartaDate = () => {
-    const now = new Date();
-    const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const jakartaTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
     return jakartaTime;
   };
   
@@ -63,7 +62,10 @@ const [revenue, setRevenue] = useState({
     
     try {
       // Prepare Jakarta date strings to avoid timezone drift
-      const toJakartaDateStr = (d: Date) => new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
+      const toJakartaDateStr = (d: Date) => {
+        const jakartaTime = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+        return jakartaTime.toISOString().split('T')[0];
+      };
       const startStr = toJakartaDateStr(startDate);
       const endStr = toJakartaDateStr(endDate);
 

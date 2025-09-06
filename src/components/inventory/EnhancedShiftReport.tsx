@@ -364,7 +364,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         (window as any).__opsByShift = opsByShift;
       }
 
-      const records = (shiftsData || []).map((shift: any) => {
+        const records = (shiftsData || []).map((shift: any) => {
         const items = returnsByShift[shift.id] || [];
         const unsoldTotal = items.reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
         const returnedVerified = items
@@ -372,8 +372,11 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           .reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
         
         const shiftStartTime = shift.shift_start_time ? 
-          new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 
-          '';
+          new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'Asia/Jakarta'
+          }) : '';
         
         const salesMap = (window as any).__salesByRiderDate || {};
         const opsMap = (window as any).__opsByShift || {};
@@ -684,10 +687,14 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                             <span className="font-medium">Total Penjualan</span>
                             <span className="font-bold text-yellow-700">Rp {Number(shift.sales_breakdown.total || 0).toLocaleString('id-ID')}</span>
                           </div>
-                          <div className="flex items-center justify-between p-3 rounded-lg border bg-green-50">
-                            <span className="font-medium">Setoran Tunai (Tunai - Operasional)</span>
-                            <span className="font-bold text-green-700">Rp {Number(shift.calculated_cash_deposit || 0).toLocaleString('id-ID')}</span>
-                          </div>
+                           <div className="flex items-center justify-between p-3 rounded-lg border bg-red-500 text-white">
+                             <span className="font-medium">Beban Operasional</span>
+                             <span className="font-bold text-white">Rp {Number(shift.operational_daily || 0).toLocaleString('id-ID')}</span>
+                           </div>
+                           <div className="flex items-center justify-between p-3 rounded-lg border bg-red-500 text-white">
+                             <span className="font-medium">Setoran Tunai (Tunai - Operasional)</span>
+                             <span className="font-bold text-white">Rp {Number(shift.calculated_cash_deposit || 0).toLocaleString('id-ID')}</span>
+                           </div>
                         </div>
                       )}
                       {shift.deposit_photos?.length > 0 && (
