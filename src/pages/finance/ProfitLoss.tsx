@@ -61,21 +61,25 @@ const [revenue, setRevenue] = useState({
     setLoading(true);
     
     try {
-      // Prepare Jakarta date strings to avoid timezone drift
-      const toJakartaDateStr = (d: Date) => {
-        const jakartaTime = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-        return jakartaTime.toISOString().split('T')[0];
+      // Format dates as YYYY-MM-DD without timezone conversion
+      const formatDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       };
-      const startStr = toJakartaDateStr(startDate);
-      const endStr = toJakartaDateStr(endDate);
+      
+      const startStr = formatDate(startDate);
+      const endStr = formatDate(endDate);
 
-      // Load transactions for revenue calculation (Jakarta day range)
+      // Load transactions for revenue calculation
+      // Use date range query that works with timestamps
       let transQuery = supabase
         .from('transactions')
         .select('id, final_amount, payment_method, rider_id, status, transaction_date')
         .eq('status', 'completed')
-        .gte('transaction_date', `${startStr}T00:00:00+07:00`)
-        .lte('transaction_date', `${endStr}T23:59:59+07:00`);
+        .gte('transaction_date', `${startStr}T00:00:00`)
+        .lte('transaction_date', `${endStr}T23:59:59`);
 
       if (selectedRider !== "all") {
         transQuery = transQuery.eq('rider_id', selectedRider);
@@ -91,12 +95,14 @@ const [revenue, setRevenue] = useState({
 
       (transactions || []).forEach((trans: any) => {
         const amount = Number(trans.final_amount || 0);
-        if (trans.payment_method === 'cash') {
+        const paymentMethod = (trans.payment_method || '').toLowerCase();
+        
+        if (paymentMethod === 'cash') {
           cashRevenue += amount;
-        } else if (trans.payment_method === 'qris') {
+        } else if (paymentMethod === 'qris') {
           qrisRevenue += amount;
           mdrAmount += amount * 0.007; // 0.7% MDR
-        } else if (trans.payment_method === 'transfer') {
+        } else if (paymentMethod === 'transfer' || paymentMethod === 'bank_transfer' || paymentMethod === 'bank') {
           transferRevenue += amount;
         }
       });
