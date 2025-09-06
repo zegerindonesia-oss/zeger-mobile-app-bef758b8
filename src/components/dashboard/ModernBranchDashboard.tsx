@@ -157,13 +157,17 @@ export const ModernBranchDashboard = () => {
   };
   const fetchStats = async () => {
     try {
+      // Use consistent date formatting
+      const startStr = formatYMD(new Date(startDate));
+      const endStr = formatYMD(new Date(endDate));
+
       // Fetch completed transactions for the date range, optionally filter by rider
       let txQuery = supabase
         .from('transactions')
-        .select('final_amount, id, rider_id')
+        .select('final_amount, id, rider_id, payment_method')
         .eq('status', 'completed')
-        .gte('transaction_date', `${startDate}T00:00:00`)
-        .lte('transaction_date', `${endDate}T23:59:59`);
+        .gte('transaction_date', `${startStr}T00:00:00`)
+        .lte('transaction_date', `${endStr}T23:59:59`);
       if (selectedUser !== 'all') {
         txQuery = txQuery.eq('rider_id', selectedUser);
       }
@@ -174,6 +178,26 @@ export const ModernBranchDashboard = () => {
         .from('customers')
         .select('id')
         .eq('is_active', true);
+
+      // Calculate revenue breakdown with MDR
+      let cashRevenue = 0;
+      let qrisRevenue = 0;
+      let transferRevenue = 0;
+      let mdrAmount = 0;
+
+      (transactions || []).forEach((trans: any) => {
+        const amount = Number(trans.final_amount || 0);
+        const paymentMethod = (trans.payment_method || '').toLowerCase();
+        
+        if (paymentMethod === 'cash') {
+          cashRevenue += amount;
+        } else if (paymentMethod === 'qris') {
+          qrisRevenue += amount;
+          mdrAmount += amount * 0.007; // 0.7% MDR
+        } else if (paymentMethod === 'transfer' || paymentMethod === 'bank_transfer' || paymentMethod === 'bank') {
+          transferRevenue += amount;
+        }
+      });
 
       // Compute total items sold and total food cost (COGS) from transaction_items joined with products.cost_price
       const transactionIds = transactions?.map(t => t.id) || [];
@@ -188,10 +212,34 @@ export const ModernBranchDashboard = () => {
         totalFoodCost = items?.reduce((sum, item: any) => sum + (item.quantity || 0) * (Number(item.products?.cost_price) || 0), 0) || 0;
       }
 
-      const totalSales = transactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
+      // Get operational expenses
+      let expenseQuery = supabase
+        .from('daily_operational_expenses')
+        .select('amount, expense_type, rider_id')
+        .gte('expense_date', startStr)
+        .lte('expense_date', endStr);
+
+      if (selectedUser !== 'all') {
+        expenseQuery = expenseQuery.eq('rider_id', selectedUser);
+      }
+
+      const { data: expenses } = await expenseQuery;
+      const operationalExpenses = (expenses || []).reduce((sum, expense: any) => {
+        const type = (expense.expense_type || '').toLowerCase();
+        // Exclude food/raw material costs from operational expenses
+        if (!type.includes('food') && !type.includes('bahan')) {
+          return sum + Number(expense.amount || 0);
+        }
+        return sum;
+      }, 0);
+
+      const totalSales = cashRevenue + qrisRevenue + transferRevenue;
       const totalTransactions = transactions?.length || 0;
       const avgTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
-      const totalProfit = totalSales - totalFoodCost;
+      
+      // Calculate profit using same logic as Profit/Loss report
+      const grossProfit = totalSales - mdrAmount;
+      const totalProfit = grossProfit - totalFoodCost - operationalExpenses;
 
       // Active riders = riders with active shift today
       const today = new Date().toISOString().split('T')[0];

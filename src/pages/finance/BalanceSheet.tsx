@@ -9,6 +9,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { calculateRevenue, formatDate } from "@/lib/financial-utils";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -36,30 +37,18 @@ export default function BalanceSheet() {
   };
 
   const loadData = async () => {
-    // Connect to actual sales transactions (Jakarta date range)
-    const toJkt = (d: Date) => new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
-    const s = toJkt(startDate);
-    const e = toJkt(endDate);
-
-    let tx = supabase
-      .from('transactions')
-      .select('final_amount, payment_method, rider_id, status, transaction_date')
-      .eq('status', 'completed')
-      .gte('transaction_date', `${s}T00:00:00+07:00`)
-      .lte('transaction_date', `${e}T23:59:59+07:00`);
-
-    if (selectedRider !== "all") {
-      tx = tx.eq('rider_id', selectedRider);
+    try {
+      // Use consistent calculation with other financial reports
+      const revenue = await calculateRevenue(startDate, endDate, selectedRider);
+      
+      // Calculate total cash (all payment methods contribute to cash position)
+      const totalCash = revenue.cash + revenue.qris + revenue.transfer;
+      
+      setAssets(totalCash);
+      setLiabilities(0); // Placeholder until liabilities mapping is defined
+    } catch (error) {
+      console.error("Error loading balance sheet data:", error);
     }
-
-    const { data: transactions } = await tx;
-    // Treat cash sales as current assets (cash & equivalents)
-    const assetsVal = (transactions || [])
-      .filter((t: any) => t.payment_method === 'cash')
-      .reduce((sum: number, t: any) => sum + Number(t.final_amount || 0), 0);
-
-    setAssets(assetsVal);
-    setLiabilities(0); // Placeholder until liabilities mapping is defined
   };
 
   useEffect(() => {
