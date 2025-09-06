@@ -34,37 +34,44 @@ interface ModuleConfig {
 }
 
 const MODULES: Record<string, ModuleConfig> = {
-  dashboard: { name: "Dashboard", permissions: ["view"] },
+  dashboard: { 
+    name: "Dashboard", 
+    permissions: ["view"] 
+  },
+  sales_pos: { 
+    name: "Sales & POS", 
+    permissions: ["view", "create", "edit", "approve"],
+    subModules: ["pos", "transactions", "transaction_details", "customers"],
+    hasResourceFilter: true
+  },
   inventory: { 
     name: "Inventory", 
     permissions: ["view", "create", "edit", "delete"],
-    subModules: ["stock_management", "production", "transfers"]
+    subModules: ["production", "stock_management", "stock_transfer", "branch_transfer"]
   },
-  sales: { 
-    name: "Sales & Transactions", 
+  finance: { 
+    name: "Finance", 
     permissions: ["view", "create", "edit", "approve"],
-    hasResourceFilter: true
+    subModules: ["profit_loss", "cash_flow", "balance_sheet", "operational_expenses"]
   },
   reports: { 
     name: "Reports", 
     permissions: ["view"],
+    subModules: ["sales_report", "inventory_report", "financial_report"],
     hasResourceFilter: true
   },
-  users: { 
-    name: "User Management", 
-    permissions: ["view", "create", "edit", "delete"]
+  admin: { 
+    name: "Admin", 
+    permissions: ["view", "create", "edit", "delete"],
+    subModules: ["user_management", "branches", "riders"]
   },
-  finance: { 
-    name: "Finance", 
-    permissions: ["view", "create", "edit", "approve"]
+  settings: { 
+    name: "Settings", 
+    permissions: ["view", "edit"]
   },
-  attendance: { 
-    name: "Attendance", 
-    permissions: ["view", "create", "edit"]
-  },
-  customers: { 
-    name: "Customer Management", 
-    permissions: ["view", "create", "edit"]
+  help: { 
+    name: "Help & Support", 
+    permissions: ["view"]
   }
 };
 
@@ -111,13 +118,13 @@ export function UserPermissionMatrix({ role, onPermissionsChange, riders = [] }:
 
   const getDefaultPermissions = (role: string) => {
     const roleDefaults: { [key: string]: string[] } = {
-      'bh_staff': ['dashboard', 'inventory', 'sales', 'reports'],
-      'bh_kasir': ['dashboard', 'sales', 'customers'],
-      'bh_report': ['dashboard', 'reports', 'sales'],
-      'sb_branch_manager': ['dashboard', 'inventory', 'sales', 'reports', 'users', 'attendance'],
-      'sb_kasir': ['dashboard', 'sales', 'customers'],
-      'sb_rider': ['dashboard', 'sales', 'customers', 'attendance'],
-      'sb_report': ['dashboard', 'reports', 'sales']
+      'bh_staff': ['dashboard', 'inventory', 'sales_pos', 'reports'],
+      'bh_kasir': ['dashboard', 'sales_pos'],
+      'bh_report': ['dashboard', 'reports', 'sales_pos'],
+      'sb_branch_manager': ['dashboard', 'inventory', 'sales_pos', 'reports', 'admin', 'finance'],
+      'sb_kasir': ['dashboard', 'sales_pos'],
+      'sb_rider': ['dashboard', 'sales_pos'],
+      'sb_report': ['dashboard', 'reports', 'sales_pos']
     };
     return roleDefaults[role] || [];
   };
@@ -129,8 +136,10 @@ export function UserPermissionMatrix({ role, onPermissionsChange, riders = [] }:
       permissions: {
         ...p.permissions,
         view: defaultModules.includes(p.module),
-        create: defaultModules.includes(p.module) && ['inventory', 'sales', 'customers', 'users'].includes(p.module),
-        edit: defaultModules.includes(p.module) && ['inventory', 'sales', 'customers'].includes(p.module),
+        create: defaultModules.includes(p.module) && ['inventory', 'sales_pos', 'admin', 'finance'].includes(p.module),
+        edit: defaultModules.includes(p.module) && ['inventory', 'sales_pos', 'admin', 'settings'].includes(p.module),
+        delete: defaultModules.includes(p.module) && ['inventory', 'admin'].includes(p.module),
+        approve: defaultModules.includes(p.module) && ['sales_pos', 'finance'].includes(p.module),
       }
     }));
     setPermissions(updated);
@@ -162,7 +171,7 @@ export function UserPermissionMatrix({ role, onPermissionsChange, riders = [] }:
                 <Badge variant="outline">{moduleKey}</Badge>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {module.permissions.map((permission) => (
                   <div key={permission} className="flex items-center space-x-2">
                     <Checkbox
@@ -181,6 +190,19 @@ export function UserPermissionMatrix({ role, onPermissionsChange, riders = [] }:
                   </div>
                 ))}
               </div>
+
+              {module.subModules && (
+                <div className="mt-3 pl-4 border-l-2 border-muted">
+                  <Label className="text-xs text-muted-foreground">Sub-modules:</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {module.subModules.map((subModule) => (
+                      <Badge key={subModule} variant="secondary" className="text-xs">
+                        {subModule.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {module.hasResourceFilter && modulePermission?.permissions.view && (
                 <div className="mt-4 p-3 bg-muted rounded-md">
