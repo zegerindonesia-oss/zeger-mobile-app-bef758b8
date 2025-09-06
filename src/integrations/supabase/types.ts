@@ -638,6 +638,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          app_access_type: Database["public"]["Enums"]["app_access_type"] | null
           branch_id: string | null
           created_at: string | null
           full_name: string
@@ -649,6 +650,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          app_access_type?:
+            | Database["public"]["Enums"]["app_access_type"]
+            | null
           branch_id?: string | null
           created_at?: string | null
           full_name: string
@@ -660,6 +664,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          app_access_type?:
+            | Database["public"]["Enums"]["app_access_type"]
+            | null
           branch_id?: string | null
           created_at?: string | null
           full_name?: string
@@ -1011,6 +1018,7 @@ export type Database = {
       get_user_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
+          app_access_type: Database["public"]["Enums"]["app_access_type"] | null
           branch_id: string | null
           created_at: string | null
           full_name: string
@@ -1032,6 +1040,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_access_type: "web_backoffice" | "pos_app" | "rider_app"
       permission_type:
         | "view"
         | "insert"
@@ -1047,6 +1056,16 @@ export type Database = {
         | "rider"
         | "finance"
         | "customer"
+        | "ho_owner"
+        | "ho_staff"
+        | "bh_staff"
+        | "bh_kasir"
+        | "bh_rider"
+        | "bh_report"
+        | "sb_branch_manager"
+        | "sb_kasir"
+        | "sb_rider"
+        | "sb_report"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1174,6 +1193,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_access_type: ["web_backoffice", "pos_app", "rider_app"],
       permission_type: [
         "view",
         "insert",
@@ -1184,7 +1204,23 @@ export const Constants = {
       ],
       stock_movement_type: ["in", "out", "transfer", "adjustment", "return"],
       transaction_status: ["pending", "completed", "cancelled", "returned"],
-      user_role: ["ho_admin", "branch_manager", "rider", "finance", "customer"],
+      user_role: [
+        "ho_admin",
+        "branch_manager",
+        "rider",
+        "finance",
+        "customer",
+        "ho_owner",
+        "ho_staff",
+        "bh_staff",
+        "bh_kasir",
+        "bh_rider",
+        "bh_report",
+        "sb_branch_manager",
+        "sb_kasir",
+        "sb_rider",
+        "sb_report",
+      ],
     },
   },
 } as const
