@@ -532,11 +532,11 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                   Tambah User Baru
                 </Button>
               </DialogTrigger>
-              <DialogContent className="glass-card max-w-md">
-                <DialogHeader>
+              <DialogContent className="glass-card w-[95vw] max-w-4xl max-h-[90vh] flex flex-col p-0">
+                <DialogHeader className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 border-b">
                   <DialogTitle className="gradient-text">Tambah User Baru</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 flex-1 overflow-y-auto p-6">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nama Lengkap *</Label>
                     <Input
@@ -680,7 +680,9 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                     </div>
                   )}
 
-                  <div className="flex gap-3 pt-4">
+                </div>
+                <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 border-t">
+                  <div className="flex gap-3">
                     <Button 
                       onClick={createUser} 
                       disabled={creating} 
@@ -971,13 +973,14 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
 
       {/* Enhanced Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="glass-card max-w-md">
-          <DialogHeader>
+        <DialogContent className="glass-card w-[95vw] max-w-4xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 border-b">
             <DialogTitle className="gradient-text">
               Edit User - {editingUser?.full_name}
             </DialogTitle>
           </DialogHeader>
           {editingUser && (
+            <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Nama Lengkap</Label>
@@ -1064,21 +1067,24 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button 
-                  onClick={updateUser} 
-                  disabled={creating} 
-                  className="btn-glass flex-1"
-                >
-                  {creating ? "Menyimpan..." : "Simpan Perubahan"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsEditDialogOpen(false)} 
-                  className="btn-glass-outline flex-1"
-                >
-                  Batal
-                </Button>
+              </div>
+              <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 border-t">
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={updateUser} 
+                    disabled={creating} 
+                    className="btn-glass flex-1"
+                  >
+                    {creating ? "Menyimpan..." : "Simpan Perubahan"}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditDialogOpen(false)} 
+                    className="btn-glass-outline flex-1"
+                  >
+                    Batal
+                  </Button>
+                </div>
               </div>
             </div>
           )}
