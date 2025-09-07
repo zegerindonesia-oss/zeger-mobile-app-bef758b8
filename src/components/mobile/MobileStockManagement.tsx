@@ -194,20 +194,44 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
       // Beritahu parent untuk refresh status persediaan
       window.dispatchEvent(new Event('inventory-updated'));
       
-      // Check if all stock has been returned
+      // Auto-start shift if needed
+      if (!activeShift) {
+        const { data: newShift, error: shiftError } = await supabase
+          .from('shift_management')
+          .insert([{
+            rider_id: userProfile.id,
+            branch_id: userProfile.branch_id,
+            shift_date: new Date().toISOString().split('T')[0],
+            shift_number: 1,
+            status: 'active'
+          }])
+          .select()
+          .single();
+
+        if (!shiftError && newShift) {
+          console.log('Auto-started shift for stock return');
+        }
+      }
+
+      // Check remaining stock for appropriate message
       const { data: remainingAfterReturn } = await supabase
         .from('inventory')
         .select('id')
         .eq('rider_id', userProfile.id)
         .gt('stock_quantity', 0);
+      
+      const remainingCount = remainingAfterReturn?.length || 0;
 
-      // Auto-navigate to shift report only if ALL stock is returned
-      if (!remainingAfterReturn || remainingAfterReturn.length === 0) {
-        setTimeout(() => {
-          onGoToShift();
+      // Always navigate to shift report after stock return
+      // This allows riders to input operational expenses regardless of remaining stock
+      setTimeout(() => {
+        onGoToShift();
+        if (remainingCount === 0) {
           toast.info("Semua stok telah dikembalikan. Silakan lengkapi laporan shift");
-        }, 1000);
-      }
+        } else {
+          toast.info("Stok dikembalikan. Lanjutkan ke laporan shift untuk input beban operasional");
+        }
+      }, 1000);
     } catch (error: any) {
       toast.error("Gagal mengembalikan stok: " + error.message);
     } finally {
@@ -219,15 +243,27 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Pengembalian Stok</h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={fetchReturnableStock}
-          disabled={loading}
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          {activeShift && !activeShift.report_submitted && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={onGoToShift}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Laporan Shift
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchReturnableStock}
+            disabled={loading}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
       
       <ScrollArea className="h-96">
@@ -270,9 +306,19 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
           ))}
 
           {returnableStock.length === 0 && (
-            <div className="text-center py-8">
+            <div className="text-center py-8 space-y-4">
               <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
               <p className="text-green-600 font-medium">Semua stok sudah terjual atau dikembalikan</p>
+              {activeShift && !activeShift.report_submitted && (
+                <Button 
+                  onClick={onGoToShift}
+                  className="mt-4"
+                  variant="default"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Lanjut ke Laporan Shift
+                </Button>
+              )}
             </div>
           )}
         </div>
