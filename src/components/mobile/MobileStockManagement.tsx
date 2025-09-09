@@ -213,7 +213,7 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
         }
       }
 
-      // Check remaining stock for appropriate message
+      // Check remaining stock for appropriate message  
       const { data: remainingAfterReturn } = await supabase
         .from('inventory')
         .select('id')
@@ -222,16 +222,12 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
       
       const remainingCount = remainingAfterReturn?.length || 0;
 
-      // Always navigate to shift report after stock return
-      // This allows riders to input operational expenses regardless of remaining stock
-      setTimeout(() => {
-        onGoToShift();
-        if (remainingCount === 0) {
-          toast.info("Semua stok telah dikembalikan. Silakan lengkapi laporan shift");
-        } else {
-          toast.info("Stok dikembalikan. Lanjutkan ke laporan shift untuk input beban operasional");
-        }
-      }, 1000);
+      // Show appropriate message based on remaining stock
+      if (remainingCount === 0) {
+        toast.success("Semua stok telah dikembalikan! Silakan lengkapi laporan shift.");
+      } else {
+        toast.success(`Stok berhasil dikembalikan! Masih ada ${remainingCount} jenis produk yang harus dikembalikan.`);
+      }
     } catch (error: any) {
       toast.error("Gagal mengembalikan stok: " + error.message);
     } finally {
