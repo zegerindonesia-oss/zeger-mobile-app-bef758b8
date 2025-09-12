@@ -353,6 +353,9 @@ const MobileStockManagement = () => {
   // New state for checkbox bulk confirmation
   const [selectedStockIds, setSelectedStockIds] = useState<Set<string>>(new Set());
   const [bulkConfirmPhoto, setBulkConfirmPhoto] = useState<File | undefined>(undefined);
+  
+  // New state for cash deposit notes
+  const [cashDepositNotes, setCashDepositNotes] = useState<string>('');
 
   useEffect(() => {
     fetchStockData();
@@ -794,9 +797,16 @@ const MobileStockManagement = () => {
         shift_end_time: new Date().toISOString()
       };
 
+      // Store photo URL and notes in notes field
+      let notesArray = [];
       if (cashPhotoUrl) {
-        // Store photo URL in notes field
-        updateData.notes = `Cash deposit photo: ${cashPhotoUrl}`;
+        notesArray.push(`Cash deposit photo: ${cashPhotoUrl}`);
+      }
+      if (cashDepositNotes.trim()) {
+        notesArray.push(`Cash deposit notes: ${cashDepositNotes.trim()}`);
+      }
+      if (notesArray.length > 0) {
+        updateData.notes = notesArray.join(' | ');
       }
 
       const { error: shiftError } = await supabase
@@ -810,6 +820,7 @@ const MobileStockManagement = () => {
       setOperationalExpenses([{ type: '', amount: '', description: '' }]);
       setExpensePhotos([undefined]);
       setCashDepositPhoto(undefined);
+      setCashDepositNotes('');
       setActiveShift(null);
       window.dispatchEvent(new Event('shift-updated'));
       fetchShiftData();
@@ -873,11 +884,6 @@ const MobileStockManagement = () => {
           </div>
           
           <Tabs value={tab} onValueChange={(v) => {
-            // Restrict access to shift report if there's remaining stock
-            if (v === 'shift' && remainingStockCount > 0) {
-              toast.error("Kembalikan semua stok terlebih dahulu sebelum mengakses laporan shift");
-              return;
-            }
             setTab(v as any);
           }} className="w-full">
             <TabsList className="grid w-full grid-cols-4 text-xs bg-muted rounded-full">
@@ -891,7 +897,7 @@ const MobileStockManagement = () => {
               </TabsTrigger>
               <TabsTrigger value="return">Kembali</TabsTrigger>
               <TabsTrigger value="history">Riwayat</TabsTrigger>
-              <TabsTrigger value="shift" disabled={remainingStockCount > 0}>
+              <TabsTrigger value="shift">
                 Shift
                 {activeShift && !activeShift.report_submitted && remainingStockCount === 0 && (
                   <Badge variant="destructive" className="ml-1 text-xs">!</Badge>
@@ -905,11 +911,6 @@ const MobileStockManagement = () => {
         <Card>
           <CardContent className="p-4">
             <Tabs value={tab} onValueChange={(v) => {
-              // Restrict access to shift report if there's remaining stock
-              if (v === 'shift' && remainingStockCount > 0) {
-                toast.error("Kembalikan semua stok terlebih dahulu sebelum mengakses laporan shift");
-                return;
-              }
               setTab(v as any);
             }} className="space-y-4">
 
@@ -1108,7 +1109,23 @@ const MobileStockManagement = () => {
 
               {/* Shift Report Tab */}
               <TabsContent value="shift" className="space-y-4">
-                {activeShift ? (
+                {remainingStockCount > 0 ? (
+                  <div className="text-center py-8 space-y-4">
+                    <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-orange-700">Kembalikan Stok Dulu</h3>
+                    <p className="text-muted-foreground">
+                      Masih ada {remainingStockCount} jenis produk yang harus dikembalikan sebelum bisa mengisi laporan shift.
+                    </p>
+                    <Button 
+                      onClick={() => setTab('return')}
+                      variant="default"
+                      className="mt-4"
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Ke Tab Pengembalian
+                    </Button>
+                  </div>
+                ) : activeShift ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       {!activeShift.report_submitted ? (
@@ -1249,51 +1266,65 @@ const MobileStockManagement = () => {
                             </div>
                           </div>
                           
-                          {/* Optional Cash Deposit Photo */}
-                          <div className="mt-3 space-y-2">
-                            <Label className="text-sm font-medium text-green-800">
-                              Foto Setoran Tunai (Opsional)
-                            </Label>
-                            <div className="flex gap-2">
-                              <input
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                style={{ display: 'none' }}
-                                id="cash-deposit-photo"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    setCashDepositPhoto(file);
-                                    toast.success("Foto setoran berhasil diupload!");
-                                  }
-                                }}
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => document.getElementById('cash-deposit-photo')?.click()}
-                                className="flex-1"
-                              >
-                                <Camera className="h-4 w-4 mr-2" />
-                                {cashDepositPhoto ? 'Ganti Foto' : 'Ambil Foto'}
-                              </Button>
-                              {cashDepositPhoto && (
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => setCashDepositPhoto(undefined)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                            {cashDepositPhoto && (
-                              <p className="text-xs text-green-700">
-                                ✓ Foto siap: {cashDepositPhoto.name}
-                              </p>
-                            )}
-                          </div>
+                           {/* Optional Cash Deposit Photo */}
+                           <div className="mt-3 space-y-2">
+                             <Label className="text-sm font-medium text-green-800">
+                               Foto Setoran Tunai (Opsional)
+                             </Label>
+                             <div className="flex gap-2">
+                               <input
+                                 type="file"
+                                 accept="image/*"
+                                 capture="environment"
+                                 style={{ display: 'none' }}
+                                 id="cash-deposit-photo"
+                                 onChange={(e) => {
+                                   const file = e.target.files?.[0];
+                                   if (file) {
+                                     setCashDepositPhoto(file);
+                                     toast.success("Foto setoran berhasil diupload!");
+                                   }
+                                 }}
+                               />
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => document.getElementById('cash-deposit-photo')?.click()}
+                                 className="flex-1"
+                               >
+                                 <Camera className="h-4 w-4 mr-2" />
+                                 {cashDepositPhoto ? 'Ganti Foto' : 'Ambil Foto'}
+                               </Button>
+                               {cashDepositPhoto && (
+                                 <Button
+                                   variant="destructive"
+                                   size="sm"
+                                   onClick={() => setCashDepositPhoto(undefined)}
+                                 >
+                                   <X className="h-4 w-4" />
+                                 </Button>
+                               )}
+                             </div>
+                             {cashDepositPhoto && (
+                               <p className="text-xs text-green-700">
+                                 ✓ Foto siap: {cashDepositPhoto.name}
+                               </p>
+                             )}
+                           </div>
+
+                           {/* Catatan Setoran */}
+                           <div className="mt-3 space-y-2">
+                             <Label className="text-sm font-medium text-green-800">
+                               Catatan Setoran (Opsional)
+                             </Label>
+                             <Textarea
+                               placeholder="Catatan tambahan untuk setoran tunai..."
+                               value={cashDepositNotes}
+                               onChange={(e) => setCashDepositNotes(e.target.value)}
+                               rows={2}
+                               className="resize-none"
+                             />
+                           </div>
                         </div>
 
                         <Button
