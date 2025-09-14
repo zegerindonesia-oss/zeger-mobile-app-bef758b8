@@ -432,17 +432,10 @@ const MobileStockManagement = () => {
 
       setActiveShift(shift);
 
-      // Get sales summary scoped to active shift time window (or today if no shift)
+      // Get sales summary for entire day (not just from shift start time)
       const today = getTodayJakarta();
-      let startRange = `${today}T00:00:00`;
-      let endRange = new Date().toISOString();
-      
-      // If shift is active, use shift start time and current time
-      if (shift?.shift_start_time) {
-        startRange = shift.shift_start_time;
-        // For active shift, use current time as end range
-        endRange = new Date().toISOString();
-      }
+      const startRange = `${today}T00:00:00`;
+      const endRange = `${today}T23:59:59`;
       
       // Check remaining rider stock that must be returned before report
       const { data: remaining } = await supabase
@@ -453,15 +446,16 @@ const MobileStockManagement = () => {
       setRemainingStockCount(remaining?.length || 0);
       
       console.log('Fetching transactions for rider:', userProfile.id);
-      console.log('Date range:', { startRange, endRange });
+      console.log('Date range (full day):', { startRange, endRange });
 
-      // Use broader query to catch all transactions for this rider today
+      // Fetch ALL transactions for the entire day (not filtered by shift start time)
       const { data: allTransactions, error: allTransError } = await supabase
         .from('transactions')
         .select('final_amount, payment_method, transaction_date, status, id')
         .eq('rider_id', userProfile.id)
-        .gte('transaction_date', `${today}T00:00:00`)
+        .gte('transaction_date', startRange)
         .lte('transaction_date', endRange)
+        .eq('status', 'completed')  // Only completed transactions
         .order('transaction_date', { ascending: false });
 
       console.log('All transactions today:', allTransactions);
@@ -471,40 +465,33 @@ const MobileStockManagement = () => {
         return;
       }
 
-      // Filter for shift period if shift exists, otherwise use all today's transactions
-      let rangeTransactions = allTransactions || [];
-      
-      if (shift?.shift_start_time) {
-        rangeTransactions = allTransactions?.filter(t => 
-          new Date(t.transaction_date) >= new Date(shift.shift_start_time) &&
-          (t.status === 'completed' || t.status === 'pending')
-        ) || [];
-      }
+      // Use ALL daily transactions for shift report (no filtering by shift start time)
+      const dailyTransactions = allTransactions || [];
 
-      console.log('Filtered transactions for shift:', rangeTransactions);
+      console.log('Daily transactions for shift report:', dailyTransactions);
 
-      const cashSales = rangeTransactions
+      const cashSales = dailyTransactions
         ?.filter(t => (t.payment_method || '').toLowerCase() === 'cash')
         ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
 
-      const qrisSales = rangeTransactions
+      const qrisSales = dailyTransactions
         ?.filter(t => (t.payment_method || '').toLowerCase() === 'qris')
         ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
 
-      const transferSales = rangeTransactions
+      const transferSales = dailyTransactions
         ?.filter(t => ['transfer', 'bank_transfer', 'bank'].includes((t.payment_method || '').toLowerCase()))
         ?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
 
       const totalSales = cashSales + qrisSales + transferSales;
 
-      console.log('Sales summary:', { cashSales, qrisSales, transferSales, totalSales, count: rangeTransactions?.length });
+      console.log('Daily sales summary:', { cashSales, qrisSales, transferSales, totalSales, count: dailyTransactions?.length });
 
       setShiftSummary({
         totalSales,
         cashSales,
         qrisSales,
         transferSales,
-        totalTransactions: rangeTransactions?.length || 0
+        totalTransactions: dailyTransactions?.length || 0
       });
     } catch (error: any) {
       console.error("Error fetching shift data:", error);
