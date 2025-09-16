@@ -886,8 +886,10 @@ const MobileStockManagement = () => {
               <TabsTrigger value="history">Riwayat</TabsTrigger>
               <TabsTrigger value="shift">
                 Shift
-                {activeShift && !activeShift.report_submitted && remainingStockCount === 0 && (
-                  <Badge variant="destructive" className="ml-1 text-xs">!</Badge>
+                {activeShift && !activeShift.report_submitted && (
+                  <Badge variant="destructive" className="ml-1 text-xs">
+                    {remainingStockCount > 0 ? remainingStockCount : '!'}
+                  </Badge>
                 )}
               </TabsTrigger>
             </TabsList>
@@ -1190,27 +1192,32 @@ const MobileStockManagement = () => {
                                  onChange={(e) => updateExpense(index, 'description', e.target.value)}
                                  className="flex-1"
                                />
-                               <input
-                                 type="file"
-                                 accept="image/*"
-                                 capture="environment"
-                                 style={{ display: 'none' }}
-                                 id={`receipt-${index}`}
-                                 onChange={(e) => {
-                                   const file = e.target.files?.[0];
-                                   if (file) {
-                                     toast.success("Foto struk berhasil diupload!");
-                                   }
-                                 }}
-                               />
-                               <Button
-                                 variant="outline"
-                                 size="sm"
-                                 onClick={() => document.getElementById(`receipt-${index}`)?.click()}
-                                 title="Upload foto struk/nota"
-                               >
-                                 <Camera className="h-4 w-4" />
-                               </Button>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  style={{ display: 'none' }}
+                                  id={`receipt-${index}`}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const newExpensePhotos = [...expensePhotos];
+                                      newExpensePhotos[index] = file;
+                                      setExpensePhotos(newExpensePhotos);
+                                      toast.success("Foto struk berhasil diupload!");
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => document.getElementById(`receipt-${index}`)?.click()}
+                                  title="Upload foto struk/nota"
+                                  className={expensePhotos[index] ? "bg-green-50 border-green-300 text-green-700" : ""}
+                                >
+                                  <Camera className="h-4 w-4" />
+                                  {expensePhotos[index] && <span className="ml-1 text-xs">✓</span>}
+                                </Button>
                                {operationalExpenses.length > 1 && (
                                  <Button
                                    variant="destructive"
@@ -1221,17 +1228,37 @@ const MobileStockManagement = () => {
                                  </Button>
                                )}
                              </div>
-                           </div>
-                         ))}
-                        
-                        <Button
-                          variant="outline"
-                          onClick={addExpense}
-                          className="w-full"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Tambah Beban
-                        </Button>
+                              {expensePhotos[index] && (
+                                <div className="col-span-2 mt-2">
+                                  <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded">
+                                    <CheckCircle className="h-3 w-3" />
+                                    <span>Foto struk: {expensePhotos[index]?.name}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const newExpensePhotos = [...expensePhotos];
+                                        newExpensePhotos[index] = undefined;
+                                        setExpensePhotos(newExpensePhotos);
+                                      }}
+                                      className="ml-auto h-6 w-6 p-0"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                         
+                         <Button
+                           variant="outline"
+                           onClick={addExpense}
+                           className="w-full"
+                         >
+                           <Plus className="h-4 w-4 mr-2" />
+                           Tambah Beban
+                         </Button>
 
                         {/* Auto-calculated cash deposit */}
                         <div className="bg-green-50 p-4 rounded-lg border border-green-200">
