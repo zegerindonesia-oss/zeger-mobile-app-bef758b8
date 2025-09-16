@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users, CoffeeIcon, Receipt, MapPin, UserCheck, Calculator, ChefHat, Building, BarChart3, CreditCard, Wallet, ArrowUpDown } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, BarChart, LineChart, Line } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users, CoffeeIcon, Receipt, MapPin, UserCheck, Calculator, ChefHat, Building, BarChart3 } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
 import { PieChart3D } from '@/components/charts/PieChart3D';
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -20,19 +20,6 @@ interface DashboardStats {
   totalProfit: number;
   totalMembers: number;
   activeRiders: number;
-  cashSales: number;
-  qrisSales: number;
-  transferSales: number;
-  operationalExpenses: number;
-  cashDeposit: number;
-}
-
-interface FinancialData {
-  month: string;
-  totalSales: number;
-  rawMaterialCost: number;
-  operationalExpenses: number;
-  totalProfit: number;
 }
 
 interface SalesData {
@@ -85,15 +72,9 @@ export const BranchHubReportDashboard = () => {
     totalItemsSold: 0,
     totalProfit: 0,
     totalMembers: 0,
-    activeRiders: 0,
-    cashSales: 0,
-    qrisSales: 0,
-    transferSales: 0,
-    operationalExpenses: 0,
-    cashDeposit: 0
+    activeRiders: 0
   });
   const [salesData, setSalesData] = useState<SalesData[]>([]);
-  const [financialData, setFinancialData] = useState<FinancialData[]>([]);
   const [productSales, setProductSales] = useState<ProductSales[]>([]);
   const [riderExpenses, setRiderExpenses] = useState<{
     rider_name: string;
@@ -142,7 +123,7 @@ export const BranchHubReportDashboard = () => {
     
     setLoading(true);
     try {
-      await Promise.all([fetchStats(), fetchSalesChart(), fetchProductSales(), fetchRiderExpenses(), fetchRiderStockData(), fetchHourlyData(), fetchFinancialChart()]);
+      await Promise.all([fetchStats(), fetchSalesChart(), fetchProductSales(), fetchRiderExpenses(), fetchRiderStockData(), fetchHourlyData()]);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -242,8 +223,6 @@ export const BranchHubReportDashboard = () => {
         .eq('rider_id', assignedRiderId);
       const activeRiders = activeShifts?.length || 0;
 
-      const cashDeposit = Math.max(0, cashRevenue - operationalExpenses);
-
       setStats({
         totalSales,
         totalTransactions,
@@ -252,12 +231,7 @@ export const BranchHubReportDashboard = () => {
         totalItemsSold,
         totalProfit,
         totalMembers: customers?.length || 0,
-        activeRiders,
-        cashSales: cashRevenue,
-        qrisSales: qrisRevenue,
-        transferSales: transferRevenue,
-        operationalExpenses,
-        cashDeposit
+        activeRiders
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -530,145 +504,6 @@ export const BranchHubReportDashboard = () => {
     }
   };
 
-  const fetchFinancialChart = async () => {
-    if (!assignedRiderId) return;
-
-    try {
-      const chartData = [];
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-
-      // Determine time period based on date range
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays <= 7) {
-        // Daily data for small ranges
-        for (let i = 0; i <= diffDays; i++) {
-          const date = new Date(start);
-          date.setDate(start.getDate() + i);
-          const dateStr = date.toISOString().split('T')[0];
-          
-          const financialDataPoint = await fetchFinancialDataForDate(dateStr, dateStr);
-          chartData.push({
-            month: date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' }),
-            ...financialDataPoint
-          });
-        }
-      } else if (diffDays <= 30) {
-        // Weekly data for medium ranges
-        const weeksData = [];
-        let currentWeekStart = new Date(start);
-        
-        while (currentWeekStart <= end) {
-          const weekEnd = new Date(currentWeekStart);
-          weekEnd.setDate(currentWeekStart.getDate() + 6);
-          if (weekEnd > end) weekEnd.setTime(end.getTime());
-          
-          const startStr = currentWeekStart.toISOString().split('T')[0];
-          const endStr = weekEnd.toISOString().split('T')[0];
-          
-          const financialDataPoint = await fetchFinancialDataForDate(startStr, endStr);
-          weeksData.push({
-            month: `Week ${Math.floor(weeksData.length + 1)}`,
-            ...financialDataPoint
-          });
-          
-          currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-        }
-        chartData.push(...weeksData);
-      } else {
-        // Monthly data for large ranges
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        for (let i = 0; i < 6; i++) {
-          const monthStart = new Date(end);
-          monthStart.setMonth(end.getMonth() - i);
-          monthStart.setDate(1);
-          const monthEnd = new Date(monthStart);
-          monthEnd.setMonth(monthStart.getMonth() + 1);
-          monthEnd.setDate(0);
-          
-          const startStr = monthStart.toISOString().split('T')[0];
-          const endStr = monthEnd.toISOString().split('T')[0];
-          
-          const financialDataPoint = await fetchFinancialDataForDate(startStr, endStr);
-          chartData.unshift({
-            month: months[monthStart.getMonth()],
-            ...financialDataPoint
-          });
-        }
-      }
-      
-      setFinancialData(chartData);
-    } catch (error) {
-      console.error("Error fetching financial chart:", error);
-    }
-  };
-
-  const fetchFinancialDataForDate = async (startStr: string, endStr: string) => {
-    // Fetch transactions for the period
-    const { data: transactions } = await supabase
-      .from('transactions')
-      .select('final_amount, id, payment_method')
-      .eq('status', 'completed')
-      .eq('rider_id', assignedRiderId)
-      .gte('transaction_date', `${startStr}T00:00:00`)
-      .lte('transaction_date', `${endStr}T23:59:59`);
-
-    // Calculate revenue breakdown
-    let totalRevenue = 0;
-    let mdrAmount = 0;
-    
-    (transactions || []).forEach((trans: any) => {
-      const amount = Number(trans.final_amount || 0);
-      totalRevenue += amount;
-      const paymentMethod = (trans.payment_method || '').toLowerCase();
-      if (paymentMethod === 'qris') {
-        mdrAmount += amount * 0.007; // 0.7% MDR
-      }
-    });
-
-    // Calculate raw material cost
-    const transactionIds = transactions?.map(t => t.id) || [];
-    let rawMaterialCost = 0;
-    if (transactionIds.length > 0) {
-      const { data: items } = await supabase
-        .from('transaction_items')
-        .select('quantity, products!inner(cost_price)')
-        .in('transaction_id', transactionIds);
-      rawMaterialCost = items?.reduce((sum, item: any) => 
-        sum + (item.quantity || 0) * (Number(item.products?.cost_price) || 0), 0
-      ) || 0;
-    }
-
-    // Calculate operational expenses
-    const { data: expenses } = await supabase
-      .from('daily_operational_expenses')
-      .select('amount, expense_type')
-      .eq('rider_id', assignedRiderId)
-      .gte('expense_date', startStr)
-      .lte('expense_date', endStr);
-
-    const operationalExpenses = (expenses || []).reduce((sum, expense: any) => {
-      const type = (expense.expense_type || '').toLowerCase();
-      if (!type.includes('food') && !type.includes('bahan')) {
-        return sum + Number(expense.amount || 0);
-      }
-      return sum;
-    }, 0);
-
-    // Calculate profit
-    const grossProfit = totalRevenue - mdrAmount;
-    const totalProfit = grossProfit - rawMaterialCost - operationalExpenses;
-
-    return {
-      totalSales: totalRevenue,
-      rawMaterialCost,
-      operationalExpenses,
-      totalProfit
-    };
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -755,46 +590,7 @@ export const BranchHubReportDashboard = () => {
             <div className="text-2xl font-bold">{formatCurrency(stats.totalSales)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-success" />
-              Total revenue dari semua payment
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Penjualan Tunai</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.cashSales)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <span className="text-success">Cash payment</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Penjualan QRIS</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.qrisSales)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <span className="text-info">QRIS payment</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Penjualan Transfer</CardTitle>
-            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.transferSales)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <span className="text-primary">Bank transfer payment</span>
+              +2.1% dari periode sebelumnya
             </div>
           </CardContent>
         </Card>
@@ -808,33 +604,21 @@ export const BranchHubReportDashboard = () => {
             <div className="text-2xl font-bold">{formatNumber(stats.totalTransactions)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-success" />
-              Jumlah transaksi selesai
+              +5.2% dari periode sebelumnya
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Beban Operasional</CardTitle>
-            <ChefHat className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.operationalExpenses)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <span className="text-warning">Operational expenses</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Setoran Tunai</CardTitle>
+            <CardTitle className="text-sm font-medium">Rata-rata Transaksi</CardTitle>
             <Calculator className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.cashDeposit)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(stats.avgTransactionValue)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
-              <span className="text-success">Cash sales - operational</span>
+              <TrendingDown className="mr-1 h-3 w-3 text-destructive" />
+              -1.2% dari periode sebelumnya
             </div>
           </CardContent>
         </Card>
@@ -848,7 +632,7 @@ export const BranchHubReportDashboard = () => {
             <div className="text-2xl font-bold">{formatNumber(stats.totalMembers)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3 text-success" />
-              Active customers
+              +12.5% dari periode sebelumnya
             </div>
           </CardContent>
         </Card>
@@ -921,68 +705,6 @@ export const BranchHubReportDashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Financial Performance Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Financial Performance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="h-80 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={financialData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `${formatNumber(value / 1000)}K`} />
-                <Tooltip 
-                  formatter={(value: number, name: string) => [
-                    formatCurrency(value), 
-                    name === 'totalSales' ? 'Total Sales' :
-                    name === 'rawMaterialCost' ? 'Beban Bahan Baku' :
-                    name === 'operationalExpenses' ? 'Beban Operasional' :
-                    'Total Profit'
-                  ]}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="totalSales" 
-                  stroke="#3B82F6" 
-                  strokeWidth={3}
-                  name="Total Sales"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="rawMaterialCost" 
-                  stroke="#DC2626" 
-                  strokeWidth={2}
-                  name="Beban Bahan Baku"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="operationalExpenses" 
-                  stroke="#F97316" 
-                  strokeWidth={2}
-                  name="Beban Operasional"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="totalProfit" 
-                  stroke="#10B981" 
-                  strokeWidth={3}
-                  name="Total Profit"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Jam Terjual Chart */}
       <Card>
