@@ -156,58 +156,77 @@ export const TransactionsEnhanced = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch additional data separately to avoid relation issues
-      const transactionsWithDetails = await Promise.all((data || []).map(async (transaction) => {
-        let customerName = '-';
-        let riderName = '-';
-        let transactionItems: TransactionItem[] = [];
+      if (!data || data.length === 0) {
+        setTransactions([]);
+        setSummary({
+          totalSales: 0,
+          totalTransactions: 0,
+          avgPerTransaction: 0,
+          totalItemsSold: 0,
+          totalFoodCost: 0,
+          cashSales: 0,
+          nonCashSales: 0
+        });
+        return;
+      }
 
-        if (transaction.customer_id) {
-          const { data: customer } = await supabase
-            .from('customers')
-            .select('name')
-            .eq('id', transaction.customer_id)
-            .single();
-          customerName = customer?.name || '-';
-        }
+      // Bulk fetch all related data to avoid N+1 queries
+      const transactionIds = data.map(t => t.id);
+      const customerIds = [...new Set(data.filter(t => t.customer_id).map(t => t.customer_id))];
+      const riderIds = [...new Set(data.filter(t => t.rider_id).map(t => t.rider_id))];
 
-        if (transaction.rider_id) {
-          const { data: rider } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', transaction.rider_id)
-            .single();
-          riderName = rider?.full_name || '-';
-        }
-
-        // Fetch transaction items
-        const { data: items } = await supabase
+      // Parallel fetch all related data
+      const [itemsResult, customersResult, ridersResult] = await Promise.all([
+        supabase
           .from('transaction_items')
           .select(`
             id,
+            transaction_id,
             product_id,
             quantity,
             unit_price,
             total_price,
             products:product_id (name, cost_price)
           `)
-          .eq('transaction_id', transaction.id);
+          .in('transaction_id', transactionIds),
+        
+        customerIds.length > 0 
+          ? supabase.from('customers').select('id, name').in('id', customerIds)
+          : Promise.resolve({ data: [] }),
+        
+        riderIds.length > 0
+          ? supabase.from('profiles').select('id, full_name').in('id', riderIds)
+          : Promise.resolve({ data: [] })
+      ]);
 
-        if (items) {
-          transactionItems = items.map(item => ({
-            ...item,
-            products: { name: item.products?.name || 'Unknown Product', cost_price: item.products?.cost_price }
-          }));
+      // Create lookup maps for faster access
+      const customersMap = new Map((customersResult.data || []).map(c => [c.id, c]));
+      const ridersMap = new Map((ridersResult.data || []).map(r => [r.id, r]));
+      const itemsMap = new Map();
+
+      // Group transaction items by transaction_id
+      (itemsResult.data || []).forEach(item => {
+        if (!itemsMap.has(item.transaction_id)) {
+          itemsMap.set(item.transaction_id, []);
         }
+        itemsMap.get(item.transaction_id).push({
+          ...item,
+          products: { 
+            name: item.products?.name || 'Unknown Product', 
+            cost_price: item.products?.cost_price 
+          }
+        });
+      });
 
-        return {
-          ...transaction,
-          customers: { name: customerName },
-          profiles: { full_name: riderName },
-          transaction_items: transactionItems
-        };
+      // Combine all data efficiently
+      const transactionsWithDetails = data.map(transaction => ({
+        ...transaction,
+        customers: { name: customersMap.get(transaction.customer_id)?.name || '-' },
+        profiles: { full_name: ridersMap.get(transaction.rider_id)?.full_name || '-' },
+        transaction_items: itemsMap.get(transaction.id) || []
       }));
 
+      // Apply search filter
       const filteredData = transactionsWithDetails.filter(transaction => 
         searchTerm === "" || 
         transaction.transaction_number.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -19,6 +19,11 @@ interface DashboardStats {
   totalProfit: number;
   totalMembers: number;
   activeRiders: number;
+  cashSales: number;
+  qrisSales: number;
+  transferSales: number;
+  operationalExpenses: number;
+  cashDeposit: number;
 }
 interface SalesData {
   month: string;
@@ -72,7 +77,12 @@ export const ModernBranchDashboard = () => {
     totalItemsSold: 0,
     totalProfit: 0,
     totalMembers: 0,
-    activeRiders: 0
+    activeRiders: 0,
+    cashSales: 0,
+    qrisSales: 0,
+    transferSales: 0,
+    operationalExpenses: 0,
+    cashDeposit: 0
   });
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [productSales, setProductSales] = useState<ProductSales[]>([]);
@@ -199,17 +209,53 @@ export const ModernBranchDashboard = () => {
         }
       });
 
-      // Compute total items sold and total food cost (COGS) from transaction_items joined with products.cost_price
+      // Compute total items sold and total food cost (COGS) with batched queries for performance
       const transactionIds = transactions?.map(t => t.id) || [];
       let totalItemsSold = 0;
       let totalFoodCost = 0;
+      
       if (transactionIds.length > 0) {
-        const { data: items } = await supabase
-          .from('transaction_items')
-          .select('quantity, products!inner(cost_price)')
-          .in('transaction_id', transactionIds);
-        totalItemsSold = items?.reduce((sum, item: any) => sum + (item.quantity || 0), 0) || 0;
-        totalFoodCost = items?.reduce((sum, item: any) => sum + (item.quantity || 0) * (Number(item.products?.cost_price) || 0), 0) || 0;
+        try {
+          // Batch process transaction IDs in chunks of 200 to avoid URL length limits
+          const chunkSize = 200;
+          const chunks = [];
+          for (let i = 0; i < transactionIds.length; i += chunkSize) {
+            chunks.push(transactionIds.slice(i, i + chunkSize));
+          }
+
+          // Process chunks in parallel
+          const itemsResults = await Promise.all(
+            chunks.map(chunk => 
+              supabase
+                .from('transaction_items')
+                .select('quantity, products:product_id(cost_price)')
+                .in('transaction_id', chunk)
+            )
+          );
+
+          // Aggregate results from all chunks
+          itemsResults.forEach(result => {
+            if (result.data) {
+              totalItemsSold += result.data.reduce((sum, item: any) => sum + (item.quantity || 0), 0);
+              totalFoodCost += result.data.reduce((sum, item: any) => {
+                const costPrice = Number(item.products?.cost_price || 0);
+                return sum + (item.quantity || 0) * costPrice;
+              }, 0);
+            }
+          });
+        } catch (error) {
+          console.error('Error fetching transaction items:', error);
+          // Fallback to simpler query if batched query fails
+          try {
+            const { data: items } = await supabase
+              .from('transaction_items')
+              .select('quantity')
+              .in('transaction_id', transactionIds.slice(0, 100)); // Limit for safety
+            totalItemsSold = items?.reduce((sum, item: any) => sum + (item.quantity || 0), 0) || 0;
+          } catch (fallbackError) {
+            console.error('Fallback query also failed:', fallbackError);
+          }
+        }
       }
 
       // Get operational expenses
@@ -250,6 +296,9 @@ export const ModernBranchDashboard = () => {
         .eq('status', 'active');
       const activeRiders = activeShifts?.length || 0;
 
+      // Calculate cash deposit (cash sales minus operational expenses)
+      const cashDeposit = cashRevenue - operationalExpenses;
+
       setStats({
         totalSales,
         totalTransactions,
@@ -258,7 +307,12 @@ export const ModernBranchDashboard = () => {
         totalItemsSold,
         totalProfit,
         totalMembers: customers?.length || 0,
-        activeRiders
+        activeRiders,
+        cashSales: cashRevenue,
+        qrisSales: qrisRevenue,
+        transferSales: transferRevenue,
+        operationalExpenses,
+        cashDeposit
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -274,8 +328,10 @@ export const ModernBranchDashboard = () => {
       // If date range is small, show daily data; otherwise monthly
       const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
       if (diffDays <= 7) {
-        // Show daily data
+        // Show daily data - parallel queries for better performance
+        const dailyQueries = [];
         for (let i = 0; i <= diffDays; i++) {
           const date = new Date(start);
           date.setDate(start.getDate() + i);
@@ -287,7 +343,20 @@ export const ModernBranchDashboard = () => {
             .gte('transaction_date', `${dateStr}T00:00:00`)
             .lte('transaction_date', `${dateStr}T23:59:59`);
           if (selectedUser !== 'all') dailyQuery = dailyQuery.eq('rider_id', selectedUser);
-          const { data: dailyTransactions } = await dailyQuery;
+          
+          dailyQueries.push({
+            query: dailyQuery,
+            date,
+            dateStr
+          });
+        }
+
+        // Execute all daily queries in parallel
+        const results = await Promise.all(dailyQueries.map(item => item.query));
+        
+        results.forEach((result, index) => {
+          const { data: dailyTransactions } = result;
+          const { date } = dailyQueries[index];
           const dailySales = dailyTransactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
           chartData.push({
             month: date.toLocaleDateString('id-ID', {
@@ -296,10 +365,12 @@ export const ModernBranchDashboard = () => {
             }),
             sales: dailySales
           });
-        }
+        });
       } else {
-        // Show monthly data for larger ranges
+        // Show monthly data for larger ranges - parallel queries
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthlyQueries = [];
+        
         for (let i = 0; i < 6; i++) {
           const monthStart = new Date(end);
           monthStart.setMonth(end.getMonth() - i);
@@ -314,13 +385,25 @@ export const ModernBranchDashboard = () => {
             .gte('transaction_date', monthStart.toISOString())
             .lte('transaction_date', monthEnd.toISOString());
           if (selectedUser !== 'all') monthlyQuery = monthlyQuery.eq('rider_id', selectedUser);
-          const { data: monthlyTransactions } = await monthlyQuery;
+          
+          monthlyQueries.push({
+            query: monthlyQuery,
+            monthStart
+          });
+        }
+
+        // Execute all monthly queries in parallel
+        const results = await Promise.all(monthlyQueries.map(item => item.query));
+        
+        results.forEach((result, index) => {
+          const { data: monthlyTransactions } = result;
+          const { monthStart } = monthlyQueries[index];
           const monthlySales = monthlyTransactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
           chartData.unshift({
             month: months[monthStart.getMonth()],
             sales: monthlySales
           });
-        }
+        });
       }
       setSalesData(chartData);
     } catch (error) {
@@ -633,50 +716,59 @@ export const ModernBranchDashboard = () => {
     color: "bg-red-500",
     type: "revenue"
   }, {
-    title: "Total Transaksi",
+    title: "Total Transaksi (Food Cost)",
     value: stats.totalTransactions.toString(),
     icon: Receipt,
-    change: `${calculatePercentageChange(stats.totalTransactions, 'transactions') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalTransactions, 'transactions').toFixed(1)}%`,
-    isPositive: calculatePercentageChange(stats.totalTransactions, 'transactions') > 0,
-    description: "Jumlah transaksi",
-    color: "bg-red-500",
+    change: formatCurrency(stats.totalFoodCost),
+    isPositive: true,
+    description: "Transaksi & Food Cost",
+    color: "bg-blue-500",
     type: "transactions"
   }, {
-    title: "Rata-rata per Transaksi",
+    title: "Total QRIS",
+    value: formatCurrency(stats.qrisSales),
+    icon: Receipt,
+    change: `${((stats.qrisSales / stats.totalSales) * 100).toFixed(1)}%`,
+    isPositive: true,
+    description: "Pembayaran QRIS",
+    color: "bg-green-500",
+    type: "qris"
+  }, {
+    title: "Total Transfer Bank",
+    value: formatCurrency(stats.transferSales),
+    icon: Building,
+    change: `${((stats.transferSales / stats.totalSales) * 100).toFixed(1)}%`,
+    isPositive: true,
+    description: "Transfer Bank",
+    color: "bg-purple-500",
+    type: "transfer"
+  }, {
+    title: "Rata-rata per Transaksi (Total Item)",
     value: formatCurrency(stats.avgTransactionValue),
     icon: Calculator,
-    change: `${calculatePercentageChange(stats.avgTransactionValue, 'avgTransaction') > 0 ? '+' : ''}${calculatePercentageChange(stats.avgTransactionValue, 'avgTransaction').toFixed(2)}%`,
-    isPositive: calculatePercentageChange(stats.avgTransactionValue, 'avgTransaction') > 0,
-    description: "Nilai rata-rata",
-    color: "bg-red-500",
+    change: stats.totalItemsSold.toString() + " items",
+    isPositive: true,
+    description: "Avg & Total Items",
+    color: "bg-yellow-500",
     type: "avgTransaction"
   }, {
-    title: "Total Food Cost",
-    value: formatCurrency(stats.totalFoodCost),
+    title: "Total Beban Operasional",
+    value: formatCurrency(stats.operationalExpenses),
     icon: ChefHat,
-    change: `${calculatePercentageChange(stats.totalFoodCost, 'foodCost') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalFoodCost, 'foodCost').toFixed(1)}%`,
-    isPositive: calculatePercentageChange(stats.totalFoodCost, 'foodCost') > 0,
-    description: "Biaya bahan",
+    change: `${((stats.operationalExpenses / stats.totalSales) * 100).toFixed(1)}%`,
+    isPositive: false,
+    description: "Operational expenses",
     color: "bg-red-500",
-    type: "foodCost"
+    type: "expenses"
   }, {
-    title: "Total Item Terjual",
-    value: stats.totalItemsSold.toString(),
-    icon: Package,
-    change: `${calculatePercentageChange(stats.totalItemsSold, 'itemsSold') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalItemsSold, 'itemsSold').toFixed(1)}%`,
-    isPositive: calculatePercentageChange(stats.totalItemsSold, 'itemsSold') > 0,
-    description: "Total item terjual",
-    color: "bg-red-500",
-    type: "itemsSold"
-  }, {
-    title: "Total Profit",
-    value: formatCurrency(stats.totalProfit),
-    icon: TrendingUp,
-    change: `${calculatePercentageChange(stats.totalProfit, 'profit') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalProfit, 'profit').toFixed(1)}%`,
-    isPositive: calculatePercentageChange(stats.totalProfit, 'profit') > 0,
-    description: "Keuntungan bersih",
-    color: "bg-red-500",
-    type: "profit"
+    title: "Total Setoran Tunai",
+    value: formatCurrency(stats.cashDeposit),
+    icon: DollarSign,
+    change: formatCurrency(stats.cashSales) + " - expenses",
+    isPositive: stats.cashDeposit > 0,
+    description: "Cash deposit",
+    color: "bg-teal-500",
+    type: "cashDeposit"
   }, {
     title: "Total Member",
     value: stats.totalMembers.toString(),
@@ -684,17 +776,8 @@ export const ModernBranchDashboard = () => {
     change: `${calculatePercentageChange(stats.totalMembers, 'members') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalMembers, 'members').toFixed(1)}%`,
     isPositive: calculatePercentageChange(stats.totalMembers, 'members') > 0,
     description: "Pelanggan terdaftar",
-    color: "bg-red-500",
+    color: "bg-indigo-500",
     type: "members"
-  }, {
-    title: "Rider Aktif",
-    value: stats.activeRiders.toString(),
-    icon: UserCheck,
-    change: `${calculatePercentageChange(stats.activeRiders, 'riders') > 0 ? '+' : ''}${calculatePercentageChange(stats.activeRiders, 'riders').toFixed(1)}%`,
-    isPositive: calculatePercentageChange(stats.activeRiders, 'riders') > 0,
-    description: "Mobile seller online",
-    color: "bg-red-500",
-    type: "riders"
   }];
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">
@@ -761,12 +844,12 @@ export const ModernBranchDashboard = () => {
           </div>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards - 8 cards in responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {kpiData.map((item, index) => <Card key={index} className="rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer" onClick={() => handleCardClick(item.type)}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
-                  <div className="p-3 rounded-2xl bg-red-500">
+                  <div className={`p-3 rounded-2xl ${item.color}`}>
                     <item.icon className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex items-center">
