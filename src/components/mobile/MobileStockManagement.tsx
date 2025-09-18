@@ -438,12 +438,39 @@ const MobileStockManagement = () => {
       const endRange = `${today}T23:59:59`;
       
       // Check remaining rider stock that must be returned before report
-      const { data: remaining } = await supabase
+      // Only count stock that was received today and still has quantity > 0
+      // If all stock is sold (quantity = 0), no need to return, shift can proceed
+      const { data: inventoryWithStock, error: inventoryError } = await supabase
         .from('inventory')
-        .select('id')
+        .select('id, stock_quantity, product_id')
         .eq('rider_id', userProfile.id)
         .gt('stock_quantity', 0);
-      setRemainingStockCount(remaining?.length || 0);
+      
+      if (inventoryError) {
+        console.error('Error fetching inventory:', inventoryError);
+        setRemainingStockCount(0);
+      } else {
+        // For each inventory item with stock > 0, check if it was received today
+        const remainingItems = [];
+        for (const item of inventoryWithStock || []) {
+          const { data: movements } = await supabase
+            .from('stock_movements')
+            .select('id')
+            .eq('rider_id', userProfile.id)
+            .eq('product_id', item.product_id)
+            .eq('movement_type', 'transfer')
+            .eq('status', 'received')
+            .gte('actual_delivery_date', `${today}T00:00:00`)
+            .lte('actual_delivery_date', `${today}T23:59:59`)
+            .limit(1);
+            
+          // If there's a stock movement today for this product, it needs to be returned
+          if (movements && movements.length > 0) {
+            remainingItems.push(item);
+          }
+        }
+        setRemainingStockCount(remainingItems.length);
+      }
       
       console.log('Fetching transactions for rider:', userProfile.id);
       console.log('Date range (full day):', { startRange, endRange });

@@ -27,6 +27,7 @@ import Inventory from "./pages/Inventory";
 import AdminUsers from "./pages/AdminUsers";
 import StockTransfer from "./pages/StockTransfer";
 import CustomerManager from "./pages/CustomerManager";
+import RiderPerformance from "./pages/RiderPerformance";
 import InventoryProductionPage from "./pages/inventory/ProductionPage";
 import InventoryBranchTransfer from "./pages/inventory/BranchTransfer";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
@@ -92,6 +93,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'rider']}>
                 <ModernLayout>
                   <CustomerManager />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/rider-performance" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
+                <ModernLayout>
+                  <RiderPerformance />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

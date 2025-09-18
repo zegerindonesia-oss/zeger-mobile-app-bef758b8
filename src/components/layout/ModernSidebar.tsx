@@ -54,15 +54,15 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     roles: ["ho_admin", "branch_manager", "finance"]
   },
   {
-    id: "sales",
-    label: "Sales & POS",
-    icon: ShoppingCart,
+    id: "analytics",
+    label: "Analytics",
+    icon: BarChart3,
     roles: ["ho_admin", "branch_manager"],
     children: [
-      { id: "pos", label: "Point of Sale", icon: ShoppingCart, path: "/pos" },
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
-      { id: "customers", label: "Customers", icon: Database, path: "/customers" }
+      { id: "customers", label: "Customers", icon: Database, path: "/customers" },
+      { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance" }
     ]
   },
   {
