@@ -23,6 +23,7 @@ interface RiderPerformanceData {
   rider_code: string;
   total_transactions: number;
   total_sales: number;
+  total_products_sold: number;
 }
 
 interface DailySalesData {
@@ -31,6 +32,7 @@ interface DailySalesData {
   rider_code: string;
   transactions: number;
   total_sales: number;
+  total_products_sold: number;
 }
 
 const RiderPerformance = () => {
@@ -132,10 +134,15 @@ const RiderPerformance = () => {
       const dailySalesResults: DailySalesData[] = [];
 
       for (const rider of riderFilter) {
-        // Fetch transactions for this rider in the date range
+        // Fetch transactions with transaction items for this rider in the date range
         const { data: transactions, error } = await supabase
           .from('transactions')
-          .select('final_amount, transaction_date, status')
+          .select(`
+            final_amount, 
+            transaction_date, 
+            status,
+            transaction_items(quantity)
+          `)
           .eq('rider_id', rider.id)
           .eq('status', 'completed')
           .gte('transaction_date', `${startDate}T00:00:00`)
@@ -149,25 +156,29 @@ const RiderPerformance = () => {
 
         const totalTransactions = transactions?.length || 0;
         const totalSales = transactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
+        const totalProductsSold = transactions?.reduce((sum, t) => 
+          sum + (t.transaction_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0) || 0;
 
         performanceResults.push({
           rider_id: rider.id,
           rider_name: rider.full_name,
           rider_code: rider.code || `Z-${rider.id.slice(-3)}`,
           total_transactions: totalTransactions,
-          total_sales: totalSales
+          total_sales: totalSales,
+          total_products_sold: totalProductsSold
         });
 
         // Group by date for daily sales data
-        const dailyGroups: { [date: string]: { transactions: number; sales: number } } = {};
+        const dailyGroups: { [date: string]: { transactions: number; sales: number; products: number } } = {};
         
         transactions?.forEach(transaction => {
           const date = transaction.transaction_date.split('T')[0];
           if (!dailyGroups[date]) {
-            dailyGroups[date] = { transactions: 0, sales: 0 };
+            dailyGroups[date] = { transactions: 0, sales: 0, products: 0 };
           }
           dailyGroups[date].transactions += 1;
           dailyGroups[date].sales += parseFloat(transaction.final_amount.toString());
+          dailyGroups[date].products += transaction.transaction_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
         });
 
         Object.entries(dailyGroups).forEach(([date, data]) => {
@@ -176,7 +187,8 @@ const RiderPerformance = () => {
             rider_name: rider.full_name,
             rider_code: rider.code || `Z-${rider.id.slice(-3)}`,
             transactions: data.transactions,
-            total_sales: data.sales
+            total_sales: data.sales,
+            total_products_sold: data.products
           });
         });
       }
@@ -216,21 +228,31 @@ const RiderPerformance = () => {
     transactions: rider.total_transactions
   }));
 
-  // Prepare line chart data (sales trend over time)
+  // Prepare multi-line chart data (each rider gets their own line)
+  const generateColors = (count: number) => {
+    return Array.from({ length: count }, (_, i) => 
+      `hsl(${(i * 360) / count}, 70%, 50%)`
+    );
+  };
+
+  const uniqueRiders = [...new Set(dailySalesData.map(d => d.rider_name))];
+  const riderColors = generateColors(uniqueRiders.length);
+  
+  // Group data by date with each rider as separate data key
   const trendData = dailySalesData.reduce((acc, curr) => {
     const existingDate = acc.find(item => item.date === curr.date);
     if (existingDate) {
-      existingDate.total_sales += curr.total_sales;
-      existingDate.total_transactions += curr.transactions;
+      existingDate[`${curr.rider_name}_sales`] = curr.total_sales;
     } else {
-      acc.push({
-        date: curr.date,
-        total_sales: curr.total_sales,
-        total_transactions: curr.transactions
-      });
+      const dateEntry: any = { date: curr.date };
+      dateEntry[`${curr.rider_name}_sales`] = curr.total_sales;
+      acc.push(dateEntry);
     }
     return acc;
-  }, [] as { date: string; total_sales: number; total_transactions: number }[]);
+  }, [] as any[]);
+
+  // Sort by date
+  trendData.sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <main className="space-y-6">
@@ -245,7 +267,7 @@ const RiderPerformance = () => {
       </header>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
@@ -314,31 +336,47 @@ const RiderPerformance = () => {
         </CardContent>
       </Card>
 
-      {/* Performance Bar Chart */}
-      <Card>
+      {/* Performance Multi-Line Chart */}
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
+            <TrendingUp className="w-5 h-5" />
             Grafik Performa All Rider
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="horizontal" margin={{ top: 20, right: 30, left: 100, bottom: 5 }}>
+              <LineChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
-                <YAxis type="category" dataKey="name" width={80} />
-                <Tooltip formatter={(value: number) => [formatCurrency(value), "Total Sales"]} />
-                <Bar dataKey="sales" fill="hsl(var(--primary))" />
-              </BarChart>
+                <XAxis dataKey="date" tickFormatter={formatDate} />
+                <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    formatCurrency(value), 
+                    name.replace('_sales', '').replace(/_/g, ' ')
+                  ]}
+                  labelFormatter={(label) => formatDate(label)}
+                />
+                {uniqueRiders.map((rider, index) => (
+                  <Line
+                    key={rider}
+                    type="monotone"
+                    dataKey={`${rider}_sales`}
+                    stroke={riderColors[index]}
+                    strokeWidth={2}
+                    dot={{ fill: riderColors[index] }}
+                    name={rider}
+                  />
+                ))}
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
       {/* Top Rank Table */}
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
@@ -347,17 +385,17 @@ const RiderPerformance = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full bg-white">
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-2">No.</th>
                   <th className="text-left p-2">Nama Rider</th>
-                  <th className="text-left p-2">Code</th>
+                  <th className="text-left p-2">Produk Terjual</th>
                   <th className="text-left p-2">Transaksi</th>
                   <th className="text-left p-2">Total Sales</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white">
                 {performanceData.map((rider, index) => (
                   <tr key={rider.rider_id} className="border-b hover:bg-muted/50">
                     <td className="p-2">
@@ -370,7 +408,7 @@ const RiderPerformance = () => {
                     </td>
                     <td className="p-2 font-medium">{rider.rider_name}</td>
                     <td className="p-2">
-                      <Badge variant="outline">{rider.rider_code}</Badge>
+                      <Badge variant="outline">{rider.total_products_sold}</Badge>
                     </td>
                     <td className="p-2">{rider.total_transactions}</td>
                     <td className="p-2 font-semibold text-green-600">
@@ -391,62 +429,53 @@ const RiderPerformance = () => {
         </CardContent>
       </Card>
 
-      {/* Sales Overview Line Chart */}
-      <Card>
+      {/* Sales Overview Bar Chart */}
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
+            <BarChart3 className="w-5 h-5" />
             Sales Overview
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={chartData} layout="horizontal" margin={{ top: 20, right: 30, left: 100, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={formatDate} />
-                <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                <Tooltip 
-                  formatter={(value: number) => [formatCurrency(value), "Total Sales"]}
-                  labelFormatter={(label) => formatDate(label)}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="total_sales" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  dot={{ fill: "hsl(var(--primary))" }}
-                />
-              </LineChart>
+                <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
+                <YAxis type="category" dataKey="name" width={80} />
+                <Tooltip formatter={(value: number) => [formatCurrency(value), "Total Sales"]} />
+                <Bar dataKey="sales" fill="hsl(var(--primary))" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
       {/* Sales Summary Table */}
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle>Sales Summary</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full bg-white">
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-2">Tgl/Bln/Thn</th>
                   <th className="text-left p-2">Nama Rider</th>
-                  <th className="text-left p-2">Kode</th>
+                  <th className="text-left p-2">Produk Terjual</th>
                   <th className="text-left p-2">Transaksi</th>
                   <th className="text-left p-2">Total Sales</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white">
                 {dailySalesData.map((sale, index) => (
                   <tr key={index} className="border-b hover:bg-muted/50">
                     <td className="p-2">{formatDate(sale.date)}</td>
                     <td className="p-2">{sale.rider_name}</td>
                     <td className="p-2">
-                      <Badge variant="outline">{sale.rider_code}</Badge>
+                      <Badge variant="outline">{sale.total_products_sold}</Badge>
                     </td>
                     <td className="p-2">{sale.transactions}</td>
                     <td className="p-2 font-semibold text-green-600">
@@ -467,7 +496,9 @@ const RiderPerformance = () => {
                   <tr className="border-t-2 font-semibold bg-muted/30">
                     <td className="p-2">Total</td>
                     <td className="p-2">-</td>
-                    <td className="p-2">-</td>
+                    <td className="p-2">
+                      {dailySalesData.reduce((sum, sale) => sum + sale.total_products_sold, 0)}
+                    </td>
                     <td className="p-2">
                       {dailySalesData.reduce((sum, sale) => sum + sale.transactions, 0)}
                     </td>

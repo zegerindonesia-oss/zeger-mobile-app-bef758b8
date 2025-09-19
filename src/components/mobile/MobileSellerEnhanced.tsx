@@ -400,13 +400,17 @@ const MobileSellerEnhanced = () => {
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            {inCartQuantity > 0 && <Button 
+                            <Button 
                               variant="outline" 
                               size="sm" 
+                              disabled={inCartQuantity <= 0}
                               onClick={(e) => { e.stopPropagation(); removeFromCart(item.product_id); }}
                             >
                                 -
-                              </Button>}
+                            </Button>
+                            <span className="min-w-8 text-center font-medium bg-muted px-2 py-1 rounded">
+                              {inCartQuantity}
+                            </span>
                             <Button 
                               disabled={inCartQuantity >= item.rider_stock || item.rider_stock <= 0} 
                               onClick={(e) => { e.stopPropagation(); addToCart(item.product_id); }} 
