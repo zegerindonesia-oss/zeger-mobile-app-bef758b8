@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useSearchParams } from "react-router-dom";
 import { 
   Package, 
@@ -102,6 +103,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   const [activeShift, setActiveShift] = useState<ShiftInfo | null>(null);
   const [historyType, setHistoryType] = useState<'transfer' | 'return'>('transfer');
   const [filterType, setFilterType] = useState<'sent' | 'received' | 'all'>('all');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const getJakartaNow = () => {
     const now = new Date();
@@ -634,7 +636,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
   return (
     <div className="space-y-6">
-      <Card className="dashboard-card">
+      <Card className="dashboard-card bg-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -696,33 +698,86 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                 </Card>
               )}
 
-              <Button 
-                onClick={createBulkTransferForRider} 
-                disabled={loading || !selectedRider}
-                className="w-full rounded-full hover:bg-primary/90"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {loading ? "Mengirim..." : "Berikan Stok ke Rider"}
-              </Button>
+              <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    disabled={loading || !selectedRider || getTotalStockToSend() === 0}
+                    className="w-full rounded-full hover:bg-primary/90"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {loading ? "Mengirim..." : "Berikan Stok ke Rider"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-white">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Konfirmasi Pengiriman Stok</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Apakah jumlah yang anda input sesuai dengan produk fisik?
+                      <div className="mt-4 p-4 bg-muted rounded-lg">
+                        <div className="space-y-2">
+                          <p className="font-medium">Total: {getTotalStockToSend()} unit</p>
+                          <div className="text-sm space-y-1">
+                            {Object.entries(productQuantities)
+                              .filter(([id, qty]) => qty > 0)
+                              .map(([id, qty]) => {
+                                const product = products.find(p => p.id === id);
+                                return (
+                                  <div key={id} className="flex justify-between">
+                                    <span>{product?.name}</span>
+                                    <span>{qty} unit</span>
+                                  </div>
+                                );
+                              })
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Tidak (tidak sesuai)</AlertDialogCancel>
+                    <AlertDialogAction onClick={createBulkTransferForRider}>
+                      Ya Kirim (stok sudah sesuai)
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {products.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-3 border rounded">
+                  <div key={product.id} className="flex items-center justify-between p-3 border rounded bg-white">
                     <div>
                       <p className="font-medium">{product.name}</p>
                       <p className="text-sm text-muted-foreground">{product.category}</p>
                     </div>
-                    <Input
-                      type="number"
-                      placeholder="Qty"
-                      min="0"
-                      className="w-20"
-                      value={productQuantities[product.id] || ''}
-                      onChange={(e) => setProductQuantities(prev => ({
-                        ...prev,
-                        [product.id]: parseInt(e.target.value) || 0
-                      }))}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        disabled={!productQuantities[product.id] || productQuantities[product.id] <= 0}
+                        onClick={() => setProductQuantities(prev => ({
+                          ...prev,
+                          [product.id]: Math.max(0, (prev[product.id] || 0) - 1)
+                        }))}
+                      >
+                        -
+                      </Button>
+                      <div className="w-12 text-center font-medium">
+                        {productQuantities[product.id] || 0}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => setProductQuantities(prev => ({
+                          ...prev,
+                          [product.id]: (prev[product.id] || 0) + 1
+                        }))}
+                      >
+                        +
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -732,7 +787,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       </Card>
 
       {/* Transfers List */}
-      <Card className="dashboard-card">
+      <Card className="dashboard-card bg-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Riwayat Transfer Stok</CardTitle>
@@ -765,7 +820,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           <ScrollArea className="h-96">
             <div className="space-y-4">
               {transfers.map((transferGroup) => (
-                <Card key={transferGroup.id} className={getTransferCardStyle(transferGroup.movement_type || 'transfer')}>
+                <Card key={transferGroup.id} className={`bg-white ${getTransferCardStyle(transferGroup.movement_type || 'transfer')}`}>
                   <CardHeader className="pb-2">
                      <div className="flex items-center justify-between">
                        <div>

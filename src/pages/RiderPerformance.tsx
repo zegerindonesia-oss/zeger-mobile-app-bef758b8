@@ -85,10 +85,10 @@ const RiderPerformance = () => {
   const getDateRange = () => {
     const today = new Date();
     const jakartaNow = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const todayStr = jakartaNow.toISOString().split('T')[0];
     
     switch (selectedPeriod) {
       case "today":
-        const todayStr = jakartaNow.toISOString().split('T')[0];
         return { startDate: todayStr, endDate: todayStr };
       
       case "weekly":
@@ -102,11 +102,15 @@ const RiderPerformance = () => {
         };
       
       case "monthly":
+        // Ensure we get the correct month start in Jakarta timezone
         const monthStart = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth(), 1);
         const monthEnd = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth() + 1, 0);
+        // Convert to Jakarta timezone string format
+        const monthStartStr = new Date(monthStart.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
+        const monthEndStr = new Date(monthEnd.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
         return { 
-          startDate: monthStart.toISOString().split('T')[0], 
-          endDate: monthEnd.toISOString().split('T')[0] 
+          startDate: monthStartStr, 
+          endDate: monthEndStr 
         };
       
       case "custom":
