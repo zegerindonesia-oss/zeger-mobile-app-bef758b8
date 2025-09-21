@@ -750,11 +750,11 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                       <p className="font-medium">{product.name}</p>
                       <p className="text-sm text-muted-foreground">{product.category}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 rounded-full"
+                        className="h-8 w-8 rounded-full bg-red-500 border-red-500 text-white hover:bg-red-600"
                         disabled={!productQuantities[product.id] || productQuantities[product.id] <= 0}
                         onClick={() => setProductQuantities(prev => ({
                           ...prev,
@@ -763,13 +763,23 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                       >
                         -
                       </Button>
-                      <div className="w-12 text-center font-medium">
-                        {productQuantities[product.id] || 0}
-                      </div>
+                      <Input
+                        type="number"
+                        min="0"
+                        className="w-12 h-8 text-center border-red-500 focus:border-red-600 focus:ring-red-500"
+                        value={productQuantities[product.id] || 0}
+                        onChange={(e) => {
+                          const value = Math.max(0, parseInt(e.target.value) || 0);
+                          setProductQuantities(prev => ({
+                            ...prev,
+                            [product.id]: value
+                          }));
+                        }}
+                      />
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 rounded-full"
+                        className="h-8 w-8 rounded-full bg-red-500 border-red-500 text-white hover:bg-red-600"
                         onClick={() => setProductQuantities(prev => ({
                           ...prev,
                           [product.id]: (prev[product.id] || 0) + 1

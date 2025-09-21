@@ -82,10 +82,17 @@ const RiderPerformance = () => {
     }
   };
 
+  const formatJktYMD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getDateRange = () => {
     const today = new Date();
     const jakartaNow = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-    const todayStr = jakartaNow.toISOString().split('T')[0];
+    const todayStr = formatJktYMD(jakartaNow);
     
     switch (selectedPeriod) {
       case "today":
@@ -97,20 +104,17 @@ const RiderPerformance = () => {
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 6);
         return { 
-          startDate: weekStart.toISOString().split('T')[0], 
-          endDate: weekEnd.toISOString().split('T')[0] 
+          startDate: formatJktYMD(weekStart), 
+          endDate: formatJktYMD(weekEnd) 
         };
       
       case "monthly":
-        // Ensure we get the correct month start in Jakarta timezone
+        // Get first day of current month in Jakarta timezone
         const monthStart = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth(), 1);
         const monthEnd = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth() + 1, 0);
-        // Convert to Jakarta timezone string format
-        const monthStartStr = new Date(monthStart.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
-        const monthEndStr = new Date(monthEnd.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })).toISOString().split('T')[0];
         return { 
-          startDate: monthStartStr, 
-          endDate: monthEndStr 
+          startDate: formatJktYMD(monthStart), 
+          endDate: formatJktYMD(monthEnd) 
         };
       
       case "custom":
@@ -172,17 +176,17 @@ const RiderPerformance = () => {
           total_products_sold: totalProductsSold
         });
 
-        // Group by date for daily sales data
+        // Group by date for daily sales data using Jakarta timezone
         const dailyGroups: { [date: string]: { transactions: number; sales: number; products: number } } = {};
         
         transactions?.forEach(transaction => {
-          const date = transaction.transaction_date.split('T')[0];
-          if (!dailyGroups[date]) {
-            dailyGroups[date] = { transactions: 0, sales: 0, products: 0 };
+          const jakartaDate = new Date(transaction.transaction_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+          if (!dailyGroups[jakartaDate]) {
+            dailyGroups[jakartaDate] = { transactions: 0, sales: 0, products: 0 };
           }
-          dailyGroups[date].transactions += 1;
-          dailyGroups[date].sales += parseFloat(transaction.final_amount.toString());
-          dailyGroups[date].products += transaction.transaction_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+          dailyGroups[jakartaDate].transactions += 1;
+          dailyGroups[jakartaDate].sales += parseFloat(transaction.final_amount.toString());
+          dailyGroups[jakartaDate].products += transaction.transaction_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
         });
 
         Object.entries(dailyGroups).forEach(([date, data]) => {
@@ -216,11 +220,26 @@ const RiderPerformance = () => {
     }).format(amount);
   };
 
+  const formatCurrencyShort = (amount: number) => {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `${(amount / 1000).toFixed(0)}K`;
+    }
+    return amount.toString();
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
+    });
+  };
+
+  const formatDateShort = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: '2-digit'
     });
   };
 
@@ -352,9 +371,8 @@ const RiderPerformance = () => {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={formatDate} />
-                <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                <XAxis dataKey="date" tickFormatter={formatDateShort} />
+                <YAxis tickFormatter={formatCurrencyShort} />
                 <Tooltip 
                   formatter={(value: number, name: string) => [
                     formatCurrency(value), 
@@ -444,21 +462,23 @@ const RiderPerformance = () => {
         <CardContent>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailySalesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <AreaChart data={trendData.map(item => ({
+                date: item.date,
+                total_sales: Object.keys(item).filter(key => key.includes('_sales')).reduce((sum, key) => sum + (item[key] || 0), 0)
+              }))} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <defs>
                   <linearGradient id="salesAreaGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
                     <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.3} />
                 <XAxis 
                   dataKey="date" 
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' })}
+                  tickFormatter={formatDateShort}
                   stroke="hsl(var(--muted-foreground))"
                 />
                 <YAxis 
-                  tickFormatter={(value) => formatCurrency(value)}
+                  tickFormatter={formatCurrencyShort}
                   stroke="hsl(var(--muted-foreground))"
                 />
                 <Tooltip 
@@ -509,7 +529,7 @@ const RiderPerformance = () => {
               <tbody className="bg-white">
                 {dailySalesData.map((sale, index) => (
                   <tr key={index} className="border-b hover:bg-muted/50">
-                    <td className="p-2">{formatDate(sale.date)}</td>
+                    <td className="p-2">{new Date(sale.date).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                     <td className="p-2">{sale.rider_name}</td>
                     <td className="p-2">
                       <Badge variant="outline">{sale.total_products_sold}</Badge>
