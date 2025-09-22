@@ -693,14 +693,54 @@ const MobileStockManagement = () => {
     setOperationalExpenses(updated);
   };
 
+  const ensureShiftForToday = async () => {
+    if (!userProfile?.id) return null;
+    
+    // If we already have an active shift, return it
+    if (activeShift) return activeShift;
+    
+    try {
+      // Create a new shift for today
+      const { data: newShift, error: shiftError } = await supabase
+        .from('shift_management')
+        .insert([{
+          rider_id: userProfile.id,
+          branch_id: userProfile.branch_id,
+          shift_date: getTodayJakarta(),
+          shift_number: 1,
+          status: 'active'
+        }])
+        .select()
+        .single();
+
+      if (shiftError) throw shiftError;
+      
+      setActiveShift(newShift);
+      toast.success("Shift otomatis dibuat untuk laporan hari ini");
+      return newShift;
+    } catch (error: any) {
+      console.error('Failed to create shift:', error);
+      toast.error("Gagal membuat shift: " + error.message);
+      return null;
+    }
+  };
+
   const handleSubmitShiftReport = async () => {
-    if (!userProfile?.id || !activeShift) {
-      toast.error("Lengkapi semua data terlebih dahulu");
+    if (!userProfile?.id) {
+      toast.error("Data pengguna tidak tersedia");
       return;
     }
+    
     if (remainingStockCount > 0) {
       toast.error("Masih ada stok tersisa. Kembalikan stok terlebih dahulu sebelum menutup shift.");
       setTab('return');
+      return;
+    }
+
+    // Ensure we have a shift for today
+    const currentShift = activeShift || await ensureShiftForToday();
+    if (!currentShift) {
+      toast.error("Gagal memuat atau membuat shift");
       return;
     }
 
@@ -718,7 +758,7 @@ const MobileStockManagement = () => {
       let cashPhotoUrl: string | undefined;
       if (cashDepositPhoto) {
         const ext = cashDepositPhoto.name.split('.').pop();
-        const fileName = `cash-deposit-${activeShift.id}-${Date.now()}.${ext}`;
+        const fileName = `cash-deposit-${currentShift.id}-${Date.now()}.${ext}`;
         const filePath = `shift-deposits/${userProfile.id}/${fileName}`;
         
         const { error: uploadError } = await supabase.storage
@@ -750,7 +790,7 @@ const MobileStockManagement = () => {
               const photo = expensePhotos[idx];
               if (photo) {
                 const ext = photo.name.split('.').pop();
-                const fileName = `receipt-${activeShift.id}-${idx}-${Date.now()}.${ext}`;
+                const fileName = `receipt-${currentShift.id}-${idx}-${Date.now()}.${ext}`;
                 receiptPath = `receipts/${userProfile.id}/${fileName}`;
                 const { error: recErr } = await supabase.storage
                   .from('expense-receipts')
@@ -759,7 +799,7 @@ const MobileStockManagement = () => {
               }
               return {
                 rider_id: userProfile.id,
-                shift_id: activeShift.id,
+                shift_id: currentShift.id,
                 expense_type: expense.type,
                 amount: parseFloat(expense.amount),
                 description: expense.description,
@@ -782,7 +822,7 @@ const MobileStockManagement = () => {
         .from('daily_reports')
         .select('id')
         .eq('rider_id', userProfile.id)
-        .eq('shift_id', activeShift.id)
+        .eq('shift_id', currentShift.id)
         .maybeSingle();
       if (checkError) throw checkError;
 
@@ -791,7 +831,7 @@ const MobileStockManagement = () => {
           .from('daily_reports')
           .insert({
             rider_id: userProfile.id,
-            shift_id: activeShift.id,
+            shift_id: currentShift.id,
             branch_id: userProfile.branch_id,
             report_date: getTodayJakarta(),
             total_sales: shiftSummary.totalSales,
@@ -826,7 +866,7 @@ const MobileStockManagement = () => {
       const { error: shiftError } = await supabase
         .from('shift_management')
         .update(updateData)
-        .eq('id', activeShift.id);
+        .eq('id', currentShift.id);
 
       if (shiftError) throw shiftError;
 
@@ -1141,7 +1181,7 @@ const MobileStockManagement = () => {
                       Ke Tab Pengembalian
                     </Button>
                   </div>
-                ) : activeShift ? (
+                ) : (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       {!activeShift.report_submitted ? (
@@ -1373,72 +1413,10 @@ const MobileStockManagement = () => {
                           disabled={loading || remainingStockCount > 0}
                           className="w-full bg-green-600 hover:bg-green-700"
                         >
-                          {loading ? "Mengirim..." : !activeShift.report_submitted ? "Kirim Laporan Shift" : "Update Laporan Shift"}
+                          {loading ? "Mengirim..." : !activeShift?.report_submitted ? "Kirim Laporan Shift" : "Update Laporan Shift"}
                         </Button>
                       </CardContent>
                     </Card>
-                  </div>
-                ) : !activeShift ? (
-                  <div className="space-y-4 text-center py-8">
-                    <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-orange-700">Tidak Ada Shift Aktif</h3>
-                    <p className="text-muted-foreground">Anda tetap bisa melihat ringkasan penjualan hari ini di bawah ini.</p>
-                    <div className="bg-blue-50 p-4 rounded-lg text-left max-w-md mx-auto">
-                      <p className="text-sm font-medium text-blue-800 mb-2">Resume Penjualan Hari Ini</p>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between"><span>Total Transaksi:</span><span className="font-semibold">{shiftSummary.totalTransactions}</span></div>
-                        <div className="flex justify-between"><span>Penjualan Tunai:</span><span className="font-semibold">{formatCurrency(shiftSummary.cashSales)}</span></div>
-                        <div className="flex justify-between"><span>Penjualan QRIS:</span><span className="font-semibold">{formatCurrency(shiftSummary.qrisSales)}</span></div>
-                        <div className="flex justify-between"><span>Penjualan Transfer:</span><span className="font-semibold">{formatCurrency(shiftSummary.transferSales)}</span></div>
-                        <div className="flex justify-between border-t pt-1"><span className="font-medium">Total Penjualan:</span><span className="font-semibold text-blue-600">{formatCurrency(shiftSummary.totalSales)}</span></div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-green-700 mb-2">Resume Shift</h3>
-                    <div className="bg-green-50 p-4 rounded-lg text-left max-w-md mx-auto">
-                      <p className="text-sm font-medium text-green-800 mb-2">
-                        Shift #{activeShift.shift_number} - {new Date(activeShift.shift_date).toLocaleDateString('id-ID')}
-                      </p>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>Waktu Mulai:</span>
-                          <span className="font-semibold">
-                            {activeShift.shift_start_time ? 
-                              new Date(activeShift.shift_start_time).toLocaleTimeString('id-ID', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              }) : 
-                              'N/A'
-                            }
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Waktu Selesai:</span>
-                          <span className="font-semibold">
-                            {activeShift.shift_end_time ? 
-                              new Date(activeShift.shift_end_time).toLocaleTimeString('id-ID', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              }) : 
-                              'N/A'
-                            }
-                          </span>
-                        </div>
-                        <div className="flex justify-between"><span>Total Transaksi:</span><span className="font-semibold">{activeShift.total_transactions || 0}</span></div>
-                        {/* Breakdown penjualan agar tetap terlihat setelah laporan dikirim */}
-                        <div className="flex justify-between"><span>Penjualan Tunai:</span><span className="font-semibold">{formatCurrency(shiftSummary.cashSales)}</span></div>
-                        <div className="flex justify-between"><span>Penjualan QRIS:</span><span className="font-semibold">{formatCurrency(shiftSummary.qrisSales)}</span></div>
-                        <div className="flex justify-between"><span>Penjualan Transfer:</span><span className="font-semibold">{formatCurrency(shiftSummary.transferSales)}</span></div>
-                        <div className="flex justify-between border-t pt-1"><span className="font-medium">Total Penjualan:</span><span className="font-semibold text-green-600">{formatCurrency(activeShift.total_sales || 0)}</span></div>
-                        <div className="flex justify-between"><span>Kas Disetor:</span><span className="font-semibold">{formatCurrency(activeShift.cash_collected || 0)}</span></div>
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mt-4">
-                      Laporan shift sudah berhasil dikirim dan menunggu verifikasi branch
-                    </p>
                   </div>
                 )}
               </TabsContent>

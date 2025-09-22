@@ -158,6 +158,13 @@ export default function OperationalExpenses() {
       return;
     }
     
+    // Get current user profile to get branch_id
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('branch_id')
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .single();
+    
     const selectedUserName = allUsers.find(u => u.id === assignedUser)?.full_name || '';
     const expenseDescription = `${category} - ${selectedUserName}`;
     
@@ -165,7 +172,8 @@ export default function OperationalExpenses() {
       expense_category: category,
       amount: amt,
       description: expenseDescription,
-      created_by: assignedUser
+      created_by: assignedUser,
+      branch_id: userProfile?.branch_id
     });
     if (error) { toast.error(error.message); return; }
     toast.success('Beban ditambahkan');
