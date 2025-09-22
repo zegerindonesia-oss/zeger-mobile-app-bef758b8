@@ -368,7 +368,8 @@ export default function OperationalExpenses() {
                   <SelectItem value="utilities">Listrik/Air</SelectItem>
                   <SelectItem value="salary">Gaji</SelectItem>
                   <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="maintenance">Perawatan</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="daily_operational">Beban Operasional Harian</SelectItem>
                   <SelectItem value="other">Lainnya</SelectItem>
                 </SelectContent>
               </Select>
