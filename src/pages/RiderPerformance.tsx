@@ -436,23 +436,21 @@ const RiderPerformance = () => {
                 <tr className="border-b">
                   <th className="text-left p-2">No.</th>
                   <th className="text-left p-2">Nama Rider</th>
-                  <th className="text-left p-2">Produk Terjual (Avg)</th>
-                  <th className="text-left p-2">Transaksi (Avg)</th>
-                  <th className="text-left p-2">Total Sales (Avg)</th>
+                   <th className="text-left p-2">Produk Terjual (Avg/day)</th>
+                   <th className="text-left p-2">Transaksi (Avg/day)</th>
+                   <th className="text-left p-2">Total Sales (Avg/day)</th>
                 </tr>
               </thead>
               <tbody className="bg-white">
-                {performanceData.map((rider, index) => {
-                  // Calculate working days for averages
-                  const { startDate: start, endDate: end } = getDateRange();
-                  const startDateObj = new Date(start);
-                  const endDateObj = new Date(end);
-                  const timeDiff = endDateObj.getTime() - startDateObj.getTime();
-                  const workingDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-                  
-                  const avgProducts = workingDays > 0 ? rider.total_products_sold / workingDays : 0;
-                  const avgTransactions = workingDays > 0 ? rider.total_transactions / workingDays : 0;
-                  const avgSales = workingDays > 0 ? rider.total_sales / workingDays : 0;
+                 {performanceData.map((rider, index) => {
+                   // Calculate working days based on actual transaction dates (like Sales Summary table)
+                   const riderDailySales = dailySalesData.filter(d => d.rider_name === rider.rider_name);
+                   const uniqueDates = [...new Set(riderDailySales.map(sale => sale.date))];
+                   const workingDays = uniqueDates.length || 1; // Fallback to 1 to avoid division by zero
+                   
+                   const avgProducts = workingDays > 0 ? rider.total_products_sold / workingDays : 0;
+                   const avgTransactions = workingDays > 0 ? rider.total_transactions / workingDays : 0;
+                   const avgSales = workingDays > 0 ? rider.total_sales / workingDays : 0;
                   
                   return (
                     <tr key={rider.rider_id} className="border-b hover:bg-muted/50">
@@ -465,32 +463,32 @@ const RiderPerformance = () => {
                         </div>
                       </td>
                       <td className="p-2 font-medium">{rider.rider_name}</td>
-                      <td className="p-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{rider.total_products_sold}</Badge>
-                          <div className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium">
-                            {avgProducts.toFixed(1)}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex items-center gap-2">
-                          <span>{rider.total_transactions}</span>
-                          <div className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium">
-                            {avgTransactions.toFixed(1)}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-green-600">
-                            {formatCurrency(rider.total_sales)}
-                          </span>
-                          <div className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium">
-                            {formatCurrency(avgSales)}
-                          </div>
-                        </div>
-                      </td>
+                       <td className="p-2">
+                         <div className="flex items-center gap-2">
+                           <Badge variant="outline">{rider.total_products_sold}</Badge>
+                           <div className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-medium">
+                             ({avgProducts.toFixed(1)})
+                           </div>
+                         </div>
+                       </td>
+                       <td className="p-2">
+                         <div className="flex items-center gap-2">
+                           <span>{rider.total_transactions}</span>
+                           <div className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-medium">
+                             ({avgTransactions.toFixed(1)})
+                           </div>
+                         </div>
+                       </td>
+                       <td className="p-2">
+                         <div className="flex items-center gap-2">
+                           <span className="font-semibold text-green-600">
+                             {formatCurrency(rider.total_sales)}
+                           </span>
+                           <div className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-medium">
+                             ({formatCurrency(avgSales)})
+                           </div>
+                         </div>
+                       </td>
                     </tr>
                   );
                 })}

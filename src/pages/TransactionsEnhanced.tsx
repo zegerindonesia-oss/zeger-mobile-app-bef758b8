@@ -132,6 +132,8 @@ export const TransactionsEnhanced = () => {
       console.log("🔍 Fetching transactions for user:", userProfile?.role);
       console.log("🔍 Should auto filter:", shouldAutoFilter);
       console.log("🔍 Selected rider:", selectedRider);
+      console.log("🔍 Assigned rider ID:", assignedRiderId);
+      console.log("🔍 Assigned rider name:", assignedRiderName);
       
       let query = supabase
         .from('transactions')

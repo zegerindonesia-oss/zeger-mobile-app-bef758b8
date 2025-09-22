@@ -228,14 +228,15 @@ export const ModernBranchDashboard = () => {
       const startStr = formatYMD(new Date(startDate));
       const endStr = formatYMD(new Date(endDate));
 
-      // Fetch completed transactions for the date range, optionally filter by rider
+      // Fetch ALL completed transactions for accurate calculation (no limits)
       let txQuery = supabase
         .from('transactions')
         .select('final_amount, id, rider_id, payment_method')
         .eq('status', 'completed')
         .gte('transaction_date', `${startStr}T00:00:00`)
         .lte('transaction_date', `${endStr}T23:59:59`);
-        // Remove limit to get all transactions for accurate calculations
+        
+      console.log(`📊 Fetching transactions from ${startStr} to ${endStr}...`);
         
       if (selectedUser !== 'all') {
         txQuery = txQuery.eq('rider_id', selectedUser);
@@ -279,25 +280,18 @@ export const ModernBranchDashboard = () => {
         try {
           console.log(`📦 Processing ${transactionIds.length} transactions for accurate calculations...`);
           
-          // Process ALL transactions without limiting - use efficient batch processing
-          const batchSize = 1000;
-          const batches = [];
-          for (let i = 0; i < transactionIds.length; i += batchSize) {
-            batches.push(transactionIds.slice(i, i + batchSize));
+          // Process ALL transactions using optimized single query (remove batch limits)
+          const { data: allItems, error: itemsError } = await supabase
+            .from('transaction_items')
+            .select('quantity, products:product_id(cost_price)')
+            .in('transaction_id', transactionIds);
+            
+          if (itemsError) {
+            console.error('❌ Error fetching transaction items:', itemsError);
+            throw itemsError;
           }
           
-          let allItems: any[] = [];
-          for (const batch of batches) {
-            const { data: batchItems, error: itemsError } = await supabase
-              .from('transaction_items')
-              .select('quantity, products:product_id(cost_price)')
-              .in('transaction_id', batch);
-              
-            if (itemsError) throw itemsError;
-            if (batchItems) allItems = allItems.concat(batchItems);
-          }
-          
-          if (allItems.length > 0) {
+          if (allItems && allItems.length > 0) {
             totalItemsSold = allItems.reduce((sum, item: any) => sum + (item.quantity || 0), 0);
             totalFoodCost = allItems.reduce((sum, item: any) => {
               const costPrice = Number(item.products?.cost_price || 0);
