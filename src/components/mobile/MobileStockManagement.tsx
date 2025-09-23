@@ -330,7 +330,20 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
 };
 
 const MobileStockManagement = () => {
+  console.log('MobileStockManagement component rendered');
   const { userProfile } = useAuth();
+  console.log('MobileStockManagement - userProfile:', userProfile);
+  
+  // Early return for debugging - shows if component is rendering
+  if (!userProfile) {
+    return (
+      <div className="p-4">
+        <h2 className="text-lg font-bold text-red-600">DEBUG: Stock Management</h2>
+        <p>Menunggu user profile...</p>
+      </div>
+    );
+  }
+  
   const [pendingStock, setPendingStock] = useState<StockItem[]>([]);
   const [receivedStock, setReceivedStock] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(false);

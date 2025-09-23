@@ -82,6 +82,7 @@ export const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
   const currentTab = searchParams.get('tab') || 'dashboard';
 
   const handleNavigation = (item: typeof navigationItems[0]) => {
+    console.log('MobileSidebar navigation clicked:', item.key, item.href);
     navigate(item.href);
     onClose();
   };

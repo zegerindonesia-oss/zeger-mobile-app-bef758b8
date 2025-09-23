@@ -53,12 +53,16 @@ export default function MobileSeller() {
   }
 
   const renderContent = () => {
+    console.log('MobileSeller renderContent - activeTab:', activeTab);
+    console.log('MobileSeller renderContent - userProfile:', userProfile);
+    
     switch (activeTab) {
       case 'dashboard':
         return <MobileRiderDashboard />;
       case 'selling':
         return <MobileSellerEnhanced />;
       case 'stock':
+        console.log('Rendering MobileStockManagement component');
         return <MobileStockManagement />;
       case 'analytics':
         return <MobileRiderAnalyticsEnhanced />;
