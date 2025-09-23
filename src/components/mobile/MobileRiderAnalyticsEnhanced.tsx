@@ -140,12 +140,15 @@ const MobileRiderAnalyticsEnhanced = () => {
         setStartDate(weekStartStr);
         setEndDate(jakartaToday);
         break;
-      case "monthly":
-        const [year, month] = jakartaToday.split('-');
-        const monthStart = `${year}-${month}-01`;
-        setStartDate(monthStart);
-        setEndDate(jakartaToday);
-        break;
+        case "monthly":
+          const [year, month] = jakartaToday.split('-');
+          const monthStart = `${year}-${month}-01`;
+          setStartDate(monthStart);
+          setEndDate(jakartaToday);
+          break;
+        case "custom":
+          // Don't change dates, let user select manually
+          break;
     }
   };
 
@@ -394,9 +397,34 @@ const MobileRiderAnalyticsEnhanced = () => {
                     <SelectItem value="today">Hari Ini</SelectItem>
                     <SelectItem value="weekly">Minggu Ini</SelectItem>
                     <SelectItem value="monthly">Bulan Ini</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Custom Date Range */}
+              {filterPeriod === "custom" && (
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <Label>Dari Tanggal</Label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Sampai Tanggal</Label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -539,7 +567,6 @@ const MobileRiderAnalyticsEnhanced = () => {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analytics.chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip 
