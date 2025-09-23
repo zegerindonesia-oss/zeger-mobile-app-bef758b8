@@ -581,7 +581,12 @@ export const BranchHubReportDashboard = () => {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-destructive">Assignment Error</h3>
-          <p className="text-muted-foreground max-w-md">{riderError}</p>
+          <p className="text-muted-foreground max-w-md">
+            {riderError?.includes('No rider assignment') 
+              ? 'Anda belum ditugaskan untuk rider manapun. Silakan hubungi admin untuk mendapatkan assignment.'
+              : `Error: ${riderError}`
+            }
+          </p>
           <Button onClick={refreshAssignment} variant="outline">
             Try Again
           </Button>

@@ -32,6 +32,7 @@ import InventoryProductionPage from "./pages/inventory/ProductionPage";
 import InventoryBranchTransfer from "./pages/inventory/BranchTransfer";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
+import CreateMalangBranch from "./pages/CreateMalangBranch";
 
 const queryClient = new QueryClient();
 
@@ -247,6 +248,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin']}>
                 <ModernLayout>
                   <AdminUsers />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/admin/create-malang-branch" element={
+              <RoleBasedRoute allowedRoles={['ho_admin']}>
+                <ModernLayout>
+                  <CreateMalangBranch />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

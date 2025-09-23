@@ -27,40 +27,53 @@ export const useRiderFilter = () => {
     setError(null);
     
     try {
-      // Query the assignment table directly
-      const { data: assignments, error } = await supabase
+      // First get the assignment
+      const { data: assignments, error: assignmentError } = await supabase
         .from('branch_hub_report_assignments')
-        .select(`
-          rider_id,
-          user_id,
-          rider:profiles!rider_id (
-            id,
-            full_name
-          )
-        `)
+        .select('rider_id, user_id')
         .eq('user_id', userProfile.id);
 
-      console.log('📊 Assignment query result:', { assignments, error });
+      console.log('📊 Assignment query result:', { assignments, error: assignmentError });
 
-      if (error) {
-        console.error('❌ Error fetching assigned rider:', error);
-        setError(`Database error: ${error.message}`);
+      if (assignmentError) {
+        console.error('❌ Error fetching assigned rider:', assignmentError);
+        setError(`Database error: ${assignmentError.message}`);
         return;
       }
 
       if (assignments && assignments.length > 0) {
-        const assignment = assignments[0] as any;
-        const rider = assignment.rider;
+        const assignment = assignments[0];
+        const riderId = assignment.rider_id;
         
-        console.log('✅ Assignment found:', assignment);
+        console.log('✅ Assignment found, rider_id:', riderId);
         
-        if (rider) {
-          console.log('🎯 Setting assigned rider:', rider.full_name, 'ID:', rider.id);
-          setAssignedRiderId(rider.id);
-          setAssignedRiderName(rider.full_name);
+        if (riderId) {
+          // Now fetch the rider profile separately
+          const { data: riderProfile, error: riderError } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .eq('id', riderId)
+            .single();
+
+          console.log('👤 Rider profile query result:', { riderProfile, error: riderError });
+
+          if (riderError) {
+            console.error('❌ Error fetching rider profile:', riderError);
+            setError(`Error fetching rider profile: ${riderError.message}`);
+            return;
+          }
+
+          if (riderProfile) {
+            console.log('🎯 Setting assigned rider:', riderProfile.full_name, 'ID:', riderProfile.id);
+            setAssignedRiderId(riderProfile.id);
+            setAssignedRiderName(riderProfile.full_name);
+          } else {
+            console.log('❌ No rider profile found');
+            setError('Rider profile not found');
+          }
         } else {
-          console.log('❌ No rider data in assignment');
-          setError('Rider data not found in assignment');
+          console.log('❌ No rider_id in assignment');
+          setError('Invalid assignment: no rider_id');
         }
       } else {
         console.log('❌ No assignments found for user:', userProfile.full_name);
