@@ -1237,7 +1237,7 @@ const MobileStockManagement = () => {
                       </div>
                     </div>
 
-                    {!activeShift?.report_submitted ? (
+                     {!activeShift?.report_submitted ? (
                       <div className="space-y-4">
                         {/* Operational Expenses Input */}
                         <Card>
@@ -1251,25 +1251,28 @@ const MobileStockManagement = () => {
                              {operationalExpenses.map((expense, index) => (
                                <div key={index} className="border rounded-lg p-3 space-y-3">
                                  <div className="grid grid-cols-2 gap-3">
-                                   <Input
-                                     placeholder="Jenis beban"
-                                     value={expense.type}
-                                     onChange={(e) => updateExpense(index, 'type', e.target.value)}
-                                   />
-                                   <Input
-                                     type="number"
-                                     placeholder="Jumlah"
-                                     value={expense.amount}
-                                     onChange={(e) => updateExpense(index, 'amount', e.target.value)}
-                                   />
+                                    <Input
+                                      placeholder="Jenis beban"
+                                      value={expense.type}
+                                      onChange={(e) => updateExpense(index, 'type', e.target.value)}
+                                      disabled={activeShift?.report_submitted}
+                                    />
+                                    <Input
+                                      type="number"
+                                      placeholder="Jumlah"
+                                      value={expense.amount}
+                                      onChange={(e) => updateExpense(index, 'amount', e.target.value)}
+                                      disabled={activeShift?.report_submitted}
+                                    />
                                  </div>
                                  <div className="flex gap-3">
-                                   <Input
-                                     placeholder="Deskripsi (opsional)"
-                                     value={expense.description}
-                                     onChange={(e) => updateExpense(index, 'description', e.target.value)}
-                                     className="flex-1"
-                                   />
+                                    <Input
+                                      placeholder="Deskripsi (opsional)"
+                                      value={expense.description}
+                                      onChange={(e) => updateExpense(index, 'description', e.target.value)}
+                                      className="flex-1"
+                                      disabled={activeShift?.report_submitted}
+                                    />
                                     <input
                                       type="file"
                                       accept="image/*"
@@ -1286,25 +1289,27 @@ const MobileStockManagement = () => {
                                         }
                                       }}
                                     />
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => document.getElementById(`receipt-${index}`)?.click()}
-                                      title="Upload foto struk/nota"
-                                      className={expensePhotos[index] ? "bg-green-50 border-green-300 text-green-700" : ""}
-                                    >
-                                      <Camera className="h-4 w-4" />
-                                      {expensePhotos[index] && <span className="ml-1 text-xs">✓</span>}
-                                    </Button>
-                                   {operationalExpenses.length > 1 && (
                                      <Button
-                                       variant="destructive"
+                                       variant="outline"
                                        size="sm"
-                                       onClick={() => removeExpense(index)}
+                                       onClick={() => document.getElementById(`receipt-${index}`)?.click()}
+                                       title="Upload foto struk/nota"
+                                       className={expensePhotos[index] ? "bg-green-50 border-green-300 text-green-700" : ""}
+                                       disabled={activeShift?.report_submitted}
                                      >
-                                       <Trash2 className="h-4 w-4" />
+                                       <Camera className="h-4 w-4" />
+                                       {expensePhotos[index] && <span className="ml-1 text-xs">✓</span>}
                                      </Button>
-                                   )}
+                                    {operationalExpenses.length > 1 && (
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => removeExpense(index)}
+                                        disabled={activeShift?.report_submitted}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                  </div>
                                   {expensePhotos[index] && (
                                     <div className="col-span-2 mt-2">
@@ -1329,14 +1334,15 @@ const MobileStockManagement = () => {
                                 </div>
                               ))}
                              
-                             <Button
-                               variant="outline"
-                               onClick={addExpense}
-                               className="w-full"
-                             >
-                               <Plus className="h-4 w-4 mr-2" />
-                               Tambah Beban
-                             </Button>
+                              <Button
+                                variant="outline"
+                                onClick={addExpense}
+                                className="w-full"
+                                disabled={activeShift?.report_submitted}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Tambah Beban
+                              </Button>
 
                             {/* Auto-calculated cash deposit */}
                             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -1378,15 +1384,16 @@ const MobileStockManagement = () => {
                                        }
                                      }}
                                    />
-                                   <Button
-                                     variant="outline"
-                                     size="sm"
-                                     onClick={() => document.getElementById('cash-deposit-photo')?.click()}
-                                     className="flex-1"
-                                   >
-                                     <Camera className="h-4 w-4 mr-2" />
-                                     {cashDepositPhoto ? 'Ganti Foto' : 'Ambil Foto'}
-                                   </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => document.getElementById('cash-deposit-photo')?.click()}
+                                      className="flex-1"
+                                      disabled={activeShift?.report_submitted}
+                                    >
+                                      <Camera className="h-4 w-4 mr-2" />
+                                      {cashDepositPhoto ? 'Ganti Foto' : 'Ambil Foto'}
+                                    </Button>
                                    {cashDepositPhoto && (
                                      <Button
                                        variant="destructive"
@@ -1409,23 +1416,24 @@ const MobileStockManagement = () => {
                                  <Label className="text-sm font-medium text-green-800">
                                    Catatan Setoran (Opsional)
                                  </Label>
-                                 <Textarea
-                                   placeholder="Catatan tambahan untuk setoran tunai..."
-                                   value={cashDepositNotes}
-                                   onChange={(e) => setCashDepositNotes(e.target.value)}
-                                   rows={2}
-                                   className="resize-none"
-                                 />
+                                  <Textarea
+                                    placeholder="Catatan tambahan untuk setoran tunai..."
+                                    value={cashDepositNotes}
+                                    onChange={(e) => setCashDepositNotes(e.target.value)}
+                                    rows={2}
+                                    className="resize-none"
+                                    disabled={activeShift?.report_submitted}
+                                  />
                                </div>
                             </div>
 
-                            <Button
-                              onClick={handleSubmitShiftReport}
-                              disabled={loading || remainingStockCount > 0}
-                              className="w-full bg-green-600 hover:bg-green-700"
-                            >
-                              {loading ? "Mengirim..." : "Kirim Laporan Shift"}
-                            </Button>
+                             <Button
+                               onClick={handleSubmitShiftReport}
+                               disabled={loading || remainingStockCount > 0 || activeShift?.report_submitted}
+                               className="w-full bg-green-600 hover:bg-green-700"
+                             >
+                               {activeShift?.report_submitted ? "Laporan Sudah Dikirim" : loading ? "Mengirim..." : "Kirim Laporan Shift"}
+                             </Button>
                           </CardContent>
                         </Card>
                       </div>

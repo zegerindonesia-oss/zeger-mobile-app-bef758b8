@@ -798,20 +798,19 @@ export const BranchHubReportDashboard = () => {
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis tickFormatter={(value) => `${formatNumber(value / 1000)}K`} />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
                   <Area
                     type="monotone"
                     dataKey="sales"
-                    stroke="#3B82F6"
+                    stroke="#DC2626"
                     fill="url(#colorSales)"
                   />
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1} />
+                      <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#DC2626" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
                 </AreaChart>
@@ -821,27 +820,51 @@ export const BranchHubReportDashboard = () => {
         </Card>
 
         {/* Menu Terjual */}
-        <Card>
+        <Card className="bg-white">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CoffeeIcon className="h-5 w-5" />
               Menu Terjual
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-white">
             {loading ? (
               <div className="h-80 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <div className="h-80">
-                <PieChart3D 
-                  title="Menu Terjual"
-                  data={productSales.map(item => ({
-                    ...item,
-                    percentage: item.value
-                  }))} 
-                />
+              <div className="space-y-4">
+                <div className="h-64">
+                  <PieChart3D 
+                    title="Menu Terjual"
+                    data={productSales.map(item => ({
+                      ...item,
+                      percentage: item.value
+                    }))} 
+                  />
+                </div>
+                <div className="bg-white rounded-lg border">
+                  <div className="p-4 border-b">
+                    <h4 className="font-semibold text-sm">Detail Produk Terjual</h4>
+                  </div>
+                  <div className="divide-y bg-white">
+                    {productSales.map((item, index) => (
+                      <div key={index} className="p-4 flex items-center justify-between bg-white">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="font-medium text-sm">{item.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-sm">{item.quantity} pcs</div>
+                          <div className="text-xs text-muted-foreground">{item.value}%</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
@@ -877,17 +900,17 @@ export const BranchHubReportDashboard = () => {
 
       {/* Performance Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-white">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
               Performa Stok
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-white">
             <div className="space-y-4">
               {riderStockData.map((data, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div key={index} className="flex items-center justify-between p-4 bg-white rounded-lg border">
                   <div>
                     <p className="font-medium">{data.rider_name}</p>
                     <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
@@ -919,17 +942,17 @@ export const BranchHubReportDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
               Expenses
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-white">
             <div className="space-y-4">
               {riderExpenses.map((expense, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                <div key={index} className="flex items-center justify-between p-4 bg-white rounded-lg border">
                   <div>
                     <p className="font-medium">{expense.rider_name}</p>
                     <p className="text-sm text-muted-foreground">Total Expenses</p>
