@@ -163,26 +163,42 @@ export const ModernBranchDashboard = () => {
 
   const fetchActiveRiders = async () => {
     try {
-      const { data, error } = await supabase
+      // Step 1: Get active shifts today
+      const { data: shifts, error: shiftsError } = await supabase
         .from('shift_management')
-        .select(`
-          rider_id,
-          shift_date,
-          status,
-          profiles:rider_id (
-            id,
-            full_name,
-            phone
-          )
-        `)
+        .select('rider_id')
         .eq('shift_date', formatYMD(getJakartaNow()))
         .eq('status', 'active')
         .is('shift_end_time', null);
 
-      if (error) throw error;
+      if (shiftsError) throw shiftsError;
 
-      setActiveRiders(data || []);
-      console.log(`👥 Active riders found: ${data?.length || 0}`);
+      if (!shifts || shifts.length === 0) {
+        setActiveRiders([]);
+        console.log(`👥 No active riders found`);
+        return;
+      }
+
+      // Step 2: Get rider profiles
+      const riderIds = shifts.map(s => s.rider_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone')
+        .in('id', riderIds);
+
+      if (profilesError) throw profilesError;
+
+      // Step 3: Combine data
+      const activeRidersData = shifts.map(shift => {
+        const profile = profiles?.find(p => p.id === shift.rider_id);
+        return {
+          rider_id: shift.rider_id,
+          profiles: profile || { id: shift.rider_id, full_name: 'Unknown', phone: null }
+        };
+      });
+
+      setActiveRiders(activeRidersData);
+      console.log(`👥 Active riders found: ${activeRidersData.length}`);
     } catch (error) {
       console.error('❌ Error fetching active riders:', error);
       setActiveRiders([]);
@@ -312,13 +328,10 @@ export const ModernBranchDashboard = () => {
         try {
           console.log(`📦 Processing ${transactionIds.length} transactions for accurate calculations...`);
           
-          // Process ALL transactions using optimized single query (remove batch limits)
+          // Step 1: Get all transaction items (no inner join)
           const { data: allItems, error: itemsError } = await supabase
             .from('transaction_items')
-            .select(`
-              quantity,
-              products:product_id!inner(cost_price)
-            `)
+            .select('product_id, quantity')
             .in('transaction_id', transactionIds);
             
           if (itemsError) {
@@ -326,9 +339,30 @@ export const ModernBranchDashboard = () => {
             throw itemsError;
           }
           
-          console.log(`📦 Raw transaction items data:`, allItems?.length);
+          console.log(`📦 Raw transaction items fetched: ${allItems?.length}`);
           
           if (allItems && allItems.length > 0) {
+            // Step 2: Get unique product IDs and fetch their cost prices
+            const uniqueProductIds = [...new Set(allItems.map(item => item.product_id))];
+            console.log(`📦 Fetching cost prices for ${uniqueProductIds.length} unique products`);
+            
+            const { data: products, error: productsError } = await supabase
+              .from('products')
+              .select('id, cost_price')
+              .in('id', uniqueProductIds);
+              
+            if (productsError) {
+              console.error('❌ Error fetching products:', productsError);
+              throw productsError;
+            }
+            
+            // Step 3: Create product cost map
+            const productCostMap = new Map();
+            (products || []).forEach(product => {
+              productCostMap.set(product.id, Number(product.cost_price || 0));
+            });
+            
+            // Step 4: Calculate totals
             totalItemsSold = allItems.reduce((sum, item: any) => {
               const qty = Number(item.quantity || 0);
               return sum + qty;
@@ -336,22 +370,23 @@ export const ModernBranchDashboard = () => {
             
             totalFoodCost = allItems.reduce((sum, item: any) => {
               const qty = Number(item.quantity || 0);
-              const costPrice = Number(item.products?.cost_price || 0);
+              const costPrice = productCostMap.get(item.product_id) || 0;
               const itemCost = qty * costPrice;
-              console.log(`Item: qty=${qty}, cost=${costPrice}, total=${itemCost}`);
+              if (costPrice === 0) {
+                console.warn(`⚠️ Missing cost_price for product ID: ${item.product_id}`);
+              }
               return sum + itemCost;
             }, 0);
+            
+            console.log(`📦 Final calculations: ${totalItemsSold} items, Rp ${totalFoodCost.toLocaleString()} food cost`);
           }
           
-          console.log(`📦 Processed ${allItems.length} transaction items from ${transactionIds.length} transactions`);
-          console.log(`📊 Total Items: ${totalItemsSold}, Total Food Cost: ${totalFoodCost}`);
-          
         } catch (error) {
-          console.error('❌ Error fetching transaction items:', error);
-          // Use more accurate estimated values as fallback
-          totalItemsSold = transactions?.length ? transactions.length * 2.5 : 0; // Better estimate
-          totalFoodCost = totalItemsSold * 12000; // More accurate cost estimate
-          console.log('📦 Using improved estimated values for items/food cost');
+          console.error('❌ Error in food cost calculation:', error);
+          // Don't use fallback - keep zeros to show real data issues
+          totalItemsSold = 0;
+          totalFoodCost = 0;
+          console.log('📦 Using zero values due to calculation error');
         }
       }
 

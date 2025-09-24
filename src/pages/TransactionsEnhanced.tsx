@@ -194,8 +194,7 @@ export const TransactionsEnhanced = () => {
             product_id,
             quantity,
             unit_price,
-            total_price,
-            products:product_id!inner (id, name, cost_price)
+            total_price
           `)
           .in('transaction_id', transactionIds),
         
@@ -208,6 +207,18 @@ export const TransactionsEnhanced = () => {
           : Promise.resolve({ data: [] })
       ]);
 
+      // Fetch products separately
+      const productIds = [...new Set((itemsResult.data || []).map(item => item.product_id))];
+      console.log("🔍 Fetching", productIds.length, "unique products");
+      
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, name, cost_price')
+        .in('id', productIds);
+
+      // Create products map
+      const productsMap = new Map((products || []).map(p => [p.id, p]));
+
       // Create lookup maps for faster access
       const customersMap = new Map((customersResult.data || []).map(c => [c.id, c]));
       const ridersMap = new Map((ridersResult.data || []).map(r => [r.id, r]));
@@ -218,32 +229,33 @@ export const TransactionsEnhanced = () => {
         if (!itemsMap.has(item.transaction_id)) {
           itemsMap.set(item.transaction_id, []);
         }
+        const product = productsMap.get(item.product_id);
         itemsMap.get(item.transaction_id).push({
           ...item,
           products: { 
-            name: item.products?.name || 'Unknown Product', 
-            cost_price: item.products?.cost_price 
+            name: product?.name || 'Unknown Product', 
+            cost_price: product?.cost_price || 0
           }
         });
       });
 
       console.log(`📦 Transaction items processed: ${itemsResult.data?.length || 0} items`);
       console.log("📦 Items by transaction:", itemsMap.size, "transactions have items");
-      console.log("📦 Sample item data:", Array.from(itemsMap.values())[0]?.slice(0, 2));
       
-      // Debug food cost calculation
-      let debugFoodCost = 0;
-      let debugTotalItems = 0;
+      // Calculate totals for verification
+      let totalItemsCount = 0;
+      let totalFoodCostCalc = 0;
       (itemsResult.data || []).forEach(item => {
         const qty = Number(item.quantity || 0);
-        const costPrice = Number(item.products?.cost_price || 0);
-        debugTotalItems += qty;
-        debugFoodCost += qty * costPrice;
+        const product = productsMap.get(item.product_id);
+        const costPrice = Number(product?.cost_price || 0);
+        totalItemsCount += qty;
+        totalFoodCostCalc += qty * costPrice;
         if (costPrice === 0) {
-          console.warn(`⚠️ Missing cost_price for product: ${item.products?.name} (id: ${item.product_id})`);
+          console.warn(`⚠️ Missing cost_price for product: ${product?.name} (id: ${item.product_id})`);
         }
       });
-      console.log(`📊 Debug calculations - Total Items: ${debugTotalItems}, Food Cost: ${debugFoodCost}`);
+      console.log(`📊 Verification - Total Items: ${totalItemsCount}, Food Cost: Rp ${totalFoodCostCalc.toLocaleString()}`);
 
       // Combine all data efficiently
       const transactionsWithDetails = data.map(transaction => ({
@@ -283,19 +295,16 @@ export const TransactionsEnhanced = () => {
       console.log("🔍 Calculating food cost for", filteredData.length, "transactions");
       
       const totalFoodCost = filteredData.reduce((sum, t) => {
-        const tc = t.transaction_items?.reduce((s, item) => {
+        const transactionCost = t.transaction_items?.reduce((itemSum, item) => {
           const cost = Number(item.products?.cost_price || 0);
           const qty = Number(item.quantity || 0);
           const itemCost = qty * cost;
-          debugFoodCost += itemCost;
-          debugTotalItems += qty;
-          console.log(`Item: ${item.products?.name}, qty: ${qty}, cost: ${cost}, total: ${itemCost}`);
-          return s + itemCost;
+          return itemSum + itemCost;
         }, 0) || 0;
-        return sum + tc;
+        return sum + transactionCost;
       }, 0);
       
-      console.log(`📊 Total calculated - Items: ${debugTotalItems}, Food Cost: ${debugFoodCost}`);
+      console.log(`📊 Final Summary - Items: ${totalItemsSold}, Food Cost: Rp ${totalFoodCost.toLocaleString()}`);
 
       setSummary({
         totalSales,
