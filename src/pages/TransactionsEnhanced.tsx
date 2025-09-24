@@ -184,6 +184,7 @@ export const TransactionsEnhanced = () => {
       const riderIds = [...new Set(data.filter(t => t.rider_id).map(t => t.rider_id))];
 
       // Parallel fetch all related data
+      console.log("🔍 Fetching transaction items for", transactionIds.length, "transactions");
       const [itemsResult, customersResult, ridersResult] = await Promise.all([
         supabase
           .from('transaction_items')
@@ -261,13 +262,24 @@ export const TransactionsEnhanced = () => {
         .reduce((sum, t) => sum + (t.final_amount || 0), 0);
 
       // Calculate food cost from sold items (qty * product cost)
+      console.log("🔍 Calculating food cost for", filteredData.length, "transactions");
+      let debugFoodCost = 0;
+      let debugItems = 0;
+      
       const totalFoodCost = filteredData.reduce((sum, t) => {
         const tc = t.transaction_items?.reduce((s, item) => {
           const cost = Number(item.products?.cost_price || 0);
-          return s + Number(item.quantity || 0) * cost;
+          const qty = Number(item.quantity || 0);
+          const itemCost = qty * cost;
+          debugFoodCost += itemCost;
+          debugItems += qty;
+          console.log(`Item: ${item.products?.name}, qty: ${qty}, cost: ${cost}, total: ${itemCost}`);
+          return s + itemCost;
         }, 0) || 0;
         return sum + tc;
       }, 0);
+      
+      console.log(`📊 Total calculated - Items: ${debugItems}, Food Cost: ${debugFoodCost}`);
 
       setSummary({
         totalSales,

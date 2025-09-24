@@ -304,3 +304,12 @@
 .custom-scroll::-webkit-scrollbar-thumb {
   @apply bg-primary/40 rounded-full hover:bg-primary/60;
 }
+
+/* Branch Hub Report Tables - Force White Backgrounds */
+.branch-hub-table, 
+.branch-hub-table table,
+.branch-hub-table .table,
+.branch-hub-table .bg-card,
+.branch-hub-table .bg-muted {
+  @apply bg-white !important;
+}

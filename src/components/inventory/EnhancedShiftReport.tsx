@@ -47,6 +47,12 @@ interface Shift {
   report_submitted: boolean;
   report_verified: boolean;
   notes?: string;
+  operationalExpenses?: Array<{
+    shift_id: string;
+    amount: number;
+    expense_type: string;
+    description: string;
+  }>;
 }
 
 interface Rider {
@@ -108,16 +114,36 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
       if (stockError) throw stockError;
 
-      // Fetch shifts
+      // Fetch shifts with notes
       const { data: shiftData, error: shiftError } = await supabase
         .from('shift_management')
-        .select('*')
+        .select('id, rider_id, shift_date, shift_number, shift_start_time, shift_end_time, total_sales, cash_collected, total_transactions, report_submitted, report_verified, notes, created_at')
         .eq('branch_id', branchId)
         .eq('report_submitted', true)
         .eq('report_verified', false)
         .order('created_at', { ascending: false });
 
       if (shiftError) throw shiftError;
+
+      // Fetch operational expenses for shifts
+      let operationalExpenses: Record<string, any[]> = {};
+      if (shiftData && shiftData.length > 0) {
+        const shiftIds = shiftData.map(s => s.id);
+        const { data: expensesData, error: expensesError } = await supabase
+          .from('daily_operational_expenses')
+          .select('shift_id, amount, expense_type, description')
+          .in('shift_id', shiftIds);
+        
+        if (expensesError) throw expensesError;
+        
+        // Group expenses by shift_id
+        (expensesData || []).forEach((expense: any) => {
+          if (!operationalExpenses[expense.shift_id]) {
+            operationalExpenses[expense.shift_id] = [];
+          }
+          operationalExpenses[expense.shift_id].push(expense);
+        });
+      }
 
       // Combine data by rider
       const riderMap: Record<string, CombinedRiderReport> = {};
@@ -137,7 +163,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         riderMap[riderId].verificationQuantities[movement.id] = movement.quantity;
       });
 
-      // Add cash deposits to rider reports
+      // Add cash deposits to rider reports with operational expenses
       shiftData?.forEach((shift) => {
         const riderId = shift.rider_id;
         if (!riderMap[riderId]) {
@@ -148,7 +174,10 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             verificationQuantities: {}
           };
         }
-        riderMap[riderId].cashDeposit = shift;
+        riderMap[riderId].cashDeposit = {
+          ...shift,
+          operationalExpenses: operationalExpenses[shift.id] || []
+        };
       });
 
       setCombinedReports(Object.values(riderMap));
@@ -497,7 +526,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                         </h3>
                         
                         <div className="p-4 border rounded-lg bg-blue-50/50">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div className="space-y-2">
                               <div className="flex justify-between p-2 bg-white/80 rounded">
                                 <span className="font-medium">Total Penjualan:</span>
@@ -511,21 +540,49 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                   {report.cashDeposit.total_transactions}
                                 </span>
                               </div>
-                            </div>
-                            <div className="flex justify-between p-2 bg-white/80 rounded">
-                              <span className="font-medium">Setoran Tunai:</span>
-                              <span className="font-bold text-green-600">
-                                Rp {report.cashDeposit.cash_collected.toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                            <div className="flex justify-center">
-                              <div className="relative">
-                                <div className="w-32 h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                  <span className="text-xs text-gray-500">Foto Setoran</span>
-                                </div>
+                              <div className="flex justify-between p-2 bg-white/80 rounded">
+                                <span className="font-medium">Setoran Tunai:</span>
+                                <span className="font-bold text-green-600">
+                                  Rp {report.cashDeposit.cash_collected.toLocaleString('id-ID')}
+                                </span>
                               </div>
                             </div>
+                            
+                            {/* Operational Expenses */}
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-sm">Beban Operasional:</h4>
+                              {report.cashDeposit.operationalExpenses && report.cashDeposit.operationalExpenses.length > 0 ? (
+                                <div className="space-y-1">
+                                  {report.cashDeposit.operationalExpenses.map((expense: any, index: number) => (
+                                    <div key={index} className="flex justify-between p-2 bg-white/80 rounded text-sm">
+                                      <span>{expense.expense_type}: {expense.description}</span>
+                                      <span className="font-medium text-red-600">
+                                        -Rp {Number(expense.amount).toLocaleString('id-ID')}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  <div className="flex justify-between p-2 bg-white/80 rounded font-semibold border-t">
+                                    <span>Total Beban:</span>
+                                    <span className="text-red-600">
+                                      -Rp {report.cashDeposit.operationalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0).toLocaleString('id-ID')}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="p-2 bg-white/80 rounded text-sm text-gray-500">
+                                  Tidak ada beban operasional
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          
+                          {/* Notes Section */}
+                          {report.cashDeposit.notes && (
+                            <div className="mt-4 p-3 bg-white/80 rounded">
+                              <h4 className="font-semibold text-sm mb-2">Catatan:</h4>
+                              <p className="text-sm text-gray-700">{report.cashDeposit.notes}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

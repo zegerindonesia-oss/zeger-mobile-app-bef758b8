@@ -283,7 +283,10 @@ export const ModernBranchDashboard = () => {
           // Process ALL transactions using optimized single query (remove batch limits)
           const { data: allItems, error: itemsError } = await supabase
             .from('transaction_items')
-            .select('quantity, products:product_id(cost_price)')
+            .select(`
+              quantity,
+              products:product_id(cost_price)
+            `)
             .in('transaction_id', transactionIds);
             
           if (itemsError) {
@@ -291,11 +294,20 @@ export const ModernBranchDashboard = () => {
             throw itemsError;
           }
           
+          console.log(`📦 Raw transaction items data:`, allItems?.length);
+          
           if (allItems && allItems.length > 0) {
-            totalItemsSold = allItems.reduce((sum, item: any) => sum + (item.quantity || 0), 0);
+            totalItemsSold = allItems.reduce((sum, item: any) => {
+              const qty = Number(item.quantity || 0);
+              return sum + qty;
+            }, 0);
+            
             totalFoodCost = allItems.reduce((sum, item: any) => {
+              const qty = Number(item.quantity || 0);
               const costPrice = Number(item.products?.cost_price || 0);
-              return sum + (item.quantity || 0) * costPrice;
+              const itemCost = qty * costPrice;
+              console.log(`Item: qty=${qty}, cost=${costPrice}, total=${itemCost}`);
+              return sum + itemCost;
             }, 0);
           }
           
