@@ -69,6 +69,9 @@ export const ModernBranchDashboard = () => {
   const [hourlyFilter, setHourlyFilter] = useState<'today' | 'week' | 'month'>('today');
   const [riderFilter, setRiderFilter] = useState<'today' | 'week' | 'month'>('today');
   const [riders, setRiders] = useState<Rider[]>([]);
+  // State for active riders
+  const [activeRiders, setActiveRiders] = useState<any[]>([]);
+  
   const [stats, setStats] = useState<DashboardStats>({
     totalSales: 0,
     totalTransactions: 0,
@@ -158,6 +161,34 @@ export const ModernBranchDashboard = () => {
     ]);
   };
 
+  const fetchActiveRiders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shift_management')
+        .select(`
+          rider_id,
+          shift_date,
+          status,
+          profiles:rider_id (
+            id,
+            full_name,
+            phone
+          )
+        `)
+        .eq('shift_date', formatYMD(getJakartaNow()))
+        .eq('status', 'active')
+        .is('shift_end_time', null);
+
+      if (error) throw error;
+
+      setActiveRiders(data || []);
+      console.log(`👥 Active riders found: ${data?.length || 0}`);
+    } catch (error) {
+      console.error('❌ Error fetching active riders:', error);
+      setActiveRiders([]);
+    }
+  };
+
   const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
@@ -170,7 +201,8 @@ export const ModernBranchDashboard = () => {
       // Load critical data first with timeout
       await Promise.all([
         withTimeout(fetchRiders(), 10000),
-        withTimeout(fetchStats(), 20000)
+        withTimeout(fetchStats(), 20000),
+        withTimeout(fetchActiveRiders(), 10000)
       ]);
       
       setStatsLoading(false);
@@ -285,7 +317,7 @@ export const ModernBranchDashboard = () => {
             .from('transaction_items')
             .select(`
               quantity,
-              products:product_id(cost_price)
+              products:product_id!inner(cost_price)
             `)
             .in('transaction_id', transactionIds);
             
@@ -1291,6 +1323,64 @@ export const ModernBranchDashboard = () => {
                 </AreaChart>
               </ResponsiveContainer>
              )}
+          </CardContent>
+        </Card>
+
+        {/* Active Riders Section */}
+        <Card className="bg-white rounded-3xl shadow-sm border-0">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold text-gray-900">Riders Aktif</CardTitle>
+                <p className="text-sm text-gray-500">Riders yang sedang beroperasi hari ini</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-green-600">
+                  {activeRiders.length} Online
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {statsLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-center space-y-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <div className="text-sm text-gray-500">Loading riders...</div>
+                </div>
+              </div>
+            ) : activeRiders.length > 0 ? (
+              <div className="space-y-3">
+                {activeRiders.map((riderShift) => (
+                  <div key={riderShift.rider_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-semibold text-sm">
+                          {riderShift.profiles?.full_name?.charAt(0) || 'R'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {riderShift.profiles?.full_name || 'Unknown Rider'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {riderShift.profiles?.phone || 'No phone'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-green-600 font-medium">Active</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Tidak ada rider yang aktif saat ini</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

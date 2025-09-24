@@ -195,7 +195,7 @@ export const TransactionsEnhanced = () => {
             quantity,
             unit_price,
             total_price,
-            products:product_id (id, name, cost_price)
+            products:product_id!inner (id, name, cost_price)
           `)
           .in('transaction_id', transactionIds),
         
@@ -230,6 +230,20 @@ export const TransactionsEnhanced = () => {
       console.log(`📦 Transaction items processed: ${itemsResult.data?.length || 0} items`);
       console.log("📦 Items by transaction:", itemsMap.size, "transactions have items");
       console.log("📦 Sample item data:", Array.from(itemsMap.values())[0]?.slice(0, 2));
+      
+      // Debug food cost calculation
+      let debugFoodCost = 0;
+      let debugTotalItems = 0;
+      (itemsResult.data || []).forEach(item => {
+        const qty = Number(item.quantity || 0);
+        const costPrice = Number(item.products?.cost_price || 0);
+        debugTotalItems += qty;
+        debugFoodCost += qty * costPrice;
+        if (costPrice === 0) {
+          console.warn(`⚠️ Missing cost_price for product: ${item.products?.name} (id: ${item.product_id})`);
+        }
+      });
+      console.log(`📊 Debug calculations - Total Items: ${debugTotalItems}, Food Cost: ${debugFoodCost}`);
 
       // Combine all data efficiently
       const transactionsWithDetails = data.map(transaction => ({
@@ -267,8 +281,6 @@ export const TransactionsEnhanced = () => {
 
       // Calculate food cost from sold items (qty * product cost)
       console.log("🔍 Calculating food cost for", filteredData.length, "transactions");
-      let debugFoodCost = 0;
-      let debugItems = 0;
       
       const totalFoodCost = filteredData.reduce((sum, t) => {
         const tc = t.transaction_items?.reduce((s, item) => {
@@ -276,14 +288,14 @@ export const TransactionsEnhanced = () => {
           const qty = Number(item.quantity || 0);
           const itemCost = qty * cost;
           debugFoodCost += itemCost;
-          debugItems += qty;
+          debugTotalItems += qty;
           console.log(`Item: ${item.products?.name}, qty: ${qty}, cost: ${cost}, total: ${itemCost}`);
           return s + itemCost;
         }, 0) || 0;
         return sum + tc;
       }, 0);
       
-      console.log(`📊 Total calculated - Items: ${debugItems}, Food Cost: ${debugFoodCost}`);
+      console.log(`📊 Total calculated - Items: ${debugTotalItems}, Food Cost: ${debugFoodCost}`);
 
       setSummary({
         totalSales,
