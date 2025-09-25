@@ -352,6 +352,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         });
 
         // Calculate payment breakdown per rider per date from transactions
+        console.log('Fetching payment breakdown for date range:', { startDate, endDate });
         const startStr = format(startDate, 'yyyy-MM-dd');
         const endStr = format(endDate, 'yyyy-MM-dd');
         const { data: transData, error: transError } = await supabase
@@ -362,18 +363,29 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           .gte('transaction_date', `${startStr}T00:00:00`)
           .lte('transaction_date', `${endStr}T23:59:59`);
         if (transError) throw transError;
+        
+        console.log('Transaction data found:', transData?.length || 0, 'transactions');
 
         const salesByRiderDate: Record<string, { cash: number; qris: number; transfer: number; total: number }>= {};
         (transData || []).forEach((t: any) => {
-          const key = `${t.rider_id}-${new Date(t.transaction_date).toDateString()}`;
+          const transDate = new Date(t.transaction_date);
+          const key = `${t.rider_id}-${transDate.toISOString().split('T')[0]}`;
           if (!salesByRiderDate[key]) salesByRiderDate[key] = { cash: 0, qris: 0, transfer: 0, total: 0 };
           const amt = Number(t.final_amount || 0);
-          const method = (t.payment_method || '').toLowerCase();
-          if (method === 'cash') salesByRiderDate[key].cash += amt;
-          else if (method === 'qris') salesByRiderDate[key].qris += amt;
-          else if (method === 'transfer') salesByRiderDate[key].transfer += amt;
+          const method = (t.payment_method || '').toLowerCase().trim();
+          
+          // Normalize payment methods
+          if (method === 'cash' || method === 'tunai') {
+            salesByRiderDate[key].cash += amt;
+          } else if (method === 'qris') {
+            salesByRiderDate[key].qris += amt;
+          } else if (method === 'transfer' || method === 'bank_transfer') {
+            salesByRiderDate[key].transfer += amt;
+          }
           salesByRiderDate[key].total += amt;
         });
+        
+        console.log('Sales breakdown by rider-date:', salesByRiderDate);
 
         // Get daily operational expenses (exclude food) per shift
         const { data: opsData, error: opsError } = await supabase
@@ -409,8 +421,11 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         
         const salesMap = (window as any).__salesByRiderDate || {};
         const opsMap = (window as any).__opsByShift || {};
-        const key = `${shift.rider_id}-${new Date(shift.shift_date).toDateString()}`;
+        const shiftDate = new Date(shift.shift_date).toISOString().split('T')[0];
+        const key = `${shift.rider_id}-${shiftDate}`;
         const sales = salesMap[key] || { cash: 0, qris: 0, transfer: 0, total: 0 };
+        
+        console.log(`Shift ${shift.id} - Key: ${key}, Sales:`, sales);
         const ops = opsMap[shift.id] || 0;
         return {
           ...shift,

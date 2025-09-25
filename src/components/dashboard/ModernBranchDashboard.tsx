@@ -72,6 +72,7 @@ export const ModernBranchDashboard = () => {
   const [riders, setRiders] = useState<Rider[]>([]);
   // State for active riders
   const [activeRiders, setActiveRiders] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
   
   const [stats, setStats] = useState<DashboardStats>({
     totalSales: 0,
@@ -206,6 +207,67 @@ export const ModernBranchDashboard = () => {
     }
   };
 
+  const fetchTopProducts = async () => {
+    try {
+      const { start, end } = getDateRange('month');
+      console.log('📦 Fetching top products...', { start, end });
+      
+      // Query to get top selling products with quantities
+      const { data, error } = await supabase
+        .from('transaction_items')
+        .select(`
+          product_id,
+          quantity,
+          total_price,
+          products!inner(name, category),
+          transactions!inner(status, transaction_date, rider_id)
+        `)
+        .eq('transactions.status', 'completed')
+        .gte('transactions.transaction_date', `${start}T00:00:00`)
+        .lte('transactions.transaction_date', `${end}T23:59:59`);
+
+      if (error) throw error;
+
+      // Group by product and sum quantities
+      const productMap = new Map();
+      
+      (data || []).forEach((item: any) => {
+        if (selectedUser !== "all" && item.transactions.rider_id !== selectedUser) {
+          return;
+        }
+        
+        const productId = item.product_id;
+        const productName = item.products.name;
+        const quantity = Number(item.quantity || 0);
+        const revenue = Number(item.total_price || 0);
+        
+        if (productMap.has(productId)) {
+          const existing = productMap.get(productId);
+          existing.quantity += quantity;
+          existing.revenue += revenue;
+        } else {
+          productMap.set(productId, {
+            id: productId,
+            name: productName,
+            category: item.products.category,
+            quantity: quantity,
+            revenue: revenue
+          });
+        }
+      });
+
+      const topProductsData = Array.from(productMap.values())
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
+      console.log(`📦 Top products fetched:`, topProductsData.length);
+      setTopProducts(topProductsData);
+    } catch (error: any) {
+      console.error('Error fetching top products:', error);
+      setTopProducts([]);
+    }
+  };
+
   const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
@@ -219,7 +281,8 @@ export const ModernBranchDashboard = () => {
       await Promise.all([
         withTimeout(fetchRiders(), 10000),
         withTimeout(fetchStats(), 20000),
-        withTimeout(fetchActiveRiders(), 10000)
+        withTimeout(fetchActiveRiders(), 10000),
+        withTimeout(fetchTopProducts(), 10000)
       ]);
       
       setStatsLoading(false);
@@ -1313,6 +1376,103 @@ export const ModernBranchDashboard = () => {
                     </div>
                   </div>
                 </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Top Products Card */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Top Produk Terjual
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {chartsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                        <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : topProducts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Belum ada data produk terjual</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topProducts.map((product, index) => (
+                    <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                      <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-full text-white text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{product.name}</div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{product.quantity} terjual</span>
+                          <span>•</span>
+                          <span className="text-green-600 font-medium">
+                            Rp {product.revenue.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Active Riders Card */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5" />
+                Riders Aktif ({activeRiders.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {chartsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                        <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : activeRiders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <UserCheck className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Tidak ada rider aktif saat ini</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {activeRiders.map((rider) => (
+                    <div key={rider.rider_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                        {rider.profiles.full_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{rider.profiles.full_name}</div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          <span>Sedang beroperasi</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>

@@ -30,6 +30,7 @@ import CustomerManager from "./pages/CustomerManager";
 import RiderPerformance from "./pages/RiderPerformance";
 import InventoryProductionPage from "./pages/inventory/ProductionPage";
 import InventoryBranchTransfer from "./pages/inventory/BranchTransfer";
+import { LocationAnalytics } from "./pages/analytics/LocationAnalytics";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
@@ -101,6 +102,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
                 <ModernLayout>
                   <RiderPerformance />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/location-analytics" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
+                <ModernLayout>
+                  <LocationAnalytics />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

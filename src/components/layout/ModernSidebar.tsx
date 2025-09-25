@@ -23,7 +23,8 @@ import {
   Database,
   Calendar,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  MapPin
 } from "lucide-react";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,7 +63,8 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
       { id: "customers", label: "Customers", icon: Database, path: "/customers" },
-      { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance" }
+      { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance" },
+      { id: "location-analytics", label: "Location Analytics", icon: MapPin, path: "/location-analytics" }
     ]
   },
   {
