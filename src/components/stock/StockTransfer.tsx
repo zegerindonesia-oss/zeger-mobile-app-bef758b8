@@ -104,6 +104,12 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   const [historyType, setHistoryType] = useState<'transfer' | 'return'>('transfer');
   const [filterType, setFilterType] = useState<'sent' | 'received' | 'all'>('all');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  
+  // New filter states
+  const [selectedUserFilter, setSelectedUserFilter] = useState<string>('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState<'today' | 'this_week' | 'this_month' | 'custom'>('today');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
 
   const getJakartaNow = () => {
     const now = new Date();
@@ -143,7 +149,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
   useEffect(() => {
     fetchTransfers();
-  }, [historyType]);
+  }, [historyType, selectedUserFilter, dateRangeFilter, customStartDate, customEndDate]);
 
   const fetchData = async () => {
     try {
@@ -236,6 +242,41 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
     }
   };
 
+  const getDateRangeFilter = () => {
+    const jakartaNow = getJakartaNow();
+    let startDate: string, endDate: string;
+    
+    switch (dateRangeFilter) {
+      case 'today':
+        startDate = formatYMD(jakartaNow);
+        endDate = formatYMD(jakartaNow);
+        break;
+      case 'this_week':
+        const weekStart = new Date(jakartaNow);
+        weekStart.setDate(jakartaNow.getDate() - jakartaNow.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        startDate = formatYMD(weekStart);
+        endDate = formatYMD(weekEnd);
+        break;
+      case 'this_month':
+        const monthStart = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth(), 1);
+        const monthEnd = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth() + 1, 0);
+        startDate = formatYMD(monthStart);
+        endDate = formatYMD(monthEnd);
+        break;
+      case 'custom':
+        startDate = customStartDate || formatYMD(jakartaNow);
+        endDate = customEndDate || formatYMD(jakartaNow);
+        break;
+      default:
+        startDate = formatYMD(jakartaNow);
+        endDate = formatYMD(jakartaNow);
+    }
+    
+    return { startDate, endDate };
+  };
+
   const fetchTransfers = async () => {
     try {
       let query = supabase
@@ -252,6 +293,16 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       // Apply filter by status if not 'all'
       if (filterType !== 'all') {
         query = query.eq('status', filterType);
+      }
+
+      // Apply date range filter
+      const { startDate, endDate } = getDateRangeFilter();
+      query = query.gte('created_at', `${startDate}T00:00:00`)
+                   .lte('created_at', `${endDate}T23:59:59`);
+
+      // Apply user filter
+      if (selectedUserFilter !== 'all') {
+        query = query.eq('rider_id', selectedUserFilter);
       }
 
       if (role === 'branch_manager' && branchId) {
@@ -801,7 +852,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Riwayat Transfer Stok</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Select value={historyType} onValueChange={(value: 'transfer' | 'return') => setHistoryType(value)}>
                 <SelectTrigger className="w-48 bg-white">
                   <SelectValue />
@@ -823,6 +874,56 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                   <SelectItem value="rejected">Ditolak</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {/* User Filter */}
+              {role === 'branch_manager' && (
+                <Select value={selectedUserFilter} onValueChange={setSelectedUserFilter}>
+                  <SelectTrigger className="w-40 bg-white">
+                    <SelectValue placeholder="Pilih Rider" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">Semua Rider</SelectItem>
+                    {riders.map(rider => (
+                      <SelectItem key={rider.id} value={rider.id}>
+                        {rider.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {/* Date Range Filter */}
+              <Select value={dateRangeFilter} onValueChange={(value: 'today' | 'this_week' | 'this_month' | 'custom') => setDateRangeFilter(value)}>
+                <SelectTrigger className="w-36 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="today">Hari Ini</SelectItem>
+                  <SelectItem value="this_week">Minggu Ini</SelectItem>
+                  <SelectItem value="this_month">Bulan Ini</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Custom Date Inputs */}
+              {dateRangeFilter === 'custom' && (
+                <>
+                  <Input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="w-36 bg-white"
+                    placeholder="Tanggal Mulai"
+                  />
+                  <Input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="w-36 bg-white"
+                    placeholder="Tanggal Akhir"
+                  />
+                </>
+              )}
             </div>
           </div>
         </CardHeader>

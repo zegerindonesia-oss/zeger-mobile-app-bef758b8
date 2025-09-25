@@ -455,76 +455,7 @@ const getCurrentLocation = (): Promise<string> => {
   });
 };
 
-const startShift = async () => {
-  setLoading(true);
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User tidak terautentikasi');
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, branch_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (!profile) throw new Error('Profil tidak ditemukan');
-
-    const today = new Date().toISOString().split('T')[0];
-
-    // Cek jika sudah ada shift aktif
-    const { data: existingActive } = await supabase
-      .from('shift_management')
-      .select('*')
-      .eq('rider_id', profile.id)
-      .eq('shift_date', today)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    if (existingActive) {
-      setShiftStatus(existingActive as any);
-      toast.info('Shift sudah aktif');
-      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'stock' }));
-      return;
-    }
-
-    // Ambil nomor shift berikutnya
-    const { data: lastShift } = await supabase
-      .from('shift_management')
-      .select('shift_number')
-      .eq('rider_id', profile.id)
-      .eq('shift_date', today)
-      .order('shift_number', { ascending: false })
-      .limit(1);
-
-    const nextNumber = lastShift && lastShift.length > 0
-      ? (lastShift[0].shift_number || 0) + 1
-      : 1;
-
-    const { data: inserted, error } = await supabase
-      .from('shift_management')
-      .insert({
-        rider_id: profile.id,
-        branch_id: profile.branch_id,
-        shift_date: today,
-        shift_start_time: new Date().toISOString(),
-        status: 'active',
-        shift_number: nextNumber,
-      })
-      .select()
-      .maybeSingle();
-
-    if (error) throw error;
-
-    setShiftStatus(inserted as any);
-    toast.success(`Shift ${inserted?.shift_number || nextNumber} dimulai`);
-    window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'stock' }));
-    fetchDashboardData();
-  } catch (error: any) {
-    toast.error('Gagal mulai shift: ' + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+// REMOVED: Manual shift start - Shift now only starts from stock confirmation
 
 
   const formatCurrency = (amount: number) => {
@@ -584,8 +515,8 @@ const startShift = async () => {
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Quick Actions - Auto Shift */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Quick Actions - Stock Management Focus */}
+        <div className="grid grid-cols-1 gap-4">
           <Button
             variant="outline"
             className="flex items-center justify-center gap-2 h-16"
@@ -593,9 +524,9 @@ const startShift = async () => {
           >
             <Package className="h-5 w-5" />
             <div className="text-center">
-              <div className="font-semibold">Kelola Stok</div>
+              <div className="font-semibold">Kelola Stok & Shift</div>
               <div className="text-xs text-muted-foreground">
-                Konfirmasi penerimaan stok
+                {!shiftStatus ? "Konfirmasi stok untuk memulai shift" : "Kelola stok dan laporan shift"}
               </div>
             </div>
           </Button>

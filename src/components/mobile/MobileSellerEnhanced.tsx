@@ -381,10 +381,10 @@ const MobileSellerEnhanced = () => {
             <AlertCircle className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
             <h3 className="text-lg font-semibold mb-2">Shift Belum Aktif</h3>
             <p className="text-muted-foreground mb-4">
-              Silakan mulai shift terlebih dahulu di halaman "Kelola Shift"
+              Shift akan otomatis dimulai saat Anda konfirmasi penerimaan stok. Silakan ke halaman "Kelola Stok" untuk konfirmasi stok dari branch hub.
             </p>
-            <Button onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'shift' }))}>
-              Ke Kelola Shift
+            <Button onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'stock' }))}>
+              Ke Kelola Stok
             </Button>
           </div>
         ) : hasPendingStock ? (
@@ -394,8 +394,8 @@ const MobileSellerEnhanced = () => {
             <p className="text-muted-foreground mb-4">
               Konfirmasi semua barang yang dikirim oleh branch hub terlebih dahulu sebelum bisa berjualan
             </p>
-            <Button onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'shift' }))}>
-              Ke Kelola Shift
+            <Button onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'stock' }))}>
+              Ke Kelola Stok
             </Button>
           </div>
         ) : stockItems.length === 0 ? (

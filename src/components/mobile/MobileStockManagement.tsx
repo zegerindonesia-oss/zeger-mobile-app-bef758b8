@@ -1182,18 +1182,25 @@ const MobileStockManagement = () => {
               <TabsContent value="shift" className="space-y-4">
                 {remainingStockCount > 0 ? (
                   <div className="text-center py-8 space-y-4">
-                    <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-orange-700">Kembalikan Stok Dulu</h3>
-                    <p className="text-muted-foreground">
-                      Masih ada {remainingStockCount} jenis produk yang harus dikembalikan sebelum bisa mengisi laporan shift.
-                    </p>
+                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-red-700">WAJIB: Kembalikan Stok Tersisa</h3>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-left">
+                      <p className="text-red-700 font-medium mb-2">
+                        🚨 Laporan shift diblokir sampai semua stok dikembalikan
+                      </p>
+                      <p className="text-sm text-red-600">
+                        Masih ada <strong>{remainingStockCount} jenis produk</strong> yang harus dikembalikan ke branch hub. 
+                        Sistem tidak akan mengizinkan penyelesaian shift sampai semua stok dikembalikan.
+                      </p>
+                    </div>
                     <Button 
                       onClick={() => setTab('return')}
-                      variant="default"
-                      className="mt-4"
+                      variant="destructive"
+                      size="lg"
+                      className="w-full"
                     >
                       <Package className="h-4 w-4 mr-2" />
-                      Ke Tab Pengembalian
+                      Ke Tab Pengembalian Stok
                     </Button>
                   </div>
                 ) : (
