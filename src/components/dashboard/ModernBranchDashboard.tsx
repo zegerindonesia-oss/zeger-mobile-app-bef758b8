@@ -1380,6 +1380,7 @@ export const ModernBranchDashboard = () => {
               )}
             </CardContent>
           </Card>
+        </div>
 
         {/* Summary Tables Section */}
         <div className="space-y-4 mb-6">
