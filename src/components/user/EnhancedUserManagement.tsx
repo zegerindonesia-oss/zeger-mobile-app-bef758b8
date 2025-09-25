@@ -89,6 +89,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
   const [accessFilter, setAccessFilter] = useState('all');
   const [userPermissions, setUserPermissions] = useState<ModulePermission[]>([]);
   const [riders, setRiders] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [selectedRiderForAssignment, setSelectedRiderForAssignment] = useState<string>('');
   const [newUser, setNewUser] = useState<NewUser>({
     full_name: '',
     email: '',
@@ -224,6 +225,12 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
       return;
     }
 
+    // Validate rider assignment for bh_report users
+    if (newUser.role === 'bh_report' && !selectedRiderForAssignment) {
+      toast.error("Pilih rider untuk user bh_report");
+      return;
+    }
+
     // Auto-assign branch for branch managers
     const assignedBranchId = (role === 'branch_manager' || role === 'sb_branch_manager') ? branchId : newUser.branch_id;
 
@@ -300,10 +307,26 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
           }
         }
 
+        // Create rider assignment for bh_report users
+        if (newUser.role === 'bh_report' && selectedRiderForAssignment && createdProfile) {
+          const { error: assignmentError } = await supabase
+            .from('branch_hub_report_assignments')
+            .insert({
+              user_id: createdProfile.id,
+              rider_id: selectedRiderForAssignment
+            });
+
+          if (assignmentError) {
+            console.error('Failed to create rider assignment:', assignmentError);
+            toast.warning('User dibuat tetapi assignment rider gagal disimpan');
+          }
+        }
+
         toast.success(`User ${newUser.full_name} berhasil dibuat! Email: ${newUser.email}`);
         setIsDialogOpen(false);
         resetNewUser();
         setUserPermissions([]);
+        setSelectedRiderForAssignment('');
         fetchUsers();
       }
     } catch (error: any) {
@@ -323,6 +346,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
       branch_id: branchId || '',
       app_access_type: 'web_backoffice'
     });
+    setSelectedRiderForAssignment('');
   };
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
@@ -524,14 +548,12 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                 <p className="text-sm text-muted-foreground">Manajemen user dengan sistem role hierarkis</p>
               </div>
             </CardTitle>
-            
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="btn-glass gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Tambah User Baru
-                </Button>
-              </DialogTrigger>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {/* Dialog for creating user - moved from header */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogContent className="glass-card w-[95vw] max-w-4xl max-h-[90vh] flex flex-col p-0">
                 <DialogHeader className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 border-b">
                   <DialogTitle className="gradient-text">Tambah User Baru</DialogTitle>
@@ -668,6 +690,34 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                     </div>
                   )}
 
+                  {/* Rider Assignment for bh_report role */}
+                  {newUser.role === 'bh_report' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="rider-assignment">Assign Rider *</Label>
+                      <Select 
+                        value={selectedRiderForAssignment} 
+                        onValueChange={setSelectedRiderForAssignment}
+                      >
+                        <SelectTrigger className="form-glass">
+                          <SelectValue placeholder="Pilih rider yang akan di-assign" />
+                        </SelectTrigger>
+                        <SelectContent className="dropdown-content">
+                          {riders.map((rider) => (
+                            <SelectItem key={rider.id} value={rider.id} className="select-item">
+                              <div className="flex items-center gap-2">
+                                <Bike className="h-4 w-4" />
+                                <span>{rider.name}</span>
+                                <Badge variant="outline" className="ml-auto text-xs">
+                                  {rider.code}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {/* Permission Matrix */}
                   {newUser.role && newUser.role !== 'rider' && (
                     <div className="space-y-3">
@@ -701,10 +751,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
+          
           {/* Enhanced Filters */}
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
@@ -835,6 +882,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                   <TableHead className="text-muted-foreground">User</TableHead>
                   <TableHead className="text-muted-foreground">Role & Access</TableHead>
                   <TableHead className="text-muted-foreground">Branch</TableHead>
+                  <TableHead className="text-muted-foreground">Assignment</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground">Terdaftar</TableHead>
                   <TableHead className="text-muted-foreground text-center">Aksi</TableHead>
@@ -874,6 +922,20 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                               {user.branches.branch_type}
                             </p>
                           </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.role === 'bh_report' ? (
+                        <div className="flex items-center gap-2">
+                          <Bike className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Assigned Rider</span>
+                          <Badge variant="outline" className="text-xs">
+                            {/* This will be populated with actual assignment data */}
+                            Active
+                          </Badge>
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
@@ -968,6 +1030,22 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
               </div>
             )}
           </div>
+
+          {/* Add User Button - Moved to bottom with unlocked access for branch managers */}
+          {(role === 'ho_admin' || role === 'ho_owner' || role === 'branch_manager' || role === 'sb_branch_manager') && (
+            <div className="flex justify-center pt-4">
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-2 px-8 py-3 rounded-2xl text-base font-semibold shadow-lg hover:shadow-red-500/20 transition-all duration-300"
+                  >
+                    <UserPlus className="h-5 w-5" />
+                    Buat User
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            </div>
+          )}
         </CardContent>
       </Card>
 
