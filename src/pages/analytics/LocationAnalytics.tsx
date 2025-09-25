@@ -89,22 +89,20 @@ export const LocationAnalytics = () => {
   const fetchLocationData = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      console.log('📍 Fetching location data...', { startDate, endDate, selectedRider });
+      
+      // Step 1: Get transactions with location data
+      let transactionQuery = supabase
         .from('transactions')
         .select(`
+          id,
           transaction_latitude,
           transaction_longitude,
           location_name,
           final_amount,
           customer_id,
           rider_id,
-          transaction_date,
-          customers!inner(name),
-          profiles!inner(full_name),
-          transaction_items(
-            quantity,
-            products(name)
-          )
+          transaction_date
         `)
         .eq('status', 'completed')
         .not('transaction_latitude', 'is', null)
@@ -113,36 +111,119 @@ export const LocationAnalytics = () => {
         .lte('transaction_date', `${endDate}T23:59:59`);
 
       if (selectedRider !== "all") {
-        query = query.eq('rider_id', selectedRider);
+        transactionQuery = transactionQuery.eq('rider_id', selectedRider);
       }
 
-      const { data: transactions, error } = await query;
-      if (error) throw error;
+      const { data: transactions, error: txError } = await transactionQuery;
+      if (txError) {
+        console.error('❌ Transaction query error:', txError);
+        throw txError;
+      }
 
-      // Group by location coordinates and aggregate data
+      console.log('📍 Found transactions:', transactions?.length || 0);
+
+      if (!transactions || transactions.length === 0) {
+        setLocationData([]);
+        return;
+      }
+
+      // Step 2: Get customer names
+      const customerIds = [...new Set(transactions.map(t => t.customer_id).filter(Boolean))];
+      let customersMap = new Map();
+      
+      if (customerIds.length > 0) {
+        const { data: customers, error: customerError } = await supabase
+          .from('customers')
+          .select('id, name')
+          .in('id', customerIds);
+        
+        if (customerError) {
+          console.warn('⚠️ Customer query error:', customerError);
+        } else {
+          customers?.forEach(customer => {
+            customersMap.set(customer.id, customer.name);
+          });
+        }
+      }
+
+      // Step 3: Get rider names
+      const riderIds = [...new Set(transactions.map(t => t.rider_id).filter(Boolean))];
+      let ridersMap = new Map();
+      
+      if (riderIds.length > 0) {
+        const { data: riders, error: riderError } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', riderIds);
+        
+        if (riderError) {
+          console.warn('⚠️ Rider query error:', riderError);
+        } else {
+          riders?.forEach(rider => {
+            ridersMap.set(rider.id, rider.full_name);
+          });
+        }
+      }
+
+      // Step 4: Get transaction items and products
+      const transactionIds = transactions.map(t => t.id);
+      let transactionItemsMap = new Map();
+      
+      if (transactionIds.length > 0) {
+        const { data: transactionItems, error: itemError } = await supabase
+          .from('transaction_items')
+          .select(`
+            transaction_id,
+            quantity,
+            product_id,
+            products(name)
+          `)
+          .in('transaction_id', transactionIds);
+        
+        if (itemError) {
+          console.warn('⚠️ Transaction items query error:', itemError);
+        } else {
+          transactionItems?.forEach(item => {
+            const txId = item.transaction_id;
+            if (!transactionItemsMap.has(txId)) {
+              transactionItemsMap.set(txId, []);
+            }
+            transactionItemsMap.get(txId).push({
+              quantity: item.quantity,
+              productName: item.products?.name || 'Unknown Product'
+            });
+          });
+        }
+      }
+
+      // Step 5: Group by location coordinates and aggregate data
       const locationMap = new Map<string, LocationData>();
 
-      transactions?.forEach((transaction: any) => {
+      transactions.forEach((transaction: any) => {
         const lat = Number(transaction.transaction_latitude);
         const lng = Number(transaction.transaction_longitude);
         const key = `${lat.toFixed(6)}-${lng.toFixed(6)}`;
         
-        const products = transaction.transaction_items
-          ?.map((item: any) => `${item.products?.name || 'Unknown'} (${item.quantity})`)
-          .join(', ') || '';
+        const items = transactionItemsMap.get(transaction.id) || [];
+        const products = items
+          .map(item => `${item.productName} (${item.quantity})`)
+          .join(', ') || 'No items';
+
+        const customerName = customersMap.get(transaction.customer_id) || 'Unknown Customer';
+        const riderName = ridersMap.get(transaction.rider_id) || 'Unknown Rider';
 
         if (locationMap.has(key)) {
           const existing = locationMap.get(key)!;
           existing.total_sales += Number(transaction.final_amount);
           existing.transaction_count += 1;
-          existing.products_sold = `${existing.products_sold}, ${products}`;
+          existing.products_sold = `${existing.products_sold}; ${products}`;
         } else {
           locationMap.set(key, {
             location_name: transaction.location_name || 'Lokasi Tidak Diketahui',
             latitude: lat,
             longitude: lng,
-            customer_name: transaction.customers?.name || 'Unknown',
-            rider_name: transaction.profiles?.full_name || 'Unknown',
+            customer_name: customerName,
+            rider_name: riderName,
             products_sold: products,
             total_sales: Number(transaction.final_amount),
             transaction_count: 1
@@ -150,10 +231,14 @@ export const LocationAnalytics = () => {
         }
       });
 
-      setLocationData(Array.from(locationMap.values()).sort((a, b) => b.total_sales - a.total_sales));
+      const locationDataArray = Array.from(locationMap.values()).sort((a, b) => b.total_sales - a.total_sales);
+      console.log('📍 Location data processed:', locationDataArray.length, 'unique locations');
+      setLocationData(locationDataArray);
+      
     } catch (error: any) {
-      console.error('Error fetching location data:', error);
-      toast.error('Gagal memuat data lokasi');
+      console.error('❌ Error fetching location data:', error);
+      toast.error(`Gagal memuat data lokasi: ${error.message}`);
+      setLocationData([]);
     } finally {
       setLoading(false);
     }

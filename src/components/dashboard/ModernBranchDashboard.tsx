@@ -1030,7 +1030,8 @@ export const ModernBranchDashboard = () => {
       </div>
     );
   }
-  return <div className="min-h-screen bg-gray-50 p-6">
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-3xl shadow-sm border-0 p-6">
@@ -1380,102 +1381,161 @@ export const ModernBranchDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Top Products Card */}
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Top Produk Terjual
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              {chartsLoading ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
-                      <div className="flex-1">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
-                        <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : topProducts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Belum ada data produk terjual</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {topProducts.map((product, index) => (
-                    <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
-                      <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-full text-white text-sm font-medium">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{product.name}</div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{product.quantity} terjual</span>
-                          <span>•</span>
-                          <span className="text-green-600 font-medium">
-                            Rp {product.revenue.toLocaleString('id-ID')}
-                          </span>
+        {/* Summary Tables Section */}
+        <div className="space-y-4 mb-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">Summary Tables</h2>
+            <p className="text-sm text-muted-foreground">Data ringkasan untuk periode terpilih</p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Top Products Table */}
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Top Products
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {chartsLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ) : topProducts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Belum ada data produk terjual</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {topProducts.map((product, index) => (
+                      <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                        <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-full text-white text-sm font-medium">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{product.name}</div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{product.quantity} terjual</span>
+                            <span>•</span>
+                            <span className="text-green-600 font-medium">
+                              Rp {product.revenue.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Active Riders Card */}
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5" />
-                Riders Aktif ({activeRiders.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              {chartsLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-                      <div className="flex-1">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
-                        <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : activeRiders.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <UserCheck className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Tidak ada rider aktif saat ini</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-48 overflow-y-auto">
-                  {activeRiders.map((rider) => (
-                    <div key={rider.rider_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {rider.profiles.full_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{rider.profiles.full_name}</div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                          <span>Sedang beroperasi</span>
+            {/* Active Riders Table */}
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                <CardTitle className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5" />
+                  Riders Aktif ({activeRiders.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {chartsLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
                         </div>
                       </div>
+                    ))}
+                  </div>
+                ) : activeRiders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <UserCheck className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Tidak ada rider aktif saat ini</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {activeRiders.map((rider) => (
+                      <div key={rider.rider_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                          {rider.profiles.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{rider.profiles.full_name}</div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            <span>Sedang beroperasi</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Cash Sales Breakdown Table */}
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Penjualan Cash
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {statsLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex justify-between items-center">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-2 rounded-lg hover:bg-muted/50">
+                      <span className="text-sm font-medium">Cash</span>
+                      <span className="text-sm font-bold text-green-600">
+                        Rp {stats.cashSales.toLocaleString('id-ID')}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <div className="flex justify-between items-center p-2 rounded-lg hover:bg-muted/50">
+                      <span className="text-sm font-medium">QRIS</span>
+                      <span className="text-sm font-bold text-blue-600">
+                        Rp {stats.qrisSales.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg hover:bg-muted/50">
+                      <span className="text-sm font-medium">Transfer</span>
+                      <span className="text-sm font-bold text-purple-600">
+                        Rp {stats.transferSales.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <hr className="my-2" />
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-muted/30">
+                      <span className="text-sm font-bold">Total</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        Rp {(stats.cashSales + stats.qrisSales + stats.transferSales).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Sales Chart */}
@@ -1595,5 +1655,6 @@ export const ModernBranchDashboard = () => {
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 };
