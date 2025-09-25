@@ -804,20 +804,19 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                         <SelectTrigger className="form-glass">
                           <SelectValue placeholder="Pilih reporter untuk di-assign" />
                         </SelectTrigger>
-                        <SelectContent className="dropdown-content">
-                          <SelectItem value="" className="select-item">No Assignment</SelectItem>
-                          {reporters.map((reporter) => (
-                            <SelectItem key={reporter.id} value={reporter.id} className="select-item">
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                <span>{reporter.full_name}</span>
-                                <Badge variant="outline" className="ml-auto text-xs">
-                                  {reporter.role}
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                      <SelectContent className="dropdown-content">
+                        {reporters.map((reporter) => (
+                          <SelectItem key={reporter.id} value={reporter.id} className="select-item">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              <span>{reporter.full_name}</span>
+                              <Badge variant="outline" className="ml-auto text-xs">
+                                {reporter.role}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                       </Select>
                     </div>
                   )}
@@ -1265,7 +1264,6 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                         <SelectValue placeholder="Pilih rider untuk di-assign" />
                       </SelectTrigger>
                       <SelectContent className="dropdown-content">
-                        <SelectItem value="" className="select-item">No Assignment</SelectItem>
                         {riders.map((rider) => (
                           <SelectItem key={rider.id} value={rider.id} className="select-item">
                             <div className="flex items-center gap-2">
@@ -1293,7 +1291,6 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                         <SelectValue placeholder="Pilih reporter untuk di-assign" />
                       </SelectTrigger>
                       <SelectContent className="dropdown-content">
-                        <SelectItem value="" className="select-item">No Assignment</SelectItem>
                         {reporters.map((reporter) => (
                           <SelectItem key={reporter.id} value={reporter.id} className="select-item">
                             <div className="flex items-center gap-2">
