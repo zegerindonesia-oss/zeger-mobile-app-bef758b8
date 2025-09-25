@@ -65,6 +65,9 @@ interface Rider {
 export const TransactionsEnhanced = () => {
   const [searchParams] = useSearchParams();
   const { userProfile } = useAuth();
+  
+  // Check if user is bh_report for white background styling
+  const isBhReport = userProfile?.role === 'bh_report';
   const { assignedRiderId, assignedRiderName, shouldAutoFilter } = useRiderFilter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
@@ -561,7 +564,7 @@ export const TransactionsEnhanced = () => {
       </div>
 
       {/* Filters */}
-      <Card className="dashboard-card">
+      <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Filter className="h-4 w-4" />
@@ -657,7 +660,7 @@ export const TransactionsEnhanced = () => {
       </Card>
 
       {/* Transactions Table */}
-      <Card className="dashboard-card">
+      <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Data Transaksi ({transactions.length} transaksi)

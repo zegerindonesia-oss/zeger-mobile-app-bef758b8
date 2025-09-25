@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Download, Filter, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TransactionDetailItem {
   id: string;
@@ -27,7 +28,11 @@ interface Summary {
 }
 
 export const TransactionDetails = () => {
+  const { userProfile } = useAuth();
   const [transactionDetails, setTransactionDetails] = useState<TransactionDetailItem[]>([]);
+  
+  // Check if user is bh_report for white background styling
+  const isBhReport = userProfile?.role === 'bh_report';
   const [summary, setSummary] = useState<Summary>({
     totalSales: 0,
     totalCost: 0,
@@ -206,7 +211,7 @@ export const TransactionDetails = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="dashboard-card">
+        <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalSales)}</p>
@@ -215,7 +220,7 @@ export const TransactionDetails = () => {
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card">
+        <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-red-600">{formatCurrency(summary.totalCost)}</p>
@@ -224,7 +229,7 @@ export const TransactionDetails = () => {
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card">
+        <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalProfit)}</p>
@@ -233,7 +238,7 @@ export const TransactionDetails = () => {
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card">
+        <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-600">{summary.totalQuantity}</p>
@@ -244,7 +249,7 @@ export const TransactionDetails = () => {
       </div>
 
       {/* Filters */}
-      <Card className="dashboard-card">
+      <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Filter className="h-4 w-4" />
@@ -288,7 +293,7 @@ export const TransactionDetails = () => {
       </Card>
 
       {/* Transaction Details Table */}
-      <Card className="dashboard-card">
+      <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Detail Transaksi Per Menu ({transactionDetails.length} item)

@@ -657,14 +657,14 @@ export const BranchHubReportDashboard = () => {
               type: "profit-loss"
             },
             {
-              title: "Active Riders",
-              value: formatNumber(stats.activeRiders),
-              description: "Currently Active",
-              icon: UserCheck,
-              color: "bg-cyan-500",
-              change: "0%",
+              title: "Total Biaya Bahan Baku",
+              value: formatCurrency(stats.totalFoodCost),
+              description: "COGS (Cost of Goods Sold)",
+              icon: Package,
+              color: "bg-orange-500",
+              change: "+5%",
               isPositive: true,
-              type: "riders"
+              type: "cost"
             },
             {
               title: "Operational Expenses",
@@ -677,7 +677,7 @@ export const BranchHubReportDashboard = () => {
               type: "operational-expenses"
             }
           ].map((item, index) => (
-            <Card key={index} className="rounded-3xl shadow-sm border-0 hover:shadow-lg transition-all cursor-pointer">
+            <Card key={index} className="rounded-3xl shadow-sm border-0 hover:shadow-lg hover:shadow-red-500/20 transition-all cursor-pointer">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className={`p-3 rounded-2xl ${item.color}`}>
@@ -713,11 +713,10 @@ export const BranchHubReportDashboard = () => {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                <Area type="monotone" dataKey="sales" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
+                <Area type="monotone" dataKey="sales" stroke="#EF4444" fill="#EF4444" fillOpacity={0.3} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -733,10 +732,13 @@ export const BranchHubReportDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <PieChart3D data={productSales.map(item => ({
-                ...item,
-                percentage: item.value
-              }))} />
+              <PieChart3D 
+                data={productSales.map(item => ({
+                  ...item,
+                  percentage: item.value
+                }))} 
+                title="Top Products"
+              />
             </div>
           </CardContent>
         </Card>
