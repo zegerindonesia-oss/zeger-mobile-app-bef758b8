@@ -146,7 +146,13 @@ export default function InventoryBranchTransfer() {
             </div>
           </div>
 
-          <Button onClick={sendToBranch} disabled={loading} className="w-full">Kirim</Button>
+          <Button 
+            onClick={sendToBranch} 
+            disabled={loading} 
+            className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium px-6 py-3 rounded-lg transition-all duration-200 hover:shadow-lg"
+          >
+            {loading ? 'Mengirim...' : 'Kirim Stok'}
+          </Button>
         </CardContent>
       </Card>
     </main>

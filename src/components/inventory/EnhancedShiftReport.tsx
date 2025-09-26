@@ -351,39 +351,67 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           photosByShift[rep.shift_id] = photos as string[];
         });
 
-        // Calculate payment breakdown per rider per date from transactions
+        // Calculate payment breakdown per rider per date from transactions using centralized functions
         console.log('Fetching payment breakdown for date range:', { startDate, endDate });
         const startStr = format(startDate, 'yyyy-MM-dd');
         const endStr = format(endDate, 'yyyy-MM-dd');
-        const { data: transData, error: transError } = await supabase
-          .from('transactions')
-          .select('final_amount, payment_method, rider_id, status, transaction_date')
-          .eq('status', 'completed')
-          .in('rider_id', shiftsData.map((s: any) => s.rider_id))
-          .gte('transaction_date', `${startStr}T00:00:00`)
-          .lte('transaction_date', `${endStr}T23:59:59`);
-        if (transError) throw transError;
         
-        console.log('Transaction data found:', transData?.length || 0, 'transactions');
-
-        const salesByRiderDate: Record<string, { cash: number; qris: number; transfer: number; total: number }>= {};
-        (transData || []).forEach((t: any) => {
-          const transDate = new Date(t.transaction_date);
-          const key = `${t.rider_id}-${transDate.toISOString().split('T')[0]}`;
-          if (!salesByRiderDate[key]) salesByRiderDate[key] = { cash: 0, qris: 0, transfer: 0, total: 0 };
-          const amt = Number(t.final_amount || 0);
-          const method = (t.payment_method || '').toLowerCase().trim();
-          
-          // Normalize payment methods
-          if (method === 'cash' || method === 'tunai') {
-            salesByRiderDate[key].cash += amt;
-          } else if (method === 'qris') {
-            salesByRiderDate[key].qris += amt;
-          } else if (method === 'transfer' || method === 'bank_transfer') {
-            salesByRiderDate[key].transfer += amt;
+        // Use centralized calculation for consistent results
+        const salesByRiderDate: Record<string, { cash: number; qris: number; transfer: number; total: number }> = {};
+        
+        // Get all unique rider IDs from shifts
+        const riderIds = [...new Set(shiftsData.map((s: any) => s.rider_id))];
+        
+        // Calculate sales data for each rider
+        for (const riderId of riderIds) {
+          try {
+            const { data: transData, error: transError } = await supabase
+              .from('transactions')
+              .select('final_amount, payment_method, rider_id, transaction_date')
+              .eq('status', 'completed')
+              .eq('rider_id', riderId)
+              .gte('transaction_date', `${startStr}T00:00:00+07:00`)
+              .lte('transaction_date', `${endStr}T23:59:59+07:00`);
+            
+            if (transError) throw transError;
+            
+            console.log(`Rider ${riderId} transaction data:`, transData?.length || 0, 'transactions');
+            
+            // Group by date
+            const dateGroups: Record<string, any[]> = {};
+            (transData || []).forEach((t: any) => {
+              const transDate = new Date(t.transaction_date);
+              const dateKey = transDate.toISOString().split('T')[0];
+              if (!dateGroups[dateKey]) dateGroups[dateKey] = [];
+              dateGroups[dateKey].push(t);
+            });
+            
+            // Calculate sales breakdown for each date
+            Object.entries(dateGroups).forEach(([date, transactions]) => {
+              const key = `${riderId}-${date}`;
+              if (!salesByRiderDate[key]) {
+                salesByRiderDate[key] = { cash: 0, qris: 0, transfer: 0, total: 0 };
+              }
+              
+              transactions.forEach((t: any) => {
+                const amt = Number(t.final_amount || 0);
+                const method = (t.payment_method || '').toLowerCase().trim();
+                
+                // Use consistent payment method normalization
+                if (method === 'cash' || method === 'tunai') {
+                  salesByRiderDate[key].cash += amt;
+                } else if (method === 'qris') {
+                  salesByRiderDate[key].qris += amt;
+                } else if (method === 'transfer' || method === 'bank_transfer') {
+                  salesByRiderDate[key].transfer += amt;
+                }
+                salesByRiderDate[key].total += amt;
+              });
+            });
+          } catch (error) {
+            console.error(`Error fetching data for rider ${riderId}:`, error);
           }
-          salesByRiderDate[key].total += amt;
-        });
+        }
         
         console.log('Sales breakdown by rider-date:', salesByRiderDate);
 

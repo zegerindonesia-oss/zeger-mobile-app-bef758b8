@@ -337,13 +337,22 @@ export const ModernBranchDashboard = () => {
   const fetchStats = async () => {
     try {
       console.log("📊 Fetching stats data...");
+      console.log("📊 Date range:", { startDate, endDate, selectedUser });
       
-      // Use centralized sales calculation for consistency
+      // Use centralized sales calculation for consistency with timezone handling
       const salesData = await calculateSalesData(
-        new Date(startDate + 'T00:00:00'),
-        new Date(endDate + 'T23:59:59'),
-        selectedUser
+        new Date(startDate + 'T00:00:00+07:00'),
+        new Date(endDate + 'T23:59:59+07:00'),
+        selectedUser === 'all' ? undefined : selectedUser
       );
+
+      console.log("📊 Sales data calculated:", {
+        netSales: salesData.netSales,
+        totalTransactions: salesData.totalTransactions,
+        cashSales: salesData.cashSales,
+        qrisSales: salesData.qrisSales,
+        transferSales: salesData.transferSales
+      });
 
       // Fetch active customers
       const { data: customers } = await supabase
@@ -351,12 +360,12 @@ export const ModernBranchDashboard = () => {
         .select('id')
         .eq('is_active', true);
 
-      // Calculate operational expenses (separate from sales calculation)
+      // Calculate operational expenses using consistent date filtering
       let expenseQuery = supabase
         .from('daily_operational_expenses')
         .select('amount, expense_type, rider_id')
-        .gte('expense_date', formatYMD(new Date(startDate)))
-        .lte('expense_date', formatYMD(new Date(endDate)));
+        .gte('expense_date', startDate)
+        .lte('expense_date', endDate);
 
       if (selectedUser !== 'all') {
         expenseQuery = expenseQuery.eq('rider_id', selectedUser);
@@ -372,8 +381,8 @@ export const ModernBranchDashboard = () => {
         return sum;
       }, 0);
 
-      // Active riders = riders with active shift today
-      const today = new Date().toISOString().split('T')[0];
+      // Active riders = riders with active shift today using Jakarta timezone
+      const today = formatYMD(getJakartaNow());
       const { data: activeShifts } = await supabase
         .from('shift_management')
         .select('id')
@@ -384,11 +393,11 @@ export const ModernBranchDashboard = () => {
       // Calculate cash deposit (cash sales minus operational expenses)
       const cashDeposit = salesData.cashSales - operationalExpenses;
 
-      // Calculate food cost from raw material calculation
+      // Calculate food cost from raw material calculation with consistent parameters
       const rawMaterialCost = await calculateRawMaterialCost(
-        new Date(startDate + 'T00:00:00'),
-        new Date(endDate + 'T23:59:59'),
-        selectedUser
+        new Date(startDate + 'T00:00:00+07:00'),
+        new Date(endDate + 'T23:59:59+07:00'),
+        selectedUser === 'all' ? undefined : selectedUser
       );
 
       // Calculate profit
@@ -410,7 +419,7 @@ export const ModernBranchDashboard = () => {
         cashDeposit
       });
       
-      console.log(`✅ Stats loaded: ${salesData.totalTransactions} transactions, ${formatCurrency(salesData.netSales)} revenue`);
+      console.log(`✅ Stats loaded: ${salesData.totalTransactions} transactions, ${formatCurrency(salesData.netSales)} revenue, ${formatCurrency(rawMaterialCost)} raw materials`);
       
     } catch (error) {
       console.error("❌ Error fetching stats:", error);
