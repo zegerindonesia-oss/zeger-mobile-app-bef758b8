@@ -109,12 +109,12 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/location-analytics" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
-                <ModernLayout>
-                  <LocationAnalytics />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
+                <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_report']}>
+                  <ModernLayout>
+                    <LocationAnalytics />
+                  </ModernLayout>
+                </RoleBasedRoute>
+              } />
             <Route path="/finance" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>

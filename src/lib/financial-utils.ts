@@ -227,29 +227,52 @@ export const calculateSalesData = async (
   const startStr = formatDate(startDate);
   const endStr = formatDate(endDate);
 
-  // Build base query
-  let transQuery = supabase
-    .from('transactions')
-    .select(`
-      id,
-      final_amount,
-      payment_method,
-      discount_amount,
-      transaction_items (
-        quantity,
-        unit_price,
-        total_price
-      )
-    `)
-    .eq('status', 'completed')
-    .gte('transaction_date', `${startStr}T00:00:00`)
-    .lte('transaction_date', `${endStr}T23:59:59`);
+  // Build base query with pagination and proper timezone (+07:00)
+  const baseFilters = (q: any) => {
+    q = q
+      .eq('status', 'completed')
+      .gte('transaction_date', `${startStr}T00:00:00+07:00`)
+      .lte('transaction_date', `${endStr}T23:59:59+07:00`);
+    if (selectedRider && selectedRider !== "all") {
+      q = q.eq('rider_id', selectedRider);
+    }
+    return q;
+  };
 
-  if (selectedRider && selectedRider !== "all") {
-    transQuery = transQuery.eq('rider_id', selectedRider);
+  // Get total count accurately (not limited by 1000)
+  const { count: totalCount } = await baseFilters(
+    supabase.from('transactions').select('id', { count: 'exact', head: true })
+  );
+
+  // Paginate through all transactions to avoid the 1000 row limit
+  const batchSize = 1000;
+  let from = 0;
+  const allTransactions: any[] = [];
+  while (true) {
+    let q = baseFilters(
+      supabase
+        .from('transactions')
+        .select(`
+          id,
+          final_amount,
+          payment_method,
+          discount_amount,
+          transaction_items (
+            quantity,
+            unit_price,
+            total_price
+          )
+        `)
+    );
+
+    const { data: batch } = await q.range(from, from + batchSize - 1);
+    if (!batch || batch.length === 0) break;
+    allTransactions.push(...batch);
+    if (batch.length < batchSize) break;
+    from += batchSize;
   }
 
-  const { data: transactions } = await transQuery;
+  const transactions = allTransactions;
 
   if (!transactions || transactions.length === 0) {
     return {

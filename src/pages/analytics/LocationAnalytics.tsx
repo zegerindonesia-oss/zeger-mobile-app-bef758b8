@@ -107,8 +107,8 @@ export const LocationAnalytics = () => {
         .eq('status', 'completed')
         .not('transaction_latitude', 'is', null)
         .not('transaction_longitude', 'is', null)
-        .gte('transaction_date', `${startDate}T00:00:00`)
-        .lte('transaction_date', `${endDate}T23:59:59`);
+        .gte('transaction_date', `${startDate}T00:00:00+07:00`)
+        .lte('transaction_date', `${endDate}T23:59:59+07:00`);
 
       if (selectedRider !== "all") {
         transactionQuery = transactionQuery.eq('rider_id', selectedRider);
