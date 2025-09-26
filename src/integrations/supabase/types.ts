@@ -116,44 +116,61 @@ export type Database = {
       branches: {
         Row: {
           address: string | null
+          branch_code: string | null
           branch_type: string | null
           code: string
           created_at: string | null
           description: string | null
           id: string
           is_active: boolean | null
+          level: number | null
           manager_id: string | null
           name: string
+          parent_branch_id: string | null
           phone: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          branch_code?: string | null
           branch_type?: string | null
           code: string
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          level?: number | null
           manager_id?: string | null
           name: string
+          parent_branch_id?: string | null
           phone?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          branch_code?: string | null
           branch_type?: string | null
           code?: string
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          level?: number | null
           manager_id?: string | null
           name?: string
+          parent_branch_id?: string | null
           phone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "branches_parent_branch_id_fkey"
+            columns: ["parent_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       checkpoints: {
         Row: {
@@ -1008,6 +1025,47 @@ export type Database = {
           },
         ]
       }
+      user_module_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_granted: boolean | null
+          module_name: string
+          permission_type: string
+          resource_filter: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_granted?: boolean | null
+          module_name: string
+          permission_type: string
+          resource_filter?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_granted?: boolean | null
+          module_name?: string
+          permission_type?: string
+          resource_filter?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_module_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_role_permissions: {
         Row: {
           created_at: string
@@ -1081,6 +1139,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_role: {
+        Args: {
+          manager_role: Database["public"]["Enums"]["user_role"]
+          target_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
       can_receive_stock: {
         Args: { rider_uuid: string }
         Returns: boolean
@@ -1112,6 +1177,10 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_user_level: {
+        Args: { user_role_param: Database["public"]["Enums"]["user_role"] }
+        Returns: number
       }
       get_user_profile: {
         Args: Record<PropertyKey, never>
@@ -1176,6 +1245,17 @@ export type Database = {
         | "sb_kasir"
         | "sb_rider"
         | "sb_report"
+        | "1_HO_Admin"
+        | "1_HO_Owner"
+        | "1_HO_Staff"
+        | "2_Hub_Branch_Manager"
+        | "2_Hub_Staff"
+        | "2_Hub_Kasir"
+        | "2_Hub_Rider"
+        | "3_SB_Branch_Manager"
+        | "3_SB_Staff"
+        | "3_SB_Kasir"
+        | "3_SB_Rider"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1330,6 +1410,17 @@ export const Constants = {
         "sb_kasir",
         "sb_rider",
         "sb_report",
+        "1_HO_Admin",
+        "1_HO_Owner",
+        "1_HO_Staff",
+        "2_Hub_Branch_Manager",
+        "2_Hub_Staff",
+        "2_Hub_Kasir",
+        "2_Hub_Rider",
+        "3_SB_Branch_Manager",
+        "3_SB_Staff",
+        "3_SB_Kasir",
+        "3_SB_Rider",
       ],
     },
   },
