@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
+import { calculateSalesData, calculateRawMaterialCost, calculateOperationalExpenses, calculateRevenue, calculateNetProfit, type RevenueBreakdown, type ExpenseBreakdown } from "@/lib/financial-utils";
+import { getTodayJakarta } from "@/lib/date";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -26,19 +28,25 @@ export default function ProfitLoss() {
   const { userProfile } = useAuth();
   const { assignedRiderId, assignedRiderName, shouldAutoFilter } = useRiderFilter();
   
-  const [revenue, setRevenue] = useState({
+  const [revenue, setRevenue] = useState<RevenueBreakdown>({
     cash: 0,
     qris: 0,
     transfer: 0,
-    total: 0
+    mdr: 0
   });
-  const [expenses, setExpenses] = useState({
+  const [expenses, setExpenses] = useState<ExpenseBreakdown>({
     rawMaterial: 0,
     operationalDaily: 0,
     salary: 0,
+    rent: 0,
+    household: 0,
+    environment: 0,
     other: 0,
-    mdr: 0,
-    total: 0
+    marketing: 0,
+    administration: 0,
+    depreciation: 0,
+    interest: 0,
+    tax: 0
   });
   const [riders, setRiders] = useState<Rider[]>([]);
   const [selectedRider, setSelectedRider] = useState<string>(() => {
@@ -67,107 +75,46 @@ export default function ProfitLoss() {
     setRiders(data || []);
   };
 
+  const [rawMaterialCost, setRawMaterialCost] = useState(0);
+
   const loadData = async () => {
     setLoading(true);
     
     try {
-      // Format dates as YYYY-MM-DD without timezone conversion
-      const formatDate = (d: Date) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-      
-      const startStr = formatDate(startDate);
-      const endStr = formatDate(endDate);
+      console.log("🔄 Loading Profit/Loss data using centralized calculations...");
+      console.log("📊 Date range:", { startDate, endDate, selectedRider });
 
-      // Load transactions for revenue calculation
-      // Use date range query that works with timestamps
-      let transQuery = supabase
-        .from('transactions')
-        .select('id, final_amount, payment_method, rider_id, status, transaction_date')
-        .eq('status', 'completed')
-        .gte('transaction_date', `${startStr}T00:00:00`)
-        .lte('transaction_date', `${endStr}T23:59:59`);
+      // Use centralized financial calculation functions for consistency
+      const [revenueData, expensesData, rawMaterial] = await Promise.all([
+        calculateRevenue(
+          startDate,
+          endDate,
+          selectedRider === "all" ? undefined : selectedRider
+        ),
+        calculateOperationalExpenses(
+          startDate,
+          endDate,
+          selectedRider === "all" ? undefined : selectedRider
+        ),
+        calculateRawMaterialCost(
+          startDate,
+          endDate,
+          selectedRider === "all" ? undefined : selectedRider
+        )
+      ]);
 
-      if (selectedRider !== "all") {
-        transQuery = transQuery.eq('rider_id', selectedRider);
-      }
-
-      const { data: transactions } = await transQuery;
-
-      // Calculate revenue breakdown
-      let cashRevenue = 0;
-      let qrisRevenue = 0;
-      let transferRevenue = 0;
-      let mdrAmount = 0;
-
-      (transactions || []).forEach((trans: any) => {
-        const amount = Number(trans.final_amount || 0);
-        const paymentMethod = (trans.payment_method || '').toLowerCase();
-        
-        if (paymentMethod === 'cash') {
-          cashRevenue += amount;
-        } else if (paymentMethod === 'qris') {
-          qrisRevenue += amount;
-          mdrAmount += amount * 0.007; // 0.7% MDR
-        } else if (paymentMethod === 'transfer' || paymentMethod === 'bank_transfer' || paymentMethod === 'bank') {
-          transferRevenue += amount;
-        }
+      console.log("✅ Centralized calculations completed:", {
+        revenue: revenueData.cash + revenueData.qris + revenueData.transfer,
+        rawMaterial,
+        expenses: Object.values(expensesData).reduce((sum, val) => sum + val, 0)
       });
 
-      // Raw material cost from sold items (sum of qty * product cost)
-      let rawMaterialCost = 0;
-      const transactionIds = (transactions || []).map((t: any) => t.id);
-      if (transactionIds.length > 0) {
-        const { data: itemCosts } = await supabase
-          .from('transaction_items')
-          .select('quantity, products (cost_price)')
-          .in('transaction_id', transactionIds);
-        rawMaterialCost = (itemCosts || []).reduce((sum: number, item: any) => {
-          const qty = Number(item.quantity || 0);
-          const cost = Number(item.products?.cost_price || 0);
-          return sum + qty * cost;
-        }, 0);
-      }
-
-      // Operational other = rider daily expenses EXCLUDING food
-      let riderOtherQuery = supabase
-        .from('daily_operational_expenses')
-        .select('amount')
-        .neq('expense_type', 'food')
-        .gte('expense_date', startStr)
-        .lte('expense_date', endStr);
-
-      if (selectedRider !== "all") {
-        riderOtherQuery = riderOtherQuery.eq('rider_id', selectedRider);
-      }
-
-      const { data: riderOther } = await riderOtherQuery;
-      const operationalDaily = (riderOther || []).reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
-
-      const salaryCost = 0; // Not counted per request
-      const otherCost = 0;  // Not counted; "lainnya" already included in operationalDaily
-
-      setRevenue({
-        cash: cashRevenue,
-        qris: qrisRevenue,
-        transfer: transferRevenue,
-        total: cashRevenue + qrisRevenue + transferRevenue
-      });
-
-      setExpenses({
-        rawMaterial: rawMaterialCost,
-        operationalDaily,
-        salary: salaryCost,
-        other: otherCost,
-        mdr: mdrAmount,
-        total: rawMaterialCost + operationalDaily + salaryCost + otherCost + mdrAmount
-      });
+      setRevenue(revenueData);
+      setExpenses(expensesData);
+      setRawMaterialCost(rawMaterial);
 
     } catch (error) {
-      console.error("Error loading profit/loss data:", error);
+      console.error("❌ Error loading profit/loss data:", error);
     } finally {
       setLoading(false);
     }
@@ -190,7 +137,9 @@ export default function ProfitLoss() {
     loadData();
   }, [selectedRider, startDate, endDate]);
 
-  const profit = revenue.total - expenses.total;
+  const totalRevenue = revenue.cash + revenue.qris + revenue.transfer;
+  const totalExpenses = rawMaterialCost + Object.values(expenses).reduce((sum, val) => sum + val, 0);
+  const profit = calculateNetProfit(revenue, rawMaterialCost, expenses);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -370,7 +319,7 @@ export default function ProfitLoss() {
                   </div>
                   <div className="flex justify-between border-t pt-2 font-semibold">
                     <span>Total Pendapatan</span>
-                    <span>{currency.format(revenue.total)}</span>
+                    <span>{currency.format(totalRevenue)}</span>
                   </div>
                 </div>
               </div>
@@ -381,11 +330,11 @@ export default function ProfitLoss() {
                 <div className="space-y-2 pl-4">
                   <div className="flex justify-between">
                     <span>MDR (QRIS 0.7%)</span>
-                    <span className="font-medium">({currency.format(expenses.mdr)})</span>
+                    <span className="font-medium">({currency.format(revenue.mdr)})</span>
                   </div>
                   <div className="flex justify-between border-t pt-2 font-semibold">
                     <span>Total Beban Pokok Penjualan</span>
-                    <span>({currency.format(expenses.mdr)})</span>
+                    <span>({currency.format(revenue.mdr)})</span>
                   </div>
                 </div>
               </div>
@@ -394,7 +343,7 @@ export default function ProfitLoss() {
               <div className="bg-muted/50 p-3 rounded">
                 <div className="flex justify-between font-semibold">
                   <span>LABA KOTOR</span>
-                  <span className="text-green-600">{currency.format(revenue.total - expenses.mdr)}</span>
+                  <span className="text-green-600">{currency.format(totalRevenue - revenue.mdr)}</span>
                 </div>
               </div>
 
@@ -404,7 +353,7 @@ export default function ProfitLoss() {
                 <div className="space-y-2 pl-4">
                    <div className="flex justify-between">
                      <span>Beban Bahan Baku</span>
-                     <span className="font-medium">({currency.format(expenses.rawMaterial)})</span>
+                     <span className="font-medium">({currency.format(rawMaterialCost)})</span>
                    </div>
                   <div className="flex justify-between">
                     <span>Beban Operasional Harian</span>
@@ -415,12 +364,20 @@ export default function ProfitLoss() {
                     <span className="font-medium">({currency.format(expenses.salary)})</span>
                   </div>
                   <div className="flex justify-between">
+                    <span>Beban Sewa</span>
+                    <span className="font-medium">({currency.format(expenses.rent)})</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Beban Rumah Tangga</span>
+                    <span className="font-medium">({currency.format(expenses.household)})</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span>Beban Lainnya</span>
                     <span className="font-medium">({currency.format(expenses.other)})</span>
                   </div>
                   <div className="flex justify-between border-t pt-2 font-semibold">
                     <span>Total Beban Operasional</span>
-                    <span>({currency.format(expenses.total - expenses.mdr)})</span>
+                    <span>({currency.format(totalExpenses)})</span>
                   </div>
                 </div>
 

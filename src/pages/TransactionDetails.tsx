@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Download, Filter, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { calculateSalesData, type SalesData } from "@/lib/financial-utils";
+import { useRiderFilter } from "@/hooks/useRiderFilter";
+import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
+import { DateFilter } from "@/components/common/DateFilter";
+import { getTodayJakarta } from "@/lib/date";
 
 interface TransactionDetailItem {
   id: string;
@@ -30,8 +33,14 @@ interface Summary {
   totalQuantity: number;
 }
 
+interface Rider {
+  id: string;
+  full_name: string;
+}
+
 export const TransactionDetails = () => {
   const { userProfile } = useAuth();
+  const { assignedRiderId, assignedRiderName, shouldAutoFilter } = useRiderFilter();
   const [transactionDetails, setTransactionDetails] = useState<TransactionDetailItem[]>([]);
   
   // Check if user is bh_report for white background styling
@@ -44,44 +53,98 @@ export const TransactionDetails = () => {
     totalProfit: 0,
     totalQuantity: 0
   });
+
+  const getJakartaDate = () => {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  };
+
+  const formatYMD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   
-  // Filter states from URL params or defaults
+  // Filter states - auto-set for bh_report users
+  const [selectedRider, setSelectedRider] = useState(() => {
+    if (shouldAutoFilter && assignedRiderId) {
+      return assignedRiderId;
+    }
+    return "all";
+  });
+
+  const [riders, setRiders] = useState<Rider[]>([]);
   const [startDate, setStartDate] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('start_date') || (() => {
-      const date = new Date();
-      date.setDate(1); // First day of current month
-      return date.toISOString().split('T')[0];
+    const defaultDate = (() => {
+      const now = getJakartaDate();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      return formatYMD(monthStart);
     })();
+    return params.get('start_date') || defaultDate;
   });
   const [endDate, setEndDate] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('end_date') || new Date().toISOString().split('T')[0];
+    return params.get('end_date') || formatYMD(getJakartaDate());
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (userProfile?.role !== 'bh_report') {
+      fetchRiders();
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    // Auto-set selected rider for bh_report users
+    if (shouldAutoFilter && assignedRiderId && selectedRider !== assignedRiderId) {
+      setSelectedRider(assignedRiderId);
+    }
+  }, [shouldAutoFilter, assignedRiderId, selectedRider]);
+
+  useEffect(() => {
     fetchTransactionDetails();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, selectedRider]);
+
+  const fetchRiders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'rider')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setRiders(data || []);
+    } catch (error) {
+      console.error("Error fetching riders:", error);
+    }
+  };
 
   const fetchTransactionDetails = async () => {
     setLoading(true);
     try {
-      // Use centralized sales calculation
+      console.log("🔍 Fetching transaction details for user:", userProfile?.role);
+      console.log("🔍 Selected rider:", selectedRider);
+      console.log("🔍 Date range:", { startDate, endDate });
+      
+      // Use centralized sales calculation for consistency
       const salesData = await calculateSalesData(
-        new Date(startDate + 'T00:00:00'),
-        new Date(endDate + 'T23:59:59')
+        new Date(startDate + 'T00:00:00+07:00'),
+        new Date(endDate + 'T23:59:59+07:00'),
+        selectedRider === "all" ? undefined : selectedRider
       );
 
       // Fetch detailed transaction items for the table
-      const { data: transactions, error } = await supabase
+      let query = supabase
         .from('transactions')
         .select(`
           id,
           transaction_number,
           transaction_date,
           payment_method,
+          rider_id,
           transaction_items (
             quantity,
             unit_price,
@@ -92,9 +155,15 @@ export const TransactionDetails = () => {
           )
         `)
         .eq('status', 'completed')
-        .gte('transaction_date', startDate)
+        .gte('transaction_date', startDate + 'T00:00:00')
         .lte('transaction_date', endDate + 'T23:59:59')
         .order('transaction_date', { ascending: false });
+
+      if (selectedRider !== "all") {
+        query = query.eq('rider_id', selectedRider);
+      }
+
+      const { data: transactions, error } = await query;
 
       if (error) throw error;
 
@@ -133,16 +202,23 @@ export const TransactionDetails = () => {
 
       setTransactionDetails(filteredDetails);
 
-      // Calculate costs from filtered details
+      // Use centralized raw material cost calculation for consistency
+      const rawMaterialCost = await calculateRawMaterialCost(
+        new Date(startDate + 'T00:00:00+07:00'),
+        new Date(endDate + 'T23:59:59+07:00'),
+        selectedRider === "all" ? undefined : selectedRider
+      );
+
       const totalQuantity = filteredDetails.reduce((sum, item) => sum + item.quantity, 0);
-      const totalCost = filteredDetails.reduce((sum, item) => sum + (item.cost_price * item.quantity), 0);
-      const totalProfit = salesData.netSales - totalCost;
+      const totalProfit = salesData.netSales - rawMaterialCost;
+
+      console.log(`📊 Transaction Details - Sales: ${formatCurrency(salesData.netSales)}, Raw Material Cost: ${formatCurrency(rawMaterialCost)}`);
 
       setSummary({
         grossSales: salesData.grossSales,
         netSales: salesData.netSales,
         totalDiscounts: salesData.totalDiscount,
-        totalCost,
+        totalCost: rawMaterialCost,
         totalProfit,
         totalQuantity
       });
@@ -271,49 +347,63 @@ export const TransactionDetails = () => {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filter Data
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Tanggal Mulai</label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Tanggal Akhir</label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="No transaksi, nama menu..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+      {/* Enhanced Filters */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* Enhanced Date and User Filter */}
+        <div className="lg:col-span-2">
+          <DateFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            showUserFilter={userProfile?.role !== 'bh_report'}
+            selectedUser={selectedRider}
+            onUserChange={setSelectedRider}
+            users={riders}
+            userLabel="User"
+            showQuickFilters={true}
+            className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}
+          />
+        </div>
+        
+        {/* Search Filter */}
+        <div className="lg:col-span-1">
+          <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Pencarian
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-4">
+                {/* Assigned Rider Display for BH Report users */}
+                {userProfile?.role === 'bh_report' && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Assigned User</label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm border">
+                      {assignedRiderName || 'Loading...'}
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="No transaksi, nama menu..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Transaction Details Table */}
       <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>

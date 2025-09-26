@@ -25,7 +25,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
 import { chunkArray } from "@/lib/array-utils";
 import { toast } from "sonner";
-import { calculateSalesData, type SalesData } from "@/lib/financial-utils";
+import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
+import { DateFilter } from "@/components/common/DateFilter";
+import { getTodayJakarta } from "@/lib/date";
 
 interface TransactionItem {
   id: string;
@@ -96,14 +98,24 @@ export const TransactionsEnhanced = () => {
     return searchParams.get('rider') || "all";
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
+  const getJakartaDate = () => {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  };
+
+  const formatYMD = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(1); // First day of current month
-    return date.toISOString().split('T')[0];
+    const now = getJakartaDate();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return formatYMD(monthStart);
   });
   const [endDate, setEndDate] = useState(() => {
-    const date = new Date();
-    return date.toISOString().split('T')[0];
+    return formatYMD(getJakartaDate());
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -316,29 +328,19 @@ export const TransactionsEnhanced = () => {
 
       // Use centralized sales calculation for consistency
       const salesData = await calculateSalesData(
-        new Date(startDate + 'T00:00:00'),
-        new Date(endDate + 'T23:59:59'),
-        selectedRider
+        new Date(startDate + 'T00:00:00+07:00'),
+        new Date(endDate + 'T23:59:59+07:00'),
+        selectedRider === "all" ? undefined : selectedRider
       );
 
-      const totalItemsSold = filteredData.reduce((sum, t) => 
-        sum + (t.transaction_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0
+      // Use centralized raw material cost calculation for consistency
+      const rawMaterialCost = await calculateRawMaterialCost(
+        new Date(startDate + 'T00:00:00+07:00'),
+        new Date(endDate + 'T23:59:59+07:00'),
+        selectedRider === "all" ? undefined : selectedRider
       );
 
-      // Calculate food cost from sold items (qty * product cost)
-      console.log("🔍 Calculating food cost for", filteredData.length, "transactions");
-      
-      const totalFoodCost = filteredData.reduce((sum, t) => {
-        const transactionCost = t.transaction_items?.reduce((itemSum, item) => {
-          const cost = Number(item.products?.cost_price || 0);
-          const qty = Number(item.quantity || 0);
-          const itemCost = qty * cost;
-          return itemSum + itemCost;
-        }, 0) || 0;
-        return sum + transactionCost;
-      }, 0);
-      
-      console.log(`📊 Final Summary - Items: ${totalItemsSold}, Food Cost: Rp ${totalFoodCost.toLocaleString()}`);
+      console.log(`📊 Centralized calculations - Sales: ${formatCurrency(salesData.netSales)}, Raw Material Cost: ${formatCurrency(rawMaterialCost)}`);
 
       setSummary({
         grossSales: salesData.grossSales,
@@ -346,8 +348,8 @@ export const TransactionsEnhanced = () => {
         totalDiscounts: salesData.totalDiscount,
         totalTransactions: salesData.totalTransactions,
         avgPerTransaction: salesData.averageSalePerTransaction,
-        totalItemsSold,
-        totalFoodCost,
+        totalItemsSold: salesData.totalItems,
+        totalFoodCost: rawMaterialCost,
         cashSales: salesData.salesByPaymentMethod.cash,
         qrisSales: salesData.salesByPaymentMethod.qris,
         transferSales: salesData.salesByPaymentMethod.transfer
@@ -572,100 +574,86 @@ export const TransactionsEnhanced = () => {
       </div>
 
       {/* Filters */}
-      <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filter Transaksi
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            {/* User/Rider filter - conditional for bh_report users */}
-            {userProfile?.role !== 'bh_report' ? (
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">User/Rider</label>
-                <Select value={selectedRider} onValueChange={setSelectedRider}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih rider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua User</SelectItem>
-                    {riders.map((rider) => (
-                      <SelectItem key={rider.id} value={rider.id}>
-                        {rider.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Assigned Rider</label>
-                <div className="px-3 py-2 bg-muted rounded-md text-sm border">
-                  {assignedRiderName || 'Loading...'}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        {/* Enhanced Date Filter */}
+        <div className="lg:col-span-2">
+          <DateFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            showUserFilter={userProfile?.role !== 'bh_report'}
+            selectedUser={selectedRider}
+            onUserChange={setSelectedRider}
+            users={riders}
+            userLabel="Rider"
+            showQuickFilters={true}
+            className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}
+          />
+        </div>
+        
+        {/* Additional Filters */}
+        <div className="lg:col-span-2">
+          <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filter Tambahan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid gap-4">
+                {/* Assigned Rider Display for BH Report users */}
+                {userProfile?.role === 'bh_report' && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Assigned Rider</label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm border">
+                      {assignedRiderName || 'Loading...'}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Metode Bayar</label>
+                  <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semua metode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Metode</SelectItem>
+                      <SelectItem value="cash">Tunai</SelectItem>
+                      <SelectItem value="qris">QRIS</SelectItem>
+                      <SelectItem value="transfer">Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="No transaksi, pelanggan..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Button 
+                    onClick={fetchTransactions}
+                    className="w-full bg-primary hover:bg-primary-dark"
+                  >
+                    Apply Filter
+                  </Button>
                 </div>
               </div>
-            )}
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Metode Bayar</label>
-              <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih metode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Metode</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="transfer">Transfer</SelectItem>
-                  <SelectItem value="qris">QRIS</SelectItem>
-                  <SelectItem value="credit_card">Kartu Kredit</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Tanggal Mulai</label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Tanggal Akhir</label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="No transaksi, pelanggan..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-end">
-              <Button 
-                onClick={fetchTransactions}
-                className="w-full bg-primary hover:bg-primary-dark"
-              >
-                Apply Filter
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Transactions Table */}
       <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
