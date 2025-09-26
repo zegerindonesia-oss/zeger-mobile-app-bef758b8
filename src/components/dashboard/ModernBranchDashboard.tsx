@@ -11,6 +11,7 @@ import { PieChart3D } from '@/components/charts/PieChart3D';
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { chunkArray } from "@/lib/array-utils";
+import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
 interface DashboardStats {
   totalSales: number;
   totalTransactions: number;
@@ -26,7 +27,7 @@ interface DashboardStats {
   operationalExpenses: number;
   cashDeposit: number;
 }
-interface SalesData {
+interface ChartSalesData {
   month: string;
   sales: number;
 }
@@ -89,7 +90,7 @@ export const ModernBranchDashboard = () => {
     operationalExpenses: 0,
     cashDeposit: 0
   });
-  const [salesData, setSalesData] = useState<SalesData[]>([]);
+  const [salesData, setSalesData] = useState<ChartSalesData[]>([]);
   const [productSales, setProductSales] = useState<ProductSales[]>([]);
   const [riderExpenses, setRiderExpenses] = useState<{
     rider_name: string;
@@ -336,26 +337,13 @@ export const ModernBranchDashboard = () => {
   const fetchStats = async () => {
     try {
       console.log("📊 Fetching stats data...");
-      // Use consistent date formatting
-      const startStr = formatYMD(new Date(startDate));
-      const endStr = formatYMD(new Date(endDate));
-
-      // Fetch ALL completed transactions for accurate calculation (no limits)
-      let txQuery = supabase
-        .from('transactions')
-        .select('final_amount, id, rider_id, payment_method')
-        .eq('status', 'completed')
-        .gte('transaction_date', `${startStr}T00:00:00`)
-        .lte('transaction_date', `${endStr}T23:59:59`);
-        
-      console.log(`📊 Fetching transactions from ${startStr} to ${endStr}...`);
-        
-      if (selectedUser !== 'all') {
-        txQuery = txQuery.eq('rider_id', selectedUser);
-      }
       
-      const { data: transactions, error: txError } = await txQuery;
-      if (txError) throw txError;
+      // Use centralized sales calculation for consistency
+      const salesData = await calculateSalesData(
+        new Date(startDate + 'T00:00:00'),
+        new Date(endDate + 'T23:59:59'),
+        selectedUser
+      );
 
       // Fetch active customers
       const { data: customers } = await supabase
@@ -363,118 +351,12 @@ export const ModernBranchDashboard = () => {
         .select('id')
         .eq('is_active', true);
 
-      // Calculate revenue breakdown with MDR
-      let cashRevenue = 0;
-      let qrisRevenue = 0;
-      let transferRevenue = 0;
-      let mdrAmount = 0;
-
-      (transactions || []).forEach((trans: any) => {
-        const amount = Number(trans.final_amount || 0);
-        const paymentMethod = (trans.payment_method || '').toLowerCase();
-        
-        if (paymentMethod === 'cash') {
-          cashRevenue += amount;
-        } else if (paymentMethod === 'qris') {
-          qrisRevenue += amount;
-          mdrAmount += amount * 0.007; // 0.7% MDR
-        } else if (paymentMethod === 'transfer' || paymentMethod === 'bank_transfer' || paymentMethod === 'bank') {
-          transferRevenue += amount;
-        }
-      });
-
-      // Process ALL transaction items for accurate calculations using batched fetching
-      const transactionIds = transactions?.map(t => t.id) || [];
-      let totalItemsSold = 0;
-      let totalFoodCost = 0;
-      
-      if (transactionIds.length > 0) {
-        try {
-          console.log(`📦 Processing ${transactionIds.length} transactions with batched fetching...`);
-          
-          // Step 1: Fetch transaction items in batches to avoid payload size limits
-          const transactionChunks = chunkArray(transactionIds, 150);
-          const allItems: any[] = [];
-          
-          for (const chunk of transactionChunks) {
-            console.log(`📦 Fetching transaction items batch (${chunk.length} transactions)...`);
-            const { data: batchItems, error: itemsError } = await supabase
-              .from('transaction_items')
-              .select('product_id, quantity')
-              .in('transaction_id', chunk);
-              
-            if (itemsError) {
-              console.error('❌ Error fetching transaction items batch:', itemsError);
-              throw itemsError;
-            }
-            
-            allItems.push(...(batchItems || []));
-          }
-          
-          console.log(`📦 Total transaction items fetched: ${allItems.length}`);
-          
-          if (allItems.length > 0) {
-            // Step 2: Get unique product IDs and fetch their cost prices in batches
-            const uniqueProductIds = [...new Set(allItems.map(item => item.product_id))];
-            console.log(`📦 Fetching cost prices for ${uniqueProductIds.length} unique products...`);
-            
-            const productChunks = chunkArray(uniqueProductIds, 150);
-            const allProducts: any[] = [];
-            
-            for (const chunk of productChunks) {
-              const { data: batchProducts, error: productsError } = await supabase
-                .from('products')
-                .select('id, cost_price')
-                .in('id', chunk);
-                
-              if (productsError) {
-                console.error('❌ Error fetching products batch:', productsError);
-                throw productsError;
-              }
-              
-              allProducts.push(...(batchProducts || []));
-            }
-            
-            // Step 3: Create product cost map
-            const productCostMap = new Map();
-            allProducts.forEach(product => {
-              productCostMap.set(product.id, Number(product.cost_price || 0));
-            });
-            
-            // Step 4: Calculate totals
-            totalItemsSold = allItems.reduce((sum, item: any) => {
-              const qty = Number(item.quantity || 0);
-              return sum + qty;
-            }, 0);
-            
-            totalFoodCost = allItems.reduce((sum, item: any) => {
-              const qty = Number(item.quantity || 0);
-              const costPrice = productCostMap.get(item.product_id) || 0;
-              const itemCost = qty * costPrice;
-              if (costPrice === 0) {
-                console.warn(`⚠️ Missing cost_price for product ID: ${item.product_id}`);
-              }
-              return sum + itemCost;
-            }, 0);
-            
-            console.log(`📦 Final calculations: ${totalItemsSold} items, Rp ${totalFoodCost.toLocaleString()} food cost`);
-          }
-          
-        } catch (error) {
-          console.error('❌ Error in food cost calculation:', error);
-          // Keep zeros to show real data issues without fallback
-          totalItemsSold = 0;
-          totalFoodCost = 0;
-          console.log('📦 Using zero values due to calculation error');
-        }
-      }
-
-      // Get operational expenses
+      // Calculate operational expenses (separate from sales calculation)
       let expenseQuery = supabase
         .from('daily_operational_expenses')
         .select('amount, expense_type, rider_id')
-        .gte('expense_date', startStr)
-        .lte('expense_date', endStr);
+        .gte('expense_date', formatYMD(new Date(startDate)))
+        .lte('expense_date', formatYMD(new Date(endDate)));
 
       if (selectedUser !== 'all') {
         expenseQuery = expenseQuery.eq('rider_id', selectedUser);
@@ -490,14 +372,6 @@ export const ModernBranchDashboard = () => {
         return sum;
       }, 0);
 
-      const totalSales = cashRevenue + qrisRevenue + transferRevenue;
-      const totalTransactions = transactions?.length || 0;
-      const avgTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
-      
-      // Calculate profit using same logic as Profit/Loss report
-      const grossProfit = totalSales - mdrAmount;
-      const totalProfit = grossProfit - totalFoodCost - operationalExpenses;
-
       // Active riders = riders with active shift today
       const today = new Date().toISOString().split('T')[0];
       const { data: activeShifts } = await supabase
@@ -505,28 +379,38 @@ export const ModernBranchDashboard = () => {
         .select('id')
         .eq('shift_date', today)
         .eq('status', 'active');
-      const activeRiders = activeShifts?.length || 0;
+      const activeRidersCount = activeShifts?.length || 0;
 
       // Calculate cash deposit (cash sales minus operational expenses)
-      const cashDeposit = cashRevenue - operationalExpenses;
+      const cashDeposit = salesData.cashSales - operationalExpenses;
+
+      // Calculate food cost from raw material calculation
+      const rawMaterialCost = await calculateRawMaterialCost(
+        new Date(startDate + 'T00:00:00'),
+        new Date(endDate + 'T23:59:59'),
+        selectedUser
+      );
+
+      // Calculate profit
+      const totalProfit = salesData.netSales - rawMaterialCost - operationalExpenses;
 
       setStats({
-        totalSales,
-        totalTransactions,
-        avgTransactionValue,
-        totalFoodCost,
-        totalItemsSold,
+        totalSales: salesData.netSales,
+        totalTransactions: salesData.totalTransactions,
+        avgTransactionValue: salesData.avgPerTransaction,
+        totalFoodCost: rawMaterialCost,
+        totalItemsSold: salesData.totalItems,
         totalProfit,
         totalMembers: customers?.length || 0,
-        activeRiders,
-        cashSales: cashRevenue,
-        qrisSales: qrisRevenue,
-        transferSales: transferRevenue,
+        activeRiders: activeRidersCount,
+        cashSales: salesData.cashSales,
+        qrisSales: salesData.qrisSales,
+        transferSales: salesData.transferSales,
         operationalExpenses,
         cashDeposit
       });
       
-      console.log(`✅ Stats loaded: ${totalTransactions} transactions, ${formatCurrency(totalSales)} revenue`);
+      console.log(`✅ Stats loaded: ${salesData.totalTransactions} transactions, ${formatCurrency(salesData.netSales)} revenue`);
       
     } catch (error) {
       console.error("❌ Error fetching stats:", error);

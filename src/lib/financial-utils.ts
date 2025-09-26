@@ -183,6 +183,119 @@ export const calculateOperationalExpenses = async (
   return breakdown;
 };
 
+export interface SalesData {
+  grossSales: number;      // Total from transaction_items (before discounts)
+  netSales: number;        // Total from final_amount (after discounts)
+  totalDiscounts: number;  // Difference between gross and net
+  totalTransactions: number;
+  totalItems: number;
+  cashSales: number;
+  qrisSales: number;
+  transferSales: number;
+  avgPerTransaction: number;
+}
+
+export const calculateSalesData = async (
+  startDate: Date,
+  endDate: Date,
+  selectedRider?: string
+): Promise<SalesData> => {
+  const startStr = formatDate(startDate);
+  const endStr = formatDate(endDate);
+
+  // Build base query
+  let transQuery = supabase
+    .from('transactions')
+    .select(`
+      id,
+      final_amount,
+      payment_method,
+      discount_amount,
+      transaction_items (
+        quantity,
+        unit_price,
+        total_price
+      )
+    `)
+    .eq('status', 'completed')
+    .gte('transaction_date', `${startStr}T00:00:00`)
+    .lte('transaction_date', `${endStr}T23:59:59`);
+
+  if (selectedRider && selectedRider !== "all") {
+    transQuery = transQuery.eq('rider_id', selectedRider);
+  }
+
+  const { data: transactions } = await transQuery;
+
+  if (!transactions || transactions.length === 0) {
+    return {
+      grossSales: 0,
+      netSales: 0,
+      totalDiscounts: 0,
+      totalTransactions: 0,
+      totalItems: 0,
+      cashSales: 0,
+      qrisSales: 0,
+      transferSales: 0,
+      avgPerTransaction: 0
+    };
+  }
+
+  // Calculate sales data
+  let grossSales = 0;
+  let netSales = 0;
+  let totalDiscounts = 0;
+  let totalItems = 0;
+  let cashSales = 0;
+  let qrisSales = 0;
+  let transferSales = 0;
+
+  transactions.forEach((transaction: any) => {
+    const finalAmount = Number(transaction.final_amount || 0);
+    const discountAmount = Number(transaction.discount_amount || 0);
+    const paymentMethod = normalizePaymentMethod(transaction.payment_method);
+    
+    // Calculate gross sales from transaction items
+    const transactionGross = transaction.transaction_items?.reduce((sum: number, item: any) => 
+      sum + (Number(item.unit_price || 0) * Number(item.quantity || 0)), 0
+    ) || 0;
+    
+    // Calculate total items
+    const transactionItems = transaction.transaction_items?.reduce((sum: number, item: any) => 
+      sum + Number(item.quantity || 0), 0
+    ) || 0;
+
+    grossSales += transactionGross;
+    netSales += finalAmount;
+    totalDiscounts += discountAmount;
+    totalItems += transactionItems;
+
+    // Payment method breakdown (using final_amount for consistency)
+    if (paymentMethod === 'cash') {
+      cashSales += finalAmount;
+    } else if (paymentMethod === 'qris') {
+      qrisSales += finalAmount;
+    } else if (paymentMethod === 'transfer') {
+      transferSales += finalAmount;
+    }
+  });
+
+  const totalTransactions = transactions.length;
+  const avgPerTransaction = totalTransactions > 0 ? netSales / totalTransactions : 0;
+
+  return {
+    grossSales,
+    netSales,
+    totalDiscounts,
+    totalTransactions,
+    totalItems,
+    cashSales,
+    qrisSales,
+    transferSales,
+    avgPerTransaction
+  };
+};
+
 export const calculateNetProfit = (
   revenue: RevenueBreakdown,
   rawMaterialCost: number,

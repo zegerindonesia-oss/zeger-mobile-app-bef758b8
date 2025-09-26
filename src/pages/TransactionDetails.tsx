@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Download, Filter, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { calculateSalesData, type SalesData } from "@/lib/financial-utils";
 
 interface TransactionDetailItem {
   id: string;
@@ -21,7 +22,9 @@ interface TransactionDetailItem {
 }
 
 interface Summary {
-  totalSales: number;
+  grossSales: number;
+  netSales: number;
+  totalDiscounts: number;
   totalCost: number;
   totalProfit: number;
   totalQuantity: number;
@@ -34,7 +37,9 @@ export const TransactionDetails = () => {
   // Check if user is bh_report for white background styling
   const isBhReport = userProfile?.role === 'bh_report';
   const [summary, setSummary] = useState<Summary>({
-    totalSales: 0,
+    grossSales: 0,
+    netSales: 0,
+    totalDiscounts: 0,
     totalCost: 0,
     totalProfit: 0,
     totalQuantity: 0
@@ -63,7 +68,13 @@ export const TransactionDetails = () => {
   const fetchTransactionDetails = async () => {
     setLoading(true);
     try {
-      // Fetch transactions with items
+      // Use centralized sales calculation
+      const salesData = await calculateSalesData(
+        new Date(startDate + 'T00:00:00'),
+        new Date(endDate + 'T23:59:59')
+      );
+
+      // Fetch detailed transaction items for the table
       const { data: transactions, error } = await supabase
         .from('transactions')
         .select(`
@@ -122,14 +133,15 @@ export const TransactionDetails = () => {
 
       setTransactionDetails(filteredDetails);
 
-      // Calculate summary
+      // Calculate costs from filtered details
       const totalQuantity = filteredDetails.reduce((sum, item) => sum + item.quantity, 0);
       const totalCost = filteredDetails.reduce((sum, item) => sum + (item.cost_price * item.quantity), 0);
-      const totalSales = filteredDetails.reduce((sum, item) => sum + (item.selling_price * item.quantity), 0);
-      const totalProfit = totalSales - totalCost;
+      const totalProfit = salesData.netSales - totalCost;
 
       setSummary({
-        totalSales,
+        grossSales: salesData.grossSales,
+        netSales: salesData.netSales,
+        totalDiscounts: salesData.totalDiscounts,
         totalCost,
         totalProfit,
         totalQuantity
@@ -210,12 +222,23 @@ export const TransactionDetails = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
           <CardContent className="p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalSales)}</p>
-              <p className="text-sm font-medium text-gray-700">Total Penjualan</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.netSales)}</p>
+              <p className="text-sm font-medium text-gray-700">Total Penjualan (Bersih)</p>
+              <p className="text-xs text-gray-500">Setelah diskon</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <p className="text-lg font-bold text-gray-600">{formatCurrency(summary.grossSales)}</p>
+              <p className="text-sm font-medium text-gray-700">Penjualan (Kotor)</p>
+              <p className="text-xs text-gray-500">Sebelum diskon</p>
             </div>
           </CardContent>
         </Card>

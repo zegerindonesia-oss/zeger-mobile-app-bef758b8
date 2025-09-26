@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
 import { chunkArray } from "@/lib/array-utils";
 import { toast } from "sonner";
+import { calculateSalesData, type SalesData } from "@/lib/financial-utils";
 
 interface TransactionItem {
   id: string;
@@ -48,13 +49,16 @@ interface Transaction {
 }
 
 interface Summary {
-  totalSales: number;
+  grossSales: number;
+  netSales: number;
+  totalDiscounts: number;
   totalTransactions: number;
   avgPerTransaction: number;
   totalItemsSold: number;
   totalFoodCost: number;
   cashSales: number;
-  nonCashSales: number;
+  qrisSales: number;
+  transferSales: number;
 }
 
 interface Rider {
@@ -72,13 +76,16 @@ export const TransactionsEnhanced = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [summary, setSummary] = useState<Summary>({
-    totalSales: 0,
+    grossSales: 0,
+    netSales: 0,
+    totalDiscounts: 0,
     totalTransactions: 0,
     avgPerTransaction: 0,
     totalItemsSold: 0,
     totalFoodCost: 0,
     cashSales: 0,
-    nonCashSales: 0
+    qrisSales: 0,
+    transferSales: 0
   });
   
   // Filter states - auto-set for bh_report users
@@ -177,13 +184,16 @@ export const TransactionsEnhanced = () => {
       if (!data || data.length === 0) {
         setTransactions([]);
         setSummary({
-          totalSales: 0,
+          grossSales: 0,
+          netSales: 0,
+          totalDiscounts: 0,
           totalTransactions: 0,
           avgPerTransaction: 0,
           totalItemsSold: 0,
           totalFoodCost: 0,
           cashSales: 0,
-          nonCashSales: 0
+          qrisSales: 0,
+          transferSales: 0
         });
         return;
       }
@@ -304,21 +314,16 @@ export const TransactionsEnhanced = () => {
 
       setTransactions(filteredData);
 
-      // Calculate summary
-      const totalSales = filteredData.reduce((sum, t) => sum + (t.final_amount || 0), 0);
-      const totalTransactions = filteredData.length;
-      const avgPerTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+      // Use centralized sales calculation for consistency
+      const salesData = await calculateSalesData(
+        new Date(startDate + 'T00:00:00'),
+        new Date(endDate + 'T23:59:59'),
+        selectedRider
+      );
+
       const totalItemsSold = filteredData.reduce((sum, t) => 
         sum + (t.transaction_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0
       );
-
-      // Calculate cash vs non-cash sales
-      const cashSales = filteredData
-        .filter(t => t.payment_method === 'cash')
-        .reduce((sum, t) => sum + (t.final_amount || 0), 0);
-      const nonCashSales = filteredData
-        .filter(t => t.payment_method === 'qris' || t.payment_method === 'transfer')
-        .reduce((sum, t) => sum + (t.final_amount || 0), 0);
 
       // Calculate food cost from sold items (qty * product cost)
       console.log("🔍 Calculating food cost for", filteredData.length, "transactions");
@@ -336,13 +341,16 @@ export const TransactionsEnhanced = () => {
       console.log(`📊 Final Summary - Items: ${totalItemsSold}, Food Cost: Rp ${totalFoodCost.toLocaleString()}`);
 
       setSummary({
-        totalSales,
-        totalTransactions,
-        avgPerTransaction,
+        grossSales: salesData.grossSales,
+        netSales: salesData.netSales,
+        totalDiscounts: salesData.totalDiscounts,
+        totalTransactions: salesData.totalTransactions,
+        avgPerTransaction: salesData.avgPerTransaction,
         totalItemsSold,
         totalFoodCost,
-        cashSales,
-        nonCashSales
+        cashSales: salesData.cashSales,
+        qrisSales: salesData.qrisSales,
+        transferSales: salesData.transferSales
       });
 
     } catch (error) {
@@ -460,9 +468,9 @@ export const TransactionsEnhanced = () => {
                   <DollarSign className="h-5 w-5" />
                 </div>
                 <div className="text-right flex-1 ml-4">
-                  <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalSales)}</p>
-                  <p className="text-sm font-medium text-gray-900">Total Penjualan</p>
-                  <p className="text-xs text-gray-500">Omset periode</p>
+                  <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.netSales)}</p>
+                  <p className="text-sm font-medium text-gray-900">Total Penjualan (Bersih)</p>
+                  <p className="text-xs text-gray-500">Setelah diskon: {formatCurrency(summary.totalDiscounts)}</p>
                 </div>
               </div>
             </CardContent>
@@ -553,7 +561,7 @@ export const TransactionsEnhanced = () => {
                   <DollarSign className="h-5 w-5" />
                 </div>
                 <div className="text-right flex-1 ml-4">
-                  <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.nonCashSales)}</p>
+                  <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.qrisSales + summary.transferSales)}</p>
                   <p className="text-sm font-medium text-gray-900">Non Tunai</p>
                   <p className="text-xs text-gray-500">QRIS + Transfer</p>
                 </div>
