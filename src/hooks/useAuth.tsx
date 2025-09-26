@@ -1,21 +1,8 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { UserRole, Profile } from "@/lib/types";
 
-type UserRole = 'ho_admin' | 'ho_owner' | 'ho_staff' | 'branch_manager' | 'bh_staff' | 'bh_kasir' | 'bh_rider' | 'bh_report' | 'sb_branch_manager' | 'sb_kasir' | 'sb_rider' | 'sb_report' | 'rider' | 'finance' | 'customer';
-
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name: string;
-  role: UserRole;
-  phone?: string;
-  branch_id?: string;
-  is_active: boolean;
-  app_access_type?: 'web_backoffice' | 'pos_app' | 'rider_app';
-  created_at: string;
-  updated_at: string;
-}
 
 interface AuthContextType {
   user: User | null;

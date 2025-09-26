@@ -42,11 +42,11 @@ import { UserPermissionMatrix, ModulePermission } from "./UserPermissionMatrix";
 
 // Enhanced user role permissions and hierarchy based on the new structure
 interface UserManagementProps {
-  role: 'ho_admin' | 'ho_owner' | 'branch_manager' | 'bh_staff' | 'sb_branch_manager';
+  role: '1_HO_Admin' | '1_HO_Owner' | '2_Hub_Branch_Manager' | '3_SB_Branch_Manager' | 'ho_admin' | 'ho_owner' | 'branch_manager' | 'bh_staff' | 'sb_branch_manager';
   branchId?: string;
 }
 
-type UserRole = 'ho_admin' | 'ho_owner' | 'ho_staff' | 'branch_manager' | 'bh_staff' | 'bh_kasir' | 'bh_rider' | 'bh_report' | 'sb_branch_manager' | 'sb_kasir' | 'sb_rider' | 'sb_report' | 'rider' | 'finance' | 'customer';
+import { UserRole, Profile } from "@/lib/types";
 
 interface User {
   id: string;

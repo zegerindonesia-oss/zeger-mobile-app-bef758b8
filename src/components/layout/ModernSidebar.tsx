@@ -47,19 +47,31 @@ interface ModernSidebarProps {
   onToggle: () => void;
 }
 
+// Helper function to check user level and permissions
+const getUserLevel = (role: string): number => {
+  if (role.startsWith('1_')) return 1; // HO level
+  if (role.startsWith('2_')) return 2; // Hub level  
+  if (role.startsWith('3_')) return 3; // Small Branch level
+  // Legacy role mapping
+  if (['ho_admin', 'ho_owner', 'ho_staff'].includes(role)) return 1;
+  if (['branch_manager', 'bh_staff', 'bh_kasir', 'bh_rider'].includes(role)) return 2;
+  if (['sb_branch_manager', 'sb_kasir', 'sb_rider'].includes(role)) return 3;
+  return 99;
+};
+
 const getMenuItems = (userRole: string): MenuItem[] => [
   {
     id: "dashboard",
     label: "Dashboard",
     icon: Home,
     path: "/admin",
-    roles: ["ho_admin", "branch_manager", "finance"]
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "finance"]
   },
   {
     id: "analytics",
-    label: "Analytics",
+    label: "Analytics", 
     icon: BarChart3,
-    roles: ["ho_admin", "branch_manager"],
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager"],
     children: [
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
@@ -72,7 +84,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     id: "inventory",
     label: "Inventory",
     icon: Package,
-    roles: ["ho_admin", "branch_manager"],
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"],
     children: [
       { id: "production", label: "Production", icon: Factory, path: "/inventory/production" },
       { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
@@ -84,7 +96,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     id: "finance",
     label: "Finance",
     icon: DollarSign,
-    roles: ["ho_admin", "branch_manager", "finance"],
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager", "finance"],
     children: [
       { id: "profit-loss", label: "Laba Rugi", icon: FileText, path: "/finance/profit-loss" },
       { id: "cash-flow", label: "Arus Kas", icon: PieChart, path: "/finance/cash-flow" },
@@ -96,7 +108,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     id: "reports",
     label: "Reports",
     icon: BarChart3,
-    roles: ["ho_admin", "branch_manager", "finance"],
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "finance"],
     children: [
       { id: "sales-report", label: "Sales Report", icon: FileText, path: "/reports/sales" },
       { id: "inventory-report", label: "Inventory Report", icon: FileText, path: "/reports/inventory" },
@@ -107,15 +119,38 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     id: "admin",
     label: "Admin",
     icon: Users,
-    roles: ["ho_admin", "branch_manager"],
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager"],
     children: [
-      { id: "user-management", label: "User Management", icon: Users, path: userRole === 'ho_admin' ? "/admin/users" : "/admin-users" },
-      { id: "branches", label: "Kelola Cabang", icon: Building2, path: "/branches", roles: ["ho_admin"] },
+      { 
+        id: "user-management", 
+        label: "User Management", 
+        icon: Users, 
+        path: getUserLevel(userRole) === 1 ? "/admin/users" : "/admin-users" 
+      },
+      { 
+        id: "branches", 
+        label: "Kelola Cabang", 
+        icon: Building2, 
+        path: "/branches", 
+        roles: ["1_HO_Admin", "1_HO_Owner", "ho_admin"] 
+      },
       { id: "riders", label: "Kelola Rider", icon: Truck, path: "/riders" }
     ]
   },
-  { id: "help", label: "Help & Support", icon: HelpCircle, path: "/help", roles: ["ho_admin", "branch_manager"] },
-  { id: "settings", label: "Settings", icon: Settings, path: "/settings", roles: ["ho_admin", "branch_manager"] }
+  { 
+    id: "help", 
+    label: "Help & Support", 
+    icon: HelpCircle, 
+    path: "/help", 
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager"] 
+  },
+  { 
+    id: "settings", 
+    label: "Settings", 
+    icon: Settings, 
+    path: "/settings", 
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager"] 
+  }
 ];
 
 export const ModernSidebar = ({ userRole, isOpen, onToggle }: ModernSidebarProps) => {

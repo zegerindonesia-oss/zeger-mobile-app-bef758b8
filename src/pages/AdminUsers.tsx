@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { EnhancedUserManagement } from "@/components/user/EnhancedUserManagement";
 import { SyncButton } from "@/components/common/SyncButton";
 
+import { UserRole } from "@/lib/types";
+
 export default function AdminUsers() {
   const { user, userProfile } = useAuth();
   const [creating, setCreating] = useState(false);
@@ -88,7 +90,7 @@ export default function AdminUsers() {
       )}
 
       {/* Enhanced User Management */}
-      {userProfile && (userProfile.role === 'ho_admin' || userProfile.role === 'ho_owner' || userProfile.role === 'branch_manager' || userProfile.role === 'bh_staff' || userProfile.role === 'sb_branch_manager') && (
+      {userProfile && (userProfile.role === '1_HO_Admin' || userProfile.role === 'ho_admin' || userProfile.role === 'ho_owner' || userProfile.role === '2_Hub_Branch_Manager' || userProfile.role === 'branch_manager' || userProfile.role === 'bh_staff' || userProfile.role === '3_SB_Branch_Manager' || userProfile.role === 'sb_branch_manager') && (
         <EnhancedUserManagement 
           role={userProfile.role as any} 
           branchId={userProfile.role === 'branch_manager' || userProfile.role === 'sb_branch_manager' ? userProfile.branch_id : undefined}

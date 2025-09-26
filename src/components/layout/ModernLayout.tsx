@@ -4,24 +4,7 @@ import { ModernSidebar } from "./ModernSidebar";
 import { ModernHeader } from "./ModernHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-
-type UserRole = 'ho_admin' | 'ho_owner' | 'ho_staff' | 'branch_manager' | 'bh_staff' | 'bh_kasir' | 'bh_rider' | 'bh_report' | 'sb_branch_manager' | 'sb_kasir' | 'sb_rider' | 'sb_report' | 'rider' | 'finance' | 'customer';
-
-interface Profile {
-  id: string;
-  role: UserRole;
-  branch_id?: string;
-  full_name: string;
-  app_access_type?: 'web_backoffice' | 'pos_app' | 'rider_app';
-}
-
-interface Branch {
-  id: string;
-  name: string;
-  code: string;
-  address: string;
-  branch_type: string;
-}
+import { Profile as SharedProfile, Branch as SharedBranch } from "@/lib/types";
 
 interface ModernLayoutProps {
   children?: ReactNode;
@@ -29,8 +12,8 @@ interface ModernLayoutProps {
 
 export const ModernLayout = ({ children }: ModernLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [branch, setBranch] = useState<Branch | null>(null);
+  const [profile, setProfile] = useState<SharedProfile | null>(null);
+  const [branch, setBranch] = useState<SharedBranch | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -48,7 +31,7 @@ export const ModernLayout = ({ children }: ModernLayoutProps) => {
         .single();
 
       if (error) throw error;
-      setProfile(profileData);
+      setProfile(profileData as SharedProfile);
 
       // Fetch branch info if user is branch manager
       if (profileData?.branch_id) {
@@ -59,7 +42,7 @@ export const ModernLayout = ({ children }: ModernLayoutProps) => {
           .single();
 
         if (!branchError) {
-          setBranch(branchData);
+          setBranch(branchData as SharedBranch);
         }
       }
     } catch (error: any) {
