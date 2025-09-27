@@ -57,36 +57,53 @@ export const PieChart3D = ({ data, title }: PieChart3DProps) => {
       <CardHeader>
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-80 w-full">
+      <CardContent className="p-3">
+        <div className="h-64 w-full relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
                 {data.map((entry, index) => (
-                  <linearGradient key={index} id={`gradient-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <radialGradient key={index} id={`gradient-${index}`} cx="50%" cy="40%" r="60%">
                     <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
-                    <stop offset="100%" stopColor={entry.color} stopOpacity={0.7} />
-                  </linearGradient>
+                    <stop offset="50%" stopColor={entry.color} stopOpacity={0.9} />
+                    <stop offset="100%" stopColor={entry.color} stopOpacity={0.6} />
+                  </radialGradient>
+                ))}
+                {data.map((entry, index) => (
+                  <filter key={index} id={`shadow-${index}`}>
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                    <feOffset dx="2" dy="3" result="offset" />
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.3"/>
+                    </feComponentTransfer>
+                    <feMerge> 
+                      <feMergeNode/>
+                      <feMergeNode in="SourceGraphic"/> 
+                    </feMerge>
+                  </filter>
                 ))}
               </defs>
               <Pie
                 data={data}
                 cx="50%"
-                cy="50%"
+                cy="45%"
                 labelLine={false}
                 label={renderCustomizedLabel}
-                outerRadius={100}
+                outerRadius={70}
+                innerRadius={0}
                 fill="#8884d8"
                 dataKey="value"
-                strokeWidth={2}
+                strokeWidth={1}
                 stroke="#fff"
+                paddingAngle={2}
               >
                 {data.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={`url(#gradient-${index})`}
                     style={{
-                      filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))'
+                      filter: `url(#shadow-${index})`,
+                      transformOrigin: 'center',
                     }}
                   />
                 ))}
@@ -94,9 +111,10 @@ export const PieChart3D = ({ data, title }: PieChart3DProps) => {
               <Tooltip content={<CustomTooltip />} />
               <Legend 
                 verticalAlign="bottom" 
-                height={36}
+                height={28}
+                wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
                 formatter={(value, entry: any) => (
-                  <span style={{ color: entry.color, fontWeight: 500 }}>
+                  <span style={{ color: entry.color, fontWeight: 500, fontSize: '10px' }}>
                     {value} ({entry.payload.percentage.toFixed(1)}%)
                   </span>
                 )}

@@ -77,7 +77,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
       { id: "customers", label: "Customers", icon: Database, path: "/customers" },
       { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance" },
-      { id: "location-analytics", label: "Location Analytics", icon: LocationPin, path: "/location-analytics" }
+      { id: "location-analytics", label: "Location Analytics", icon: LocationPin, path: "/location-analytics", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "bh_report"] }
     ]
   },
   {
@@ -96,12 +96,12 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     id: "finance",
     label: "Finance",
     icon: DollarSign,
-    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager", "finance"],
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager", "finance", "bh_report"],
     children: [
       { id: "profit-loss", label: "Laba Rugi", icon: FileText, path: "/finance/profit-loss" },
       { id: "cash-flow", label: "Arus Kas", icon: PieChart, path: "/finance/cash-flow" },
       { id: "balance-sheet", label: "Neraca", icon: FileText, path: "/finance/balance-sheet" },
-      { id: "operational-expenses", label: "Beban Operasional", icon: FileText, path: "/finance/operational-expenses" }
+      { id: "operational-expenses", label: "Beban Operasional", icon: FileText, path: "/finance/operational-expenses", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "bh_report"] }
     ]
   },
   {

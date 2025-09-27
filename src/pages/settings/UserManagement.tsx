@@ -1,15 +1,24 @@
 import { EnhancedUserManagement } from "@/components/user/EnhancedUserManagement";
+import { ComprehensiveUserForm } from "@/components/user/ComprehensiveUserForm";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SyncButton } from "@/components/common/SyncButton";
-import { Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, UserPlus } from "lucide-react";
+import { useState } from "react";
 
 const SettingsUserManagement = () => {
   const { userProfile } = useAuth();
+  const [isComprehensiveFormOpen, setIsComprehensiveFormOpen] = useState(false);
 
   if (!userProfile) {
     return <div>Loading...</div>;
   }
+
+  const handleUserCreated = () => {
+    // Refresh the user list or handle success
+    window.location.reload(); // Simple refresh, could be improved with state management
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -21,7 +30,16 @@ const SettingsUserManagement = () => {
             <p className="text-muted-foreground">Kelola pengguna dan hak akses</p>
           </div>
         </div>
-        <SyncButton />
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={() => setIsComprehensiveFormOpen(true)}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Tambah User (Advanced)
+          </Button>
+          <SyncButton />
+        </div>
       </div>
 
       <Card>
@@ -35,6 +53,14 @@ const SettingsUserManagement = () => {
           />
         </CardContent>
       </Card>
+
+      <ComprehensiveUserForm
+        isOpen={isComprehensiveFormOpen}
+        onClose={() => setIsComprehensiveFormOpen(false)}
+        onSuccess={handleUserCreated}
+        userRole={userProfile.role}
+        branchId={userProfile.branch_id || undefined}
+      />
     </div>
   );
 };

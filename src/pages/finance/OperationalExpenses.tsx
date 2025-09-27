@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Eye, Edit, Trash2 } from "lucide-react";
+import { CalendarIcon, Eye, Edit, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/hooks/useAuth";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -28,6 +29,22 @@ type Expense = {
 }
 
 export default function OperationalExpenses() {
+  const { userProfile } = useAuth();
+  const canEdit = userProfile && ['ho_admin', 'branch_manager'].includes(userProfile.role);
+  const canView = userProfile && ['ho_admin', 'branch_manager', 'bh_report'].includes(userProfile.role);
+
+  if (!userProfile || !canView) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">Anda tidak memiliki akses ke halaman ini.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Use Indonesian timezone for dates
   const getJakartaDate = () => {
     const now = new Date();
@@ -454,9 +471,10 @@ export default function OperationalExpenses() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Tambah Beban</CardTitle></CardHeader>
-        <CardContent>
+      {canEdit && (
+        <Card>
+          <CardHeader><CardTitle>Tambah Beban</CardTitle></CardHeader>
+          <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Kategori</Label>
@@ -532,9 +550,10 @@ export default function OperationalExpenses() {
             <div className="md:col-span-2">
               <Button onClick={onAdd} className="w-full md:w-auto">Simpan</Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>Riwayat (Termasuk Beban Rider)</CardTitle></CardHeader>
@@ -587,8 +606,8 @@ export default function OperationalExpenses() {
                       </Dialog>
                     )}
                     
-                    {/* Edit/Delete buttons - only for operational expenses */}
-                    {(it as any).source === 'operational' && (
+                    {/* Edit/Delete buttons - only for operational expenses and users with edit permissions */}
+                    {(it as any).source === 'operational' && canEdit && (
                       <>
                         <Button
                           variant="outline"
