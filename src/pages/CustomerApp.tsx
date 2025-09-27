@@ -1,144 +1,274 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ZegerLogo } from '@/components/ui/zeger-logo';
 import { 
+  Home, 
+  Ticket, 
+  ClipboardList, 
+  User,
   MapPin,
-  Search,
-  Plus,
-  Minus,
   ShoppingCart,
   Star,
-  Clock,
-  Navigation,
-  Gift
-} from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { ZegerLogo } from "@/components/ui/zeger-logo";
+  Gift,
+  Plus,
+  Minus,
+  Phone
+} from 'lucide-react';
+import { CustomerAuth } from '@/components/customer/CustomerAuth';
+import { CustomerHome } from '@/components/customer/CustomerHome';
+import { CustomerVouchers } from '@/components/customer/CustomerVouchers';
+import { CustomerOrders } from '@/components/customer/CustomerOrders';
+import { CustomerProfile } from '@/components/customer/CustomerProfile';
+import { CustomerMap } from '@/components/customer/CustomerMap';
+import { CustomerMenu } from '@/components/customer/CustomerMenu';
+import { CustomerCart } from '@/components/customer/CustomerCart';
+import { useToast } from '@/hooks/use-toast';
+
+interface CustomerUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  points: number;
+  address: string;
+  photo_url?: string;
+}
 
 interface Product {
   id: string;
   name: string;
-  price: number;
-  category: string;
   description: string;
+  price: number;
+  image_url: string;
+  category: string;
+  custom_options: any;
 }
 
 interface CartItem extends Product {
   quantity: number;
+  customizations: any;
 }
 
-interface LoyaltyProgram {
-  points: number;
-  tier: string;
-  nextTierPoints: number;
-}
+type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'cart';
 
-const CustomerApp = () => {
+export default function CustomerApp() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [customerUser, setCustomerUser] = useState<CustomerUser | null>(null);
+  
+  // App state
+  const [activeView, setActiveView] = useState<View>('home');
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loyaltyData, setLoyaltyData] = useState<LoyaltyProgram>({
-    points: 1250,
-    tier: "Silver",
-    nextTierPoints: 2000
-  });
-  const [nearbyRiders, setNearbyRiders] = useState([
-    { id: 1, name: "Ahmad", distance: "0.5 km", eta: "5 min", rating: 4.8 },
-    { id: 2, name: "Budi", distance: "1.2 km", eta: "8 min", rating: 4.9 },
-    { id: 3, name: "Sari", distance: "2.1 km", eta: "12 min", rating: 4.7 }
-  ]);
-  const [activeView, setActiveView] = useState<'menu' | 'cart' | 'loyalty' | 'riders'>('menu');
+  const [loading, setLoading] = useState(true);
 
+  // Check authentication and fetch customer profile
+  useEffect(() => {
+    if (user) {
+      fetchCustomerProfile();
+    } else {
+      setIsAuthenticated(false);
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Fetch products on mount
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const fetchCustomerProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customer_users')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // No profile exists, user needs to complete registration
+        setIsAuthenticated(false);
+      } else if (error) {
+        throw error;
+      } else {
+        setCustomerUser(data);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error('Error fetching customer profile:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat profil customer",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('is_active', true)
-        .order('category')
-        .order('name');
+        .eq('is_active', true);
 
       if (error) throw error;
       setProducts(data || []);
-    } catch (error: any) {
-      toast.error("Gagal memuat menu");
+    } catch (error) {
+      console.error('Error fetching products:', error);
     }
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const addToCart = (product: Product, customizations: any = {}, quantity: number = 1) => {
+    const cartKey = `${product.id}-${JSON.stringify(customizations)}`;
+    const existingItem = cart.find(item => 
+      `${item.id}-${JSON.stringify(item.customizations)}` === cartKey
+    );
 
-  // Group products by category
-  const groupedProducts = filteredProducts.reduce((acc, product) => {
-    const category = product.category || 'Lainnya';
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(product);
-    return acc;
-  }, {} as Record<string, Product[]>);
-
-  const categories = Object.keys(groupedProducts).sort();
-
-  // Category icons for visual distinction
-  const categoryIcons: Record<string, string> = {
-    'Espresso Based': '☕',
-    'Milk Based': '🥛',
-    'Signature': '⭐',
-    'Creampresso': '🍦',
-    'Refresher': '🍃',
-    'Topping': '🍯',
-    'Syrup': '🍭'
-  };
-
-  const addToCart = (product: Product) => {
-    const existing = cart.find(item => item.id === product.id);
-    
-    if (existing) {
-      setCart(cart.map(item => 
-        item.id === product.id 
-          ? { ...item, quantity: item.quantity + 1 }
+    if (existingItem) {
+      setCart(cart.map(item =>
+        `${item.id}-${JSON.stringify(item.customizations)}` === cartKey
+          ? { ...item, quantity: item.quantity + quantity }
           : item
       ));
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart([...cart, { ...product, quantity, customizations }]);
     }
-    
-    toast.success(`${product.name} ditambahkan!`);
+
+    toast({
+      title: "Ditambahkan ke keranjang",
+      description: `${product.name} berhasil ditambahkan`,
+    });
   };
 
-  const updateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      setCart(cart.filter(item => item.id !== id));
-      return;
+  const updateCartQuantity = (productId: string, customizations: any, newQuantity: number) => {
+    const cartKey = `${productId}-${JSON.stringify(customizations)}`;
+    
+    if (newQuantity <= 0) {
+      setCart(cart.filter(item => 
+        `${item.id}-${JSON.stringify(item.customizations)}` !== cartKey
+      ));
+    } else {
+      setCart(cart.map(item =>
+        `${item.id}-${JSON.stringify(item.customizations)}` === cartKey
+          ? { ...item, quantity: newQuantity }
+          : item
+      ));
     }
-    
-    setCart(cart.map(item =>
-      item.id === id ? { ...item, quantity } : item
-    ));
   };
 
-  const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const earnedPoints = Math.floor(totalAmount / 1000); // 1 point per 1000 rupiah
-
-  const callRider = (riderId: number) => {
-    const rider = nearbyRiders.find(r => r.id === riderId);
-    toast.success(`${rider?.name} sedang menuju lokasi Anda! ETA: ${rider?.eta}`);
+  const getTotalPrice = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const renderMenu = () => (
+  const getTotalItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <ZegerLogo size="lg" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <CustomerAuth onAuthSuccess={() => {
+      setIsAuthenticated(true);
+      fetchCustomerProfile();
+    }} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-3">
+            <ZegerLogo size="sm" />
+            <div>
+              <h1 className="font-bold text-lg text-primary">Zeger Coffee</h1>
+              <p className="text-xs text-muted-foreground">Hi, {customerUser?.name}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 bg-amber-50 px-3 py-1 rounded-full">
+              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+              <span className="text-sm font-medium text-amber-700">
+                {customerUser?.points || 0}
+              </span>
+            </div>
+            
+            {cart.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="relative"
+                onClick={() => setActiveView('cart')}
+              >
+                <ShoppingCart className="h-4 w-4" />
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                >
+                  {getTotalItems()}
+                </Badge>
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="pb-20">
+        <CustomerHome 
+          customerUser={customerUser} 
+          onNavigate={setActiveView}
+          recentProducts={products.slice(0, 6)}
+          onAddToCart={addToCart}
+        />
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+        <div className="flex items-center justify-around py-2">
+          {[
+            { key: 'home', icon: Home, label: 'Home' },
+            { key: 'vouchers', icon: Ticket, label: 'Voucher' },
+            { key: 'orders', icon: ClipboardList, label: 'Pesanan' },
+            { key: 'profile', icon: User, label: 'Akun' }
+          ].map(({ key, icon: Icon, label }) => (
+            <Button
+              key={key}
+              variant="ghost"
+              size="sm"
+              className={`flex flex-col items-center space-y-1 h-auto py-2 px-3 ${
+                activeView === key ? 'text-primary' : 'text-muted-foreground'
+              }`}
+              onClick={() => setActiveView(key as View)}
+            >
+              <Icon className={`h-5 w-5 ${activeView === key ? 'fill-primary/20' : ''}`} />
+              <span className="text-xs font-medium">{label}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
     <div className="space-y-6 pb-20">
       <div className="text-center py-4">
         <ZegerLogo size="md" />

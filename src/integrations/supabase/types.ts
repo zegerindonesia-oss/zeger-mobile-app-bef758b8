@@ -249,6 +249,285 @@ export type Database = {
           },
         ]
       }
+      customer_order_items: {
+        Row: {
+          created_at: string
+          custom_options: Json | null
+          id: string
+          order_id: string
+          price: number
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          custom_options?: Json | null
+          id?: string
+          order_id: string
+          price: number
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          custom_options?: Json | null
+          id?: string
+          order_id?: string
+          price?: number
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "customer_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_orders: {
+        Row: {
+          created_at: string
+          delivery_address: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          payment_method: string | null
+          rider_id: string | null
+          status: string
+          total_price: number
+          updated_at: string
+          user_id: string
+          voucher_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_address?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          payment_method?: string | null
+          rider_id?: string | null
+          status?: string
+          total_price?: number
+          updated_at?: string
+          user_id: string
+          voucher_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_address?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          payment_method?: string | null
+          rider_id?: string | null
+          status?: string
+          total_price?: number
+          updated_at?: string
+          user_id?: string
+          voucher_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_orders_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "customer_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "customer_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_points_history: {
+        Row: {
+          change: number
+          created_at: string
+          description: string
+          id: string
+          order_id: string | null
+          user_id: string
+        }
+        Insert: {
+          change: number
+          created_at?: string
+          description: string
+          id?: string
+          order_id?: string | null
+          user_id: string
+        }
+        Update: {
+          change?: number
+          created_at?: string
+          description?: string
+          id?: string
+          order_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_points_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "customer_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_points_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "customer_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_user_vouchers: {
+        Row: {
+          claimed_at: string
+          id: string
+          is_used: boolean | null
+          used_at: string | null
+          user_id: string
+          voucher_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          id?: string
+          is_used?: boolean | null
+          used_at?: string | null
+          user_id: string
+          voucher_id: string
+        }
+        Update: {
+          claimed_at?: string
+          id?: string
+          is_used?: boolean | null
+          used_at?: string | null
+          user_id?: string
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_user_vouchers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "customer_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_user_vouchers_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "customer_vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_users: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_online: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          phone: string | null
+          photo_url: string | null
+          points: number
+          role: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_online?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          phone?: string | null
+          photo_url?: string | null
+          points?: number
+          role?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_online?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          phone?: string | null
+          photo_url?: string | null
+          points?: number
+          role?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      customer_vouchers: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          min_order: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          discount_type?: string
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          min_order?: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          min_order?: number | null
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -656,6 +935,7 @@ export type Database = {
           code: string
           cost_price: number | null
           created_at: string | null
+          custom_options: Json | null
           description: string | null
           id: string
           image_url: string | null
@@ -669,6 +949,7 @@ export type Database = {
           code: string
           cost_price?: number | null
           created_at?: string | null
+          custom_options?: Json | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -682,6 +963,7 @@ export type Database = {
           code?: string
           cost_price?: number | null
           created_at?: string | null
+          custom_options?: Json | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -814,6 +1096,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      rider_locations: {
+        Row: {
+          id: string
+          latitude: number
+          longitude: number
+          rider_id: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          latitude: number
+          longitude: number
+          rider_id: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          latitude?: number
+          longitude?: number
+          rider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_locations_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: true
+            referencedRelation: "customer_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shift_management: {
         Row: {
