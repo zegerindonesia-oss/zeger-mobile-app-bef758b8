@@ -159,8 +159,8 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         .eq('is_active', true);
       setProducts(productsData || []);
 
-      // Fetch riders - include all active riders regardless of branch_id for stock transfers
-      console.log('Fetching riders...');
+      // Fetch riders - filter by branch for branch managers
+      console.log('Fetching riders for role:', role, 'branchId:', branchId);
       const { data: ridersData, error: ridersError } = await supabase
         .from('profiles')
         .select('id, full_name, branch_id')
@@ -173,10 +173,11 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         console.error('Error fetching riders:', ridersError);
       } else {
         console.log('Riders fetched:', ridersData);
-        // Filter riders by branch for small branch managers  
+        // Filter riders by branch for all branch manager types
         let filteredRiders = ridersData || [];
-        if (role === 'sb_branch_manager' && branchId) {
+        if ((role === 'branch_manager' || role === 'sb_branch_manager') && branchId) {
           filteredRiders = ridersData?.filter(rider => rider.branch_id === branchId) || [];
+          console.log('Filtered riders for branch:', filteredRiders);
         }
         setRiders(filteredRiders);
       }
