@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, FC } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -36,10 +36,10 @@ export const usePermissions = () => {
 };
 
 interface PermissionProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children }) => {
+export const PermissionProvider: FC<PermissionProviderProps> = ({ children }) => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const { userProfile } = useAuth();
@@ -119,11 +119,11 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
 interface PermissionGuardProps {
   module: string;
   permission?: string;
-  fallback?: React.ReactNode;
-  children: React.ReactNode;
+  fallback?: ReactNode;
+  children: ReactNode;
 }
 
-export const PermissionGuard: React.FC<PermissionGuardProps> = ({
+export const PermissionGuard: FC<PermissionGuardProps> = ({
   module,
   permission = 'view',
   fallback = null,
