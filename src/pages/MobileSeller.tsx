@@ -20,7 +20,7 @@ export default function MobileSeller() {
   const activeTab = searchParams.get('tab') || 'dashboard';
 
   useEffect(() => {
-    if (!loading && (!user || !userProfile || userProfile.role !== 'rider')) {
+    if (!loading && (!user || !userProfile || !['rider', 'sb_rider', 'bh_rider'].includes(userProfile.role))) {
       window.location.href = '/auth';
     }
   }, [user, userProfile, loading]);
@@ -46,7 +46,7 @@ export default function MobileSeller() {
     );
   }
 
-  if (!user || !userProfile || userProfile.role !== 'rider') {
+  if (!user || !userProfile || !['rider', 'sb_rider', 'bh_rider'].includes(userProfile.role)) {
     return null; // Will redirect to auth
   }
 

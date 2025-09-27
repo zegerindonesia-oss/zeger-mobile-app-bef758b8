@@ -58,7 +58,7 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/mobile-seller" element={
-              <RoleBasedRoute allowedRoles={['rider']}>
+              <RoleBasedRoute allowedRoles={['rider', 'sb_rider', 'bh_rider']}>
                 <MobileSeller />
               </RoleBasedRoute>
             } />
@@ -96,7 +96,7 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/customers" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'rider']}>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'rider', 'sb_rider', 'bh_rider']}>
                 <ModernLayout>
                   <CustomerManager />
                 </ModernLayout>

@@ -27,6 +27,8 @@ export const RoleBasedRoute = ({
         // Redirect based on user role
         const roleRedirects = {
           'rider': '/mobile-seller',
+          'sb_rider': '/mobile-seller',
+          'bh_rider': '/mobile-seller',
           'customer': '/customer-app',
           'ho_admin': '/',
           'branch_manager': '/',

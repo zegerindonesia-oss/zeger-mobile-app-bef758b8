@@ -47,6 +47,8 @@ const Auth = () => {
     if (!loading && user && userProfile) {
       const roleRedirects = {
         'rider': '/mobile-seller',
+        'sb_rider': '/mobile-seller',
+        'bh_rider': '/mobile-seller',
         'customer': '/customer-app', 
         'ho_admin': '/',
         'branch_manager': '/',

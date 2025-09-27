@@ -164,7 +164,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       const { data: ridersData, error: ridersError } = await supabase
         .from('profiles')
         .select('id, full_name, branch_id')
-        .eq('role', 'rider')
+        .in('role', ['rider', 'sb_rider', 'bh_rider'])
         .eq('is_active', true)
         .not('branch_id', 'is', null)
         .order('full_name');
@@ -187,7 +187,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       await fetchRiderShifts();
 
       // Fetch active shift for current rider if role is rider
-      if (role === 'rider') {
+      if (['rider', 'sb_rider', 'bh_rider'].includes(role)) {
         await fetchActiveShift();
       }
 
@@ -304,9 +304,9 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         query = query.eq('rider_id', selectedUserFilter);
       }
 
-      if (role === 'branch_manager' && branchId) {
+      if ((role === 'branch_manager' || role === 'sb_branch_manager') && branchId) {
         query = query.eq('branch_id', branchId);
-      } else if (role === 'rider') {
+      } else if (['rider', 'sb_rider', 'bh_rider'].includes(role)) {
         query = query.eq('rider_id', userId);
       }
 
@@ -380,7 +380,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       return;
     }
 
-    if (role === 'branch_manager' && !selectedRider) {
+    if ((role === 'branch_manager' || role === 'sb_branch_manager') && !selectedRider) {
       toast.error("Pilih rider");
       return;
     }
@@ -409,7 +409,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         quantity: transferQuantity,
         movement_type: 'transfer' as const,
         branch_id: role === 'ho_admin' ? selectedToBranch : branchId,
-        rider_id: role === 'branch_manager' ? selectedRider : null,
+        rider_id: (role === 'branch_manager' || role === 'sb_branch_manager') ? selectedRider : null,
         created_by: userId,
         notes: `Transfer ${role === 'ho_admin' ? 'to branch' : 'to rider'}`
       };
@@ -421,7 +421,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       if (error) throw error;
 
       // Reduce branch hub stock when transferring to rider
-      if (role === 'branch_manager' && selectedRider) {
+      if ((role === 'branch_manager' || role === 'sb_branch_manager') && selectedRider) {
         await supabase
           .from('inventory')
           .update({ 
