@@ -236,7 +236,7 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/stock-transfer" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
                 <ModernLayout>
                   <StockTransfer />
                 </ModernLayout>
