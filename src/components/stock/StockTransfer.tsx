@@ -173,8 +173,13 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         console.error('Error fetching riders:', ridersError);
       } else {
         console.log('Riders fetched:', ridersData);
+        // Filter riders by branch for small branch managers  
+        let filteredRiders = ridersData || [];
+        if (role === 'sb_branch_manager' && branchId) {
+          filteredRiders = ridersData?.filter(rider => rider.branch_id === branchId) || [];
+        }
+        setRiders(filteredRiders);
       }
-      setRiders(ridersData || []);
 
       // Fetch branches
       const { data: branchesData } = await supabase

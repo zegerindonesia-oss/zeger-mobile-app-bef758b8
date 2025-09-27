@@ -1285,6 +1285,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_rider_role: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       upsert_bh_report_assignment: {
         Args: { _report_user_id: string; _rider_profile_id: string }
         Returns: undefined
