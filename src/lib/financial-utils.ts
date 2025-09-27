@@ -42,49 +42,16 @@ export const calculateRevenue = async (
   endDate: Date,
   selectedRider?: string
 ): Promise<RevenueBreakdown> => {
-  const startStr = formatDate(startDate);
-  const endStr = formatDate(endDate);
+  // Use centralized sales calculation for consistency
+  const salesData = await calculateSalesData(startDate, endDate, selectedRider);
   
-  // Use Asia/Jakarta timezone
-  const startDateTime = `${startStr}T00:00:00+07:00`;
-  const endDateTime = `${endStr}T23:59:59+07:00`;
-
-  let transQuery = supabase
-    .from('transactions')
-    .select('final_amount, payment_method')
-    .eq('status', 'completed')
-    .gte('transaction_date', startDateTime)
-    .lte('transaction_date', endDateTime);
-
-  if (selectedRider && selectedRider !== "all") {
-    transQuery = transQuery.eq('rider_id', selectedRider);
-  }
-
-  const { data: transactions } = await transQuery;
-
-  let cashRevenue = 0;
-  let qrisRevenue = 0;
-  let transferRevenue = 0;
-  let mdrAmount = 0;
-
-  (transactions || []).forEach((trans: any) => {
-    const amount = Number(trans.final_amount || 0);
-    const paymentMethod = normalizePaymentMethod(trans.payment_method);
-    
-    if (paymentMethod === 'cash') {
-      cashRevenue += amount;
-    } else if (paymentMethod === 'qris') {
-      qrisRevenue += amount;
-      mdrAmount += amount * 0.007; // 0.7% MDR
-    } else if (paymentMethod === 'transfer') {
-      transferRevenue += amount;
-    }
-  });
+  // Calculate MDR only on QRIS payments (0.7%)
+  const mdrAmount = salesData.salesByPaymentMethod.qris * 0.007;
 
   return {
-    cash: cashRevenue,
-    qris: qrisRevenue,
-    transfer: transferRevenue,
+    cash: salesData.salesByPaymentMethod.cash,
+    qris: salesData.salesByPaymentMethod.qris,
+    transfer: salesData.salesByPaymentMethod.transfer,
     mdr: mdrAmount
   };
 };
@@ -141,6 +108,61 @@ export const calculateRawMaterialCost = async (
   return totalCost;
 };
 
+// Map existing granular expense types to standardized categories
+const mapExpenseToCategory = (expenseType: string): keyof ExpenseBreakdown => {
+  const type = expenseType.toLowerCase();
+  
+  // Beban Operasional Harian (daily operational expenses)
+  if (type.includes('es batu') || type.includes('plastik') || type.includes('sedotan') || 
+      type.includes('tissue') || type.includes('food') || type.includes('balleys') ||
+      type.includes('waste') || type.includes('pompa') || type.includes('angin') ||
+      type.includes('parkir') || type.includes('kunci') || type.includes('daily') ||
+      type.includes('operasional') || type.includes('operational')) {
+    return 'operationalDaily';
+  }
+  
+  // Beban Lingkungan (environmental expenses)
+  if (type.includes('iuran') || type.includes('kebersihan') || type.includes('mcg') ||
+      type.includes('pedagang') || type.includes('taman') || type.includes('sekardangan') ||
+      type.includes('environment') || type.includes('lingkungan')) {
+    return 'environment';
+  }
+  
+  // Beban Gaji Karyawan (salary)
+  if (type.includes('gaji') || type.includes('salary')) {
+    return 'salary';
+  }
+  
+  // Beban Sewa (rent)
+  if (type.includes('sewa') || type.includes('rent')) {
+    return 'rent';
+  }
+  
+  // Beban Rumah Tangga (household)
+  if (type.includes('listrik') || type.includes('air') || type.includes('utilities') || 
+      type.includes('rumah tangga') || type.includes('household')) {
+    return 'household';
+  }
+  
+  // Raw Material (food/ingredients)
+  if (type.includes('bahan') || type.includes('ingredient')) {
+    return 'rawMaterial';
+  }
+  
+  // Marketing
+  if (type.includes('marketing')) {
+    return 'marketing';
+  }
+  
+  // Administration
+  if (type.includes('administrasi') || type.includes('administration')) {
+    return 'administration';
+  }
+  
+  // Default to others
+  return 'other';
+};
+
 export const calculateOperationalExpenses = async (
   startDate: Date,
   endDate: Date,
@@ -149,18 +171,44 @@ export const calculateOperationalExpenses = async (
   const startStr = formatDate(startDate);
   const endStr = formatDate(endDate);
 
-  let expenseQuery = supabase
-    .from('daily_operational_expenses')
-    .select('amount, expense_type, rider_id')
+  // Fetch operational expenses from operational_expenses table
+  let opQuery = supabase
+    .from('operational_expenses')
+    .select('amount, expense_category, created_by')
     .gte('expense_date', startStr)
     .lte('expense_date', endStr);
 
   if (selectedRider && selectedRider !== "all") {
-    expenseQuery = expenseQuery.eq('rider_id', selectedRider);
+    opQuery = opQuery.eq('created_by', selectedRider);
   }
 
-  const { data: expenses } = await expenseQuery;
+  const { data: operationalExpenses } = await opQuery;
 
+  // Fetch daily operational expenses (rider expenses) with pagination
+  const batchSize = 1000;
+  let from = 0;
+  let allRiderExpenses: any[] = [];
+  
+  while (true) {
+    let riderQuery = supabase
+      .from('daily_operational_expenses')
+      .select('amount, expense_type, rider_id')
+      .gte('expense_date', startStr)
+      .lte('expense_date', endStr);
+
+    if (selectedRider && selectedRider !== "all") {
+      riderQuery = riderQuery.eq('rider_id', selectedRider);
+    }
+
+    const { data: batch } = await riderQuery.range(from, from + batchSize - 1);
+    if (!batch || batch.length === 0) break;
+    
+    allRiderExpenses.push(...batch);
+    if (batch.length < batchSize) break;
+    from += batchSize;
+  }
+
+  // Initialize expense breakdown
   const breakdown: ExpenseBreakdown = {
     rawMaterial: 0,
     operationalDaily: 0,
@@ -176,30 +224,18 @@ export const calculateOperationalExpenses = async (
     tax: 0
   };
 
-  (expenses || []).forEach((expense: any) => {
+  // Process operational expenses using standardized mapping
+  (operationalExpenses || []).forEach((expense: any) => {
     const amount = Number(expense.amount || 0);
-    const type = (expense.expense_type || '').toLowerCase();
+    const category = mapExpenseToCategory(expense.expense_category || '');
+    breakdown[category] += amount;
+  });
 
-    // Map expense types to categories
-    if (type.includes('food') || type.includes('bahan')) {
-      breakdown.rawMaterial += amount;
-    } else if (type.includes('operational') || type.includes('operasional')) {
-      breakdown.operationalDaily += amount;
-    } else if (type.includes('salary') || type.includes('gaji')) {
-      breakdown.salary += amount;
-    } else if (type.includes('rent') || type.includes('sewa')) {
-      breakdown.rent += amount;
-    } else if (type.includes('household') || type.includes('rumah tangga')) {
-      breakdown.household += amount;
-    } else if (type.includes('environment') || type.includes('lingkungan')) {
-      breakdown.environment += amount;
-    } else if (type.includes('marketing')) {
-      breakdown.marketing += amount;
-    } else if (type.includes('administration') || type.includes('administrasi')) {
-      breakdown.administration += amount;
-    } else {
-      breakdown.other += amount;
-    }
+  // Process daily operational expenses (rider expenses) using standardized mapping
+  allRiderExpenses.forEach((expense: any) => {
+    const amount = Number(expense.amount || 0);
+    const category = mapExpenseToCategory(expense.expense_type || '');
+    breakdown[category] += amount;
   });
 
   return breakdown;

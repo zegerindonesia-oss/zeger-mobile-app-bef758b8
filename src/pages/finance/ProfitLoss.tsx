@@ -350,77 +350,81 @@ export default function ProfitLoss() {
               {/* BEBAN OPERASIONAL */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">BEBAN OPERASIONAL</h3>
-                <div className="space-y-2 pl-4">
+                 <div className="space-y-2 pl-4">
+                    <div className="flex justify-between">
+                      <span>Beban Bahan Baku</span>
+                      <span className="font-medium">({currency.format(rawMaterialCost)})</span>
+                    </div>
                    <div className="flex justify-between">
-                     <span>Beban Bahan Baku</span>
-                     <span className="font-medium">({currency.format(rawMaterialCost)})</span>
+                     <span>Beban Operasional Harian</span>
+                     <span className="font-medium">({currency.format(expenses.operationalDaily)})</span>
                    </div>
-                  <div className="flex justify-between">
-                    <span>Beban Operasional Harian</span>
-                    <span className="font-medium">({currency.format(expenses.operationalDaily)})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Beban Gaji</span>
-                    <span className="font-medium">({currency.format(expenses.salary)})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Beban Sewa</span>
-                    <span className="font-medium">({currency.format(expenses.rent)})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Beban Rumah Tangga</span>
-                    <span className="font-medium">({currency.format(expenses.household)})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Beban Lainnya</span>
-                    <span className="font-medium">({currency.format(expenses.other)})</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2 font-semibold">
-                    <span>Total Beban Operasional</span>
-                    <span>({currency.format(totalExpenses)})</span>
-                  </div>
-                </div>
+                   <div className="flex justify-between">
+                     <span>Beban Gaji Karyawan</span>
+                     <span className="font-medium">({currency.format(expenses.salary)})</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span>Beban Sewa</span>
+                     <span className="font-medium">({currency.format(expenses.rent)})</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span>Beban Rumah Tangga</span>
+                     <span className="font-medium">({currency.format(expenses.household)})</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span>Beban Lingkungan</span>
+                     <span className="font-medium">({currency.format(expenses.environment)})</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span>Beban Lainnya</span>
+                     <span className="font-medium">({currency.format(expenses.other)})</span>
+                   </div>
+                   <div className="flex justify-between border-t pt-2 font-semibold">
+                     <span>Total Beban Operasional</span>
+                     <span>({currency.format(totalExpenses)})</span>
+                   </div>
+                 </div>
 
                 {/* BEBAN NON OPERASIONAL */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 mt-6">BEBAN NON OPERASIONAL</h3>
-                  <div className="space-y-2 pl-4">
-                    <div className="flex justify-between">
-                      <span>Beban Marketing</span>
-                      <span className="font-medium">({currency.format(0)})</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Beban Administrasi</span>
-                      <span className="font-medium">({currency.format(0)})</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-2 font-semibold">
-                      <span>Total Beban Non Operasional</span>
-                      <span>({currency.format(0)})</span>
-                    </div>
-                  </div>
+                   <div className="space-y-2 pl-4">
+                     <div className="flex justify-between">
+                       <span>Beban Marketing</span>
+                       <span className="font-medium">({currency.format(expenses.marketing)})</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span>Beban Administrasi</span>
+                       <span className="font-medium">({currency.format(expenses.administration)})</span>
+                     </div>
+                     <div className="flex justify-between border-t pt-2 font-semibold">
+                       <span>Total Beban Non Operasional</span>
+                       <span>({currency.format(expenses.marketing + expenses.administration)})</span>
+                     </div>
+                   </div>
                 </div>
 
                 {/* BEBAN LAINNYA */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 mt-6">BEBAN LAINNYA</h3>
-                  <div className="space-y-2 pl-4">
-                    <div className="flex justify-between">
-                      <span>Depresiasi/Amortisasi</span>
-                      <span className="font-medium">({currency.format(0)})</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Bunga</span>
-                      <span className="font-medium">({currency.format(0)})</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Pajak</span>
-                      <span className="font-medium">({currency.format(0)})</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-2 font-semibold">
-                      <span>Total Beban Lainnya</span>
-                      <span>({currency.format(0)})</span>
-                    </div>
-                  </div>
+                   <div className="space-y-2 pl-4">
+                     <div className="flex justify-between">
+                       <span>Depresiasi/Amortisasi</span>
+                       <span className="font-medium">({currency.format(expenses.depreciation)})</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span>Bunga</span>
+                       <span className="font-medium">({currency.format(expenses.interest)})</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span>Pajak</span>
+                       <span className="font-medium">({currency.format(expenses.tax)})</span>
+                     </div>
+                     <div className="flex justify-between border-t pt-2 font-semibold">
+                       <span>Total Beban Lainnya</span>
+                       <span>({currency.format(expenses.depreciation + expenses.interest + expenses.tax)})</span>
+                     </div>
+                   </div>
                 </div>
               </div>
 

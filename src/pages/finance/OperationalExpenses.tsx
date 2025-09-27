@@ -35,7 +35,7 @@ export default function OperationalExpenses() {
     return jakartaTime;
   };
 
-  const [category, setCategory] = useState("rent");
+  const [category, setCategory] = useState("beban_operasional_harian");
   const [amount, setAmount] = useState<string>("");
   const [assignedUser, setAssignedUser] = useState("");
   const [expenseDate, setExpenseDate] = useState<Date>(getJakartaDate());
@@ -463,13 +463,12 @@ export default function OperationalExpenses() {
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="rent">Sewa</SelectItem>
-                  <SelectItem value="utilities">Listrik/Air</SelectItem>
-                  <SelectItem value="salary">Gaji</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="daily_operational">Beban Operasional Harian</SelectItem>
-                  <SelectItem value="other">Lainnya</SelectItem>
+                  <SelectItem value="beban_operasional_harian">Beban Operasional Harian</SelectItem>
+                  <SelectItem value="beban_gaji_karyawan">Beban Gaji Karyawan</SelectItem>
+                  <SelectItem value="beban_sewa">Beban Sewa</SelectItem>
+                  <SelectItem value="beban_rumah_tangga">Beban Rumah Tangga</SelectItem>
+                  <SelectItem value="beban_lingkungan">Beban Lingkungan</SelectItem>
+                  <SelectItem value="beban_lainnya">Beban Lainnya</SelectItem>
                 </SelectContent>
               </Select>
             </div>
