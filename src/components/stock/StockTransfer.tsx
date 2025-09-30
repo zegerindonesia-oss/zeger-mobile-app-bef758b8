@@ -79,6 +79,8 @@ interface Rider {
   branch_id: string;
   branches?: {
     name: string;
+    code?: string;
+    branch_code?: string;
   };
 }
 
@@ -170,7 +172,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           id, 
           full_name, 
           branch_id,
-          branches(name)
+          branches(name, code, branch_code)
         `)
         .in('role', ['rider', 'sb_rider', 'bh_rider'])
         .eq('is_active', true)
@@ -188,10 +190,12 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       
       if (ridersError) {
         console.error('Error fetching riders:', ridersError);
-      } else {
-        console.log('Riders fetched:', ridersData);
-        setRiders(ridersData || []);
+        toast.error('Failed to load riders');
+        return;
       }
+      
+      console.log(`✅ Fetched ${ridersData?.length || 0} riders for role: ${role}, branch: ${branchId}`);
+      setRiders(ridersData || []);
 
       // Fetch branches
       const { data: branchesData } = await supabase
@@ -905,11 +909,15 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     <SelectItem value="all">Semua Rider</SelectItem>
-                    {riders.map(rider => (
-                      <SelectItem key={rider.id} value={rider.id}>
-                        {rider.full_name} — {rider.branches?.name || 'Unknown Branch'}
-                      </SelectItem>
-                    ))}
+                    {riders.map(rider => {
+                      const branchCode = rider.branches?.branch_code || rider.branches?.code || '';
+                      const branchName = rider.branches?.name || 'Unknown Branch';
+                      return (
+                        <SelectItem key={rider.id} value={rider.id}>
+                          {branchCode && `${branchCode} — `}{rider.full_name} ({branchName})
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}

@@ -33,6 +33,7 @@ import { default as InventoryBranchTransfer } from "./pages/inventory/BranchTran
 import PurchasingSimple from "./pages/inventory/PurchasingSimple";
 import { SmallBranchStockManagement } from "./components/inventory/SmallBranchStockManagement";
 import { LocationAnalytics } from "./pages/analytics/LocationAnalytics";
+import CentralKitchenAnalytics from "./pages/analytics/CentralKitchen";
 import SettingsUserManagement from "./pages/settings/UserManagement";
 import SettingsRiderManagement from "./pages/settings/RiderManagement";
 import BranchManagement from "./pages/settings/BranchManagement";
@@ -71,6 +72,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>
                   <AdminDashboard />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/analytics/central-kitchen" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+                <ModernLayout>
+                  <CentralKitchenAnalytics />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

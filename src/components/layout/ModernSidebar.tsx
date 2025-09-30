@@ -73,6 +73,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     icon: BarChart3,
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "bh_report"],
     children: [
+      { id: "central-kitchen", label: "Central Kitchen", icon: Coffee, path: "/analytics/central-kitchen", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] },
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
       { id: "customers", label: "Customers", icon: Database, path: "/customers" },
