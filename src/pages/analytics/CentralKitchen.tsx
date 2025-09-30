@@ -33,11 +33,12 @@ interface ResumeData {
   totalProfitCK: number;
 }
 
-interface PriceChartData {
-  product: string;
-  ckPrice: number;
-  costPrice: number;
-  sellingPrice: number;
+interface AggregatedChartData {
+  label: string;
+  sales: number;
+  hpp: number;
+  foodCost: number;
+  profitCK: number;
 }
 
 export default function CentralKitchenAnalytics() {
@@ -48,7 +49,7 @@ export default function CentralKitchenAnalytics() {
   const [riders, setRiders] = useState<any[]>([]);
   const [transactionData, setTransactionData] = useState<TransactionData[]>([]);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
-  const [chartData, setChartData] = useState<PriceChartData[]>([]);
+  const [chartData, setChartData] = useState<AggregatedChartData[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -174,7 +175,6 @@ export default function CentralKitchenAnalytics() {
 
       // Process transaction data for detail table
       const transactionArray: TransactionData[] = [];
-      const productPriceMap = new Map<string, { ckPrice: number; costPrice: number; sellingPrice: number; count: number }>();
       
       let totalCKPrice = 0;
 
@@ -200,19 +200,6 @@ export default function CentralKitchenAnalytics() {
           txnTotalSales += quantity * sellingPrice;
           txnTotalCKPrice += quantity * ckPrice;
           txnTotalHPP += quantity * costPrice;
-
-          // Aggregate for chart
-          const existing = productPriceMap.get(product.name) || {
-            ckPrice: 0,
-            costPrice: 0,
-            sellingPrice: 0,
-            count: 0
-          };
-          existing.ckPrice += ckPrice;
-          existing.costPrice += costPrice;
-          existing.sellingPrice += sellingPrice;
-          existing.count += 1;
-          productPriceMap.set(product.name, existing);
         });
 
         const txnProfitCK = txnTotalHPP - txnTotalCKPrice;
@@ -257,18 +244,16 @@ export default function CentralKitchenAnalytics() {
         totalProfitCK: rawMaterialCost - totalCKPrice
       });
 
-      // Prepare chart data (average prices per product)
-      const chartArray: PriceChartData[] = Array.from(productPriceMap.entries())
-        .map(([product, data]) => ({
-          product,
-          ckPrice: data.ckPrice / data.count,
-          costPrice: data.costPrice / data.count,
-          sellingPrice: data.sellingPrice / data.count
-        }))
-        .sort((a, b) => b.sellingPrice - a.sellingPrice)
-        .slice(0, 10); // Top 10 products
+      // Prepare aggregated chart data showing Sales, HPP, Food Cost, and Profit CK
+      const aggregatedData: AggregatedChartData = {
+        label: 'Total',
+        sales: salesData.grossSales,
+        hpp: rawMaterialCost,
+        foodCost: totalCKPrice,
+        profitCK: rawMaterialCost - totalCKPrice
+      };
 
-      setChartData(chartArray);
+      setChartData([aggregatedData]);
 
     } catch (error) {
       console.error('Error fetching sales data:', error);
@@ -374,7 +359,18 @@ export default function CentralKitchenAnalytics() {
 
       {/* Chart */}
       <Card className="p-6 bg-white">
-        <h2 className="text-xl font-semibold mb-4">Grafik Harga CK vs HPP vs Harga Jual</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Grafik Sales vs HPP vs Food Cost vs Profit CK</h2>
+          {resumeData && (
+            <div className="text-right">
+              <div className="text-sm text-muted-foreground">Profit CK</div>
+              <div className="text-2xl font-bold text-green-600">
+                {((resumeData.totalProfitCK / resumeData.totalSales) * 100).toFixed(2)}%
+              </div>
+              <div className="text-xs text-muted-foreground">dari total sales</div>
+            </div>
+          )}
+        </div>
         {loading ? (
           <div className="h-80 flex items-center justify-center">
             <p className="text-muted-foreground">Memuat data...</p>
@@ -382,13 +378,14 @@ export default function CentralKitchenAnalytics() {
         ) : chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={chartData}>
-              <XAxis dataKey="product" angle={-45} textAnchor="end" height={120} />
+              <XAxis dataKey="label" />
               <YAxis />
               <Tooltip formatter={(value: any) => `Rp ${Number(value).toLocaleString()}`} />
               <Legend />
-              <Line type="monotone" dataKey="ckPrice" stroke="#22c55e" strokeWidth={2} name="Harga CK" />
-              <Line type="monotone" dataKey="costPrice" stroke="#ef4444" strokeWidth={2} name="HPP" />
-              <Line type="monotone" dataKey="sellingPrice" stroke="#f97316" strokeWidth={2} name="Harga Jual" />
+              <Line type="monotone" dataKey="sales" stroke="#3b82f6" strokeWidth={3} name="Sales" />
+              <Line type="monotone" dataKey="hpp" stroke="#ef4444" strokeWidth={3} name="HPP" />
+              <Line type="monotone" dataKey="foodCost" stroke="#f97316" strokeWidth={3} name="Food Cost" />
+              <Line type="monotone" dataKey="profitCK" stroke="#22c55e" strokeWidth={3} name="Profit CK" />
             </LineChart>
           </ResponsiveContainer>
         ) : (

@@ -27,6 +27,7 @@ interface DashboardStats {
   transferSales: number;
   operationalExpenses: number;
   cashDeposit: number;
+  totalProduction: number;
 }
 interface ChartSalesData {
   month: string;
@@ -91,7 +92,8 @@ export const ModernBranchDashboard = () => {
     qrisSales: 0,
     transferSales: 0,
     operationalExpenses: 0,
-    cashDeposit: 0
+    cashDeposit: 0,
+    totalProduction: 0
   });
   const [salesData, setSalesData] = useState<ChartSalesData[]>([]);
   const [productSales, setProductSales] = useState<ProductSales[]>([]);
@@ -326,7 +328,7 @@ export const ModernBranchDashboard = () => {
           totalFoodCost: 0, totalItemsSold: 0, totalProfit: 0,
           totalMembers: 0, activeRiders: 0, cashSales: 0,
           qrisSales: 0, transferSales: 0, operationalExpenses: 0,
-          cashDeposit: 0
+          cashDeposit: 0, totalProduction: 0
         });
         setStatsLoading(false);
       }
@@ -425,6 +427,20 @@ export const ModernBranchDashboard = () => {
       // Calculate profit
       const totalProfit = salesData.netSales - rawMaterialCost - operationalExpenses;
 
+      // Fetch production data
+      let productionQuery = supabase
+        .from('production_items')
+        .select('quantity, production_batches!inner(branch_id, produced_at)')
+        .gte('production_batches.produced_at', `${startDate}T00:00:00+07:00`)
+        .lte('production_batches.produced_at', `${endDate}T23:59:59+07:00`);
+      
+      if (userProfile?.role === 'branch_manager' && userProfile?.branch_id) {
+        productionQuery = productionQuery.eq('production_batches.branch_id', userProfile.branch_id);
+      }
+      
+      const { data: productionItems } = await productionQuery;
+      const totalProduction = (productionItems || []).reduce((sum, item) => sum + item.quantity, 0);
+
       setStats({
         totalSales: salesData.netSales,
         totalTransactions: salesData.totalTransactions,
@@ -438,7 +454,8 @@ export const ModernBranchDashboard = () => {
         qrisSales: salesData.salesByPaymentMethod.qris,
         transferSales: salesData.salesByPaymentMethod.transfer,
         operationalExpenses,
-        cashDeposit
+        cashDeposit,
+        totalProduction
       });
       
       console.log(`✅ Stats loaded: ${salesData.totalTransactions} transactions, ${formatCurrency(salesData.netSales)} revenue, ${formatCurrency(rawMaterialCost)} raw materials`);
@@ -836,88 +853,133 @@ export const ModernBranchDashboard = () => {
     };
     return changes[type as keyof typeof changes] || 0;
   };
-  const kpiData = [{
-    title: "Total Pendapatan",
-    value: formatCurrency(stats.totalSales),
-    icon: DollarSign,
-    change: `${calculatePercentageChange(stats.totalSales, 'revenue') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalSales, 'revenue').toFixed(2)}%`,
-    isPositive: calculatePercentageChange(stats.totalSales, 'revenue') > 0,
-    description: "Revenue bulan ini",
-    color: "bg-red-500",
-    type: "revenue"
-  }, {
-    title: "Total Transaksi",
-    value: stats.totalTransactions.toString(),
-    icon: Receipt,
-    change: `${calculatePercentageChange(stats.totalTransactions, 'transactions') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalTransactions, 'transactions').toFixed(2)}%`,
-    isPositive: calculatePercentageChange(stats.totalTransactions, 'transactions') > 0,
-    description: "Jumlah transaksi",
-    color: "bg-blue-500",
-    type: "transactions"
-  }, {
-    title: "Biaya Bahan Baku",
-    value: formatCurrency(stats.totalFoodCost),
-    icon: Receipt,
-    change: `${((stats.totalFoodCost / stats.totalSales) * 100).toFixed(1)}%`,
-    isPositive: false,
-    description: "Food cost dari penjualan",
-    color: "bg-orange-500",
-    type: "foodcost"
-  }, {
-    title: "Total QRIS",
-    value: formatCurrency(stats.qrisSales),
-    icon: Receipt,
-    change: `${((stats.qrisSales / stats.totalSales) * 100).toFixed(1)}%`,
-    isPositive: true,
-    description: "Pembayaran QRIS",
-    color: "bg-green-500",
-    type: "qris"
-  }, {
-    title: "Total Transfer Bank",
-    value: formatCurrency(stats.transferSales),
-    icon: Building,
-    change: `${((stats.transferSales / stats.totalSales) * 100).toFixed(1)}%`,
-    isPositive: true,
-    description: "Transfer Bank",
-    color: "bg-purple-500",
-    type: "transfer"
-  }, {
-    title: "Rata-rata per Transaksi (Total Item)",
-    value: formatCurrency(stats.avgTransactionValue),
-    icon: Calculator,
-    change: stats.totalItemsSold.toString() + " items",
-    isPositive: true,
-    description: "Avg & Total Items",
-    color: "bg-yellow-500",
-    type: "avgTransaction"
-  }, {
-    title: "Total Beban Operasional",
-    value: formatCurrency(stats.operationalExpenses),
-    icon: ChefHat,
-    change: `${((stats.operationalExpenses / stats.totalSales) * 100).toFixed(1)}%`,
-    isPositive: false,
-    description: "Operational expenses",
-    color: "bg-red-500",
-    type: "expenses"
-  }, {
-    title: "Total Setoran Tunai",
-    value: formatCurrency(stats.cashDeposit),
-    icon: DollarSign,
-    change: formatCurrency(stats.cashSales) + " - expenses",
-    isPositive: stats.cashDeposit > 0,
-    description: "Cash deposit",
-    color: "bg-teal-500",
-    type: "cashDeposit"
-  }, {
-    title: "Total Member",
-    value: stats.totalMembers.toString(),
-    icon: Users,
-    change: `${calculatePercentageChange(stats.totalMembers, 'members') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalMembers, 'members').toFixed(1)}%`,
-    isPositive: calculatePercentageChange(stats.totalMembers, 'members') > 0,
-    description: "Pelanggan terdaftar",
-    color: "bg-indigo-500",
-    type: "members"
-  }];
+  const kpiData = [
+    // Row 1
+    {
+      title: "Total Pendapatan",
+      value: formatCurrency(stats.totalSales),
+      icon: DollarSign,
+      change: `${calculatePercentageChange(stats.totalSales, 'revenue') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalSales, 'revenue').toFixed(2)}%`,
+      isPositive: calculatePercentageChange(stats.totalSales, 'revenue') > 0,
+      description: "Revenue bulan ini",
+      color: "bg-red-500",
+      type: "revenue"
+    }, 
+    {
+      title: "Total Transaksi",
+      value: stats.totalTransactions.toString(),
+      icon: Receipt,
+      change: `${calculatePercentageChange(stats.totalTransactions, 'transactions') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalTransactions, 'transactions').toFixed(2)}%`,
+      isPositive: calculatePercentageChange(stats.totalTransactions, 'transactions') > 0,
+      description: "Jumlah transaksi",
+      color: "bg-blue-500",
+      type: "transactions"
+    }, 
+    {
+      title: "Total Produk Terjual",
+      value: stats.totalItemsSold.toString(),
+      icon: Package,
+      change: `${calculatePercentageChange(stats.totalItemsSold, 'itemsSold') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalItemsSold, 'itemsSold').toFixed(1)}%`,
+      isPositive: calculatePercentageChange(stats.totalItemsSold, 'itemsSold') > 0,
+      description: "Jumlah produk terjual",
+      color: "bg-purple-500",
+      type: "itemsSold"
+    },
+    {
+      title: "Rata-Rata Per Transaksi",
+      value: formatCurrency(stats.avgTransactionValue),
+      icon: Calculator,
+      change: `${calculatePercentageChange(stats.avgTransactionValue, 'avgTransaction') > 0 ? '+' : ''}${calculatePercentageChange(stats.avgTransactionValue, 'avgTransaction').toFixed(1)}%`,
+      isPositive: calculatePercentageChange(stats.avgTransactionValue, 'avgTransaction') > 0,
+      description: "Avg per transaksi",
+      color: "bg-yellow-500",
+      type: "avgTransaction"
+    },
+    
+    // Row 2
+    {
+      title: "Penjualan Tunai",
+      value: formatCurrency(stats.cashSales),
+      icon: DollarSign,
+      change: `${((stats.cashSales / stats.totalSales) * 100).toFixed(1)}%`,
+      isPositive: true,
+      description: "Pembayaran cash",
+      color: "bg-emerald-500",
+      type: "cash"
+    },
+    {
+      title: "Total QRIS",
+      value: formatCurrency(stats.qrisSales),
+      icon: Receipt,
+      change: `${((stats.qrisSales / stats.totalSales) * 100).toFixed(1)}%`,
+      isPositive: true,
+      description: "Pembayaran QRIS",
+      color: "bg-green-500",
+      type: "qris"
+    }, 
+    {
+      title: "Total Transfer Bank",
+      value: formatCurrency(stats.transferSales),
+      icon: Building,
+      change: `${((stats.transferSales / stats.totalSales) * 100).toFixed(1)}%`,
+      isPositive: true,
+      description: "Transfer Bank",
+      color: "bg-purple-500",
+      type: "transfer"
+    }, 
+    {
+      title: "Total Setoran Tunai",
+      value: formatCurrency(stats.cashDeposit),
+      icon: DollarSign,
+      change: formatCurrency(stats.cashSales) + " - expenses",
+      isPositive: stats.cashDeposit > 0,
+      description: "Cash deposit",
+      color: "bg-teal-500",
+      type: "cashDeposit"
+    },
+    
+    // Row 3
+    {
+      title: "Biaya Bahan Baku",
+      value: formatCurrency(stats.totalFoodCost),
+      icon: Receipt,
+      change: `${((stats.totalFoodCost / stats.totalSales) * 100).toFixed(1)}%`,
+      isPositive: false,
+      description: "Food cost dari penjualan",
+      color: "bg-orange-500",
+      type: "foodcost"
+    }, 
+    {
+      title: "Total Beban Operasional",
+      value: formatCurrency(stats.operationalExpenses),
+      icon: ChefHat,
+      change: `${((stats.operationalExpenses / stats.totalSales) * 100).toFixed(1)}%`,
+      isPositive: false,
+      description: "Operational expenses",
+      color: "bg-red-500",
+      type: "expenses"
+    }, 
+    {
+      title: "Total Member",
+      value: stats.totalMembers.toString(),
+      icon: Users,
+      change: `${calculatePercentageChange(stats.totalMembers, 'members') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalMembers, 'members').toFixed(1)}%`,
+      isPositive: calculatePercentageChange(stats.totalMembers, 'members') > 0,
+      description: "Pelanggan terdaftar",
+      color: "bg-indigo-500",
+      type: "members"
+    },
+    {
+      title: "Total Produksi",
+      value: stats.totalProduction.toString(),
+      icon: ChefHat,
+      change: `${calculatePercentageChange(stats.totalProduction, 'itemsSold') > 0 ? '+' : ''}${calculatePercentageChange(stats.totalProduction, 'itemsSold').toFixed(1)}%`,
+      isPositive: true,
+      description: "Produk diproduksi",
+      color: "bg-blue-500",
+      type: "production"
+    }
+  ];
   // Enhanced loading state
   if (loading) {
     return (

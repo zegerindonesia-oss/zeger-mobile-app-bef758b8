@@ -179,25 +179,11 @@ export default function PurchasingSimple() {
         if (invError && invError.code !== 'PGRST116') {
           throw invError;
         }
-
-        if (existingInventory) {
-          // Update existing inventory
-          const { error: updateError } = await supabase
-            .from('inventory')
-            .update({
-              stock_quantity: existingInventory.stock_quantity + item.quantity,
-              last_updated: new Date().toISOString()
-            })
-            .eq('id', existingInventory.id);
-
-          if (updateError) throw updateError;
-        }
         
-        // Use upsert to handle race condition with partial unique index
+        // Use upsert to handle both create and update cases
         const { error: upsertError } = await supabase
           .from('inventory')
           .upsert({
-            id: existingInventory?.id,
             product_id: item.product_id,
             branch_id: userProfile?.branch_id,
             stock_quantity: existingInventory 
@@ -206,9 +192,10 @@ export default function PurchasingSimple() {
             min_stock_level: existingInventory?.min_stock_level || 5,
             max_stock_level: existingInventory?.max_stock_level || 100,
             rider_id: null,
-            last_updated: new Date().toISOString()
+            last_updated: new Date().toISOString(),
+            ...(existingInventory?.id && { id: existingInventory.id })
           }, {
-            onConflict: 'id',
+            onConflict: 'branch_id,product_id',
             ignoreDuplicates: false
           });
 
