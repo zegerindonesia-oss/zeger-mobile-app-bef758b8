@@ -167,13 +167,18 @@ export default function PurchasingSimple() {
 
       // Update branch inventory
       for (const item of purchaseItems) {
-        const { data: existingInventory } = await supabase
+        const { data: existingInventory, error: invError } = await supabase
           .from('inventory')
           .select('*')
           .eq('product_id', item.product_id)
           .eq('branch_id', userProfile?.branch_id)
           .is('rider_id', null)
-          .single();
+          .maybeSingle();
+
+        // Handle error (but not "no rows" error)
+        if (invError && invError.code !== 'PGRST116') {
+          throw invError;
+        }
 
         if (existingInventory) {
           // Update existing inventory
@@ -187,15 +192,19 @@ export default function PurchasingSimple() {
 
           if (updateError) throw updateError;
         } else {
-          // Create new inventory record
+          // Create new inventory record (upsert in case of race condition)
           const { error: createError } = await supabase
             .from('inventory')
-            .insert({
+            .upsert({
               product_id: item.product_id,
               branch_id: userProfile?.branch_id,
               stock_quantity: item.quantity,
               min_stock_level: 5,
-              max_stock_level: 100
+              max_stock_level: 100,
+              rider_id: null
+            }, {
+              onConflict: 'branch_id,product_id',
+              ignoreDuplicates: false
             });
 
           if (createError) throw createError;

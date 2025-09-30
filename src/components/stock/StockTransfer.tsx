@@ -488,21 +488,26 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
     setLoading(true);
     try {
-      // Check branch hub inventory before transfer
+      // Check branch inventory before transfer using RPC function
+      const branchType = role === 'sb_branch_manager' ? 'cabang' : 'branch hub';
+      
       for (const row of rows) {
-        const { data: hubInventory, error: hubError } = await supabase
-          .from('inventory')
-          .select('*')
-          .eq('branch_id', branchId)
-          .eq('product_id', row.id)
-          .is('rider_id', null)
-          .maybeSingle();
+        const { data: availableStock, error: stockError } = await supabase
+          .rpc('get_branch_stock', {
+            p_branch_id: branchId,
+            p_product_id: row.id
+          });
 
-        if (hubError) throw hubError;
+        if (stockError) {
+          console.error("Error checking stock:", stockError);
+          toast.error("Gagal memeriksa stok");
+          return;
+        }
 
-        if (!hubInventory || hubInventory.stock_quantity < row.qty) {
-          const productName = products.find(p => p.id === row.id)?.name || 'Unknown';
-          toast.error(`Stok branch hub tidak mencukupi untuk ${productName}`);
+        const productName = products.find(p => p.id === row.id)?.name || 'Unknown';
+        
+        if ((availableStock || 0) < row.qty) {
+          toast.error(`Stok ${branchType} tidak mencukupi untuk ${productName}. Tersedia: ${availableStock || 0} unit, diminta: ${row.qty} unit`);
           return;
         }
       }

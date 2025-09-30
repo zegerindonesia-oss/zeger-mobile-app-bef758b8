@@ -1559,6 +1559,10 @@ export type Database = {
           rider_name: string
         }[]
       }
+      get_branch_stock: {
+        Args: { p_branch_id: string; p_product_id: string }
+        Returns: number
+      }
       get_current_user_branch: {
         Args: Record<PropertyKey, never>
         Returns: string
