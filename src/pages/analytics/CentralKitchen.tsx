@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -296,7 +296,7 @@ export default function CentralKitchenAnalytics() {
       </div>
 
       {/* Filters */}
-      <Card className="p-6">
+      <Card className="p-6 bg-white">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Rider</label>
@@ -365,7 +365,7 @@ export default function CentralKitchenAnalytics() {
       </Card>
 
       {/* Chart */}
-      <Card className="p-6">
+      <Card className="p-6 bg-white">
         <h2 className="text-xl font-semibold mb-4">Grafik Harga CK vs HPP vs Harga Jual</h2>
         {loading ? (
           <div className="h-80 flex items-center justify-center">
@@ -373,16 +373,15 @@ export default function CentralKitchenAnalytics() {
           </div>
         ) : chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
+            <LineChart data={chartData}>
               <XAxis dataKey="product" angle={-45} textAnchor="end" height={120} />
               <YAxis />
               <Tooltip formatter={(value: any) => `Rp ${Number(value).toLocaleString()}`} />
               <Legend />
-              <Bar dataKey="ckPrice" fill="#22c55e" name="Harga CK" />
-              <Bar dataKey="costPrice" fill="#ef4444" name="HPP" />
-              <Bar dataKey="sellingPrice" fill="#f97316" name="Harga Jual" />
-            </BarChart>
+              <Line type="monotone" dataKey="ckPrice" stroke="#22c55e" strokeWidth={2} name="Harga CK" />
+              <Line type="monotone" dataKey="costPrice" stroke="#ef4444" strokeWidth={2} name="HPP" />
+              <Line type="monotone" dataKey="sellingPrice" stroke="#f97316" strokeWidth={2} name="Harga Jual" />
+            </LineChart>
           </ResponsiveContainer>
         ) : (
           <div className="h-80 flex items-center justify-center">
@@ -393,7 +392,7 @@ export default function CentralKitchenAnalytics() {
 
       {/* Resume Analytics Table */}
       {resumeData && (
-        <Card className="p-6">
+        <Card className="p-6 bg-white">
           <h2 className="text-xl font-semibold mb-4">Resume Analytic Central Kitchen</h2>
           <div className="rounded-md border">
             <Table>
@@ -427,7 +426,7 @@ export default function CentralKitchenAnalytics() {
       )}
 
       {/* Transaction Detail Table */}
-      <Card className="p-6">
+      <Card className="p-6 bg-white">
         <h2 className="text-xl font-semibold mb-4">Transaction Central Kitchen</h2>
         <div className="rounded-md border">
           <Table>

@@ -192,19 +192,16 @@ export default function PurchasingSimple() {
 
           if (updateError) throw updateError;
         } else {
-          // Create new inventory record (upsert in case of race condition)
+          // Create new inventory record
           const { error: createError } = await supabase
             .from('inventory')
-            .upsert({
+            .insert({
               product_id: item.product_id,
               branch_id: userProfile?.branch_id,
               stock_quantity: item.quantity,
               min_stock_level: 5,
               max_stock_level: 100,
               rider_id: null
-            }, {
-              onConflict: 'branch_id,product_id',
-              ignoreDuplicates: false
             });
 
           if (createError) throw createError;
