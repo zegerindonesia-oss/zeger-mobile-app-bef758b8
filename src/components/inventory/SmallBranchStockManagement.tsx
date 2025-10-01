@@ -257,6 +257,11 @@ export const SmallBranchStockManagement = () => {
 
     setSubmitting(true);
     try {
+      // Generate batch ID for grouping related transfers
+      const batchId = crypto.randomUUID();
+      const expectedDelivery = new Date();
+      expectedDelivery.setHours(expectedDelivery.getHours() + 1);
+
       // Process each transfer item
       for (const item of validItems) {
         // Reduce branch inventory
@@ -278,43 +283,8 @@ export const SmallBranchStockManagement = () => {
           if (updateBranchError) throw updateBranchError;
         }
 
-        // Check if rider already has this product
-        const { data: existingRiderInventory } = await supabase
-          .from('inventory')
-          .select('*')
-          .eq('product_id', item.product_id)
-          .eq('rider_id', selectedRider)
-          .eq('branch_id', userProfile?.branch_id)
-          .single();
-
-        if (existingRiderInventory) {
-          // Update existing rider inventory
-          const { error: updateRiderError } = await supabase
-            .from('inventory')
-            .update({
-              stock_quantity: existingRiderInventory.stock_quantity + item.quantity,
-              last_updated: new Date().toISOString()
-            })
-            .eq('id', existingRiderInventory.id);
-
-          if (updateRiderError) throw updateRiderError;
-        } else {
-          // Create new rider inventory
-          const { error: createRiderError } = await supabase
-            .from('inventory')
-            .insert({
-              product_id: item.product_id,
-              branch_id: userProfile?.branch_id,
-              rider_id: selectedRider,
-              stock_quantity: item.quantity,
-              min_stock_level: 5,
-              max_stock_level: 100
-            });
-
-          if (createRiderError) throw createRiderError;
-        }
-
-        // Create stock movement record
+        // Create stock movement record with 'sent' status
+        // Rider will need to confirm receipt in mobile app
         const { error: movementError } = await supabase
           .from('stock_movements')
           .insert({
@@ -323,16 +293,18 @@ export const SmallBranchStockManagement = () => {
             rider_id: selectedRider,
             movement_type: 'transfer',
             quantity: item.quantity,
-            status: 'completed',
-            reference_type: 'branch_to_rider_transfer',
-            notes: `Transfer from branch to rider`,
+            status: 'sent', // Changed from 'completed' to 'sent'
+            reference_id: batchId,
+            reference_type: 'small_branch_to_rider_transfer',
+            expected_delivery_date: expectedDelivery.toISOString(),
+            notes: `Transfer dari small branch ke rider - menunggu konfirmasi`,
             created_by: userProfile?.id
           });
 
         if (movementError) throw movementError;
       }
 
-      toast.success(`Berhasil mentransfer ${validItems.length} item ke rider`);
+      toast.success(`Berhasil mengirim ${validItems.length} item ke rider. Menunggu konfirmasi penerimaan dari rider.`);
       
       // Reset form
       setSelectedRider("");

@@ -38,6 +38,7 @@ import CashDeposit from "./pages/analytics/CashDeposit";
 import SettingsUserManagement from "./pages/settings/UserManagement";
 import SettingsRiderManagement from "./pages/settings/RiderManagement";
 import BranchManagement from "./pages/settings/BranchManagement";
+import RiderReassignment from "./pages/settings/RiderReassignment";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
@@ -241,6 +242,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
                 <ModernLayout>
                   <BranchManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/settings/rider-reassignment" element={
+              <RoleBasedRoute allowedRoles={['ho_admin']}>
+                <ModernLayout>
+                  <RiderReassignment />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

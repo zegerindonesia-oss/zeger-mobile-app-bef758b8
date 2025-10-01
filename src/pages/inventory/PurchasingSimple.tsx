@@ -132,110 +132,38 @@ export default function PurchasingSimple() {
 
     setSubmitting(true);
     try {
-      // Create the purchase record
-      const { data: purchaseData, error: purchaseError } = await supabase
-        .from('purchases')
-        .insert({
-          purchase_number: `PO-${Date.now()}`,
+      // Use Edge Function for atomic purchase creation
+      const { data, error } = await supabase.functions.invoke('create-purchase', {
+        body: {
           supplier_name: supplierName,
           purchase_date: purchaseDate,
           notes: notes,
-          total_amount: calculateTotal(),
-          branch_id: userProfile?.branch_id,
-          created_by: userProfile?.id,
-          status: 'completed'
-        })
-        .select()
-        .single();
-
-      if (purchaseError) throw purchaseError;
-
-      // Create purchase items
-      const purchaseItemsData = purchaseItems.map(item => ({
-        purchase_id: purchaseData.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        cost_per_unit: item.cost_per_unit,
-        total_cost: item.total_cost
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('purchase_items')
-        .insert(purchaseItemsData);
-
-      if (itemsError) throw itemsError;
-
-      // Update branch inventory
-      for (const item of purchaseItems) {
-        const { data: existingInventory, error: invError } = await supabase
-          .from('inventory')
-          .select('*')
-          .eq('product_id', item.product_id)
-          .eq('branch_id', userProfile?.branch_id)
-          .is('rider_id', null)
-          .maybeSingle();
-
-        // Handle error (but not "no rows" error)
-        if (invError && invError.code !== 'PGRST116') {
-          throw invError;
-        }
-        
-        if (existingInventory) {
-          // Update existing inventory
-          const { error: updateError } = await supabase
-            .from('inventory')
-            .update({
-              stock_quantity: existingInventory.stock_quantity + item.quantity,
-              last_updated: new Date().toISOString(),
-            })
-            .eq('id', existingInventory.id);
-
-          if (updateError) throw updateError;
-        } else {
-          // Insert new inventory
-          const { error: insertError } = await supabase
-            .from('inventory')
-            .insert({
-              product_id: item.product_id,
-              branch_id: userProfile?.branch_id,
-              stock_quantity: item.quantity,
-              min_stock_level: 5,
-              max_stock_level: 100,
-              rider_id: null,
-              last_updated: new Date().toISOString(),
-            });
-
-          if (insertError) throw insertError;
-        }
-
-        // Create stock movement record
-        const { error: movementError } = await supabase
-          .from('stock_movements')
-          .insert({
+          items: purchaseItems.map(item => ({
             product_id: item.product_id,
-            branch_id: userProfile?.branch_id,
-            movement_type: 'in',
             quantity: item.quantity,
-            status: 'completed',
-            reference_id: purchaseData.id,
-            reference_type: 'purchase',
-            notes: `Pembelian dari ${supplierName}`,
-            created_by: userProfile?.id
-          });
+            cost_per_unit: item.cost_per_unit
+          })),
+          branch_id: userProfile?.branch_id
+        }
+      });
 
-        if (movementError) throw movementError;
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Pembelian ${data.purchase_number} berhasil dicatat! Total: ${formatCurrency(data.total_amount)}`);
+        
+        // Reset form
+        setSupplierName("");
+        setPurchaseDate(new Date().toISOString().split('T')[0]);
+        setNotes("");
+        setPurchaseItems([]);
+      } else {
+        throw new Error(data?.error || 'Unknown error occurred');
       }
       
-      toast.success("Pembelian berhasil dicatat dan stok telah diperbarui!");
-      
-      // Reset form
-      setSupplierName("");
-      setPurchaseDate(new Date().toISOString().split('T')[0]);
-      setNotes("");
-      setPurchaseItems([]);
-      
     } catch (error: any) {
-      toast.error("Gagal mencatat pembelian: " + error.message);
+      console.error('Purchase error:', error);
+      toast.error("Gagal mencatat pembelian: " + (error.message || 'Terjadi kesalahan'));
     } finally {
       setSubmitting(false);
     }

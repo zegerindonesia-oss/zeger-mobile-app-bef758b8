@@ -2,3 +2,9 @@ project_id = "uqgxxgbhvqjxrpotyilj"
 
 [functions.update-transaction-payment]
 verify_jwt = true
+
+[functions.reassign-rider-branch]
+verify_jwt = true
+
+[functions.create-purchase]
+verify_jwt = true

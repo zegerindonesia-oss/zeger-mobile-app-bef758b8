@@ -25,7 +25,8 @@ import {
   ChevronDown,
   ChevronRight,
   MapPin,
-  Banknote
+  Banknote,
+  UserCog
 } from "lucide-react";
 import { MapPin as LocationPin } from "lucide-react";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
@@ -151,6 +152,13 @@ const getMenuItems = (userRole: string): MenuItem[] => [
         icon: Building2, 
         path: "/settings/branches",
         roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"]
+      },
+      { 
+        id: "rider-reassignment", 
+        label: "Rider Reassignment", 
+        icon: UserCog, 
+        path: "/settings/rider-reassignment",
+        roles: ["1_HO_Admin", "ho_admin"]
       }
     ]
   }
