@@ -34,6 +34,7 @@ import PurchasingSimple from "./pages/inventory/PurchasingSimple";
 import { SmallBranchStockManagement } from "./components/inventory/SmallBranchStockManagement";
 import { LocationAnalytics } from "./pages/analytics/LocationAnalytics";
 import CentralKitchenAnalytics from "./pages/analytics/CentralKitchen";
+import CashDeposit from "./pages/analytics/CashDeposit";
 import SettingsUserManagement from "./pages/settings/UserManagement";
 import SettingsRiderManagement from "./pages/settings/RiderManagement";
 import BranchManagement from "./pages/settings/BranchManagement";
@@ -79,6 +80,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
                 <ModernLayout>
                   <CentralKitchenAnalytics />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/analytics/cash-deposit" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+                <ModernLayout>
+                  <CashDeposit />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

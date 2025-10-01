@@ -24,7 +24,8 @@ import {
   Calendar,
   ChevronDown,
   ChevronRight,
-  MapPin
+  MapPin,
+  Banknote
 } from "lucide-react";
 import { MapPin as LocationPin } from "lucide-react";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
@@ -76,6 +77,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "central-kitchen", label: "Central Kitchen", icon: Coffee, path: "/analytics/central-kitchen", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] },
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
+      { id: "cash-deposit", label: "Cash Deposit", icon: Banknote, path: "/analytics/cash-deposit", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] },
       { id: "customers", label: "Customers", icon: Database, path: "/customers" },
       { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance" },
       { id: "location-analytics", label: "Location Analytics", icon: LocationPin, path: "/location-analytics", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "bh_report"] }
