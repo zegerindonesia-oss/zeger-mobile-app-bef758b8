@@ -298,11 +298,14 @@ export type Database = {
         Row: {
           created_at: string
           delivery_address: string | null
+          delivery_fee: number | null
+          discount_amount: number | null
           estimated_arrival: string | null
           id: string
           latitude: number | null
           longitude: number | null
           order_type: string | null
+          outlet_id: string | null
           payment_method: string | null
           qris_payment_proof_url: string | null
           rejection_reason: string | null
@@ -316,11 +319,14 @@ export type Database = {
         Insert: {
           created_at?: string
           delivery_address?: string | null
+          delivery_fee?: number | null
+          discount_amount?: number | null
           estimated_arrival?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           order_type?: string | null
+          outlet_id?: string | null
           payment_method?: string | null
           qris_payment_proof_url?: string | null
           rejection_reason?: string | null
@@ -334,11 +340,14 @@ export type Database = {
         Update: {
           created_at?: string
           delivery_address?: string | null
+          delivery_fee?: number | null
+          discount_amount?: number | null
           estimated_arrival?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           order_type?: string | null
+          outlet_id?: string | null
           payment_method?: string | null
           qris_payment_proof_url?: string | null
           rejection_reason?: string | null
@@ -350,6 +359,13 @@ export type Database = {
           voucher_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_orders_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_orders_rider_id_fkey"
             columns: ["rider_id"]

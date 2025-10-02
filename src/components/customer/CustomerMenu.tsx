@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { ZegerLogo } from '@/components/ui/zeger-logo';
-import { Plus, Search, Gift } from 'lucide-react';
+import { Plus, Search, Gift, MapPin } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -21,9 +21,20 @@ interface Product {
 interface CustomerMenuProps {
   products: Product[];
   onAddToCart: (product: Product, customizations?: any, quantity?: number) => void;
+  outletId?: string;
+  outletName?: string;
+  outletAddress?: string;
+  onChangeOutlet?: () => void;
 }
 
-export function CustomerMenu({ products, onAddToCart }: CustomerMenuProps) {
+export function CustomerMenu({ 
+  products, 
+  onAddToCart,
+  outletId,
+  outletName,
+  outletAddress,
+  onChangeOutlet
+}: CustomerMenuProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProducts = useMemo(() => {
@@ -64,10 +75,37 @@ export function CustomerMenu({ products, onAddToCart }: CustomerMenuProps) {
 
   return (
     <div className="space-y-6 pb-20 p-4">
-      <div className="text-center py-4">
-        <ZegerLogo size="md" />
-        <p className="text-muted-foreground mt-2">Kopi premium untuk hari yang sempurna</p>
-      </div>
+      {outletId && outletName ? (
+        <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm opacity-90 mb-1">Pesan dari</p>
+                <h2 className="text-xl font-bold mb-2">{outletName}</h2>
+                <p className="text-sm opacity-80 flex items-start gap-1">
+                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{outletAddress}</span>
+                </p>
+              </div>
+              {onChangeOutlet && (
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={onChangeOutlet}
+                  className="ml-2"
+                >
+                  Ganti
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="text-center py-4">
+          <ZegerLogo size="md" />
+          <p className="text-muted-foreground mt-2">Kopi premium untuk hari yang sempurna</p>
+        </div>
+      )}
 
       {/* Loyalty Status */}
       <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">

@@ -29,6 +29,8 @@ import { CustomerMenu } from '@/components/customer/CustomerMenu';
 import { CustomerCart } from '@/components/customer/CustomerCart';
 import { CustomerOutletList } from '@/components/customer/CustomerOutletList';
 import { OrderDetail } from '@/components/customer/OrderDetail';
+import CustomerCheckout from '@/components/customer/CustomerCheckout';
+import CustomerOrderSuccess from '@/components/customer/CustomerOrderSuccess';
 import { useToast } from '@/hooks/use-toast';
 
 interface CustomerUser {
@@ -56,7 +58,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'cart' | 'outlets';
+type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'cart' | 'outlets' | 'checkout' | 'order-success';
 
 export default function CustomerApp() {
   const { user } = useAuth();
@@ -73,6 +75,19 @@ export default function CustomerApp() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeOrdersCount, setActiveOrdersCount] = useState(0);
+  
+  // Outlet selection state
+  const [selectedOutlet, setSelectedOutlet] = useState<{
+    id: string;
+    name: string;
+    address: string;
+  } | null>(null);
+  
+  // Order success state
+  const [lastOrderId, setLastOrderId] = useState<string>('');
+  const [lastOrderNumber, setLastOrderNumber] = useState<string>('');
+  const [lastOrderType, setLastOrderType] = useState<'outlet_pickup' | 'outlet_delivery'>('outlet_pickup');
+  const [estimatedTime, setEstimatedTime] = useState<string>('15-30 menit');
   
   // Handle query params for order detail
   const tab = searchParams.get('tab');
@@ -251,6 +266,94 @@ export default function CustomerApp() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
+  const handleConfirmOrder = async (orderData: {
+    outletId: string;
+    orderType: 'outlet_pickup' | 'outlet_delivery';
+    deliveryAddress?: string;
+    deliveryLat?: number;
+    deliveryLng?: number;
+    paymentMethod: 'cash' | 'e_wallet' | 'qris';
+    voucherId?: string;
+    totalPrice: number;
+    deliveryFee: number;
+    discount: number;
+  }) => {
+    try {
+      // 1. Insert customer_order
+      const { data: order, error: orderError } = await supabase
+        .from('customer_orders')
+        .insert({
+          user_id: customerUser!.id,
+          outlet_id: orderData.outletId,
+          order_type: orderData.orderType,
+          delivery_address: orderData.deliveryAddress,
+          latitude: orderData.deliveryLat,
+          longitude: orderData.deliveryLng,
+          payment_method: orderData.paymentMethod,
+          voucher_id: orderData.voucherId,
+          total_price: orderData.totalPrice,
+          delivery_fee: orderData.deliveryFee,
+          discount_amount: orderData.discount,
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Insert customer_order_items
+      const orderItems = cart.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        custom_options: item.customizations
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('customer_order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // 3. Update customer points
+      const earnedPoints = Math.floor(orderData.totalPrice / 1000);
+      const { error: pointsError } = await supabase
+        .from('customer_users')
+        .update({ points: (customerUser!.points || 0) + earnedPoints })
+        .eq('id', customerUser!.id);
+
+      if (pointsError) throw pointsError;
+
+      // 4. Clear cart
+      setCart([]);
+
+      // 5. Navigate to success page
+      setLastOrderId(order.id);
+      setLastOrderNumber(order.id.slice(0, 8).toUpperCase());
+      setLastOrderType(orderData.orderType);
+      setEstimatedTime(
+        orderData.orderType === 'outlet_pickup' 
+          ? '15-30 menit' 
+          : '~45 menit'
+      );
+      setActiveView('order-success');
+
+      toast({
+        title: "✅ Pesanan Berhasil!",
+        description: "Pesanan Anda sedang diproses",
+      });
+
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "Error",
+        description: "Gagal membuat pesanan. Silakan coba lagi.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center">
@@ -338,19 +441,81 @@ export default function CustomerApp() {
             {activeView === 'outlets' && (
               <CustomerOutletList 
                 onNavigate={(view: string) => setActiveView(view as View)}
+                onSelectOutlet={(outlet: any) => {
+                  setSelectedOutlet({
+                    id: outlet.id,
+                    name: outlet.name,
+                    address: outlet.address
+                  });
+                  setActiveView('menu');
+                }}
               />
             )}
             {activeView === 'menu' && (
               <CustomerMenu 
                 products={products}
                 onAddToCart={addToCart}
+                outletId={selectedOutlet?.id}
+                outletName={selectedOutlet?.name}
+                outletAddress={selectedOutlet?.address}
+                onChangeOutlet={() => setActiveView('outlets')}
               />
             )}
             {activeView === 'cart' && (
               <CustomerCart 
                 cart={cart}
                 onUpdateQuantity={updateCartQuantity}
-                onNavigate={(view: string) => setActiveView(view as View)}
+                onNavigate={(view: string) => {
+                  if (view === 'checkout' && !selectedOutlet) {
+                    // If trying to checkout without outlet, redirect to outlet selection
+                    setActiveView('outlets');
+                    toast({
+                      title: "Pilih Outlet",
+                      description: "Silakan pilih outlet terlebih dahulu",
+                    });
+                  } else if (view === 'map') {
+                    // "Pesan Sekarang" now goes to checkout, not map
+                    if (!selectedOutlet) {
+                      setActiveView('outlets');
+                      toast({
+                        title: "Pilih Outlet",
+                        description: "Silakan pilih outlet terlebih dahulu",
+                      });
+                    } else {
+                      setActiveView('checkout');
+                    }
+                  } else {
+                    setActiveView(view as View);
+                  }
+                }}
+              />
+            )}
+            {activeView === 'checkout' && selectedOutlet && customerUser && (
+              <CustomerCheckout
+                cart={cart}
+                outletId={selectedOutlet.id}
+                outletName={selectedOutlet.name}
+                outletAddress={selectedOutlet.address}
+                customerUser={customerUser}
+                onConfirm={handleConfirmOrder}
+                onBack={() => setActiveView('cart')}
+              />
+            )}
+            {activeView === 'order-success' && lastOrderId && (
+              <CustomerOrderSuccess
+                orderId={lastOrderId}
+                orderNumber={lastOrderNumber}
+                orderType={lastOrderType}
+                outletName={selectedOutlet?.name}
+                outletAddress={selectedOutlet?.address}
+                estimatedTime={estimatedTime}
+                onNavigate={(view: string, id?: string) => {
+                  if (id) {
+                    setSearchParams({ tab: 'order-detail', id });
+                  } else {
+                    setActiveView(view as View);
+                  }
+                }}
               />
             )}
           </>
