@@ -11,3 +11,15 @@ verify_jwt = true
 
 [functions.fix-zero-transactions]
 verify_jwt = true
+
+[functions.get-nearby-riders]
+verify_jwt = false
+
+[functions.send-order-request]
+verify_jwt = false
+
+[functions.rider-respond-order]
+verify_jwt = false
+
+[functions.update-rider-location-live]
+verify_jwt = false
