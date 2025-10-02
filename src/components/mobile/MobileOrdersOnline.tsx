@@ -208,7 +208,7 @@ export function MobileOrdersOnline() {
       }
       
       fetchOrders();
-      setShowIncomingOrder(false);
+      setShowIncomingModal(false);
     } catch (error) {
       console.error('Error accepting order:', error);
       toast.error('Gagal menerima pesanan');

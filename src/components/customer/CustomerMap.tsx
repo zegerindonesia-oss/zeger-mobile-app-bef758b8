@@ -43,11 +43,12 @@ const CustomerMap = () => {
     };
   }, []);
 
-  // Initialize map when location and riders are available
+  // Initialize map when location is available
   useEffect(() => {
-    if (!userLocation || !mapContainer.current || nearbyRiders.length === 0) return;
+    if (!userLocation || !mapContainer.current) return;
     if (map.current) return; // Map already initialized
 
+    console.log('🗺️ Initializing map with user location:', userLocation);
     mapboxgl.accessToken = MAPBOX_TOKEN;
     
     map.current = new mapboxgl.Map({
@@ -67,7 +68,8 @@ const CustomerMap = () => {
       .setPopup(new mapboxgl.Popup().setHTML('<strong>Lokasi Anda</strong>'))
       .addTo(map.current);
 
-    // Add rider markers
+    // Add rider markers (if any)
+    console.log('📍 Adding markers for riders:', nearbyRiders.length);
     nearbyRiders.forEach(rider => {
       if (rider.lat && rider.lng) {
         const riderEl = document.createElement('div');
@@ -88,18 +90,21 @@ const CustomerMap = () => {
       }
     });
 
-    // Fit bounds to show all markers
-    const bounds = new mapboxgl.LngLatBounds();
-    bounds.extend([userLocation.lng, userLocation.lat]);
-    nearbyRiders.forEach(rider => {
-      if (rider.lat && rider.lng) {
-        bounds.extend([rider.lng, rider.lat]);
-      }
-    });
-    map.current.fitBounds(bounds, { padding: 50, maxZoom: 14 });
+    // Fit bounds to show all markers (if riders exist)
+    if (nearbyRiders.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      bounds.extend([userLocation.lng, userLocation.lat]);
+      nearbyRiders.forEach(rider => {
+        if (rider.lat && rider.lng) {
+          bounds.extend([rider.lng, rider.lat]);
+        }
+      });
+      map.current.fitBounds(bounds, { padding: 50, maxZoom: 14 });
+    }
   }, [userLocation, nearbyRiders]);
 
   const getUserLocation = () => {
+    console.log('📍 Requesting user location...');
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -107,18 +112,23 @@ const CustomerMap = () => {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
+          console.log('✅ Got user location:', location);
           setUserLocation(location);
           fetchNearbyRiders(location.lat, location.lng);
         },
         (error) => {
-          console.error('Error getting location:', error);
+          console.error('❌ Error getting location:', error);
           setLoading(false);
         }
       );
+    } else {
+      console.error('❌ Geolocation not supported');
+      setLoading(false);
     }
   };
 
   const fetchNearbyRiders = async (lat: number, lng: number) => {
+    console.log('🔍 Fetching nearby riders for location:', { lat, lng });
     try {
       const { data, error } = await supabase.functions.invoke('get-nearby-riders', {
         body: {
@@ -128,11 +138,15 @@ const CustomerMap = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Edge function error:', error);
+        throw error;
+      }
       
+      console.log('✅ Fetched riders:', data.riders?.length || 0, 'riders found');
       setNearbyRiders(data.riders || []);
     } catch (error) {
-      console.error('Error fetching nearby riders:', error);
+      console.error('❌ Error fetching nearby riders:', error);
     } finally {
       setLoading(false);
     }
