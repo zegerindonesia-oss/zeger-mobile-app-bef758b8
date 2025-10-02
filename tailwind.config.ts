@@ -32,6 +32,14 @@ export default {
 					shadow: 'var(--glass-shadow)',
 				},
 				
+				// Zeger Brand Colors
+				zeger: {
+					red: '#DC2626',
+					'red-dark': '#B91C1C',
+					cream: '#FEF3C7',
+					brown: '#92400E',
+				},
+				
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					dark: 'hsl(var(--primary-dark))',
@@ -74,6 +82,8 @@ export default {
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-coffee': 'var(--gradient-coffee)',
+				'gradient-cream': 'var(--gradient-cream)',
 				'gradient-glass': 'var(--gradient-glass)',
 				'gradient-hero': 'var(--gradient-hero)',
 				'gradient-dashboard': 'var(--gradient-dashboard)',

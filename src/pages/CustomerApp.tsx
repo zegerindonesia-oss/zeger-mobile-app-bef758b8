@@ -72,6 +72,7 @@ export default function CustomerApp() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeOrdersCount, setActiveOrdersCount] = useState(0);
   
   // Handle query params for order detail
   const tab = searchParams.get('tab');
@@ -91,6 +92,75 @@ export default function CustomerApp() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Real-time subscription for active orders
+  useEffect(() => {
+    if (!customerUser?.id) return;
+
+    const fetchActiveOrdersCount = async () => {
+      const { count } = await supabase
+        .from('customer_orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', customerUser.id)
+        .in('status', ['pending', 'accepted', 'on_the_way']);
+      
+      setActiveOrdersCount(count || 0);
+    };
+
+    fetchActiveOrdersCount();
+
+    // Subscribe to order changes
+    const channel = supabase
+      .channel('customer_active_orders')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customer_orders',
+          filter: `user_id=eq.${customerUser.id}`
+        },
+        (payload) => {
+          console.log('Order update:', payload);
+          fetchActiveOrdersCount();
+          
+          // Show toast notifications for status changes
+          if (payload.eventType === 'UPDATE') {
+            const newStatus = (payload.new as any)?.status;
+            const oldStatus = (payload.old as any)?.status;
+            
+            if (newStatus !== oldStatus) {
+              // Play notification sound
+              const audio = new Audio('/notification.mp3');
+              audio.play().catch(err => console.log('Audio failed:', err));
+              
+              // Show toast based on status
+              if (newStatus === 'accepted') {
+                toast({
+                  title: "✅ Pesanan Diterima!",
+                  description: "Rider telah menerima pesanan Anda",
+                });
+              } else if (newStatus === 'on_the_way') {
+                toast({
+                  title: "🚗 Rider Dalam Perjalanan!",
+                  description: "Pesanan Anda sedang diantar",
+                });
+              } else if (newStatus === 'delivered') {
+                toast({
+                  title: "🎉 Pesanan Tiba!",
+                  description: "Selamat menikmati kopi Zeger!",
+                });
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [customerUser, toast]);
 
   const fetchCustomerProfile = async () => {
     try {
@@ -291,22 +361,30 @@ export default function CustomerApp() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
         <div className="flex items-center justify-around py-2">
           {[
-            { key: 'home', icon: Home, label: 'Home' },
-            { key: 'vouchers', icon: Ticket, label: 'Voucher' },
-            { key: 'orders', icon: ClipboardList, label: 'Pesanan' },
-            { key: 'profile', icon: User, label: 'Akun' }
-          ].map(({ key, icon: Icon, label }) => (
+            { key: 'home', icon: Home, label: 'Home', badge: 0 },
+            { key: 'vouchers', icon: Ticket, label: 'Voucher', badge: 0 },
+            { key: 'orders', icon: ClipboardList, label: 'Pesanan', badge: activeOrdersCount },
+            { key: 'profile', icon: User, label: 'Akun', badge: 0 }
+          ].map(({ key, icon: Icon, label, badge }) => (
             <Button
               key={key}
               variant="ghost"
               size="sm"
-              className={`flex flex-col items-center space-y-1 h-auto py-2 px-3 ${
+              className={`relative flex flex-col items-center space-y-1 h-auto py-2 px-3 touch-target ${
                 activeView === key ? 'text-primary' : 'text-muted-foreground'
               }`}
               onClick={() => setActiveView(key as View)}
             >
               <Icon className={`h-5 w-5 ${activeView === key ? 'fill-primary/20' : ''}`} />
               <span className="text-xs font-medium">{label}</span>
+              {badge > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs badge-pulse"
+                >
+                  {badge}
+                </Badge>
+              )}
             </Button>
           ))}
         </div>

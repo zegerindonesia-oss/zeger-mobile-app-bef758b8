@@ -195,6 +195,11 @@ export function MobileOrdersOnline() {
 
       toast.success('Pesanan diterima!');
       
+      // Vibrate device if supported
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+      }
+      
       // Open Google Maps for navigation
       const order = orders.find(o => o.id === orderId);
       if (order && order.latitude && order.longitude) {
@@ -203,6 +208,7 @@ export function MobileOrdersOnline() {
       }
       
       fetchOrders();
+      setShowIncomingOrder(false);
     } catch (error) {
       console.error('Error accepting order:', error);
       toast.error('Gagal menerima pesanan');

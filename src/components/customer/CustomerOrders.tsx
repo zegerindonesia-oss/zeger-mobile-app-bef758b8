@@ -16,6 +16,8 @@ import {
   Phone,
   Eye
 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface CustomerOrdersProps {
   customerUser: any;
@@ -263,14 +265,7 @@ export function CustomerOrders({ customerUser }: CustomerOrdersProps) {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Memuat pesanan...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Memuat pesanan..." />;
   }
 
   return (
@@ -293,13 +288,11 @@ export function CustomerOrders({ customerUser }: CustomerOrdersProps) {
         
         <TabsContent value="active" className="space-y-4">
           {getActiveOrders().length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-2">Tidak ada pesanan aktif</p>
-                <p className="text-sm text-muted-foreground">Pesanan yang sedang diproses akan muncul di sini</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Clock}
+              title="Tidak ada pesanan aktif"
+              description="Pesanan yang sedang diproses akan muncul di sini"
+            />
           ) : (
             getActiveOrders().map((order) => (
               <OrderCard key={order.id} order={order} />
@@ -309,13 +302,11 @@ export function CustomerOrders({ customerUser }: CustomerOrdersProps) {
         
         <TabsContent value="history" className="space-y-4">
           {getCompletedOrders().length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-2">Belum ada riwayat pesanan</p>
-                <p className="text-sm text-muted-foreground">Pesanan yang selesai akan tersimpan di sini</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Package}
+              title="Belum ada riwayat pesanan"
+              description="Pesanan yang selesai akan tersimpan di sini"
+            />
           ) : (
             getCompletedOrders().map((order) => (
               <OrderCard key={order.id} order={order} />

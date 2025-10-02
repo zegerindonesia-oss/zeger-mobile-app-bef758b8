@@ -20,7 +20,7 @@
 
 @layer base {
   :root {
-    /* Core Brand Colors - Red Dominance with White Accents */
+    /* Zeger Brand Colors */
     --background: 0 0% 98%;
     --foreground: 0 0% 8%;
 
@@ -29,11 +29,15 @@
     --glass-border: 0 0% 100% / 0.2;
     --glass-shadow: 0 84% 60% / 0.1;
 
-    /* Red Gradient System */
-    --primary: 0 84% 60%;        /* Vibrant Red */
-    --primary-dark: 0 84% 45%;   /* Deeper Red */
-    --primary-light: 0 84% 75%;  /* Lighter Red */
+    /* Zeger Coffee - Red Primary */
+    --primary: 0 84% 60%;        /* Merah Zeger #DC2626 */
+    --primary-dark: 0 72% 51%;   /* Merah gelap #B91C1C */
+    --primary-light: 0 84% 75%;  /* Merah terang */
     --primary-foreground: 0 0% 100%;
+    
+    /* Accent Colors */
+    --accent-yellow: 45 93% 90%; /* Kuning-Cream #FEF3C7 */
+    --accent-brown: 30 67% 28%;  /* Coklat Kopi #92400E */
 
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 20%;
@@ -62,8 +66,10 @@
     --input: 0 0% 100% / 0.8;
     --ring: 0 84% 60%;
 
-    /* Advanced Gradients */
+    /* Advanced Gradients - Zeger Coffee Theme */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-dark)));
+    --gradient-coffee: linear-gradient(135deg, hsl(30, 67%, 28%), hsl(0, 84%, 60%));
+    --gradient-cream: linear-gradient(135deg, hsl(45, 93%, 90%), hsl(0, 0%, 100%));
     --gradient-glass: linear-gradient(135deg, hsl(var(--glass-bg)), hsl(var(--card-glass)));
     --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--secondary)));
 
@@ -244,6 +250,60 @@
 
   .bounce-in {
     animation: bounceIn 0.4s ease-out;
+  }
+  
+  /* Mobile-First Responsive Design */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .btn-mobile {
+    @apply h-12 rounded-full text-base font-medium px-6;
+  }
+
+  .btn-mobile-lg {
+    @apply h-14 rounded-full text-lg font-semibold px-8;
+  }
+
+  .mobile-padding {
+    @apply p-4;
+  }
+
+  .mobile-gap {
+    @apply space-y-4;
+  }
+
+  .text-mobile-body {
+    @apply text-base leading-relaxed;
+  }
+
+  .text-mobile-heading {
+    @apply text-xl font-semibold;
+  }
+
+  /* Page Transitions */
+  .page-enter {
+    @apply animate-in fade-in slide-in-from-right-4 duration-300;
+  }
+
+  .page-exit {
+    @apply animate-out fade-out slide-out-to-left-4 duration-300;
+  }
+
+  /* Card Hover Effects */
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:scale-[1.02];
+  }
+
+  /* Button Press Effect */
+  .btn-press {
+    @apply active:scale-95 transition-transform duration-150;
+  }
+
+  /* Badge Pulse Animation */
+  .badge-pulse {
+    @apply animate-pulse;
   }
 }
 
