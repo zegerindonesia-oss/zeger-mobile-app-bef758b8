@@ -167,10 +167,11 @@ const MobileRiderDashboard = () => {
       // Fetch today's sales
       const today = new Date().toISOString().split('T')[0];
       const { data: salesData, error: salesError } = await supabase
-        .from('orders')
-        .select('total_amount')
+        .from('transactions')
+        .select('final_amount')
         .eq('rider_id', riderId)
-        .eq('order_date', today);
+        .gte('transaction_date', `${today}T00:00:00`)
+        .lte('transaction_date', `${today}T23:59:59`);
 
       if (salesError) {
         console.error('Error fetching sales:', salesError);
@@ -178,7 +179,7 @@ const MobileRiderDashboard = () => {
         return;
       }
 
-      const todaySales = salesData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+      const todaySales = salesData?.reduce((sum, order) => sum + (Number(order.final_amount) || 0), 0) || 0;
       const todayTransactions = salesData?.length || 0;
 
       // TODO: Implement active customers logic
@@ -237,7 +238,7 @@ const MobileRiderDashboard = () => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, branch_id')
         .eq('user_id', user?.id)
         .single();
 
@@ -248,6 +249,7 @@ const MobileRiderDashboard = () => {
         .insert([
           {
             rider_id: profile.id,
+            branch_id: profile.branch_id!,
             shift_date: today,
             shift_start_time: new Date().toISOString(),
             status: 'active'

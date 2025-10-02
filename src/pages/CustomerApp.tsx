@@ -23,7 +23,7 @@ import { CustomerHome } from '@/components/customer/CustomerHome';
 import { CustomerVouchers } from '@/components/customer/CustomerVouchers';
 import { CustomerOrders } from '@/components/customer/CustomerOrders';
 import { CustomerProfile } from '@/components/customer/CustomerProfile';
-import { CustomerMap } from '@/components/customer/CustomerMap';
+import CustomerMap from '@/components/customer/CustomerMap';
 import { CustomerMenu } from '@/components/customer/CustomerMenu';
 import { CustomerCart } from '@/components/customer/CustomerCart';
 import { CustomerOutletList } from '@/components/customer/CustomerOutletList';
