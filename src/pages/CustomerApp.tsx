@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,7 @@ import CustomerMap from '@/components/customer/CustomerMap';
 import { CustomerMenu } from '@/components/customer/CustomerMenu';
 import { CustomerCart } from '@/components/customer/CustomerCart';
 import { CustomerOutletList } from '@/components/customer/CustomerOutletList';
+import { OrderDetail } from '@/components/customer/OrderDetail';
 import { useToast } from '@/hooks/use-toast';
 
 interface CustomerUser {
@@ -59,6 +61,7 @@ type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'cart'
 export default function CustomerApp() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -69,6 +72,10 @@ export default function CustomerApp() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Handle query params for order detail
+  const tab = searchParams.get('tab');
+  const orderId = searchParams.get('id');
 
   // Check authentication and fetch customer profile
   useEffect(() => {
@@ -235,35 +242,48 @@ export default function CustomerApp() {
 
       {/* Main Content */}
       <div className="pb-20">
-        {activeView === 'home' && (
-          <CustomerHome 
-            customerUser={customerUser} 
-            onNavigate={setActiveView}
-            recentProducts={products.slice(0, 6)}
-            onAddToCart={addToCart}
+        {tab === 'order-detail' && orderId ? (
+          <OrderDetail 
+            orderId={orderId} 
+            userRole="customer"
+            onBack={() => {
+              setSearchParams({});
+              setActiveView('orders');
+            }}
           />
-        )}
-        {activeView === 'vouchers' && <CustomerVouchers customerUser={customerUser} />}
-        {activeView === 'orders' && <CustomerOrders customerUser={customerUser} />}
-        {activeView === 'profile' && <CustomerProfile customerUser={customerUser} onUpdateProfile={() => fetchCustomerProfile()} />}
-        {activeView === 'map' && <CustomerMap />}
-        {activeView === 'outlets' && (
-          <CustomerOutletList 
-            onNavigate={(view: string) => setActiveView(view as View)}
-          />
-        )}
-        {activeView === 'menu' && (
-          <CustomerMenu 
-            products={products}
-            onAddToCart={addToCart}
-          />
-        )}
-        {activeView === 'cart' && (
-          <CustomerCart 
-            cart={cart}
-            onUpdateQuantity={updateCartQuantity}
-            onNavigate={(view: string) => setActiveView(view as View)}
-          />
+        ) : (
+          <>
+            {activeView === 'home' && (
+              <CustomerHome 
+                customerUser={customerUser} 
+                onNavigate={setActiveView}
+                recentProducts={products.slice(0, 6)}
+                onAddToCart={addToCart}
+              />
+            )}
+            {activeView === 'vouchers' && <CustomerVouchers customerUser={customerUser} />}
+            {activeView === 'orders' && <CustomerOrders customerUser={customerUser} />}
+            {activeView === 'profile' && <CustomerProfile customerUser={customerUser} onUpdateProfile={() => fetchCustomerProfile()} />}
+            {activeView === 'map' && <CustomerMap />}
+            {activeView === 'outlets' && (
+              <CustomerOutletList 
+                onNavigate={(view: string) => setActiveView(view as View)}
+              />
+            )}
+            {activeView === 'menu' && (
+              <CustomerMenu 
+                products={products}
+                onAddToCart={addToCart}
+              />
+            )}
+            {activeView === 'cart' && (
+              <CustomerCart 
+                cart={cart}
+                onUpdateQuantity={updateCartQuantity}
+                onNavigate={(view: string) => setActiveView(view as View)}
+              />
+            )}
+          </>
         )}
       </div>
 

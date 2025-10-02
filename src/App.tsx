@@ -14,6 +14,7 @@ import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
+import OrdersManagement from "./pages/OrdersManagement";
 import ProfitLoss from "./pages/finance/ProfitLoss";
 import CashFlow from "./pages/finance/CashFlow";
 import BalanceSheet from "./pages/finance/BalanceSheet";
@@ -117,6 +118,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'rider', 'sb_rider', 'bh_rider']}>
                 <ModernLayout>
                   <CustomerManager />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/orders-management" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
+                <ModernLayout>
+                  <OrdersManagement />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

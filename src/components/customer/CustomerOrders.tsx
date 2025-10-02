@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,8 @@ import {
   MapPin,
   RefreshCw,
   ShoppingBag,
-  Phone
+  Phone,
+  Eye
 } from 'lucide-react';
 
 interface CustomerOrdersProps {
@@ -73,6 +75,7 @@ const statusConfig = {
 export function CustomerOrders({ customerUser }: CustomerOrdersProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     fetchOrders();
@@ -220,6 +223,16 @@ export function CustomerOrders({ customerUser }: CustomerOrdersProps) {
 
           {/* Action Buttons */}
           <div className="flex space-x-2 pt-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => setSearchParams({ tab: 'order-detail', id: order.id })}
+              className="flex-1"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Lihat Detail
+            </Button>
+            
             {['delivered'].includes(order.status) && (
               <Button 
                 variant="outline" 

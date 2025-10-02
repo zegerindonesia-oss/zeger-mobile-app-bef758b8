@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +15,8 @@ import {
   XCircle,
   Loader2,
   User,
-  DollarSign
+  DollarSign,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -52,6 +54,7 @@ interface CustomerOrder {
 
 export function MobileOrdersOnline() {
   const { userProfile } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
@@ -317,6 +320,16 @@ export function MobileOrdersOnline() {
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
+                      {/* View Detail Button - Available for all statuses */}
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/customer-app?tab=order-detail&id=${order.id}`)}
+                        className="flex-1"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Detail
+                      </Button>
+                      
                       {order.status === 'pending' && (
                         <>
                           <Button
