@@ -16,9 +16,11 @@ import {
   Loader2,
   User,
   DollarSign,
-  Eye
+  Eye,
+  Navigation
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { MobileIncomingOrder } from './MobileIncomingOrder';
 
 interface OrderItem {
   id: string;
@@ -59,12 +61,16 @@ export function MobileOrdersOnline() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [processingOrder, setProcessingOrder] = useState<string | null>(null);
+  const [incomingOrder, setIncomingOrder] = useState<CustomerOrder | null>(null);
+  const [showIncomingModal, setShowIncomingModal] = useState(false);
+  const [riderLocation, setRiderLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     fetchOrders();
+    getCurrentLocation();
     
-    // Subscribe to realtime updates
-    const channel = supabase
+    // Subscribe to realtime updates for all order changes
+    const allOrdersChannel = supabase
       .channel('customer_orders_changes')
       .on(
         'postgres_changes',
@@ -80,10 +86,67 @@ export function MobileOrdersOnline() {
       )
       .subscribe();
 
+    // Subscribe specifically for new incoming orders (INSERT events)
+    const incomingOrdersChannel = supabase
+      .channel('incoming_orders')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'customer_orders',
+          filter: `rider_id=eq.${userProfile?.id}`
+        },
+        async (payload) => {
+          console.log('New order incoming:', payload);
+          
+          // Fetch full order details
+          const { data, error } = await supabase
+            .from('customer_orders')
+            .select(`
+              *,
+              customer_users!customer_orders_user_id_fkey (name, phone),
+              customer_order_items (
+                id,
+                product_id,
+                quantity,
+                price,
+                products (name, code)
+              )
+            `)
+            .eq('id', payload.new.id)
+            .eq('status', 'pending')
+            .single();
+
+          if (!error && data) {
+            setIncomingOrder(data as CustomerOrder);
+            setShowIncomingModal(true);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(allOrdersChannel);
+      supabase.removeChannel(incomingOrdersChannel);
     };
   }, [userProfile?.id]);
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setRiderLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        }
+      );
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -131,6 +194,14 @@ export function MobileOrdersOnline() {
       if (error) throw error;
 
       toast.success('Pesanan diterima!');
+      
+      // Open Google Maps for navigation
+      const order = orders.find(o => o.id === orderId);
+      if (order && order.latitude && order.longitude) {
+        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`;
+        window.open(mapsUrl, '_blank');
+      }
+      
       fetchOrders();
     } catch (error) {
       console.error('Error accepting order:', error);
@@ -239,11 +310,21 @@ export function MobileOrdersOnline() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">Order Online</h2>
-        <p className="text-muted-foreground">Kelola pesanan dari Zeger App</p>
-      </div>
+    <>
+      <MobileIncomingOrder
+        order={incomingOrder}
+        isOpen={showIncomingModal}
+        onClose={() => setShowIncomingModal(false)}
+        onAccept={handleAcceptOrder}
+        onReject={handleRejectOrder}
+        riderLocation={riderLocation}
+      />
+
+      <div className="p-4 space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold">Order Online</h2>
+          <p className="text-muted-foreground">Kelola pesanan dari Zeger App</p>
+        </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5">
@@ -356,24 +437,46 @@ export function MobileOrdersOnline() {
                         </>
                       )}
                       
-                      {order.status === 'accepted' && (
-                        <Button
-                          onClick={() => handleUpdateStatus(order.id, 'in_progress')}
-                          disabled={processingOrder === order.id}
-                          className="w-full"
-                        >
-                          Mulai Pengiriman
-                        </Button>
+                       {order.status === 'accepted' && (
+                        <>
+                          <Button
+                            onClick={() => handleUpdateStatus(order.id, 'in_progress')}
+                            disabled={processingOrder === order.id}
+                            className="flex-1"
+                          >
+                            Mulai Pengiriman
+                          </Button>
+                          {order.latitude && order.longitude && (
+                            <Button
+                              variant="outline"
+                              onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`, '_blank')}
+                            >
+                              <Navigation className="h-4 w-4 mr-2" />
+                              Rute
+                            </Button>
+                          )}
+                        </>
                       )}
                       
                       {order.status === 'in_progress' && (
-                        <Button
-                          onClick={() => handleUpdateStatus(order.id, 'completed')}
-                          disabled={processingOrder === order.id}
-                          className="w-full"
-                        >
-                          Selesaikan Pesanan
-                        </Button>
+                        <>
+                          <Button
+                            onClick={() => handleUpdateStatus(order.id, 'completed')}
+                            disabled={processingOrder === order.id}
+                            className="flex-1"
+                          >
+                            Tiba di Lokasi
+                          </Button>
+                          {order.latitude && order.longitude && (
+                            <Button
+                              variant="outline"
+                              onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`, '_blank')}
+                            >
+                              <Navigation className="h-4 w-4 mr-2" />
+                              Rute
+                            </Button>
+                          )}
+                        </>
                       )}
 
                       {order.customer_users.phone && (
@@ -393,6 +496,7 @@ export function MobileOrdersOnline() {
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+      </div>
+    </>
   );
 }

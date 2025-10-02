@@ -33,6 +33,7 @@ const MobileRiderDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [hasActiveShift, setHasActiveShift] = useState(false);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const watchIdRef = useRef<number | null>(null);
 
@@ -41,11 +42,29 @@ const MobileRiderDashboard = () => {
       fetchDashboardData();
       checkActiveShift();
       startLocationTracking();
-    }
+      fetchPendingOrders();
+      
+      // Subscribe to pending orders
+      const channel = supabase
+        .channel('pending_orders_count')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'customer_orders'
+          },
+          () => {
+            fetchPendingOrders();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      stopLocationTracking();
-    };
+      return () => {
+        stopLocationTracking();
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   const startLocationTracking = () => {
@@ -199,6 +218,33 @@ const MobileRiderDashboard = () => {
     }
   };
 
+  const fetchPendingOrders = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!profile) return;
+
+      const { count, error } = await supabase
+        .from('customer_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('rider_id', profile.id)
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('Error fetching pending orders:', error);
+        return;
+      }
+
+      setPendingOrdersCount(count || 0);
+    } catch (error) {
+      console.error('Error in fetchPendingOrders:', error);
+    }
+  };
+
   const checkActiveShift = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -318,9 +364,18 @@ const MobileRiderDashboard = () => {
     <div className="container mx-auto p-4">
       <Card>
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">
-            Rider Dashboard
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-bold">
+              Rider Dashboard
+            </CardTitle>
+            {pendingOrdersCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full animate-pulse">
+                <span className="text-sm font-medium">
+                  {pendingOrdersCount} Pesanan Baru
+                </span>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
