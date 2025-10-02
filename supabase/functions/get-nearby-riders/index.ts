@@ -50,36 +50,50 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get rider profiles with location
+    // Get ALL rider profiles (with or without location)
     const { data: riders, error: ridersError } = await supabase
       .from('profiles')
       .select('id, full_name, phone, last_known_lat, last_known_lng, location_updated_at')
       .in('id', activeRiderIds)
-      .eq('is_active', true)
-      .not('last_known_lat', 'is', null)
-      .not('last_known_lng', 'is', null);
+      .eq('is_active', true);
 
     if (ridersError) {
       console.error('Error fetching riders:', ridersError);
       throw ridersError;
     }
 
-    console.log('Riders with location:', riders?.length);
+    console.log('Total riders found:', riders?.length);
 
-    // Calculate distances and filter by radius
+    // Calculate distances for ALL riders
     const ridersWithDistance = await Promise.all(
       (riders || []).map(async (rider) => {
-        // Haversine formula for distance calculation
-        const R = 6371; // Earth radius in km
-        const dLat = (customer_lat - rider.last_known_lat!) * Math.PI / 180;
-        const dLng = (customer_lng - rider.last_known_lng!) * Math.PI / 180;
-        const a = 
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(rider.last_known_lat! * Math.PI / 180) * 
-          Math.cos(customer_lat * Math.PI / 180) *
-          Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance_km = R * c;
+        let distance_km = 9999;
+        let eta_minutes = 0;
+        let is_online = false;
+
+        // Only calculate distance if rider has location
+        if (rider.last_known_lat && rider.last_known_lng) {
+          // Haversine formula for distance calculation
+          const R = 6371; // Earth radius in km
+          const dLat = (customer_lat - rider.last_known_lat) * Math.PI / 180;
+          const dLng = (customer_lng - rider.last_known_lng) * Math.PI / 180;
+          const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(rider.last_known_lat * Math.PI / 180) * 
+            Math.cos(customer_lat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          distance_km = Math.round((R * c) * 100) / 100;
+
+          // Calculate ETA (assuming 20 km/h average speed)
+          eta_minutes = Math.round((distance_km / 20) * 60);
+
+          // Check if location is recent (within last 5 minutes)
+          const locationAge = rider.location_updated_at 
+            ? (Date.now() - new Date(rider.location_updated_at).getTime()) / 1000 / 60
+            : 999;
+          is_online = locationAge < 5;
+        }
 
         // Get rider inventory count
         const { data: inventory } = await supabase
@@ -89,28 +103,28 @@ Deno.serve(async (req) => {
 
         const total_stock = inventory?.reduce((sum, item) => sum + (item.stock_quantity || 0), 0) || 0;
 
-        // Calculate ETA (assuming 20 km/h average speed)
-        const eta_minutes = Math.round((distance_km / 20) * 60);
-
         return {
           id: rider.id,
           full_name: rider.full_name,
           phone: rider.phone || '',
-          distance_km: Math.round(distance_km * 100) / 100,
+          distance_km,
           eta_minutes,
           total_stock,
           rating: 4.5, // TODO: Implement real rating system
           lat: rider.last_known_lat,
           lng: rider.last_known_lng,
-          last_updated: rider.location_updated_at
+          last_updated: rider.location_updated_at,
+          is_online
         };
       })
     );
 
-    // Filter by radius and sort by distance
-    const nearbyRiders = ridersWithDistance
-      .filter(r => r.distance_km <= radius_km)
-      .sort((a, b) => a.distance_km - b.distance_km);
+    // Sort: online riders first (by distance), then offline riders
+    const nearbyRiders = ridersWithDistance.sort((a, b) => {
+      if (a.is_online && !b.is_online) return -1;
+      if (!a.is_online && b.is_online) return 1;
+      return a.distance_km - b.distance_km;
+    });
 
     console.log('Nearby riders found:', nearbyRiders.length);
 
