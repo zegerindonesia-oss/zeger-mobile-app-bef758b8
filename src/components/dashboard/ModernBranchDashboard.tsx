@@ -79,6 +79,16 @@ export const ModernBranchDashboard = () => {
   const [activeRiders, setActiveRiders] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   
+  // Online Orders State
+  const [onlineOrders, setOnlineOrders] = useState<any[]>([]);
+  const [onlineOrdersStats, setOnlineOrdersStats] = useState({
+    total: 0,
+    pending: 0,
+    in_progress: 0,
+    completed: 0,
+    revenue: 0
+  });
+  
   const [stats, setStats] = useState<DashboardStats>({
     totalSales: 0,
     totalTransactions: 0,
@@ -137,6 +147,30 @@ export const ModernBranchDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [selectedUser, salesFilter, startDate, endDate, menuFilter, hourlyFilter, riderFilter]);
+
+  // Real-time subscription for online orders
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-online-orders')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customer_orders'
+        },
+        () => {
+          console.log('🔄 Online order updated, refreshing...');
+          fetchOnlineOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const getDateRange = (filter: 'today' | 'week' | 'month') => {
     const today = getJakartaNow();
     let start = startDate;
@@ -221,6 +255,62 @@ export const ModernBranchDashboard = () => {
     }
   };
 
+  const fetchOnlineOrders = async () => {
+    try {
+      console.log('🛍️ Fetching online orders...');
+      
+      const today = formatYMD(getJakartaNow());
+      
+      let query = supabase
+        .from('customer_orders')
+        .select(`
+          *,
+          customer_users!customer_orders_user_id_fkey(name, phone),
+          rider:customer_users!customer_orders_rider_id_fkey(name, phone),
+          order_items:customer_order_items(
+            quantity,
+            product:products(name)
+          )
+        `)
+        .gte('created_at', `${today}T00:00:00`)
+        .lte('created_at', `${today}T23:59:59`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      // Branch filtering
+      if (userProfile?.role === 'branch_manager' && userProfile?.branch_id) {
+        // Add branch filtering if needed in the future
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setOnlineOrders(data || []);
+
+      // Calculate stats
+      const orders = data || [];
+      const total = orders.length;
+      const pending = orders.filter(o => o.status === 'pending').length;
+      const in_progress = orders.filter(o => 
+        ['confirmed', 'preparing', 'on_delivery'].includes(o.status)
+      ).length;
+      const completed = orders.filter(o => 
+        ['delivered', 'completed'].includes(o.status)
+      ).length;
+      const revenue = orders
+        .filter(o => ['delivered', 'completed'].includes(o.status))
+        .reduce((sum, o) => sum + (o.total_price || 0), 0);
+
+      setOnlineOrdersStats({ total, pending, in_progress, completed, revenue });
+      
+      console.log(`🛍️ Online orders fetched: ${total} orders, Rp ${revenue.toLocaleString('id-ID')} revenue`);
+    } catch (error: any) {
+      console.error('Error fetching online orders:', error);
+      setOnlineOrders([]);
+    }
+  };
+
   const fetchTopProducts = async () => {
     try {
       const { start, end } = getDateRange('month');
@@ -296,7 +386,8 @@ export const ModernBranchDashboard = () => {
         withTimeout(fetchRiders(), 10000),
         withTimeout(fetchStats(), 20000),
         withTimeout(fetchActiveRiders(), 10000),
-        withTimeout(fetchTopProducts(), 10000)
+        withTimeout(fetchTopProducts(), 10000),
+        withTimeout(fetchOnlineOrders(), 10000)
       ]);
       
       setStatsLoading(false);
@@ -1521,6 +1612,130 @@ export const ModernBranchDashboard = () => {
             </Card>
           </div>
         </div>
+
+        {/* Online Orders Section */}
+        <Card className="bg-white rounded-3xl shadow-sm border-0">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <ShoppingCart className="h-6 w-6 text-primary" />
+                  Online Orders (Zeger App)
+                </CardTitle>
+                <p className="text-sm text-gray-500">Order hari ini dari aplikasi customer</p>
+              </div>
+              <Button 
+                onClick={() => navigate('/orders-management')}
+                size="sm"
+                className="rounded-full"
+              >
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Stats Row */}
+            <div className="grid grid-cols-5 gap-4 mb-6">
+              <div className="text-center p-4 bg-gray-50 rounded-2xl">
+                <p className="text-2xl font-bold text-gray-900">{onlineOrdersStats.total}</p>
+                <p className="text-xs text-gray-600 mt-1">Total Orders</p>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 rounded-2xl">
+                <p className="text-2xl font-bold text-yellow-600">{onlineOrdersStats.pending}</p>
+                <p className="text-xs text-gray-600 mt-1">Pending</p>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-2xl">
+                <p className="text-2xl font-bold text-blue-600">{onlineOrdersStats.in_progress}</p>
+                <p className="text-xs text-gray-600 mt-1">In Progress</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-2xl">
+                <p className="text-2xl font-bold text-green-600">{onlineOrdersStats.completed}</p>
+                <p className="text-xs text-gray-600 mt-1">Completed</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-2xl">
+                <p className="text-lg font-bold text-purple-600">
+                  {formatCurrency(onlineOrdersStats.revenue)}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">Revenue</p>
+              </div>
+            </div>
+
+            {/* Recent Orders Table */}
+            {statsLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div className="w-full space-y-2">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : onlineOrders.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>Belum ada order online hari ini</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {onlineOrders.map((order) => {
+                  const statusColors: Record<string, string> = {
+                    pending: 'bg-yellow-100 text-yellow-700',
+                    confirmed: 'bg-blue-100 text-blue-700',
+                    preparing: 'bg-purple-100 text-purple-700',
+                    on_delivery: 'bg-indigo-100 text-indigo-700',
+                    delivered: 'bg-green-100 text-green-700',
+                    completed: 'bg-green-100 text-green-700',
+                    cancelled: 'bg-red-100 text-red-700',
+                    rejected: 'bg-gray-100 text-gray-700'
+                  };
+
+                  return (
+                    <div 
+                      key={order.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/customer-app?tab=order-detail&id=${order.id}`)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="font-mono text-sm font-medium text-gray-900">
+                            #{order.id.slice(0, 8)}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
+                            {order.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {order.customer_users?.name || 'Unknown'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Package className="h-3 w-3" />
+                            {order.order_items?.length || 0} items
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Receipt className="h-3 w-3" />
+                            {new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-primary">
+                          {formatCurrency(order.total_price)}
+                        </p>
+                        <p className="text-xs text-gray-500 uppercase">
+                          {order.payment_method}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Sales Chart */}
         <Card className="bg-white rounded-3xl shadow-sm border-0">
