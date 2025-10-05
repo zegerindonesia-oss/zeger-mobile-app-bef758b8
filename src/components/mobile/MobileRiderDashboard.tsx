@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
   Package, Clock, DollarSign, TrendingUp,
-  MapPin, Users, Activity
+  MapPin, Users, Activity, Navigation, RefreshCw
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -34,6 +34,8 @@ const MobileRiderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [hasActiveShift, setHasActiveShift] = useState(false);
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [gpsStatus, setGpsStatus] = useState<'active' | 'inactive' | 'error'>('inactive');
+  const [lastGpsUpdate, setLastGpsUpdate] = useState<Date | null>(null);
   const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const watchIdRef = useRef<number | null>(null);
 
@@ -70,8 +72,12 @@ const MobileRiderDashboard = () => {
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
       console.log('Geolocation not supported');
+      setGpsStatus('error');
+      toast.error('GPS tidak didukung di perangkat ini');
       return;
     }
+
+    setGpsStatus('active');
 
     // Initial location update
     updateLocation();
@@ -80,9 +86,26 @@ const MobileRiderDashboard = () => {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         updateLocationToServer(position.coords);
+        setGpsStatus('active');
+        setLastGpsUpdate(new Date());
       },
       (error) => {
         console.error('Error watching position:', error);
+        setGpsStatus('error');
+        
+        let errorMessage = 'Gagal mengakses GPS';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Izin GPS ditolak. Aktifkan di pengaturan.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Lokasi tidak tersedia.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'GPS timeout.';
+            break;
+        }
+        toast.error(errorMessage);
       },
       {
         enableHighAccuracy: true,
@@ -145,9 +168,14 @@ const MobileRiderDashboard = () => {
 
       if (error) {
         console.error('Error updating location:', error);
+        setGpsStatus('error');
+      } else {
+        setGpsStatus('active');
+        setLastGpsUpdate(new Date());
       }
     } catch (error) {
       console.error('Error in updateLocationToServer:', error);
+      setGpsStatus('error');
     }
   };
 
@@ -360,10 +388,41 @@ const MobileRiderDashboard = () => {
     );
   }
 
+  const getGpsStatusColor = () => {
+    switch (gpsStatus) {
+      case 'active': return 'text-green-500';
+      case 'inactive': return 'text-yellow-500';
+      case 'error': return 'text-red-500';
+    }
+  };
+
+  const getGpsStatusIcon = () => {
+    switch (gpsStatus) {
+      case 'active': return '🟢';
+      case 'inactive': return '🟡';
+      case 'error': return '🔴';
+    }
+  };
+
+  const formatLastUpdate = () => {
+    if (!lastGpsUpdate) return 'Belum tersedia';
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - lastGpsUpdate.getTime()) / 1000);
+    
+    if (diff < 60) return `${diff} detik lalu`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} menit lalu`;
+    return lastGpsUpdate.toLocaleTimeString('id-ID');
+  };
+
+  const handleManualGpsUpdate = () => {
+    toast.info('Memperbarui lokasi GPS...');
+    updateLocation();
+  };
+
   return (
     <div className="container mx-auto p-4">
       <Card>
-        <CardHeader className="space-y-1">
+        <CardHeader className="space-y-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-bold">
               Rider Dashboard
@@ -375,6 +434,32 @@ const MobileRiderDashboard = () => {
                 </span>
               </div>
             )}
+          </div>
+          
+          {/* GPS Status Indicator */}
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="flex items-center gap-2">
+              <Navigation className={`h-5 w-5 ${getGpsStatusColor()}`} />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Status GPS</span>
+                  <span className={`text-xs ${getGpsStatusColor()}`}>
+                    {getGpsStatusIcon()} {gpsStatus === 'active' ? 'Aktif' : gpsStatus === 'inactive' ? 'Standby' : 'Error'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Update: {formatLastUpdate()}
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleManualGpsUpdate}
+              className="h-8"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="grid gap-4">

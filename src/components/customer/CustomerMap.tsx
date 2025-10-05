@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Phone, Star, Package, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, Phone, Star, Package, Navigation, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Rider {
   id: string;
@@ -18,7 +19,9 @@ interface Rider {
   lng: number | null;
   last_updated: string | null;
   is_online: boolean;
-  photo_url?: string | null;
+  has_gps?: boolean;
+  branch_name?: string;
+  branch_address?: string;
 }
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyALr8P3I3bAO8UBYXVA0BI1biG5sUuiIpg';
@@ -33,7 +36,7 @@ const CustomerMap = () => {
   const markers = useRef<google.maps.Marker[]>([]);
 
   useEffect(() => {
-    getUserLocation();
+    requestLocationPermission();
     
     // Cleanup map on unmount
     return () => {
@@ -42,6 +45,26 @@ const CustomerMap = () => {
     };
   }, []);
 
+  const requestLocationPermission = async () => {
+    console.log('📍 Requesting location permission...');
+    try {
+      const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+      
+      if (permission.state === 'denied') {
+        setMapError('Izin lokasi ditolak. Silakan aktifkan di pengaturan browser Anda.');
+        setLoading(false);
+        toast.error('Izin lokasi ditolak');
+        return;
+      }
+      
+      getUserLocation();
+    } catch (error) {
+      // Fallback if Permissions API not supported
+      console.log('Permissions API not supported, requesting directly');
+      getUserLocation();
+    }
+  };
+
   // Initialize Google Maps when location is available
   useEffect(() => {
     if (!userLocation || !mapContainer.current) return;
@@ -49,10 +72,29 @@ const CustomerMap = () => {
 
     console.log('🗺️ Initializing Google Maps with user location:', userLocation);
     
-    // Load Google Maps script
-    const loadGoogleMaps = () => {
-      if ((window as any).google?.maps) {
+    loadGoogleMaps()
+      .then(() => {
         initializeMap();
+      })
+      .catch((error) => {
+        console.error('❌ Failed to load Google Maps:', error);
+        setMapError('Gagal memuat Google Maps. Silakan refresh halaman.');
+        toast.error('Gagal memuat peta');
+      });
+  }, [userLocation]);
+
+  const loadGoogleMaps = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if ((window as any).google?.maps) {
+        resolve();
+        return;
+      }
+
+      // Check if script already exists
+      const existingScript = document.querySelector(`script[src*="maps.googleapis.com"]`);
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve());
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load Google Maps')));
         return;
       }
 
@@ -60,140 +102,186 @@ const CustomerMap = () => {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
       script.async = true;
       script.defer = true;
-      script.onload = initializeMap;
-      document.head.appendChild(script);
-    };
-
-    const initializeMap = () => {
-      if (!mapContainer.current || !(window as any).google?.maps) return;
-
-      // Create map
-      map.current = new google.maps.Map(mapContainer.current, {
-        center: { lat: userLocation.lat, lng: userLocation.lng },
-        zoom: 13,
-        mapTypeControl: false,
-        fullscreenControl: true,
-      });
-
-      // Add customer marker (blue pin)
-      const customerMarker = new google.maps.Marker({
-        position: { lat: userLocation.lat, lng: userLocation.lng },
-        map: map.current,
-        title: 'Lokasi Anda',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 12,
-          fillColor: '#3b82f6',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 4,
-        },
-      });
-
-      const customerInfo = new google.maps.InfoWindow({
-        content: '<div style="padding: 8px;"><strong>Lokasi Anda</strong></div>',
-      });
-      customerMarker.addListener('click', () => {
-        customerInfo.open(map.current!, customerMarker);
-      });
-
-      // Add rider markers
-      console.log('📍 Adding markers for riders:', nearbyRiders.length);
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
-
-      nearbyRiders.forEach(rider => {
-        if (rider.lat && rider.lng) {
-          const riderMarker = new google.maps.Marker({
-            position: { lat: rider.lat, lng: rider.lng },
-            map: map.current!,
-            title: rider.full_name,
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: rider.is_online ? '#22c55e' : '#9ca3af',
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 3,
-            },
-          });
-
-          const infoWindow = new google.maps.InfoWindow({
-            content: `
-              <div style="padding: 12px; min-width: 200px;">
-                <strong style="font-size: 16px;">${rider.full_name}</strong><br/>
-                <span style="color: ${rider.is_online ? '#22c55e' : '#9ca3af'};">
-                  ${rider.is_online ? '🟢 Online' : '⚪ Offline'}
-                </span><br/>
-                <span style="font-size: 14px;">
-                  ${rider.distance_km < 999 ? `📍 ${rider.distance_km.toFixed(1)} km` : '📍 Lokasi tidak tersedia'}
-                </span>
-              </div>
-            `,
-          });
-
-          riderMarker.addListener('click', () => {
-            infoWindow.open(map.current!, riderMarker);
-          });
-
-          markers.current.push(riderMarker);
-          bounds.extend({ lat: rider.lat, lng: rider.lng });
+      
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      const handleError = () => {
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.log(`🔄 Retrying Google Maps load (${retryCount}/${maxRetries})...`);
+          setTimeout(() => {
+            document.head.removeChild(script);
+            loadGoogleMaps().then(resolve).catch(reject);
+          }, 2000);
+        } else {
+          reject(new Error('Failed to load Google Maps after multiple attempts'));
         }
-      });
+      };
+      
+      script.onload = () => {
+        console.log('✅ Google Maps script loaded');
+        resolve();
+      };
+      script.onerror = handleError;
+      document.head.appendChild(script);
+    });
+  };
 
-      // Fit bounds to show all markers
-      if (nearbyRiders.length > 0) {
-        map.current.fitBounds(bounds, 50);
+  const initializeMap = () => {
+    if (!mapContainer.current || !(window as any).google?.maps || !userLocation) return;
+
+    console.log('🗺️ Creating map instance...');
+    // Create map
+    map.current = new google.maps.Map(mapContainer.current, {
+      center: { lat: userLocation.lat, lng: userLocation.lng },
+      zoom: 13,
+      mapTypeControl: false,
+      fullscreenControl: true,
+    });
+
+    // Add customer marker (blue pin)
+    const customerMarker = new google.maps.Marker({
+      position: { lat: userLocation.lat, lng: userLocation.lng },
+      map: map.current,
+      title: 'Lokasi Anda',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: '#3b82f6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 4,
+      },
+    });
+
+    const customerInfo = new google.maps.InfoWindow({
+      content: '<div style="padding: 8px;"><strong>Lokasi Anda</strong></div>',
+    });
+    customerMarker.addListener('click', () => {
+      customerInfo.open(map.current!, customerMarker);
+    });
+
+    // Add rider markers
+    console.log('📍 Adding markers for riders:', nearbyRiders.length);
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
+
+    nearbyRiders.forEach(rider => {
+      if (rider.lat && rider.lng) {
+        const riderMarker = new google.maps.Marker({
+          position: { lat: rider.lat, lng: rider.lng },
+          map: map.current!,
+          title: `${rider.full_name}${rider.has_gps ? '' : ' (Lokasi cabang)'}`,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: rider.has_gps ? (rider.is_online ? '#22c55e' : '#ef4444') : '#9ca3af',
+            fillOpacity: rider.has_gps ? 1 : 0.5,
+            strokeColor: '#ffffff',
+            strokeWeight: 3,
+          },
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 12px; min-width: 200px;">
+              <strong style="font-size: 16px;">${rider.full_name}</strong><br/>
+              <span style="color: ${rider.is_online ? '#22c55e' : '#9ca3af'};">
+                ${rider.is_online ? '🟢 Online' : '⚪ Offline'}
+              </span><br/>
+              <span style="font-size: 14px;">
+                ${rider.distance_km < 999 ? `📍 ${rider.distance_km.toFixed(1)} km` : '📍 Lokasi tidak tersedia'}
+              </span>
+              ${!rider.has_gps ? '<br/><span style="font-size: 12px; color: #9ca3af;">⚠️ Lokasi GPS tidak tersedia</span>' : ''}
+            </div>
+          `,
+        });
+
+        riderMarker.addListener('click', () => {
+          infoWindow.open(map.current!, riderMarker);
+        });
+
+        markers.current.push(riderMarker);
+        bounds.extend({ lat: rider.lat, lng: rider.lng });
       }
+    });
 
-      console.log('✅ Google Maps loaded successfully');
-      setMapError(null);
-    };
+    // Fit bounds to show all markers
+    if (nearbyRiders.length > 0) {
+      map.current.fitBounds(bounds, 50);
+    }
 
-    loadGoogleMaps();
-  }, [userLocation, nearbyRiders]);
+    console.log('✅ Google Maps loaded successfully');
+    setMapError(null);
+  };
 
   const getUserLocation = () => {
     console.log('📍 Requesting user location...');
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          console.log('✅ Got user location:', location);
-          setUserLocation(location);
-          fetchNearbyRiders(location.lat, location.lng);
-        },
-        (error) => {
-          console.error('❌ Error getting location:', error);
-          // Use Jakarta as fallback location
-          const fallbackLocation = { lat: -6.2088, lng: 106.8456 };
-          console.log('📍 Using fallback location (Jakarta):', fallbackLocation);
-          setUserLocation(fallbackLocation);
-          fetchNearbyRiders(fallbackLocation.lat, fallbackLocation.lng);
-          setMapError('Lokasi tidak dapat diakses. Menggunakan lokasi default (Jakarta).');
-        }
-      );
-    } else {
-      console.error('❌ Geolocation not supported');
+    if (!navigator.geolocation) {
+      const errorMsg = "Geolocation tidak didukung di browser Anda";
+      setMapError(errorMsg);
+      toast.error(errorMsg);
       // Use Jakarta as fallback location
       const fallbackLocation = { lat: -6.2088, lng: 106.8456 };
       setUserLocation(fallbackLocation);
       fetchNearbyRiders(fallbackLocation.lat, fallbackLocation.lng);
-      setMapError('Browser tidak mendukung geolokasi. Menggunakan lokasi default (Jakarta).');
+      setLoading(false);
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        console.log('✅ Got user location:', location);
+        setUserLocation(location);
+        setMapError(null);
+        fetchNearbyRiders(location.lat, location.lng);
+      },
+      (error) => {
+        console.error('❌ Error getting location:', error);
+        let errorMessage = "Tidak dapat mengakses lokasi Anda";
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Izin lokasi ditolak. Silakan aktifkan di pengaturan browser.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Informasi lokasi tidak tersedia.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Permintaan lokasi timeout.";
+            break;
+        }
+        
+        setMapError(errorMessage);
+        toast.error(errorMessage);
+        
+        // Fallback to Jakarta
+        const fallbackLocation = { lat: -6.2088, lng: 106.8456 };
+        setUserLocation(fallbackLocation);
+        fetchNearbyRiders(fallbackLocation.lat, fallbackLocation.lng);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   const fetchNearbyRiders = async (lat: number, lng: number) => {
     console.log('🔍 Fetching nearby riders for location:', { lat, lng });
     try {
+      setLoading(true);
       const { data, error } = await supabase.functions.invoke('get-nearby-riders', {
         body: {
           customer_lat: lat,
           customer_lng: lng,
-          radius_km: 50 // Large radius to show all riders
+          radius_km: 50
         }
       });
 
@@ -203,9 +291,19 @@ const CustomerMap = () => {
       }
       
       console.log('✅ Fetched riders:', data.riders?.length || 0, 'riders found');
+      
+      if (!data.riders || data.riders.length === 0) {
+        setMapError('Tidak ada rider tersedia di area ini saat ini. Silakan coba lagi nanti.');
+        toast.info('Tidak ada rider tersedia');
+      } else {
+        setMapError(null);
+      }
+      
       setNearbyRiders(data.riders || []);
     } catch (error) {
       console.error('❌ Error fetching nearby riders:', error);
+      setMapError('Gagal memuat rider terdekat. Pastikan Anda terhubung ke internet.');
+      toast.error('Gagal memuat rider terdekat');
     } finally {
       setLoading(false);
     }
@@ -221,7 +319,26 @@ const CustomerMap = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">Memuat peta dan mencari rider terdekat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (mapError && !userLocation) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 p-4">
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Perhatian</h3>
+          <p className="text-gray-600 mb-4">{mapError}</p>
+          <Button onClick={requestLocationPermission}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Coba Lagi
+          </Button>
+        </div>
       </div>
     );
   }
@@ -236,8 +353,19 @@ const CustomerMap = () => {
       {/* Interactive Map */}
       {mapError && (
         <Card className="mb-4 border-yellow-500 bg-yellow-50">
-          <CardContent className="p-4">
-            <p className="text-sm text-yellow-800">{mapError}</p>
+          <CardContent className="p-4 flex items-center justify-between">
+            <p className="text-sm text-yellow-800 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              {mapError}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => {
+              setMapError(null);
+              if (userLocation) {
+                fetchNearbyRiders(userLocation.lat, userLocation.lng);
+              }
+            }}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -251,9 +379,15 @@ const CustomerMap = () => {
       {nearbyRiders.length === 0 ? (
         <Card className="shadow-lg">
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              Tidak ada rider yang tersedia saat ini
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-semibold mb-2">Tidak ada rider tersedia</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Belum ada rider yang aktif di area Anda saat ini
             </p>
+            <Button onClick={() => userLocation && fetchNearbyRiders(userLocation.lat, userLocation.lng)}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Coba Lagi
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -270,7 +404,7 @@ const CustomerMap = () => {
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <Avatar className="h-14 w-14 ring-2 ring-primary/10">
-                        <AvatarImage src={rider.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${rider.id}`} />
+                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rider.id}`} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
                           {rider.full_name.charAt(0)}
                         </AvatarFallback>
@@ -281,7 +415,7 @@ const CustomerMap = () => {
                     </div>
                     <div>
                       <CardTitle className="text-lg font-bold">{rider.full_name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                           <span className="text-xs font-semibold">{rider.rating}</span>
@@ -289,6 +423,12 @@ const CustomerMap = () => {
                         <Badge variant={rider.is_online ? "default" : "secondary"} className="text-xs">
                           {rider.is_online ? '🟢 Online' : '⚪ Offline'}
                         </Badge>
+                        {!rider.has_gps && (
+                          <Badge variant="outline" className="text-xs">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            Lokasi Cabang
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -313,11 +453,12 @@ const CustomerMap = () => {
                     </span>
                   </div>
                 </div>
-                {!rider.lat || !rider.lng ? (
-                  <p className="text-xs text-muted-foreground bg-gray-50 p-2 rounded">
-                    📍 Lokasi tidak tersedia
+                {!rider.has_gps && rider.branch_name && (
+                  <p className="text-xs text-muted-foreground bg-gray-50 p-2 rounded flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    GPS tidak aktif. Menampilkan lokasi {rider.branch_name}
                   </p>
-                ) : null}
+                )}
                 <div className="flex gap-2 pt-2">
                   {/* Kunjungi Rider - Open Google Maps Direction */}
                   <Button 
@@ -329,7 +470,7 @@ const CustomerMap = () => {
                         window.open(`https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}`, '_blank');
                       }
                     }}
-                    disabled={!rider.is_online || !rider.lat || !rider.lng}
+                    disabled={!rider.lat || !rider.lng}
                   >
                     <Navigation className="h-4 w-4 mr-2" />
                     Kunjungi Rider
@@ -339,10 +480,9 @@ const CustomerMap = () => {
                     size="sm" 
                     className="flex-1 shadow-md hover:shadow-lg transition-shadow bg-red-500 hover:bg-red-600 rounded-full"
                     onClick={() => {
-                      // TODO: Implement order creation and rider notification
                       window.location.href = `/customer-app?tab=menu&rider=${rider.id}`;
                     }}
-                    disabled={!rider.is_online || !rider.lat || !rider.lng}
+                    disabled={!rider.is_online}
                   >
                     <Phone className="h-4 w-4 mr-2" />
                     Panggil Rider
