@@ -378,44 +378,6 @@ export default function CustomerApp() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Compact Header - Only show on cart, menu, checkout */}
-      {['cart', 'menu', 'checkout'].includes(activeView) && (
-        <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
-          <div className="flex items-center justify-between p-2">
-            <div className="flex items-center space-x-2">
-              <ZegerLogo size="sm" />
-              <h1 className="font-bold text-sm text-primary">Zeger Coffee</h1>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1 bg-amber-50 px-2 py-1 rounded-full">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="text-xs font-medium text-amber-700">
-                  {customerUser?.points || 0}
-                </span>
-              </div>
-              
-              {cart.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="relative h-8"
-                  onClick={() => setActiveView('cart')}
-                >
-                  <ShoppingCart className="h-3 w-3" />
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]"
-                  >
-                    {getTotalItems()}
-                  </Badge>
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <div className={cn("pb-20", activeView === 'home' && "pt-0")}>
         {tab === 'order-detail' && orderId ? (
