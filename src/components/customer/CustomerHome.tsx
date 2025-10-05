@@ -74,7 +74,6 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   };
 
   const membershipInfo = getMembershipBadge();
-  const firstName = customerUser?.full_name?.split(' ')[0] || 'Guest';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -88,11 +87,11 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-lg">
-                {firstName.charAt(0).toUpperCase()}
+                {customerUser?.name?.charAt(0)?.toUpperCase() || 'G'}
               </div>
               <div>
                 <p className="text-sm text-gray-500">Hi,</p>
-                <h2 className="text-lg font-bold text-gray-900">{firstName}</h2>
+                <h2 className="text-base font-bold text-gray-900">{customerUser?.name?.toUpperCase() || 'GUEST'}</h2>
               </div>
             </div>
             <Button variant="ghost" size="icon" className="relative">
@@ -186,26 +185,30 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
           {/* Order Type Buttons */}
           <div className="grid grid-cols-2 gap-3">
-            {/* TAKE AWAY Button */}
+            {/* TAKE AWAY Button - Red Theme */}
             <Button
               onClick={() => onNavigate('outlets')}
               className="h-32 flex-col gap-3 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
             >
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] opacity-50"></div>
-              <Store className="h-12 w-12 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
+              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <Store className="h-10 w-10 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
+              </div>
               <div className="relative z-10">
                 <p className="text-lg font-bold">TAKE AWAY</p>
                 <p className="text-xs opacity-90">Zeger Outlet</p>
               </div>
             </Button>
 
-            {/* DELIVERY Button */}
+            {/* DELIVERY Button - Darker Red Theme */}
             <Button
               onClick={() => onNavigate('map')}
-              className="h-32 flex-col gap-3 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
+              className="h-32 flex-col gap-3 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
             >
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] opacity-50"></div>
-              <Bike className="h-12 w-12 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
+              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <Bike className="h-10 w-10 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
+              </div>
               <div className="relative z-10">
                 <p className="text-lg font-bold">DELIVERY</p>
                 <p className="text-xs opacity-90">Zeger on the Wheels</p>

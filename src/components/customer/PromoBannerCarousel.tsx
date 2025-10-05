@@ -1,66 +1,82 @@
-import React from 'react';
-import { Card } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
+import { cn } from '@/lib/utils';
 
-const PromoBannerCarousel = () => {
-  const plugin = React.useRef(
-    Autoplay({ delay: 3000, stopOnInteraction: true })
-  );
+export function PromoBannerCarousel() {
+  const [api, setApi] = useState<any>();
+  const [current, setCurrent] = useState(0);
 
-  const promoBanners = [
-    {
-      id: 1,
-      title: "OCTOBREW Promo",
-      image: "/promo-banners/octobrew-1.png"
-    },
-    {
-      id: 2,
-      title: "Special Offers",
-      image: "/promo-banners/octobrew-2.png"
-    },
-    {
-      id: 3,
-      title: "Member Deals",
-      image: "/promo-banners/octobrew-3.png"
-    },
-    {
-      id: 4,
-      title: "New Menu",
-      image: "/promo-banners/octobrew-4.png"
-    }
+  const banners = [
+    '/promo-banners/octobrew-1.png',
+    '/promo-banners/octobrew-2.png',
+    '/promo-banners/octobrew-3.png',
+    '/promo-banners/octobrew-4.png'
   ];
 
+  useEffect(() => {
+    if (!api) return;
+
+    setCurrent(api.selectedScrollSnap());
+
+    api.on('select', () => {
+      setCurrent(api.selectedScrollSnap());
+    });
+  }, [api]);
+
   return (
-    <Carousel
-      plugins={[plugin.current]}
-      className="w-full"
-      onMouseEnter={plugin.current.stop}
-      onMouseLeave={plugin.current.reset}
-    >
-      <CarouselContent>
-        {promoBanners.map((banner) => (
-          <CarouselItem key={banner.id}>
-            <div className="relative h-48 overflow-hidden rounded-none">
-              <img 
-                src={banner.image} 
-                alt={banner.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious className="left-2" />
-      <CarouselNext className="right-2" />
-    </Carousel>
+    <div className="w-full overflow-hidden">
+      <Carousel
+        setApi={setApi}
+        className="w-full"
+        plugins={[
+          Autoplay({
+            delay: 3000,
+          }),
+        ]}
+        opts={{
+          loop: true,
+        }}
+      >
+        <CarouselContent>
+          {banners.map((banner, index) => (
+            <CarouselItem key={index}>
+              <div className="relative w-full h-64 bg-gradient-to-br from-red-500 to-red-600">
+                <img
+                  src={banner}
+                  alt={`Promo Banner ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&auto=format&fit=crop';
+                  }}
+                />
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+
+        {/* Dots Indicator */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => api?.scrollTo(index)}
+              className={cn(
+                "w-2 h-2 rounded-full transition-all",
+                current === index 
+                  ? "bg-white w-8" 
+                  : "bg-white/50 hover:bg-white/75"
+              )}
+            />
+          ))}
+        </div>
+      </Carousel>
+    </div>
   );
-};
+}
 
 export default PromoBannerCarousel;
