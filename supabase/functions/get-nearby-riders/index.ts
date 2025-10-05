@@ -25,10 +25,13 @@ Deno.serve(async (req) => {
 
     console.log('Finding nearby riders for location:', { customer_lat, customer_lng, radius_km });
 
-    // Fetch ALL active riders
+    // Fetch ALL active riders with branch location data
     const { data: riders, error: ridersError } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, last_known_lat, last_known_lng, location_updated_at, branch_id')
+      .select(`
+        id, full_name, phone, last_known_lat, last_known_lng, location_updated_at, branch_id,
+        branches!inner(id, name, address, latitude, longitude)
+      `)
       .eq('role', 'rider')
       .eq('is_active', true);
 
@@ -39,15 +42,6 @@ Deno.serve(async (req) => {
 
     console.log('Total riders found:', riders?.length);
 
-    // Get unique branch IDs and fetch branch data
-    const branchIds = [...new Set(riders?.map(r => r.branch_id).filter(Boolean) || [])];
-    const { data: branches } = await supabase
-      .from('branches')
-      .select('id, name, address')
-      .in('id', branchIds);
-
-    const branchMap = new Map(branches?.map(b => [b.id, b]) || []);
-
     // Calculate distances for all riders with fallback
     const ridersWithDistance = await Promise.all(
       (riders || []).map(async (rider) => {
@@ -55,7 +49,7 @@ Deno.serve(async (req) => {
         let riderLng = rider.last_known_lng;
         let hasGPS = riderLat !== null && riderLng !== null;
         
-        // Fallback: try to get latest location from rider_locations table
+        // Fallback 1: try to get latest location from rider_locations table
         if (!hasGPS) {
           const { data: recentLocation } = await supabase
             .from('rider_locations')
@@ -69,11 +63,24 @@ Deno.serve(async (req) => {
             riderLat = recentLocation.latitude;
             riderLng = recentLocation.longitude;
             hasGPS = true;
+            console.log(`Rider ${rider.full_name} using rider_locations GPS`);
           }
         }
 
-        // Skip rider if no valid location
+        // Fallback 2: use branch location if rider has no GPS
+        if (!hasGPS && rider.branches) {
+          const branch = rider.branches as any;
+          if (branch.latitude && branch.longitude) {
+            riderLat = branch.latitude;
+            riderLng = branch.longitude;
+            hasGPS = false; // Still mark as no direct GPS
+            console.log(`Rider ${rider.full_name} using branch location fallback: ${branch.name}`);
+          }
+        }
+
+        // Skip rider if no valid location (including branch fallback)
         if (!riderLat || !riderLng) {
+          console.log(`Skipping rider ${rider.full_name} - no location data`);
           return null;
         }
         
@@ -112,7 +119,7 @@ Deno.serve(async (req) => {
 
         const total_stock = inventory?.reduce((sum, item) => sum + (item.stock_quantity || 0), 0) || 0;
 
-        const branch = branchMap.get(rider.branch_id);
+        const branch = rider.branches as any;
 
         return {
           id: rider.id,

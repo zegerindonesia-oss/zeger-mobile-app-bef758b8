@@ -123,7 +123,9 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          latitude: number | null
           level: number | null
+          longitude: number | null
           manager_id: string | null
           name: string
           parent_branch_id: string | null
@@ -139,7 +141,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
           level?: number | null
+          longitude?: number | null
           manager_id?: string | null
           name: string
           parent_branch_id?: string | null
@@ -155,7 +159,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
           level?: number | null
+          longitude?: number | null
           manager_id?: string | null
           name?: string
           parent_branch_id?: string | null

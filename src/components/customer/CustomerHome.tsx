@@ -77,11 +77,8 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Banner with Promo Carousel - Full Width */}
-      <PromoBannerCarousel />
-
-      {/* Member Card - Below Banner */}
-      <div className="px-4 -mt-6 mb-4">
+      {/* Member Card - At Top */}
+      <div className="px-4 pt-4 mb-4">
         <Card className="bg-white rounded-3xl shadow-lg p-4">
           {/* Greeting & Notification */}
           <div className="flex items-center justify-between mb-4">
@@ -157,6 +154,13 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
             </Button>
           </div>
         </Card>
+      </div>
+
+      {/* Promo Banner - Below Member Card */}
+      <div className="px-4 mb-6">
+        <div className="overflow-hidden rounded-2xl shadow-lg">
+          <PromoBannerCarousel />
+        </div>
       </div>
 
       {/* Order Type Section */}

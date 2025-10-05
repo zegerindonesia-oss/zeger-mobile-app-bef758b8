@@ -45,7 +45,7 @@ export function PromoBannerCarousel() {
         <CarouselContent>
           {banners.map((banner, index) => (
             <CarouselItem key={index}>
-              <div className="relative w-full h-64 bg-gradient-to-br from-red-500 to-red-600">
+              <div className="relative w-full h-48 bg-gradient-to-br from-red-500 to-red-600">
                 <img
                   src={banner}
                   alt={`Promo Banner ${index + 1}`}

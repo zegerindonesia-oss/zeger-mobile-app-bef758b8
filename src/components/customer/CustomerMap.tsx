@@ -59,8 +59,7 @@ const CustomerMap = () => {
       
       getUserLocation();
     } catch (error) {
-      // Fallback if Permissions API not supported
-      console.log('Permissions API not supported, requesting directly');
+      console.warn('Permissions API not supported, requesting directly:', error);
       getUserLocation();
     }
   };
@@ -78,8 +77,11 @@ const CustomerMap = () => {
       })
       .catch((error) => {
         console.error('❌ Failed to load Google Maps:', error);
-        setMapError('Gagal memuat Google Maps. Silakan refresh halaman.');
-        toast.error('Gagal memuat peta');
+        const errorMsg = error.message || 'Gagal memuat Google Maps';
+        setMapError(`${errorMsg}. Pastikan API Key sudah diaktifkan untuk Maps JavaScript API.`);
+        toast.error('Gagal memuat peta', {
+          description: 'Periksa koneksi internet atau coba lagi nanti'
+        });
       });
   }, [userLocation]);
 
