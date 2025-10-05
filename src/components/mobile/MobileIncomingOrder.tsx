@@ -90,8 +90,25 @@ export function MobileIncomingOrder({
 
   const playNotificationSound = () => {
     try {
-      const audio = new Audio('/notification.mp3');
-      audio.play().catch(err => console.log('Audio play failed:', err));
+      // Create a simple beep sound using Web Audio API
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.3;
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+      
+      // Vibrate if supported
+      if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500, 200, 500]);
+      }
     } catch (error) {
       console.log('Error playing sound:', error);
     }

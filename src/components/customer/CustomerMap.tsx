@@ -5,8 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Phone, Star, Package, Navigation, Loader2 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface Rider {
   id: string;
@@ -23,8 +21,7 @@ interface Rider {
   photo_url?: string | null;
 }
 
-// Temporary: User should add their Mapbox token
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiemVnZXJhcHAiLCJhIjoiY20zeTh6Y2VhMGF5cTJsc2J5bmZ1b3RtMCJ9.FUQ8xRvXaKHLJLdXZegerA';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyALr8P3I3bAO8UBYXVA0BI1biG5sUuiIpg';
 
 const CustomerMap = () => {
   const [nearbyRiders, setNearbyRiders] = useState<Rider[]>([]);
@@ -32,95 +29,128 @@ const CustomerMap = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
+  const map = useRef<google.maps.Map | null>(null);
+  const markers = useRef<google.maps.Marker[]>([]);
 
   useEffect(() => {
     getUserLocation();
     
     // Cleanup map on unmount
     return () => {
-      markers.current.forEach(marker => marker.remove());
-      if (map.current) map.current.remove();
+      markers.current.forEach(marker => marker.setMap(null));
+      markers.current = [];
     };
   }, []);
 
-  // Initialize map when location is available
+  // Initialize Google Maps when location is available
   useEffect(() => {
     if (!userLocation || !mapContainer.current) return;
     if (map.current) return; // Map already initialized
 
-    console.log('🗺️ Initializing map with user location:', userLocation);
+    console.log('🗺️ Initializing Google Maps with user location:', userLocation);
     
-    try {
-      mapboxgl.accessToken = MAPBOX_TOKEN;
-      
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [userLocation.lng, userLocation.lat],
-        zoom: 12
+    // Load Google Maps script
+    const loadGoogleMaps = () => {
+      if ((window as any).google?.maps) {
+        initializeMap();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeMap;
+      document.head.appendChild(script);
+    };
+
+    const initializeMap = () => {
+      if (!mapContainer.current || !(window as any).google?.maps) return;
+
+      // Create map
+      map.current = new google.maps.Map(mapContainer.current, {
+        center: { lat: userLocation.lat, lng: userLocation.lng },
+        zoom: 13,
+        mapTypeControl: false,
+        fullscreenControl: true,
       });
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      // Add customer marker (blue pin)
+      const customerMarker = new google.maps.Marker({
+        position: { lat: userLocation.lat, lng: userLocation.lng },
+        map: map.current,
+        title: 'Lokasi Anda',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#3b82f6',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 4,
+        },
+      });
 
-      // Add customer marker (blue)
-      const customerEl = document.createElement('div');
-      customerEl.className = 'w-8 h-8 bg-primary rounded-full border-4 border-white shadow-lg';
-      new mapboxgl.Marker(customerEl)
-        .setLngLat([userLocation.lng, userLocation.lat])
-        .setPopup(new mapboxgl.Popup().setHTML('<strong>Lokasi Anda</strong>'))
-        .addTo(map.current);
+      const customerInfo = new google.maps.InfoWindow({
+        content: '<div style="padding: 8px;"><strong>Lokasi Anda</strong></div>',
+      });
+      customerMarker.addListener('click', () => {
+        customerInfo.open(map.current!, customerMarker);
+      });
 
-      // Add rider markers (if any)
+      // Add rider markers
       console.log('📍 Adding markers for riders:', nearbyRiders.length);
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
+
       nearbyRiders.forEach(rider => {
         if (rider.lat && rider.lng) {
-          const riderEl = document.createElement('div');
-          riderEl.className = rider.is_online 
-            ? 'w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg'
-            : 'w-6 h-6 bg-gray-400 rounded-full border-2 border-white shadow-lg';
-          
-          const marker = new mapboxgl.Marker(riderEl)
-            .setLngLat([rider.lng, rider.lat])
-            .setPopup(new mapboxgl.Popup().setHTML(
-              `<strong>${rider.full_name}</strong><br/>
-               ${rider.is_online ? '🟢 Online' : '⚪ Offline'}<br/>
-               ${rider.distance_km < 999 ? `📍 ${rider.distance_km} km` : '📍 Lokasi tidak tersedia'}`
-            ))
-            .addTo(map.current!);
-          
-          markers.current.push(marker);
+          const riderMarker = new google.maps.Marker({
+            position: { lat: rider.lat, lng: rider.lng },
+            map: map.current!,
+            title: rider.full_name,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: rider.is_online ? '#22c55e' : '#9ca3af',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 3,
+            },
+          });
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+              <div style="padding: 12px; min-width: 200px;">
+                <strong style="font-size: 16px;">${rider.full_name}</strong><br/>
+                <span style="color: ${rider.is_online ? '#22c55e' : '#9ca3af'};">
+                  ${rider.is_online ? '🟢 Online' : '⚪ Offline'}
+                </span><br/>
+                <span style="font-size: 14px;">
+                  ${rider.distance_km < 999 ? `📍 ${rider.distance_km.toFixed(1)} km` : '📍 Lokasi tidak tersedia'}
+                </span>
+              </div>
+            `,
+          });
+
+          riderMarker.addListener('click', () => {
+            infoWindow.open(map.current!, riderMarker);
+          });
+
+          markers.current.push(riderMarker);
+          bounds.extend({ lat: rider.lat, lng: rider.lng });
         }
       });
 
-      // Fit bounds to show all markers (if riders exist)
+      // Fit bounds to show all markers
       if (nearbyRiders.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
-        bounds.extend([userLocation.lng, userLocation.lat]);
-        nearbyRiders.forEach(rider => {
-          if (rider.lat && rider.lng) {
-            bounds.extend([rider.lng, rider.lat]);
-          }
-        });
-        map.current.fitBounds(bounds, { padding: 50, maxZoom: 14 });
+        map.current.fitBounds(bounds, 50);
       }
-      
-      // Map loaded successfully
-      map.current.on('load', () => {
-        console.log('✅ Map loaded successfully');
-        setMapError(null);
-      });
 
-      // Handle map errors
-      map.current.on('error', (e) => {
-        console.error('❌ Map error:', e);
-        setMapError('Gagal memuat peta. Periksa koneksi internet Anda.');
-      });
-    } catch (error) {
-      console.error('❌ Error initializing map:', error);
-      setMapError('Gagal menginisialisasi peta.');
-    }
+      console.log('✅ Google Maps loaded successfully');
+      setMapError(null);
+    };
+
+    loadGoogleMaps();
   }, [userLocation, nearbyRiders]);
 
   const getUserLocation = () => {

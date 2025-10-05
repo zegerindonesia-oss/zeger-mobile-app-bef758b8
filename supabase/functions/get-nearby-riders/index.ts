@@ -25,56 +25,37 @@ Deno.serve(async (req) => {
 
     console.log('Finding nearby riders for location:', { customer_lat, customer_lng, radius_km });
 
-    // DEMO MODE: Show all riders regardless of shift status
-    // Get ALL rider profiles (active riders with role 'rider')
+    // Get riders with REAL locations (no demo mode)
     const { data: riders, error: ridersError } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, last_known_lat, last_known_lng, location_updated_at')
+      .select('id, full_name, phone, last_known_lat, last_known_lng, location_updated_at, photo_url')
       .eq('role', 'rider')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .not('last_known_lat', 'is', null)
+      .not('last_known_lng', 'is', null);
 
     if (ridersError) {
       console.error('Error fetching riders:', ridersError);
       throw ridersError;
     }
 
-    console.log('Total riders found:', riders?.length);
+    console.log('Total riders found with real locations:', riders?.length);
 
-    // DEMO: Dummy locations around Jakarta if rider has no location
-    const demoLocations = [
-      { lat: -6.2088, lng: 106.8456 }, // Central Jakarta
-      { lat: -6.1751, lng: 106.8650 }, // North Jakarta
-      { lat: -6.2615, lng: 106.7837 }, // West Jakarta
-      { lat: -6.2297, lng: 106.9239 }, // East Jakarta
-      { lat: -6.3011, lng: 106.8165 }, // South Jakarta
-    ];
-
-    // Calculate distances for ALL riders
+    // Calculate distances for all riders with REAL locations
     const ridersWithDistance = await Promise.all(
-      (riders || []).map(async (rider, index) => {
+      (riders || []).map(async (rider) => {
         let distance_km = 9999;
         let eta_minutes = 0;
         let is_online = false;
-        let rider_lat = rider.last_known_lat;
-        let rider_lng = rider.last_known_lng;
 
-        // DEMO: Use dummy location if rider has no location
-        if (!rider_lat || !rider_lng) {
-          const demoLoc = demoLocations[index % demoLocations.length];
-          rider_lat = demoLoc.lat;
-          rider_lng = demoLoc.lng;
-          console.log(`Using demo location for ${rider.full_name}: ${rider_lat}, ${rider_lng}`);
-        }
-
-        // Calculate distance
-        if (rider_lat && rider_lng) {
-          // Haversine formula for distance calculation
+        // Calculate distance using Haversine formula
+        if (rider.last_known_lat && rider.last_known_lng) {
           const R = 6371; // Earth radius in km
-          const dLat = (customer_lat - rider_lat) * Math.PI / 180;
-          const dLng = (customer_lng - rider_lng) * Math.PI / 180;
+          const dLat = (customer_lat - rider.last_known_lat) * Math.PI / 180;
+          const dLng = (customer_lng - rider.last_known_lng) * Math.PI / 180;
           const a = 
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(rider_lat * Math.PI / 180) * 
+            Math.cos(rider.last_known_lat * Math.PI / 180) * 
             Math.cos(customer_lat * Math.PI / 180) *
             Math.sin(dLng / 2) * Math.sin(dLng / 2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
@@ -83,8 +64,13 @@ Deno.serve(async (req) => {
           // Calculate ETA (assuming 20 km/h average speed)
           eta_minutes = Math.round((distance_km / 20) * 60);
 
-          // DEMO: Mark all riders as online for testing
-          is_online = true;
+          // Check if rider is online (location updated within last 10 minutes)
+          if (rider.location_updated_at) {
+            const lastUpdate = new Date(rider.location_updated_at).getTime();
+            const now = new Date().getTime();
+            const tenMinutes = 10 * 60 * 1000;
+            is_online = (now - lastUpdate) < tenMinutes;
+          }
         }
 
         // Get rider inventory count
@@ -103,10 +89,11 @@ Deno.serve(async (req) => {
           eta_minutes,
           total_stock,
           rating: 4.5, // TODO: Implement real rating system
-          lat: rider_lat, // Use demo location if original is null
-          lng: rider_lng, // Use demo location if original is null
+          lat: rider.last_known_lat,
+          lng: rider.last_known_lng,
           last_updated: rider.location_updated_at,
-          is_online
+          is_online,
+          photo_url: rider.photo_url
         };
       })
     );
