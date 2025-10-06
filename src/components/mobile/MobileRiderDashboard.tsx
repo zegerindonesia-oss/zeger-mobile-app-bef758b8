@@ -404,13 +404,6 @@ const MobileRiderDashboard = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Activity className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   const getGpsStatusColor = () => {
     switch (gpsStatus) {
@@ -543,6 +536,14 @@ const MobileRiderDashboard = () => {
       toast.error(err.message || 'Gagal merespons pesanan');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Activity className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
