@@ -33,6 +33,7 @@ import { CustomerOutletList } from '@/components/customer/CustomerOutletList';
 import { OrderDetail } from '@/components/customer/OrderDetail';
 import CustomerCheckout from '@/components/customer/CustomerCheckout';
 import CustomerOrderSuccess from '@/components/customer/CustomerOrderSuccess';
+import CustomerOrderWaiting from '@/components/customer/CustomerOrderWaiting';
 import { useToast } from '@/hooks/use-toast';
 
 interface CustomerUser {
@@ -62,7 +63,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'cart' | 'outlets' | 'checkout' | 'order-success';
+type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'cart' | 'outlets' | 'checkout' | 'order-success' | 'waiting';
 
 export default function CustomerApp() {
   const { user } = useAuth();
@@ -92,6 +93,10 @@ export default function CustomerApp() {
   const [lastOrderNumber, setLastOrderNumber] = useState<string>('');
   const [lastOrderType, setLastOrderType] = useState<'outlet_pickup' | 'outlet_delivery'>('outlet_pickup');
   const [estimatedTime, setEstimatedTime] = useState<string>('15-30 menit');
+  
+  // Waiting state for rider requests
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [pendingRider, setPendingRider] = useState<any>(null);
   
   // Handle query params for order detail
   const tab = searchParams.get('tab');
@@ -402,7 +407,16 @@ export default function CustomerApp() {
             {activeView === 'vouchers' && <CustomerVouchers customerUser={customerUser} />}
             {activeView === 'orders' && <CustomerOrders customerUser={customerUser} />}
             {activeView === 'profile' && <CustomerProfile customerUser={customerUser} onUpdateProfile={() => fetchCustomerProfile()} />}
-            {activeView === 'map' && <CustomerMap />}
+            {activeView === 'map' && (
+              <CustomerMap 
+                customerUser={customerUser}
+                onCallRider={(orderId, rider) => {
+                  setPendingOrderId(orderId);
+                  setPendingRider(rider);
+                  setActiveView('waiting');
+                }}
+              />
+            )}
             {activeView === 'outlets' && (
               <CustomerOutletList 
                 onNavigate={(view: string) => setActiveView(view as View)}
@@ -480,6 +494,46 @@ export default function CustomerApp() {
                   } else {
                     setActiveView(view as View);
                   }
+                }}
+              />
+            )}
+            {activeView === 'waiting' && pendingOrderId && pendingRider && (
+              <CustomerOrderWaiting
+                orderId={pendingOrderId}
+                rider={pendingRider}
+                onAccepted={() => {
+                  setActiveView('orders');
+                  setPendingOrderId(null);
+                  setPendingRider(null);
+                  toast({
+                    title: "✅ Rider Menerima!",
+                    description: "Cek tab Pesanan untuk tracking",
+                  });
+                }}
+                onRejected={(reason) => {
+                  setActiveView('map');
+                  setPendingOrderId(null);
+                  setPendingRider(null);
+                  toast({
+                    title: "❌ Rider Menolak",
+                    description: reason,
+                    variant: "destructive"
+                  });
+                }}
+                onCancel={async () => {
+                  if (pendingOrderId) {
+                    await supabase
+                      .from('customer_orders')
+                      .update({ status: 'cancelled' })
+                      .eq('id', pendingOrderId);
+                  }
+                  setActiveView('map');
+                  setPendingOrderId(null);
+                  setPendingRider(null);
+                  toast({
+                    title: "Dibatalkan",
+                    description: "Permintaan dibatalkan",
+                  });
                 }}
               />
             )}

@@ -22,13 +22,20 @@ interface Rider {
   has_gps?: boolean;
   branch_name?: string;
   branch_address?: string;
+  photo_url?: string;
+}
+
+interface CustomerMapProps {
+  customerUser?: any;
+  onCallRider?: (orderId: string, rider: Rider) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyALr8P3I3bAO8UBYXVA0BI1biG5sUuiIpg';
 
-const CustomerMap = () => {
+const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const [nearbyRiders, setNearbyRiders] = useState<Rider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requestingRider, setRequestingRider] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -474,11 +481,15 @@ const CustomerMap = () => {
                     size="sm" 
                     className="flex-1 shadow-sm hover:shadow-md transition-shadow rounded-full"
                     onClick={() => {
-                      if (rider.lat && rider.lng) {
-                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}`, '_blank');
+                      if (rider.lat && rider.lng && userLocation) {
+                        window.open(
+                          `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${rider.lat},${rider.lng}&travelmode=driving`, 
+                          '_blank'
+                        );
+                        toast.success(`Membuka Google Maps ke ${rider.full_name}`);
                       }
                     }}
-                    disabled={!rider.lat || !rider.lng}
+                    disabled={!rider.lat || !rider.lng || !userLocation}
                   >
                     <Navigation className="h-4 w-4 mr-2" />
                     Kunjungi Rider
@@ -487,12 +498,45 @@ const CustomerMap = () => {
                   <Button 
                     size="sm" 
                     className="flex-1 shadow-md hover:shadow-lg transition-shadow bg-red-500 hover:bg-red-600 rounded-full"
-                    onClick={() => {
-                      window.location.href = `/customer-app?tab=menu&rider=${rider.id}`;
+                    onClick={async () => {
+                      if (!userLocation || !customerUser) {
+                        toast.error('Lokasi atau data customer tidak tersedia');
+                        return;
+                      }
+                      
+                      try {
+                        setRequestingRider(rider.id);
+                        const { data, error } = await supabase.functions.invoke('send-order-request', {
+                          body: {
+                            customer_user_id: customerUser.id,
+                            rider_profile_id: rider.id,
+                            customer_lat: userLocation.lat,
+                            customer_lng: userLocation.lng,
+                            delivery_address: customerUser.address || 'Alamat tidak tersedia',
+                            notes: 'Customer memanggil rider untuk datang'
+                          }
+                        });
+                        
+                        if (error) throw error;
+                        
+                        toast.success('Permintaan terkirim! Menunggu konfirmasi rider...');
+                        
+                        // Call callback to parent component
+                        onCallRider?.(data.order_id, rider);
+                      } catch (err: any) {
+                        console.error('Error calling rider:', err);
+                        toast.error(err.message || 'Gagal mengirim permintaan');
+                      } finally {
+                        setRequestingRider(null);
+                      }
                     }}
-                    disabled={!rider.is_online}
+                    disabled={!rider.is_online || requestingRider === rider.id || !userLocation || !customerUser}
                   >
-                    <Phone className="h-4 w-4 mr-2" />
+                    {requestingRider === rider.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Phone className="h-4 w-4 mr-2" />
+                    )}
                     Panggil Rider
                   </Button>
                 </div>

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
   Package, Clock, DollarSign, TrendingUp,
-  MapPin, Users, Activity, Navigation, RefreshCw
+  MapPin, Users, Activity, Navigation, RefreshCw, Phone
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -38,9 +40,29 @@ const MobileRiderDashboard = () => {
   const [lastGpsUpdate, setLastGpsUpdate] = useState<Date | null>(null);
   const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [riderProfile, setRiderProfile] = useState<RiderProfile | null>(null);
+
+  const fetchRiderProfile = async () => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (data) {
+        setRiderProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching rider profile:', error);
+    }
+  };
 
   useEffect(() => {
     if (user) {
+      fetchRiderProfile();
       fetchDashboardData();
       checkActiveShift();
       startLocationTracking();
@@ -419,6 +441,105 @@ const MobileRiderDashboard = () => {
     updateLocation();
   };
 
+  // Subscribe to pending orders
+  useEffect(() => {
+    if (!riderProfile?.id) return;
+    
+    const fetchPendingOrdersWithDetails = async () => {
+      const { data } = await supabase
+        .from('customer_orders')
+        .select(`
+          *,
+          customer:customer_users!customer_orders_user_id_fkey(
+            name,
+            phone,
+            address,
+            photo_url
+          )
+        `)
+        .eq('rider_id', riderProfile.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      
+      if (data && data.length > 0) {
+        setPendingOrders(data);
+        setShowOrderDialog(true);
+        
+        // Play notification sound
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(() => console.log('Audio play failed'));
+        
+        // Show toast
+        toast.info(`${data.length} permintaan baru dari customer!`, {
+          duration: 5000
+        });
+      }
+    };
+    
+    fetchPendingOrdersWithDetails();
+    
+    // Subscribe to new pending orders
+    const channel = supabase
+      .channel('rider_pending_orders')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'customer_orders',
+          filter: `rider_id=eq.${riderProfile.id}`
+        },
+        () => {
+          fetchPendingOrdersWithDetails();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [riderProfile]);
+
+  const handleRespondOrder = async (orderId: string, action: 'accept' | 'reject') => {
+    if (!riderProfile) return;
+    
+    try {
+      const { error } = await supabase.functions.invoke('rider-respond-order', {
+        body: {
+          order_id: orderId,
+          rider_profile_id: riderProfile.id,
+          action,
+          rejection_reason: action === 'reject' ? 'Sedang sibuk melayani customer lain' : undefined
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (action === 'accept') {
+        // Get order details for directions
+        const order = pendingOrders.find(o => o.id === orderId);
+        if (order && order.latitude && order.longitude) {
+          const url = `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}&travelmode=driving`;
+          window.open(url, '_blank');
+          toast.success('Pesanan diterima! Google Maps dibuka untuk directions');
+        }
+      } else {
+        toast.info('Pesanan ditolak');
+      }
+      
+      // Remove from pending list
+      setPendingOrders(prev => prev.filter(o => o.id !== orderId));
+      
+      // Close dialog if no more orders
+      if (pendingOrders.length <= 1) {
+        setShowOrderDialog(false);
+      }
+    } catch (err: any) {
+      console.error('Error responding to order:', err);
+      toast.error(err.message || 'Gagal merespons pesanan');
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <Card>
@@ -519,6 +640,76 @@ const MobileRiderDashboard = () => {
           </Card>
         </CardContent>
       </Card>
+
+      {/* Pending Order Dialog */}
+      {showOrderDialog && pendingOrders.length > 0 && (
+        <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl">🔔 Permintaan Baru!</DialogTitle>
+              <DialogDescription>
+                Customer meminta Anda untuk datang
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {pendingOrders[0] && (
+                <>
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    <Avatar className="h-14 w-14 ring-2 ring-primary">
+                      <AvatarImage src={pendingOrders[0].customer?.photo_url} />
+                      <AvatarFallback className="bg-primary text-white">
+                        {pendingOrders[0].customer?.name?.[0] || 'C'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="font-semibold text-lg">{pendingOrders[0].customer?.name || 'Customer'}</p>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span>{pendingOrders[0].customer?.phone || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-blue-900">Alamat Customer:</p>
+                        <p className="text-sm text-blue-700">
+                          {pendingOrders[0].delivery_address || 'Alamat tidak tersedia'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {pendingOrders.length > 1 && (
+                    <div className="text-center text-sm text-muted-foreground">
+                      +{pendingOrders.length - 1} permintaan lainnya menunggu
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      variant="destructive" 
+                      className="flex-1"
+                      onClick={() => handleRespondOrder(pendingOrders[0].id, 'reject')}
+                    >
+                      Tolak
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleRespondOrder(pendingOrders[0].id, 'accept')}
+                    >
+                      Terima
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
