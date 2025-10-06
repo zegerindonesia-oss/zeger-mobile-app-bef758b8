@@ -8,9 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
   Package, Clock, DollarSign, TrendingUp,
-  MapPin, Users, Activity, Navigation, RefreshCw, Phone
+  MapPin, Users, Activity, Navigation, RefreshCw, Phone, BarChart3
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardStats {
   totalStock: number;
@@ -33,6 +34,8 @@ const MobileRiderDashboard = () => {
     todayTransactions: 0,
     activeCustomers: 0
   });
+  const [chartData, setChartData] = useState<{date: string, sales: number}[]>([]);
+  const [topProducts, setTopProducts] = useState<{name: string, quantity: number}[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasActiveShift, setHasActiveShift] = useState(false);
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
@@ -624,25 +627,71 @@ const MobileRiderDashboard = () => {
                 <CardTitle>Active Customers</CardTitle>
               </CardHeader>
               <CardContent className="flex items-center space-x-4">
-                <Users className="h-6 w-6 text-muted-foreground" />
-                <div className="text-2xl font-bold">{stats.activeCustomers}</div>
-              </CardContent>
-            </Card>
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Shift Management</CardTitle>
-            </CardHeader>
-            <CardContent className="flex justify-between items-center">
-              {hasActiveShift ? (
-                <Button variant="destructive" onClick={handleShiftEnd}>
-                  End Shift
-                </Button>
-              ) : (
-                <Button onClick={handleShiftStart}>Start Shift</Button>
-              )}
+              <Users className="h-6 w-6 text-muted-foreground" />
+              <div className="text-2xl font-bold">{stats.activeCustomers}</div>
             </CardContent>
           </Card>
+        </div>
+        
+        {/* Sales Trend Chart */}
+        {chartData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Tren Penjualan (7 Hari)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" style={{ fontSize: '12px' }} />
+                  <YAxis style={{ fontSize: '12px' }} />
+                  <Tooltip formatter={(value) => `Rp ${Number(value).toLocaleString('id-ID')}`} />
+                  <Line type="monotone" dataKey="sales" stroke="#ef4444" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Top Products */}
+        {topProducts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Produk Terlaris
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {topProducts.map((product, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                    <span className="text-sm font-medium">{product.name}</span>
+                    <span className="text-sm text-muted-foreground">{product.quantity} pcs</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Shift Management</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-between items-center">
+            {hasActiveShift ? (
+              <Button variant="destructive" onClick={handleShiftEnd}>
+                End Shift
+              </Button>
+            ) : (
+              <Button onClick={handleShiftStart}>Start Shift</Button>
+            )}
+          </CardContent>
+        </Card>
         </CardContent>
       </Card>
 

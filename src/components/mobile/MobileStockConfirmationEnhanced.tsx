@@ -421,13 +421,8 @@ export const MobileStockConfirmationEnhanced = ({ riderId, branchId }: MobileSto
                   <Accordion key={group.reference_id} type="single" collapsible className="border rounded-lg">
                     <AccordionItem value={group.reference_id} className="border-none">
                       <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedGroups[group.reference_id] || false}
-                              onCheckedChange={(checked) => handleSelectGroup(group.reference_id, checked as boolean)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
+                        <div className="flex items-center justify-between w-full gap-3">
+                          <div className="flex items-center gap-3 flex-1">
                             <div className="text-left">
                               <div className="font-medium text-sm">{group.transaction_id}</div>
                               <div className="text-xs text-muted-foreground">
@@ -435,13 +430,19 @@ export const MobileStockConfirmationEnhanced = ({ riderId, branchId }: MobileSto
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <Badge variant="secondary" className="text-xs">
                               {group.total_items} items
                             </Badge>
                             <Badge variant="outline" className="text-xs">
                               {group.total_quantity} pcs
                             </Badge>
+                            <Checkbox
+                              checked={selectedGroups[group.reference_id] || false}
+                              onCheckedChange={(checked) => handleSelectGroup(group.reference_id, checked as boolean)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-6 w-6 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
                           </div>
                         </div>
                       </AccordionTrigger>
@@ -451,17 +452,11 @@ export const MobileStockConfirmationEnhanced = ({ riderId, branchId }: MobileSto
                             <div 
                               key={item.id}
                               className={`p-3 border rounded-lg transition-colors cursor-pointer ${
-                                selectedItems[item.id] ? 'bg-primary/5 border-primary/30' : 'hover:bg-muted/50'
+                                selectedItems[item.id] ? 'bg-green-50 border-green-300' : 'hover:bg-muted/50'
                               }`}
                               onClick={() => handleSelectItem(item.id, !(selectedItems[item.id] || false))}
                             >
-                              <div className="flex items-start space-x-3">
-                                <Checkbox
-                                  id={`item-${item.id}`}
-                                  checked={!!selectedItems[item.id]}
-                                  onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
+                              <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between">
                                     <h5 className="font-medium text-sm">{item.product?.name || 'Unknown Product'}</h5>
@@ -476,6 +471,13 @@ export const MobileStockConfirmationEnhanced = ({ riderId, branchId }: MobileSto
                                     </p>
                                   )}
                                 </div>
+                                <Checkbox
+                                  id={`item-${item.id}`}
+                                  checked={!!selectedItems[item.id]}
+                                  onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-6 w-6 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 shrink-0"
+                                />
                               </div>
                             </div>
                           ))}

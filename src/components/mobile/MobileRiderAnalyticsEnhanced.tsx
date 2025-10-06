@@ -128,6 +128,18 @@ const MobileRiderAnalyticsEnhanced = () => {
         setStartDate(jakartaToday);
         setEndDate(jakartaToday);
         break;
+      case "yesterday":
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const yesterdayStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Jakarta',
+          year: 'numeric',
+          month: '2-digit', 
+          day: '2-digit'
+        }).format(yesterday);
+        setStartDate(yesterdayStr);
+        setEndDate(yesterdayStr);
+        break;
       case "weekly":
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - 6); // Last 7 days
@@ -397,6 +409,7 @@ const MobileRiderAnalyticsEnhanced = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="today">Hari Ini</SelectItem>
+                    <SelectItem value="yesterday">Kemarin</SelectItem>
                     <SelectItem value="weekly">Minggu Ini</SelectItem>
                     <SelectItem value="monthly">Bulan Ini</SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>
