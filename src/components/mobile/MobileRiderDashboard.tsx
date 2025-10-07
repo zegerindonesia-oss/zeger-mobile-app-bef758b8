@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { MobileIncomingOrder } from './MobileIncomingOrder';
 
 interface DashboardStats {
   totalStock: number;
@@ -46,6 +47,8 @@ const MobileRiderDashboard = () => {
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [riderProfile, setRiderProfile] = useState<RiderProfile | null>(null);
+  const [currentOrder, setCurrentOrder] = useState<any>(null);
+  const [riderLocation, setRiderLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const fetchRiderProfile = async () => {
     try {
@@ -95,6 +98,61 @@ const MobileRiderDashboard = () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Request GPS permission on mount
+  useEffect(() => {
+    const requestGPSPermission = async () => {
+      if (!navigator.geolocation) {
+        toast.error('Perangkat Anda tidak mendukung GPS');
+        setGpsStatus('error');
+        return;
+      }
+
+      try {
+        const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        
+        if (result.state === 'denied') {
+          toast.error('GPS diblokir. Silakan aktifkan GPS di pengaturan browser');
+          setGpsStatus('error');
+        } else {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setRiderLocation({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              });
+              setGpsStatus('active');
+              toast.success('GPS aktif');
+            },
+            (error) => {
+              console.error('GPS error:', error);
+              toast.error('Tidak dapat mengakses GPS');
+              setGpsStatus('error');
+            },
+            { enableHighAccuracy: true }
+          );
+        }
+      } catch (err) {
+        // Browser doesn't support permissions API, request directly
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setRiderLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+            setGpsStatus('active');
+          },
+          (error) => {
+            console.error('GPS error:', error);
+            toast.error('Tidak dapat mengakses GPS');
+            setGpsStatus('error');
+          }
+        );
+      }
+    };
+
+    requestGPSPermission();
+  }, []);
 
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
@@ -492,11 +550,18 @@ const MobileRiderDashboard = () => {
         .from('customer_orders')
         .select(`
           *,
-          customer:customer_users!customer_orders_user_id_fkey(
+          customer_users!customer_orders_user_id_fkey(
             name,
             phone,
             address,
             photo_url
+          ),
+          customer_order_items(
+            id,
+            product_id,
+            quantity,
+            price,
+            products(name, code)
           )
         `)
         .eq('rider_id', riderProfile.id)
@@ -504,15 +569,35 @@ const MobileRiderDashboard = () => {
         .order('created_at', { ascending: false });
       
       if (data && data.length > 0) {
-        setPendingOrders(data);
+        // Show first order in dialog
+        setCurrentOrder(data[0]);
         setShowOrderDialog(true);
         
         // Play notification sound
-        const audio = new Audio('/notification.mp3');
-        audio.play().catch(() => console.log('Audio play failed'));
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.value = 0.3;
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.3);
+          
+          if (navigator.vibrate) {
+            navigator.vibrate([500, 200, 500, 200, 500]);
+          }
+        } catch (error) {
+          console.log('Sound play error:', error);
+        }
         
         // Show toast
-        toast.info(`${data.length} permintaan baru dari customer!`, {
+        toast.info(`Pesanan baru dari ${data[0].customer_users.name}!`, {
           duration: 5000
         });
       }
@@ -542,7 +627,7 @@ const MobileRiderDashboard = () => {
     };
   }, [riderProfile]);
 
-  const handleRespondOrder = async (orderId: string, action: 'accept' | 'reject') => {
+  const handleAcceptOrder = async (orderId: string) => {
     if (!riderProfile) return;
     
     try {
@@ -550,35 +635,51 @@ const MobileRiderDashboard = () => {
         body: {
           order_id: orderId,
           rider_profile_id: riderProfile.id,
-          action,
-          rejection_reason: action === 'reject' ? 'Sedang sibuk melayani customer lain' : undefined
+          action: 'accept'
         }
       });
       
       if (error) throw error;
       
-      if (action === 'accept') {
-        // Get order details for directions
-        const order = pendingOrders.find(o => o.id === orderId);
-        if (order && order.latitude && order.longitude) {
-          const url = `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}&travelmode=driving`;
-          window.open(url, '_blank');
-          toast.success('Pesanan diterima! Google Maps dibuka untuk directions');
-        }
-      } else {
-        toast.info('Pesanan ditolak');
+      // Get order details for directions
+      const order = currentOrder;
+      if (order && order.latitude && order.longitude) {
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}&travelmode=driving`;
+        window.open(url, '_blank');
+        toast.success('Pesanan diterima! Membuka Google Maps...');
       }
       
-      // Remove from pending list
-      setPendingOrders(prev => prev.filter(o => o.id !== orderId));
-      
-      // Close dialog if no more orders
-      if (pendingOrders.length <= 1) {
-        setShowOrderDialog(false);
-      }
+      setShowOrderDialog(false);
+      setCurrentOrder(null);
+      fetchPendingOrders();
     } catch (err: any) {
-      console.error('Error responding to order:', err);
-      toast.error(err.message || 'Gagal merespons pesanan');
+      console.error('Error accepting order:', err);
+      toast.error(err.message || 'Gagal menerima pesanan');
+    }
+  };
+
+  const handleRejectOrder = async (orderId: string, reason: string) => {
+    if (!riderProfile) return;
+    
+    try {
+      const { error } = await supabase.functions.invoke('rider-respond-order', {
+        body: {
+          order_id: orderId,
+          rider_profile_id: riderProfile.id,
+          action: 'reject',
+          rejection_reason: reason
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast.info('Pesanan ditolak');
+      setShowOrderDialog(false);
+      setCurrentOrder(null);
+      fetchPendingOrders();
+    } catch (err: any) {
+      console.error('Error rejecting order:', err);
+      toast.error(err.message || 'Gagal menolak pesanan');
     }
   };
 
@@ -737,75 +838,18 @@ const MobileRiderDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Pending Order Dialog */}
-      {showOrderDialog && pendingOrders.length > 0 && (
-        <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-xl">🔔 Permintaan Baru!</DialogTitle>
-              <DialogDescription>
-                Customer meminta Anda untuk datang
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              {pendingOrders[0] && (
-                <>
-                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                    <Avatar className="h-14 w-14 ring-2 ring-primary">
-                      <AvatarImage src={pendingOrders[0].customer?.photo_url} />
-                      <AvatarFallback className="bg-primary text-white">
-                        {pendingOrders[0].customer?.name?.[0] || 'C'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="font-semibold text-lg">{pendingOrders[0].customer?.name || 'Customer'}</p>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        <span>{pendingOrders[0].customer?.phone || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-blue-600 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-900">Alamat Customer:</p>
-                        <p className="text-sm text-blue-700">
-                          {pendingOrders[0].delivery_address || 'Alamat tidak tersedia'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {pendingOrders.length > 1 && (
-                    <div className="text-center text-sm text-muted-foreground">
-                      +{pendingOrders.length - 1} permintaan lainnya menunggu
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      variant="destructive" 
-                      className="flex-1"
-                      onClick={() => handleRespondOrder(pendingOrders[0].id, 'reject')}
-                    >
-                      Tolak
-                    </Button>
-                    <Button 
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={() => handleRespondOrder(pendingOrders[0].id, 'accept')}
-                    >
-                      Terima
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Incoming Order Dialog using MobileIncomingOrder component */}
+      <MobileIncomingOrder
+        order={currentOrder}
+        isOpen={showOrderDialog}
+        onClose={() => {
+          setShowOrderDialog(false);
+          setCurrentOrder(null);
+        }}
+        onAccept={handleAcceptOrder}
+        onReject={handleRejectOrder}
+        riderLocation={riderLocation}
+      />
     </div>
   );
 };

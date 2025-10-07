@@ -413,7 +413,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <Avatar className="h-14 w-14 ring-2 ring-primary/10">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rider.id}`} />
+                        <AvatarImage src={rider.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${rider.id}`} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
                           {rider.full_name.charAt(0)}
                         </AvatarFallback>

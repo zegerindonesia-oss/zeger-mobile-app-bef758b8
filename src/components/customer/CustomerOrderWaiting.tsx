@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Phone, MapPin, Clock, Loader2, XCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Phone, MapPin, Clock, Loader2, XCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,6 +33,8 @@ export default function CustomerOrderWaiting({
 }: CustomerOrderWaitingProps) {
   const { toast } = useToast();
   const [countdown, setCountdown] = useState(60);
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     // Subscribe to order status changes
@@ -54,12 +57,12 @@ export default function CustomerOrderWaiting({
           onAccepted();
         } else if (newStatus === 'rejected') {
           const reason = payload.new.rejection_reason || 'Rider menolak pesanan';
-          toast({
-            title: '❌ Pesanan Ditolak',
-            description: reason,
-            variant: 'destructive'
-          });
-          onRejected(reason);
+          setRejectionReason(reason);
+          setShowRejectionDialog(true);
+          setTimeout(() => {
+            setShowRejectionDialog(false);
+            onRejected(reason);
+          }, 5000);
         }
       })
       .subscribe();
@@ -175,10 +178,54 @@ export default function CustomerOrderWaiting({
 
           {/* Info Text */}
           <p className="text-center text-xs text-muted-foreground">
-            Pesanan akan otomatis dibatalkan jika tidak ada respons dalam {countdown} detik
-          </p>
+          Pesanan akan otomatis dibatalkan jika tidak ada respons dalam {countdown} detik
+        </p>
         </CardContent>
       </Card>
+
+      {/* Rejection Dialog */}
+      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Pesanan Ditolak
+            </DialogTitle>
+            <DialogDescription>
+              Mohon maaf, rider tidak dapat menerima pesanan Anda
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-destructive/10 p-4 rounded-lg">
+              <p className="text-sm font-medium mb-1">Alasan Penolakan:</p>
+              <p className="text-sm text-destructive">{rejectionReason}</p>
+            </div>
+            
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={rider.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${rider.id}`} />
+                <AvatarFallback>{rider.full_name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-foreground">{rider.full_name}</p>
+                <p className="text-xs">{rider.phone}</p>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setShowRejectionDialog(false);
+                onRejected(rejectionReason);
+              }}
+            >
+              Tutup
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
