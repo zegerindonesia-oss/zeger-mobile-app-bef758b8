@@ -146,44 +146,22 @@ export default function RiderReassignment() {
         </div>
       </div>
 
-      {/* Quick Actions for Z-009 and Z-011 */}
+      {/* Quick Actions for Z-009, Z-011, and Z-00 */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            Quick Fix: Pindahkan Z-009 & Z-011
+            Quick Fix: Pindahkan Rider ke Branch yang Benar
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
             <AlertDescription>
-              Tombol di bawah akan langsung memindahkan rider yang salah branch ke small branch yang benar.
+              Tombol di bawah akan langsung memindahkan rider ke branch yang benar dan set role sb_rider.
             </AlertDescription>
           </Alert>
 
           <div className="grid gap-4">
-            <Card className="bg-muted/50">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Z-009 Pak Alut</p>
-                    <p className="text-sm text-muted-foreground">ZegerOTW09@gmail.com</p>
-                    <p className="text-sm text-green-600 font-medium mt-1">→ Zeger Coffee Malang</p>
-                  </div>
-                  <Button 
-                    onClick={() => handleQuickReassign(
-                      "ZegerOTW09@gmail.com",
-                      "Zeger Coffee Malang",
-                      "Z-009 Pak Alut"
-                    )}
-                    disabled={quickActionLoading === "ZegerOTW09@gmail.com"}
-                  >
-                    {quickActionLoading === "ZegerOTW09@gmail.com" ? "Memproses..." : "Pindahkan"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -193,14 +171,61 @@ export default function RiderReassignment() {
                     <p className="text-sm text-green-600 font-medium mt-1">→ Zeger Coffee Graha Kota</p>
                   </div>
                   <Button 
-                    onClick={() => handleQuickReassign(
-                      "zegerotw01@gmail.com",
+                    onClick={() => handleQuickReassignByName(
+                      "Pak Rikman",
                       "Zeger Coffee Graha Kota",
-                      "Z-011 Pak Rikman"
+                      "Z-011 Pak Rikman",
+                      { setSb: true, riderCode: "Z-011" }
                     )}
-                    disabled={quickActionLoading === "zegerotw01@gmail.com"}
+                    disabled={quickActionLoading === "Pak Rikman"}
                   >
-                    {quickActionLoading === "zegerotw01@gmail.com" ? "Memproses..." : "Pindahkan"}
+                    {quickActionLoading === "Pak Rikman" ? "Memproses..." : "Pindahkan"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Z-009 Pak Alut</p>
+                    <p className="text-sm text-muted-foreground">ZegerOTW09@gmail.com</p>
+                    <p className="text-sm text-green-600 font-medium mt-1">→ Zeger Coffee Malang</p>
+                  </div>
+                  <Button 
+                    onClick={() => handleQuickReassignByName(
+                      "Pak Alut",
+                      "Zeger Coffee Malang",
+                      "Z-009 Pak Alut",
+                      { setSb: true, riderCode: "Z-009" }
+                    )}
+                    disabled={quickActionLoading === "Pak Alut"}
+                  >
+                    {quickActionLoading === "Pak Alut" ? "Memproses..." : "Pindahkan"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Z-00 Zeger Event</p>
+                    <p className="text-sm text-muted-foreground">Rider Code: Z-00</p>
+                    <p className="text-sm text-blue-600 font-medium mt-1">→ Branch Hub Zeger Kemiri</p>
+                  </div>
+                  <Button 
+                    onClick={() => handleQuickReassignByName(
+                      "Zeger Event",
+                      "Zeger Kemiri",
+                      "Z-00 Zeger Event",
+                      { setSb: false, riderCode: "Z-00" }
+                    )}
+                    disabled={quickActionLoading === "Zeger Event"}
+                  >
+                    {quickActionLoading === "Zeger Event" ? "Memproses..." : "Pindahkan"}
                   </Button>
                 </div>
               </CardContent>
