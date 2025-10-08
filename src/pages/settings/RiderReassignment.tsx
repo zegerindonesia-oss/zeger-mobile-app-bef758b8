@@ -86,6 +86,42 @@ export default function RiderReassignment() {
     }
   };
 
+  const handleQuickReassignByName = async (
+    fullName: string,
+    branchName: string,
+    riderName: string,
+    options?: { setSb?: boolean; forceRole?: string; riderCode?: string }
+  ) => {
+    setQuickActionLoading(fullName);
+    setResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('reassign-rider-branch', {
+        body: {
+          rider_full_name: fullName,
+          rider_code: options?.riderCode,
+          target_branch_name: branchName,
+          set_role_to_sb_rider: options?.setSb ?? false,
+          force_role: options?.forceRole
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`${riderName} berhasil dipindahkan ke ${branchName}!`);
+        setResult(data);
+      } else {
+        throw new Error(data?.error || 'Unknown error');
+      }
+    } catch (error: any) {
+      console.error('Quick reassignment (by name) error:', error);
+      toast.error(`Gagal memindahkan ${riderName}: ` + (error.message || 'Terjadi kesalahan'));
+    } finally {
+      setQuickActionLoading(null);
+    }
+  };
+
   // Only ho_admin can access this
   if (userProfile?.role !== 'ho_admin') {
     return (

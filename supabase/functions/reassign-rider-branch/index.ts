@@ -66,36 +66,82 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Parse request body
-    const { rider_email, target_branch_name, set_role_to_sb_rider } = await req.json();
+    // Parse request body (enhanced to support name/code)
+    const { 
+      rider_email, 
+      rider_full_name,
+      rider_code,
+      target_branch_name, 
+      target_branch_code,
+      set_role_to_sb_rider,
+      force_role
+    } = await req.json();
 
-    console.log('Reassigning rider:', { rider_email, target_branch_name, set_role_to_sb_rider });
+    console.log('Reassigning rider:', { rider_email, rider_full_name, rider_code, target_branch_name, target_branch_code, set_role_to_sb_rider, force_role });
 
-    // Get rider profile by email
-    const { data: riderProfile, error: riderError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, full_name, branch_id, role')
-      .eq('user_id', (
-        await supabaseAdmin.auth.admin.listUsers()
-      ).data.users?.find(u => u.email === rider_email)?.id)
-      .single();
+    // Resolve rider profile by email -> name -> code
+    let riderProfile: any = null;
 
-    if (riderError || !riderProfile) {
-      return new Response(JSON.stringify({ error: `Rider not found with email: ${rider_email}` }), {
+    if (rider_email) {
+      const adminUsers = (await supabaseAdmin.auth.admin.listUsers()).data.users || [];
+      const userId = adminUsers.find(u => u.email?.toLowerCase() === String(rider_email).toLowerCase())?.id;
+      if (userId) {
+        const { data } = await supabaseAdmin
+          .from('profiles')
+          .select('id, full_name, branch_id, role, user_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        riderProfile = data;
+      }
+    }
+
+    if (!riderProfile && rider_full_name) {
+      const { data } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, branch_id, role, user_id')
+        .ilike('full_name', `%${rider_full_name}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      riderProfile = data;
+    }
+
+    if (!riderProfile && rider_code) {
+      // Match code prefix like "Z-011" at start of full_name
+      const { data } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, branch_id, role, user_id')
+        .ilike('full_name', `${rider_code}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      riderProfile = data;
+    }
+
+    if (!riderProfile) {
+      return new Response(JSON.stringify({ error: `Rider tidak ditemukan (email/nama/kode tidak cocok)` }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Get target branch by name
-    const { data: targetBranch, error: branchError } = await supabaseAdmin
+    // Get target branch by name or code (robust match)
+    let branchQuery = supabaseAdmin
       .from('branches')
-      .select('id, name')
-      .ilike('name', target_branch_name)
-      .single();
+      .select('id, name, code')
+      .limit(1);
 
-    if (branchError || !targetBranch) {
-      return new Response(JSON.stringify({ error: `Branch not found: ${target_branch_name}` }), {
+    if (target_branch_code) {
+      branchQuery = branchQuery.ilike('code', `%${target_branch_code}%`);
+    } else if (target_branch_name) {
+      // Match either name or code using OR
+      branchQuery = branchQuery.or(`name.ilike.%${target_branch_name}%,code.ilike.%${target_branch_name}%`);
+    }
+
+    const { data: targetBranch } = await branchQuery.maybeSingle();
+
+    if (!targetBranch) {
+      return new Response(JSON.stringify({ error: `Branch tidak ditemukan: ${target_branch_name || target_branch_code}` }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -115,7 +161,10 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString()
     };
 
-    if (set_role_to_sb_rider && riderProfile.role !== 'sb_rider') {
+    if (force_role && riderProfile.role !== force_role) {
+      updateData.role = force_role;
+      changes.role_changed = `${riderProfile.role} -> ${force_role}`;
+    } else if (set_role_to_sb_rider && riderProfile.role !== 'sb_rider') {
       updateData.role = 'sb_rider';
       changes.role_changed = `${riderProfile.role} -> sb_rider`;
     }
