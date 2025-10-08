@@ -93,6 +93,53 @@ const MobileRiderDashboard = () => {
       )
       .subscribe();
 
+    // Phase 2: Subscribe to incoming customer orders (new orders assigned to this rider)
+    const fetchProfile = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (profile) {
+        const ordersChannel = supabase
+          .channel('incoming_customer_orders')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'customer_orders',
+              filter: `rider_id=eq.${profile.id}`
+            },
+            (payload) => {
+              console.log('📦 New order received:', payload.new);
+              const newOrder = payload.new;
+              
+              // Show notification with sound
+              toast.success('Pesanan Baru Masuk!', {
+                description: `Order dari customer`,
+                duration: 10000,
+              });
+
+              // Play notification sound
+              const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSqBzvLZiTYIG2m98OScTgwOUKnn77RgGQU7k9ryxnkkBSp+zPLaizsKGGS57OihUxMJTKXh8LZZGA==');
+              audio.play().catch(e => console.log('Could not play sound:', e));
+
+              // Set current order and show dialog
+              setCurrentOrder(newOrder);
+              setShowOrderDialog(true);
+              
+              // Refresh pending orders count
+              fetchPendingOrders();
+            }
+          )
+          .subscribe();
+      }
+    };
+
+    fetchProfile();
+
     return () => {
       stopLocationTracking();
       supabase.removeChannel(channel);

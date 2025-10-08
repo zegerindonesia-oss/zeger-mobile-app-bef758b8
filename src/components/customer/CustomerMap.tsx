@@ -42,6 +42,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
+  const riderMarkersMap = useRef<Map<string, google.maps.Marker>>(new Map());
 
   useEffect(() => {
     requestLocationPermission();
@@ -50,8 +51,72 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     return () => {
       markers.current.forEach(marker => marker.setMap(null));
       markers.current = [];
+      riderMarkersMap.current.clear();
     };
   }, []);
+
+  // Phase 3: Subscribe to realtime rider location updates
+  useEffect(() => {
+    if (!userLocation || nearbyRiders.length === 0) return;
+
+    console.log('🔄 Subscribing to rider location updates for', nearbyRiders.length, 'riders');
+
+    const channel = supabase
+      .channel('rider_locations_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rider_locations'
+        },
+        (payload) => {
+          const riderId = payload.new.rider_id;
+          const newLat = payload.new.latitude;
+          const newLng = payload.new.longitude;
+
+          console.log('📍 Rider location updated:', { riderId, newLat, newLng });
+
+          // Update rider in state
+          setNearbyRiders(prev => prev.map(rider => {
+            if (rider.id === riderId) {
+              // Calculate new distance
+              const R = 6371;
+              const dLat = (newLat - userLocation.lat) * Math.PI / 180;
+              const dLon = (newLng - userLocation.lng) * Math.PI / 180;
+              const lat1 = userLocation.lat * Math.PI / 180;
+              const lat2 = newLat * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const distance = R * c;
+
+              return {
+                ...rider,
+                lat: newLat,
+                lng: newLng,
+                distance_km: distance,
+                eta_minutes: Math.ceil((distance / 20) * 60),
+                has_gps: true,
+                is_online: true
+              };
+            }
+            return rider;
+          }));
+
+          // Update marker on map
+          const marker = riderMarkersMap.current.get(riderId);
+          if (marker) {
+            marker.setPosition({ lat: newLat, lng: newLng });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userLocation, nearbyRiders.length]);
 
   const requestLocationPermission = async () => {
     console.log('📍 Requesting location permission...');
@@ -213,6 +278,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
         });
 
         markers.current.push(riderMarker);
+        riderMarkersMap.current.set(rider.id, riderMarker);
         bounds.extend({ lat: rider.lat, lng: rider.lng });
       }
     });
@@ -329,6 +395,66 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     if (rider?.phone) {
       window.location.href = `tel:${rider.phone}`;
     }
+  };
+
+  // Phase 4: Handle "Panggil Rider" - Create order request
+  const handlePanggilRider = async (rider: Rider) => {
+    if (!customerUser || !userLocation) {
+      toast.error('Silakan login terlebih dahulu');
+      return;
+    }
+
+    setRequestingRider(rider.id);
+
+    try {
+      console.log('📞 Calling rider:', rider.full_name);
+
+      const { data, error } = await supabase.functions.invoke('send-order-request', {
+        body: {
+          customer_user_id: customerUser.id,
+          rider_profile_id: rider.id,
+          customer_lat: userLocation.lat,
+          customer_lng: userLocation.lng,
+          delivery_address: customerUser.address || 'Alamat pelanggan',
+          order_items: [], // Empty for now, can be filled later
+          total_price: 0
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Permintaan berhasil dikirim!', {
+        description: `Menunggu ${rider.full_name} menerima pesanan`
+      });
+
+      // Navigate to tracking page if order created
+      if (onCallRider && data?.order) {
+        onCallRider(data.order.id, rider);
+      }
+    } catch (error: any) {
+      console.error('Error calling rider:', error);
+      toast.error('Gagal mengirim permintaan', {
+        description: error.message || 'Silakan coba lagi'
+      });
+    } finally {
+      setRequestingRider(null);
+    }
+  };
+
+  // Phase 6: Handle "Kunjungi Rider" - Open Google Maps directions
+  const handleKunjungiRider = (rider: Rider) => {
+    if (!rider.lat || !rider.lng) {
+      toast.error('Lokasi rider tidak tersedia');
+      return;
+    }
+
+    // Open Google Maps with directions
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}`;
+    window.open(mapsUrl, '_blank');
+    
+    toast.success('Membuka Google Maps', {
+      description: 'Arahkan ke lokasi rider'
+    });
   };
 
   if (loading) {

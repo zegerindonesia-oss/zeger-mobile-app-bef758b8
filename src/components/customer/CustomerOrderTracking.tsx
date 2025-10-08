@@ -115,9 +115,14 @@ export default function CustomerOrderTracking({
     loadGoogleMaps();
   }, []);
 
-  // Subscribe to rider location updates
+  // Phase 5: Subscribe to rider location updates and order status
   useEffect(() => {
-    const channel = supabase
+    if (!rider.id) return;
+
+    console.log('🔄 Starting real-time tracking for order:', orderId);
+
+    // Subscribe to rider location updates
+    const locationChannel = supabase
       .channel('rider_location_tracking')
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -128,7 +133,7 @@ export default function CustomerOrderTracking({
         const newLat = payload.new.latitude;
         const newLng = payload.new.longitude;
 
-        console.log('Rider location updated:', { newLat, newLng });
+        console.log('📍 Rider location updated:', { newLat, newLng });
 
         setRiderLocation({ lat: newLat, lng: newLng });
 
@@ -168,7 +173,7 @@ export default function CustomerOrderTracking({
         filter: `id=eq.${orderId}`
       }, (payload) => {
         const newStatus = payload.new.status;
-        console.log('Order status changed:', newStatus);
+        console.log('📦 Order status changed:', newStatus);
         setOrderStatus(newStatus);
 
         if (newStatus === 'completed' || newStatus === 'delivered') {
@@ -177,9 +182,54 @@ export default function CustomerOrderTracking({
       })
       .subscribe();
 
+    // Subscribe to order_status_history for detailed status updates
+    const historyChannel = supabase
+      .channel('order_history_tracking')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'order_status_history',
+        filter: `order_id=eq.${orderId}`
+      }, (payload) => {
+        const newHistory = payload.new;
+        console.log('📝 New status history:', newHistory.status);
+        
+        // Update order status based on history
+        setOrderStatus(newHistory.status);
+      })
+      .subscribe();
+
+    // Fetch initial rider location
+    const fetchInitialLocation = async () => {
+      const { data } = await supabase
+        .from('rider_locations')
+        .select('latitude, longitude')
+        .eq('rider_id', rider.id)
+        .single();
+
+      if (data) {
+        setRiderLocation({ lat: data.latitude, lng: data.longitude });
+        calculateDistanceAndETA(data.latitude, data.longitude);
+        
+        // Update marker and map
+        if (riderMarker.current) {
+          riderMarker.current.setPosition({ lat: data.latitude, lng: data.longitude });
+        }
+        if (polyline.current) {
+          polyline.current.setPath([
+            { lat: data.latitude, lng: data.longitude },
+            { lat: customerLat, lng: customerLng }
+          ]);
+        }
+      }
+    };
+
+    fetchInitialLocation();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(locationChannel);
       supabase.removeChannel(statusChannel);
+      supabase.removeChannel(historyChannel);
     };
   }, [rider.id, orderId]);
 
