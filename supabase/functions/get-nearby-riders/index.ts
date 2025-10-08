@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const { data: riders, error: ridersError } = await supabase
       .from('profiles')
       .select(`
-        id, full_name, phone, photo_url, last_known_lat, last_known_lng, location_updated_at, branch_id,
+        id, full_name, phone, last_known_lat, last_known_lng, location_updated_at, branch_id,
         branches(id, name, address, latitude, longitude)
       `)
       .or('role.eq.rider,role.eq.sb_rider,role.eq.bh_rider')
@@ -79,10 +79,10 @@ Deno.serve(async (req) => {
         }
 
         // Don't skip riders without location - show them with high distance
-        if (!riderLat || !riderLat) {
+        if (riderLat == null || riderLng == null) {
           console.log(`Rider ${rider.full_name} has no location data - setting distance to 9999`);
-          riderLat = riderLat || 0;
-          riderLng = riderLng || 0;
+          riderLat = 0;
+          riderLng = 0;
         }
         
         let distance_km = 9999;
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
           id: rider.id,
           full_name: rider.full_name,
           phone: rider.phone || '',
-          photo_url: rider.photo_url || null,
+          photo_url: null, // Field removed from profiles table
           distance_km,
           eta_minutes,
           total_stock,

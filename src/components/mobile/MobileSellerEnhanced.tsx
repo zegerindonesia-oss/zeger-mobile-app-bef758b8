@@ -464,7 +464,7 @@ const MobileSellerEnhanced = () => {
       <div className="space-y-6">
             {/* Pending stock warning banner */}
             {hasPendingStock && (
-              <Card className="border-orange-200 bg-orange-50">
+              <Card className="relative z-0 border-orange-200 bg-orange-50">
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2 text-orange-700">
                     <Package className="h-4 w-4" />
