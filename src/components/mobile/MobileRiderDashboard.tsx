@@ -756,32 +756,8 @@ const MobileRiderDashboard = () => {
           filter: `rider_profile_id=eq.${riderProfile.id}`
         },
         (payload) => {
-      console.log('🔔 INSERT event received in rider_pending_orders channel:', payload);
-          console.log('📋 Order data:', payload.new);
-          console.log('🆔 My rider_profile_id:', riderProfile.id);
-          console.log('🎯 Order rider_profile_id:', payload.new?.rider_profile_id);
-          
-          // Show popup immediately with minimal data
-          if (payload.new) {
-            console.log('⚡ Setting order dialog to show immediately');
-            setCurrentOrder(payload.new);
-            setShowOrderDialog(true);
-            
-            // Try to play notification
-            try {
-              navigator.vibrate?.(500);
-              const audio = new Audio('/sounds/order-notif.mp3');
-              audio.play().catch(e => console.warn('Audio play failed:', e));
-            } catch (err) {
-              console.warn('Notification failed:', err);
-            }
-          }
-          
-          // Then fetch full details in background (toast removed to fix build)
-          fetchPendingOrdersWithDetails().catch(err => {
-            console.error('❌ Failed to fetch full order details:', err);
-            console.warn('⚠️ Order popup shown with minimal data due to RLS permissions');
-          });
+          console.log('🔔 INSERT event received in rider_pending_orders channel:', payload);
+          fetchPendingOrdersWithDetails();
         }
       )
       .subscribe();
