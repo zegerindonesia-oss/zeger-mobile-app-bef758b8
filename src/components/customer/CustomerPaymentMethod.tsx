@@ -123,7 +123,7 @@ export default function CustomerPaymentMethod({
                     'flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border-2',
                     selectedMethod === wallet.id
                       ? 'border-red-500 bg-red-50 shadow-md scale-[1.02]'
-                      : wallet.color,
+                      : 'border-gray-200 bg-white',
                     'hover:shadow-lg'
                   )}
                 >
