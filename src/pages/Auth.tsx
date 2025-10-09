@@ -60,22 +60,6 @@ const Auth = () => {
     }
   }, [user, userProfile, loading]);
 
-  // ✅ FALLBACK REDIRECT - Force redirect if user exists but profile is stuck loading
-  useEffect(() => {
-    if (!loading && user && !userProfile) {
-      const timer = setTimeout(() => {
-        // Check email pattern for rider roles (Z- prefix typically used for riders)
-        const email = user.email?.toLowerCase() || '';
-        const isRider = email.startsWith('z-') || email.includes('rider');
-        
-        const fallbackUrl = isRider ? '/mobile-seller' : '/customer-app';
-        toast.error('Profile loading timeout, redirecting...');
-        window.location.replace(fallbackUrl);
-      }, 2000); // Wait 2 seconds before forcing redirect
-
-      return () => clearTimeout(timer);
-    }
-  }, [user, userProfile, loading]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({

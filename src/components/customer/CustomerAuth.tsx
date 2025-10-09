@@ -92,7 +92,7 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/customer`
+          emailRedirectTo: `${window.location.origin}/customer-app`
         }
       });
 
@@ -134,6 +134,16 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
         });
 
       if (error) throw error;
+
+      // Also upsert to profiles table for consistency
+      await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          full_name: formData.name,
+          phone: formData.phone,
+          role: 'customer'
+        }, { onConflict: 'user_id' });
 
       toast({
         title: "Berhasil!",
