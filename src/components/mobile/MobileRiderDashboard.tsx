@@ -455,11 +455,15 @@ const MobileRiderDashboard = () => {
 
       if (!profile) return;
 
+      console.log('🔍 Fetching pending orders count for rider_profile_id:', profile.id);
+      
       const { count, error } = await supabase
         .from('customer_orders')
         .select('id', { count: 'exact', head: true })
-        .eq('rider_id', profile.id)
+        .eq('rider_profile_id', profile.id)
         .eq('status', 'pending');
+      
+      console.log('📊 Pending orders count:', count);
 
       if (error) {
         console.error('Error fetching pending orders:', error);
@@ -677,6 +681,8 @@ const MobileRiderDashboard = () => {
     }
     
     const fetchPendingOrdersWithDetails = async () => {
+      console.log('🔍 Fetching pending orders for rider_profile_id:', riderProfile.id);
+      
       const { data } = await supabase
         .from('customer_orders')
         .select(`
@@ -695,9 +701,11 @@ const MobileRiderDashboard = () => {
             products(name, code)
           )
         `)
-        .eq('rider_id', riderProfile.id)
+        .eq('rider_profile_id', riderProfile.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
+      
+      console.log('📦 Fetched pending orders:', data?.length || 0);
       
       if (data && data.length > 0) {
         // Show first order in dialog
@@ -747,7 +755,8 @@ const MobileRiderDashboard = () => {
           table: 'customer_orders',
           filter: `rider_profile_id=eq.${riderProfile.id}`
         },
-        () => {
+        (payload) => {
+          console.log('🔔 INSERT event received in rider_pending_orders channel:', payload);
           fetchPendingOrdersWithDetails();
         }
       )
