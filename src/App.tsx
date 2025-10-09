@@ -67,7 +67,11 @@ const App = () => (
                 <MobileSeller />
               </RoleBasedRoute>
             } />
-            <Route path="/customer-app" element={<CustomerApp />} />
+            <Route path="/customer-app" element={
+              <RoleBasedRoute allowedRoles={['customer']} redirectTo="/auth">
+                <CustomerApp />
+              </RoleBasedRoute>
+            } />
             <Route path="/customer" element={<CustomerApp />} />
             <Route path="/admin" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>

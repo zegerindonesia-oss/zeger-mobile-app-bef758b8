@@ -308,7 +308,7 @@ const Auth = () => {
                       {authLoading ? "Creating Account..." : "Sign Up"}
                     </Button>
                     <p className="text-xs text-gray-500 text-center">
-                      *Sign up is only available for customers. Employee accounts are managed internally.
+                      *Sign up untuk customer. Akun staff/karyawan dikelola dari backoffice.
                     </p>
                   </form>
                 </TabsContent>
@@ -336,21 +336,6 @@ const Auth = () => {
               </div>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="text-center space-y-3">
-                <p className="text-sm text-gray-600 font-medium">
-                  Pelanggan? Gunakan aplikasi customer
-                </p>
-                <Button
-                  type="button"
-                  onClick={() => navigate('/customer-app')}
-                  variant="outline"
-                  className="w-full border-2 border-red-600 text-red-600 hover:bg-red-50 rounded-full py-6 text-base font-semibold"
-                >
-                  Masuk ke Customer App →
-                </Button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
