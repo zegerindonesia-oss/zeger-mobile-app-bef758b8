@@ -90,24 +90,30 @@ export function MobileIncomingOrder({
 
   const playNotificationSound = () => {
     try {
-      // Create a simple beep sound using Web Audio API
+      // Create audio context
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      // Play 3 beeps
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.value = 0.5;
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.5);
+        }, i * 700);
+      }
       
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      gainNode.gain.value = 0.3;
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-      
-      // Vibrate if supported
+      // Enhanced vibration pattern
       if (navigator.vibrate) {
-        navigator.vibrate([500, 200, 500, 200, 500]);
+        navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
       }
     } catch (error) {
       console.log('Error playing sound:', error);
@@ -283,7 +289,7 @@ export function MobileIncomingOrder({
               <Button
                 size="lg"
                 onClick={handleAccept}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-[#DC2626] hover:bg-[#B91C1C] text-white"
               >
                 ✅ TERIMA
               </Button>

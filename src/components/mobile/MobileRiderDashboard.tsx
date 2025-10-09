@@ -102,6 +102,8 @@ const MobileRiderDashboard = () => {
         .single();
       
       if (profile) {
+        console.log('🔍 Subscribing to orders for rider_profile_id:', profile.id);
+        
         const ordersChannel = supabase
           .channel('incoming_customer_orders')
           .on(
@@ -110,24 +112,47 @@ const MobileRiderDashboard = () => {
               event: 'INSERT',
               schema: 'public',
               table: 'customer_orders',
-              filter: `rider_id=eq.${profile.id}`
+              filter: `rider_profile_id=eq.${profile.id}`
             },
-            (payload) => {
-              console.log('📦 New order received:', payload.new);
-              const newOrder = payload.new;
+            async (payload) => {
+              console.log('📦 Raw order received:', payload.new);
               
-              // Show notification with sound
+              // Fetch complete order with relations
+              const { data: fullOrder, error } = await supabase
+                .from('customer_orders')
+                .select(`
+                  *,
+                  customer_users!customer_orders_user_id_fkey(name, phone),
+                  customer_order_items(
+                    id,
+                    product_id,
+                    quantity,
+                    price,
+                    products(name, code)
+                  )
+                `)
+                .eq('id', payload.new.id)
+                .single();
+
+              if (error) {
+                console.error('❌ Error fetching full order:', error);
+                toast.error('Gagal memuat detail pesanan');
+                return;
+              }
+
+              console.log('✅ Full order data:', fullOrder);
+
+              // Show notification
               toast.success('Pesanan Baru Masuk!', {
-                description: `Order dari customer`,
+                description: `Order dari ${fullOrder.customer_users.name}`,
                 duration: 10000,
               });
 
-              // Play notification sound
-              const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSqBzvLZiTYIG2m98OScTgwOUKnn77RgGQU7k9ryxnkkBSp+zPLaizsKGGS57OihUxMJTKXh8LZZGA==');
-              audio.play().catch(e => console.log('Could not play sound:', e));
+              // Play notification sound & vibrate
+              playEnhancedNotification();
 
-              // Set current order and show dialog
-              setCurrentOrder(newOrder);
+              // Set order and show popup
+              setCurrentOrder(fullOrder);
               setShowOrderDialog(true);
               
               // Refresh pending orders count
@@ -554,6 +579,65 @@ const MobileRiderDashboard = () => {
     }
   };
 
+  const playEnhancedNotification = () => {
+    try {
+      // Create audio context
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Play 3 beeps
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.value = 0.5;
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.5);
+        }, i * 700);
+      }
+      
+      // Enhanced vibration pattern
+      if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+      }
+    } catch (error) {
+      console.log('Error playing notification:', error);
+    }
+  };
+
+  const openGoogleMapsDirection = (lat: number, lng: number) => {
+    // Detect platform
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+
+    let mapsUrl = '';
+
+    if (isIOS) {
+      // Try Google Maps app first, fallback to Apple Maps
+      mapsUrl = `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving`;
+      
+      // Fallback to Apple Maps
+      setTimeout(() => {
+        window.location.href = `maps://maps.apple.com/?daddr=${lat},${lng}`;
+      }, 500);
+    } else if (isAndroid) {
+      // Android Google Maps
+      mapsUrl = `google.navigation:q=${lat},${lng}&mode=d`;
+    } else {
+      // Web fallback
+      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+    }
+
+    console.log('🗺️ Opening Google Maps:', mapsUrl);
+    window.location.href = mapsUrl;
+  };
+
 
   const getGpsStatusColor = () => {
     switch (gpsStatus) {
@@ -661,7 +745,7 @@ const MobileRiderDashboard = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'customer_orders',
-          filter: `rider_id=eq.${riderProfile.id}`
+          filter: `rider_profile_id=eq.${riderProfile.id}`
         },
         () => {
           fetchPendingOrdersWithDetails();
@@ -678,7 +762,9 @@ const MobileRiderDashboard = () => {
     if (!riderProfile) return;
     
     try {
-      const { error } = await supabase.functions.invoke('rider-respond-order', {
+      console.log('✅ Accepting order:', orderId);
+      
+      const { data, error } = await supabase.functions.invoke('rider-respond-order', {
         body: {
           order_id: orderId,
           rider_profile_id: riderProfile.id,
@@ -687,21 +773,25 @@ const MobileRiderDashboard = () => {
       });
       
       if (error) throw error;
-      
-      // Get order details for directions
-      const order = currentOrder;
-      if (order && order.latitude && order.longitude) {
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}&travelmode=driving`;
-        window.open(url, '_blank');
-        toast.success('Pesanan diterima! Membuka Google Maps...');
-      }
-      
+
+      toast.success('Pesanan berhasil diterima!', {
+        description: 'Membuka Google Maps untuk navigasi...'
+      });
+
+      // Close dialog
       setShowOrderDialog(false);
       setCurrentOrder(null);
+
+      // Refresh pending orders
       fetchPendingOrders();
+
+      // Navigate to customer location
+      if (currentOrder?.latitude && currentOrder?.longitude) {
+        openGoogleMapsDirection(currentOrder.latitude, currentOrder.longitude);
+      }
     } catch (err: any) {
-      console.error('Error accepting order:', err);
-      toast.error(err.message || 'Gagal menerima pesanan');
+      console.error('❌ Error accepting order:', err);
+      toast.error('Gagal menerima pesanan: ' + (err.message || 'Unknown error'));
     }
   };
 
