@@ -78,8 +78,10 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Promo Banner - Stacked at Top */}
-      <div className="w-full overflow-hidden">
-        <PromoBannerCarousel />
+      <div className="px-4 pt-4">
+        <Card className="rounded-2xl overflow-hidden shadow-md">
+          <PromoBannerCarousel />
+        </Card>
       </div>
 
       {/* Member Card - Below Banner with Slight Overlap */}
@@ -172,7 +174,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
               <Store className="h-5 w-5 text-red-500" />
               <div>
                 <p className="text-xs text-gray-500">Outlet</p>
-                <p className="text-sm font-semibold text-gray-900">BALAM (Main Branch)</p>
+                <p className="text-sm font-semibold text-gray-900">Zeger Kemiri</p>
               </div>
             </div>
             <Button 
@@ -193,12 +195,11 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
               className="h-32 flex-col gap-3 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
             >
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] opacity-50"></div>
-              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                <Store className="h-10 w-10 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
+              <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <Store className="h-12 w-12 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
               </div>
               <div className="relative z-10">
-                <p className="text-lg font-bold">Zeger Outlet</p>
-                <p className="text-xs opacity-90">Ambil di Outlet</p>
+                <p className="text-lg font-bold">Zeger Branch</p>
               </div>
             </Button>
 
@@ -212,8 +213,11 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
                 <Bike className="h-10 w-10 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
               </div>
               <div className="relative z-10">
-                <p className="text-lg font-bold">Zeger On The Wheels</p>
-                <p className="text-xs opacity-90">Antar ke Lokasi</p>
+                <p className="text-base font-bold leading-tight">
+                  <span className="block">Zeger</span>
+                  <span className="block">On The Wheels</span>
+                </p>
+                <p className="text-xs opacity-90 mt-1">Layanan Kopi Keliling</p>
               </div>
             </Button>
           </div>
@@ -222,19 +226,11 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
       {/* Quick Action Banners */}
       <div className="px-4 mb-6">
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all">
-            <ShoppingBag className="h-8 w-8 mb-2" />
-            <p className="text-sm font-bold">Big Order</p>
-            <p className="text-xs opacity-90">For Events</p>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all">
-            <Star className="h-8 w-8 mb-2" />
-            <p className="text-sm font-bold">Menu Favorit</p>
-            <p className="text-xs opacity-90">Best Seller</p>
-          </Card>
-        </div>
+        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all">
+          <ShoppingBag className="h-8 w-8 mb-2" />
+          <p className="text-sm font-bold">Big Order</p>
+          <p className="text-xs opacity-90">For Events</p>
+        </Card>
       </div>
 
       {/* Active Promotions */}

@@ -124,6 +124,64 @@ export default function CustomerApp() {
     }
   }, [user]);
 
+  // Restore pending order from localStorage on mount
+  useEffect(() => {
+    if (!customerUser) return;
+
+    const restorePendingOrder = async () => {
+      const savedOrderId = localStorage.getItem('zeger-last-pending-order');
+      if (!savedOrderId) return;
+
+      try {
+        const { data: orderData, error } = await supabase
+          .from('customer_orders')
+          .select(`
+            *,
+            rider:rider_profile_id (
+              id,
+              full_name,
+              phone,
+              photo_url
+            )
+          `)
+          .eq('id', savedOrderId)
+          .single();
+
+        if (error) {
+          localStorage.removeItem('zeger-last-pending-order');
+          return;
+        }
+
+        if (orderData) {
+          if (orderData.status === 'accepted' || orderData.status === 'on_the_way') {
+            // Redirect to tracking
+            setTrackingOrderId(savedOrderId);
+            setTrackingRider(orderData.rider);
+            setTrackingCoordinates({
+              lat: orderData.latitude || 0,
+              lng: orderData.longitude || 0,
+              address: orderData.delivery_address || ''
+            });
+            setActiveView('order-tracking');
+          } else if (orderData.status === 'pending') {
+            // Redirect to waiting screen
+            setPendingOrderId(savedOrderId);
+            setPendingRider(orderData.rider);
+            setActiveView('waiting');
+          } else {
+            // Order completed or cancelled, clear localStorage
+            localStorage.removeItem('zeger-last-pending-order');
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring pending order:', error);
+        localStorage.removeItem('zeger-last-pending-order');
+      }
+    };
+
+    restorePendingOrder();
+  }, [customerUser]);
+
   // Fetch products on mount
   useEffect(() => {
     fetchProducts();
@@ -176,6 +234,12 @@ export default function CustomerApp() {
                   title: "✅ Pesanan Diterima!",
                   description: "Rider telah menerima pesanan Anda",
                 });
+                
+                // Auto-redirect to tracking if it's the last pending order
+                const savedOrderId = localStorage.getItem('zeger-last-pending-order');
+                if (savedOrderId === (payload.new as any).id) {
+                  fetchOrderForTracking(savedOrderId);
+                }
               } else if (newStatus === 'on_the_way') {
                 toast({
                   title: "🚗 Rider Dalam Perjalanan!",
@@ -248,6 +312,33 @@ export default function CustomerApp() {
       supabase.removeChannel(channel);
     };
   }, [pendingOrderId]);
+
+  const fetchOrderForTracking = async (orderId: string) => {
+    const { data: orderData } = await supabase
+      .from('customer_orders')
+      .select(`
+        *,
+        rider:rider_profile_id (
+          id,
+          full_name,
+          phone,
+          photo_url
+        )
+      `)
+      .eq('id', orderId)
+      .single();
+
+    if (orderData) {
+      setTrackingOrderId(orderId);
+      setTrackingRider(orderData.rider);
+      setTrackingCoordinates({
+        lat: orderData.latitude || 0,
+        lng: orderData.longitude || 0,
+        address: orderData.delivery_address || ''
+      });
+      setActiveView('order-tracking');
+    }
+  };
 
   const fetchCustomerProfile = async () => {
     try {
@@ -481,6 +572,7 @@ export default function CustomerApp() {
                 onCallRider={(orderId, rider) => {
                   setPendingOrderId(orderId);
                   setPendingRider(rider);
+                  localStorage.setItem('zeger-last-pending-order', orderId);
                   setActiveView('waiting');
                 }}
               />
@@ -598,7 +690,6 @@ export default function CustomerApp() {
                 }}
               />
             )}
-
             {activeView === 'order-tracking' && trackingOrderId && trackingRider && trackingCoordinates && (
               <CustomerOrderTracking
                 orderId={trackingOrderId}

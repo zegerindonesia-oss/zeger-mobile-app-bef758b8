@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { playAlertBeep } from '@/lib/audio';
 
 interface OrderItem {
   id: string;
@@ -70,7 +71,7 @@ export function MobileIncomingOrder({
   useEffect(() => {
     if (isOpen && order) {
       setCountdown(60);
-      playNotificationSound();
+      playAlertBeep({ times: 5, freq: 1200, durationMs: 600, volume: 0.9, intervalMs: 800 });
       calculateDistanceAndETA();
       
       const timer = setInterval(() => {
@@ -87,37 +88,6 @@ export function MobileIncomingOrder({
       return () => clearInterval(timer);
     }
   }, [isOpen, order]);
-
-  const playNotificationSound = () => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Play 5 loud beeps with high frequency
-      for (let i = 0; i < 5; i++) {
-        setTimeout(() => {
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-          
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          
-          oscillator.frequency.value = 1200; // Higher pitch for attention
-          oscillator.type = 'sine';
-          gainNode.gain.value = 0.9; // Maximum volume
-          
-          oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.6); // Longer beep duration
-        }, i * 800); // Longer interval between beeps
-      }
-      
-      // Strong vibration pattern (4 long pulses)
-      if (navigator.vibrate) {
-        navigator.vibrate([800, 200, 800, 200, 800, 200, 800]);
-      }
-    } catch (error) {
-      console.log('Error playing notification sound:', error);
-    }
-  };
 
   const calculateDistanceAndETA = () => {
     if (!order || !order.latitude || !order.longitude || !riderLocation) return;

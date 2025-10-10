@@ -8,11 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
   Package, Clock, DollarSign, TrendingUp,
-  MapPin, Users, Activity, Navigation, RefreshCw, Phone, BarChart3
+  MapPin, Users, Activity, Navigation, RefreshCw, Phone, BarChart3, Volume2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MobileIncomingOrder } from './MobileIncomingOrder';
+import { unlockAudio, playAlertBeep, ensureUnlockListeners } from '@/lib/audio';
 
 interface DashboardStats {
   totalStock: number;
@@ -49,6 +50,7 @@ const MobileRiderDashboard = () => {
   const [riderProfile, setRiderProfile] = useState<RiderProfile | null>(null);
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [riderLocation, setRiderLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [showSoundBanner, setShowSoundBanner] = useState(false);
 
   const fetchRiderProfile = async () => {
     try {
@@ -70,6 +72,14 @@ const MobileRiderDashboard = () => {
     if (!user) {
       return () => {}; // ✅ Always return cleanup, even if empty
     }
+
+    // Check if sound needs to be enabled
+    if (window.AudioContext && !localStorage.getItem('zeger-sound-enabled')) {
+      setShowSoundBanner(true);
+    }
+    
+    // Ensure unlock listeners are set
+    ensureUnlockListeners();
 
     fetchRiderProfile();
     fetchDashboardData();
@@ -149,7 +159,7 @@ const MobileRiderDashboard = () => {
               });
 
               // Play notification sound & vibrate
-              playEnhancedNotification();
+              playAlertBeep({ times: 5, freq: 1200, durationMs: 600, volume: 0.9, intervalMs: 800 });
 
               // Set order and show popup
               setCurrentOrder(fullOrder);
@@ -839,6 +849,29 @@ const MobileRiderDashboard = () => {
 
   return (
     <div className="container mx-auto p-4">
+      {/* Sound Enable Banner */}
+      {showSoundBanner && (
+        <div className="fixed top-2 left-2 right-2 z-50">
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-5 w-5 text-amber-600" />
+              <span className="text-sm font-medium text-amber-900">Aktifkan suara notifikasi?</span>
+            </div>
+            <Button 
+              size="sm" 
+              onClick={() => { 
+                unlockAudio(); 
+                playAlertBeep({ times: 1, durationMs: 300, volume: 0.6 }); 
+                setShowSoundBanner(false); 
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Aktifkan
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <Card>
         <CardHeader className="space-y-3">
           <div className="flex items-center justify-between">
