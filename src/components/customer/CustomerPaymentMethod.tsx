@@ -13,8 +13,9 @@ import { cn } from '@/lib/utils';
 interface CustomerPaymentMethodProps {
   orderId: string;
   totalAmount: number;
+  orderType?: string;
   onBack: () => void;
-  onSuccess: (paymentMethod: string, invoiceUrl?: string) => void;
+  onSuccess: (paymentMethod?: string, invoiceUrl?: string) => void;
 }
 
 const eWalletOptions = [
@@ -27,6 +28,7 @@ const eWalletOptions = [
 export default function CustomerPaymentMethod({
   orderId,
   totalAmount,
+  orderType,
   onBack,
   onSuccess,
 }: CustomerPaymentMethodProps) {
@@ -47,6 +49,28 @@ export default function CustomerPaymentMethod({
     setLoading(true);
 
     try {
+      // For pickup orders with cash payment, skip Xendit
+      if (orderType === 'outlet_pickup' && selectedMethod === 'CASH') {
+        // Update order status to confirmed
+        const { error: updateError } = await supabase
+          .from('customer_orders')
+          .update({ 
+            payment_method: 'cash',
+            status: 'confirmed' 
+          })
+          .eq('id', orderId);
+        
+        if (updateError) throw updateError;
+        
+        toast({
+          title: 'Pesanan dikonfirmasi',
+          description: 'Silakan bayar tunai saat mengambil pesanan',
+        });
+        
+        onSuccess('CASH');
+        return;
+      }
+
       // Call Xendit edge function to create invoice
       const { data, error } = await supabase.functions.invoke('create-xendit-invoice', {
         body: {
@@ -105,6 +129,38 @@ export default function CustomerPaymentMethod({
           <AlertCircle className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="text-sm"><strong>Pastikan Saldo Cukup!</strong> Pastikan saldo kamu cukup sebelum melakukan pembayaran</AlertDescription>
         </Alert>
+
+        {/* Cash Payment for Pickup */}
+        {orderType === 'outlet_pickup' && (
+          <Card className="p-4">
+            <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              Tunai
+            </h2>
+            <RadioGroup value={selectedMethod} onValueChange={setSelectedMethod}>
+              <Label
+                htmlFor="CASH"
+                className={cn(
+                  'flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border-2',
+                  selectedMethod === 'CASH'
+                    ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]'
+                    : 'border-gray-200 bg-white',
+                  'hover:shadow-lg'
+                )}
+              >
+                <RadioGroupItem value="CASH" id="CASH" />
+                <div className="text-3xl">💵</div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900">Bayar di Outlet</p>
+                  <p className="text-sm text-gray-500">Bayar tunai saat mengambil pesanan</p>
+                </div>
+                {selectedMethod === 'CASH' && (
+                  <Badge className="bg-green-500">Dipilih</Badge>
+                )}
+              </Label>
+            </RadioGroup>
+          </Card>
+        )}
 
         {/* E-Wallet Options */}
         <Card className="p-4">

@@ -76,16 +76,16 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   const membershipInfo = getMembershipBadge();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Promo Banner - Stacked at Top */}
-      <div className="px-4 pt-4">
+    <div className="min-h-screen bg-white">
+      {/* Promo Banner Section */}
+      <div className="px-4 pt-2">
         <Card className="rounded-2xl overflow-hidden shadow-md">
           <PromoBannerCarousel />
         </Card>
       </div>
 
-      {/* Member Card - Below Banner with Slight Overlap */}
-      <div className="px-4 -mt-8 mb-4">
+      {/* Member Card - Overlapping Banner */}
+      <div className="px-4 -mt-6 mb-4">
         <Card className="bg-white rounded-3xl shadow-xl p-4">
           {/* Greeting & Notification */}
           <div className="flex items-center justify-between mb-4">
@@ -164,34 +164,15 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
       </div>
 
       {/* Order Type Section */}
-      <div className="px-4 mb-6">
+      <div className="px-4 mb-4">
         <Card className="bg-white rounded-2xl shadow-lg p-5">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Buat Pesanan Sekarang</h3>
-          
-          {/* Outlet Selection */}
-          <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-xl">
-            <div className="flex items-center gap-2">
-              <Store className="h-5 w-5 text-red-500" />
-              <div>
-                <p className="text-xs text-gray-500">Outlet</p>
-                <p className="text-sm font-semibold text-gray-900">Zeger Kemiri</p>
-              </div>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-              onClick={() => onNavigate('outlets')}
-            >
-              Ubah
-            </Button>
-          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Zeger Kemiri</h3>
 
           {/* Order Type Buttons */}
           <div className="grid grid-cols-2 gap-3">
-            {/* TAKE AWAY Button - Red Theme */}
+            {/* Zeger Branch Button */}
             <Button
-              onClick={() => onNavigate('outlets')}
+              onClick={() => onNavigate('menu')}
               className="h-32 flex-col gap-3 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
             >
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] opacity-50"></div>
@@ -203,7 +184,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
               </div>
             </Button>
 
-            {/* DELIVERY Button - "Zeger On The Wheels" */}
+            {/* Zeger On The Wheels Button */}
             <Button
               onClick={() => onNavigate('map')}
               className="h-32 flex-col gap-3 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
@@ -224,8 +205,8 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         </Card>
       </div>
 
-      {/* Quick Action Banners */}
-      <div className="px-4 mb-6">
+      {/* Quick Action Banner - Big Order Full Width */}
+      <div className="px-4 mb-4">
         <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all">
           <ShoppingBag className="h-8 w-8 mb-2" />
           <p className="text-sm font-bold">Big Order</p>
@@ -235,7 +216,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
       {/* Active Promotions */}
       {activeVouchers.length > 0 && (
-        <div className="px-4 mb-6">
+        <div className="px-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold text-gray-900">Promo Aktif</h3>
             <Button 
@@ -272,7 +253,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
       {/* Recent Orders */}
       {recentOrders.length > 0 && (
-        <div className="px-4 mb-20">
+        <div className="px-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold text-gray-900">Pesanan Terakhir</h3>
             <Button 

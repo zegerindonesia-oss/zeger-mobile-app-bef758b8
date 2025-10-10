@@ -222,17 +222,20 @@ export function CustomerMenu({
                           <Coffee className="h-12 w-12 text-gray-300" />
                         </div>
                       )}
-                      {/* Add Button Overlay */}
+                      {/* Product Click Area */}
                       <button
                         onClick={() => onAddToCart(product)}
-                        className="absolute bottom-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
+                        className="absolute inset-0 w-full h-full"
                       >
-                        <Plus className="h-5 w-5" />
+                        <span className="sr-only">View {product.name}</span>
                       </button>
                     </div>
 
                     {/* Product Info */}
-                    <div className="p-3">
+                    <button 
+                      onClick={() => onAddToCart(product)}
+                      className="p-3 w-full text-left"
+                    >
                       <h3 className="text-base font-semibold text-gray-900 mb-1 line-clamp-2">
                         {product.name}
                       </h3>
@@ -246,7 +249,7 @@ export function CustomerMenu({
                           Rp {product.price.toLocaleString('id-ID')}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   </Card>
                 ))
               )}
