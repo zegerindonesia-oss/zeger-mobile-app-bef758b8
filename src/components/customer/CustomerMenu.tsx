@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Store, Plus, Coffee, Sandwich, IceCream, Pizza, Salad, Cake } from 'lucide-react';
+import { Search, Store, Plus, Coffee, Sandwich, IceCream, Pizza, Salad, Cake, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Product {
@@ -23,6 +23,8 @@ interface CustomerMenuProps {
   outletName?: string;
   outletAddress?: string;
   onChangeOutlet?: () => void;
+  cartItemCount: number;
+  onViewCart: () => void;
 }
 
 type OrderType = 'dine-in' | 'take-away' | 'delivery';
@@ -33,7 +35,9 @@ export function CustomerMenu({
   outletId,
   outletName,
   outletAddress,
-  onChangeOutlet 
+  onChangeOutlet,
+  cartItemCount,
+  onViewCart
 }: CustomerMenuProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -257,6 +261,19 @@ export function CustomerMenu({
           </ScrollArea>
         </div>
       </div>
+
+      {/* Floating Cart Button */}
+      {cartItemCount > 0 && (
+        <button
+          onClick={onViewCart}
+          className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all"
+        >
+          <ShoppingCart className="h-7 w-7 text-white" />
+          <span className="absolute -top-2 -right-2 bg-white text-red-600 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 border-red-600">
+            {cartItemCount}
+          </span>
+        </button>
+      )}
     </div>
   );
 }

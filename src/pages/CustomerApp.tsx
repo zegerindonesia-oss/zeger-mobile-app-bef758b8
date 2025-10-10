@@ -110,6 +110,9 @@ export default function CustomerApp() {
     address: string;
   } | null>(null);
   
+  // Product detail state
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
   // Handle query params for order detail
   const tab = searchParams.get('tab');
   const orderId = searchParams.get('id');
@@ -383,7 +386,7 @@ export default function CustomerApp() {
     }
   };
 
-  const addToCart = (product: Product, customizations: any = {}, quantity: number = 1) => {
+  const addToCart = (product: Product, quantity: number = 1, customizations: any = {}) => {
     const cartKey = `${product.id}-${JSON.stringify(customizations)}`;
     const existingItem = cart.find(item => 
       `${item.id}-${JSON.stringify(item.customizations)}` === cartKey
@@ -403,6 +406,10 @@ export default function CustomerApp() {
       title: "Ditambahkan ke keranjang",
       description: `${product.name} berhasil ditambahkan`,
     });
+    
+    // Navigate to cart after adding
+    setSelectedProduct(null);
+    setActiveView('cart');
   };
 
   const updateCartQuantity = (productId: string, customizations: any, newQuantity: number) => {
@@ -593,11 +600,31 @@ export default function CustomerApp() {
             {activeView === 'menu' && (
               <CustomerMenu 
                 products={products}
-                onAddToCart={addToCart}
+                onAddToCart={(product) => {
+                  setSelectedProduct(product);
+                }}
                 outletId={selectedOutlet?.id}
                 outletName={selectedOutlet?.name}
                 outletAddress={selectedOutlet?.address}
                 onChangeOutlet={() => setActiveView('outlets')}
+                cartItemCount={cart.length}
+                onViewCart={() => setActiveView('cart')}
+              />
+            )}
+            {selectedProduct && (
+              <CustomerProductDetail
+                product={selectedProduct}
+                orderType="take-away"
+                onBack={() => {
+                  setSelectedProduct(null);
+                  setActiveView('menu');
+                }}
+                onAddToCart={addToCart}
+                cartItemCount={cart.length}
+                onViewCart={() => {
+                  setSelectedProduct(null);
+                  setActiveView('cart');
+                }}
               />
             )}
             {activeView === 'cart' && (

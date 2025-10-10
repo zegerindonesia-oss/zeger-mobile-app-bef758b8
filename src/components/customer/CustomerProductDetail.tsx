@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Minus, Coffee } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Coffee, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Product {
@@ -19,13 +19,17 @@ interface CustomerProductDetailProps {
   orderType: 'dine-in' | 'take-away' | 'delivery';
   onBack: () => void;
   onAddToCart: (product: Product, quantity: number, customizations: any) => void;
+  cartItemCount: number;
+  onViewCart: () => void;
 }
 
 export function CustomerProductDetail({ 
   product, 
   orderType,
   onBack, 
-  onAddToCart 
+  onAddToCart,
+  cartItemCount,
+  onViewCart
 }: CustomerProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
   const [temperature, setTemperature] = useState<'hot' | 'ice'>('ice');
@@ -217,6 +221,19 @@ export function CustomerProductDetail({
         {/* Bottom spacing for fixed button */}
         <div className="h-20"></div>
       </div>
+
+      {/* Floating Cart Button */}
+      {cartItemCount > 0 && (
+        <button
+          onClick={onViewCart}
+          className="fixed bottom-24 right-6 z-50 w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all border-2 border-red-500"
+        >
+          <ShoppingCart className="h-7 w-7 text-red-500" />
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
+            {cartItemCount}
+          </span>
+        </button>
+      )}
     </div>
   );
 }
