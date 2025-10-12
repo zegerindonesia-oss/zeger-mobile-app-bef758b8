@@ -40,10 +40,11 @@ export interface ExpenseBreakdown {
 export const calculateRevenue = async (
   startDate: Date,
   endDate: Date,
-  selectedRider?: string
+  selectedRider?: string,
+  branchId?: string
 ): Promise<RevenueBreakdown> => {
   // Use centralized sales calculation for consistency
-  const salesData = await calculateSalesData(startDate, endDate, selectedRider);
+  const salesData = await calculateSalesData(startDate, endDate, selectedRider, branchId);
   
   // Calculate MDR only on QRIS payments (0.7%)
   const mdrAmount = salesData.salesByPaymentMethod.qris * 0.007;
@@ -59,7 +60,8 @@ export const calculateRevenue = async (
 export const calculateRawMaterialCost = async (
   startDate: Date,
   endDate: Date,
-  selectedRider?: string
+  selectedRider?: string,
+  branchId?: string
 ): Promise<number> => {
   const startStr = formatDate(startDate);
   const endStr = formatDate(endDate);
@@ -74,11 +76,15 @@ export const calculateRawMaterialCost = async (
     .select(`
       quantity, 
       products!inner(cost_price),
-      transactions!inner(status, transaction_date, rider_id)
+      transactions!inner(status, transaction_date, rider_id, branch_id)
     `)
     .eq('transactions.status', 'completed')
     .gte('transactions.transaction_date', startDateTime)
     .lte('transactions.transaction_date', endDateTime);
+
+  if (branchId) {
+    itemsQuery = itemsQuery.eq('transactions.branch_id', branchId);
+  }
 
   if (selectedRider && selectedRider !== "all") {
     itemsQuery = itemsQuery.eq('transactions.rider_id', selectedRider);
@@ -166,7 +172,8 @@ const mapExpenseToCategory = (expenseType: string): keyof ExpenseBreakdown => {
 export const calculateOperationalExpenses = async (
   startDate: Date,
   endDate: Date,
-  selectedRider?: string
+  selectedRider?: string,
+  branchId?: string
 ): Promise<ExpenseBreakdown> => {
   const startStr = formatDate(startDate);
   const endStr = formatDate(endDate);
@@ -174,9 +181,13 @@ export const calculateOperationalExpenses = async (
   // Fetch operational expenses from operational_expenses table
   let opQuery = supabase
     .from('operational_expenses')
-    .select('amount, expense_category, created_by')
+    .select('amount, expense_category, created_by, branch_id')
     .gte('expense_date', startStr)
     .lte('expense_date', endStr);
+
+  if (branchId) {
+    opQuery = opQuery.eq('branch_id', branchId);
+  }
 
   if (selectedRider && selectedRider !== "all") {
     opQuery = opQuery.eq('created_by', selectedRider);
@@ -258,7 +269,8 @@ export interface SalesData {
 export const calculateSalesData = async (
   startDate: Date,
   endDate: Date,
-  selectedRider?: string
+  selectedRider?: string,
+  branchId?: string
 ): Promise<SalesData> => {
   const startStr = formatDate(startDate);
   const endStr = formatDate(endDate);
@@ -269,6 +281,12 @@ export const calculateSalesData = async (
       .eq('status', 'completed')
       .gte('transaction_date', `${startStr}T00:00:00+07:00`)
       .lte('transaction_date', `${endStr}T23:59:59+07:00`);
+    
+    // Branch filtering for branch managers and small branch managers
+    if (branchId) {
+      q = q.eq('branch_id', branchId);
+    }
+    
     if (selectedRider && selectedRider !== "all") {
       q = q.eq('rider_id', selectedRider);
     }

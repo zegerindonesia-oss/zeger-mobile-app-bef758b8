@@ -88,7 +88,7 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/analytics/cash-deposit" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
                 <ModernLayout>
                   <CashDeposit />
                 </ModernLayout>

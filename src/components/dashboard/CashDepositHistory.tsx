@@ -62,6 +62,8 @@ export const CashDepositHistory = () => {
 
       if (userProfile?.role === 'branch_manager' && userProfile.branch_id) {
         query = query.eq('branch_id', userProfile.branch_id);
+      } else if (userProfile?.role === 'sb_branch_manager' && userProfile.branch_id) {
+        query = query.eq('branch_id', userProfile.branch_id);
       }
 
       const { data, error } = await query;

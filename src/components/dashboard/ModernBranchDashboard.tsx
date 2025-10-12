@@ -466,11 +466,25 @@ export const ModernBranchDashboard = () => {
       console.log("📊 Fetching stats data...");
       console.log("📊 Date range:", { startDate, endDate, selectedUser });
       
+      // Determine branch filtering based on user role
+      let branchIdFilter: string | undefined;
+      
+      if (userProfile?.role === 'branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;  // Hub managers: filter by their hub
+        console.log("🏢 Branch Manager - filtering by branch:", branchIdFilter);
+      } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;  // Small Branch managers: filter by their branch
+        console.log("🏪 Small Branch Manager - filtering by branch:", branchIdFilter);
+      } else {
+        console.log("👑 HO Admin - viewing all branches");
+      }
+      
       // Use centralized sales calculation for consistency with timezone handling
       const salesData = await calculateSalesData(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedUser === 'all' ? undefined : selectedUser
+        selectedUser === 'all' ? undefined : selectedUser,
+        branchIdFilter
       );
 
       console.log("📊 Sales data calculated:", {
@@ -524,7 +538,8 @@ export const ModernBranchDashboard = () => {
       const rawMaterialCost = await calculateRawMaterialCost(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedUser === 'all' ? undefined : selectedUser
+        selectedUser === 'all' ? undefined : selectedUser,
+        branchIdFilter
       );
 
       // Calculate profit
@@ -570,6 +585,15 @@ export const ModernBranchDashboard = () => {
   };
   const fetchSalesChart = async () => {
     try {
+      // Determine branch filtering based on user role
+      let branchIdFilter: string | undefined;
+      
+      if (userProfile?.role === 'branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      }
+      
       // Generate chart data based on the date range
       const chartData = [];
       const start = new Date(startDate);
@@ -592,6 +616,7 @@ export const ModernBranchDashboard = () => {
             .eq('status', 'completed')
             .gte('transaction_date', `${dateStr}T00:00:00`)
             .lte('transaction_date', `${dateStr}T23:59:59`);
+          if (branchIdFilter) dailyQuery = dailyQuery.eq('branch_id', branchIdFilter);
           if (selectedUser !== 'all') dailyQuery = dailyQuery.eq('rider_id', selectedUser);
           
           dailyQueries.push({
@@ -634,6 +659,7 @@ export const ModernBranchDashboard = () => {
             .eq('status', 'completed')
             .gte('transaction_date', monthStart.toISOString())
             .lte('transaction_date', monthEnd.toISOString());
+          if (branchIdFilter) monthlyQuery = monthlyQuery.eq('branch_id', branchIdFilter);
           if (selectedUser !== 'all') monthlyQuery = monthlyQuery.eq('rider_id', selectedUser);
           
           monthlyQueries.push({
@@ -662,18 +688,30 @@ export const ModernBranchDashboard = () => {
   };
   const fetchProductSales = async () => {
     try {
+      // Determine branch filtering based on user role
+      let branchIdFilter: string | undefined;
+      
+      if (userProfile?.role === 'branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      }
+      
       // Use the main date filters instead of separate menuFilter
-      const {
-        data: transactions
-      } = await supabase.from('transactions').select(`
+      let query = supabase.from('transactions').select(`
           transaction_date,
           rider_id,
+          branch_id,
           status,
           transaction_items(
             quantity,
             products!inner(name)
           )
         `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00`).lte('transaction_date', `${endDate}T23:59:59`);
+      
+      if (branchIdFilter) query = query.eq('branch_id', branchIdFilter);
+      
+      const { data: transactions } = await query;
       if (!transactions) {
         setProductSales([]);
         return;
@@ -770,17 +808,29 @@ export const ModernBranchDashboard = () => {
   };
   const fetchHourlyData = async () => {
     try {
+      // Determine branch filtering based on user role
+      let branchIdFilter: string | undefined;
+      
+      if (userProfile?.role === 'branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      }
+      
       // Use the main date filters instead of separate hourlyFilter
-      const {
-        data: transactions
-      } = await supabase.from('transactions').select(`
+      let query = supabase.from('transactions').select(`
           transaction_date,
           rider_id,
+          branch_id,
           transaction_items(
             quantity,
             products!inner(name)
           )
         `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00`).lte('transaction_date', `${endDate}T23:59:59`);
+      
+      if (branchIdFilter) query = query.eq('branch_id', branchIdFilter);
+      
+      const { data: transactions } = await query;
       if (!transactions) {
         setHourlyData([]);
         return;
@@ -844,12 +894,22 @@ export const ModernBranchDashboard = () => {
   };
   const fetchRiderStockData = async () => {
     try {
+      // Determine branch filtering based on user role
+      let branchIdFilter: string | undefined;
+      
+      if (userProfile?.role === 'branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
+        branchIdFilter = userProfile.branch_id;
+      }
+      
       // Fetch riders; if a rider is selected, only fetch that rider
       let ridersQuery = supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, branch_id')
         .in('role', ['rider', 'sb_rider', 'bh_rider'])
         .eq('is_active', true);
+      if (branchIdFilter) ridersQuery = ridersQuery.eq('branch_id', branchIdFilter);
       if (selectedUser !== 'all') ridersQuery = ridersQuery.eq('id', selectedUser);
       const { data: ridersData } = await ridersQuery;
       if (!ridersData) {
@@ -858,13 +918,17 @@ export const ModernBranchDashboard = () => {
       }
       const stockData = await Promise.all(ridersData.map(async (rider: any) => {
         // Fetch transactions for this rider in the date range
-        const { data: transactions } = await supabase
+        let transactionQuery = supabase
           .from('transactions')
-          .select('id, final_amount')
+          .select('id, final_amount, branch_id')
           .eq('rider_id', rider.id)
           .eq('status', 'completed')
           .gte('transaction_date', `${startDate}T00:00:00`)
           .lte('transaction_date', `${endDate}T23:59:59`);
+        
+        if (branchIdFilter) transactionQuery = transactionQuery.eq('branch_id', branchIdFilter);
+        
+        const { data: transactions } = await transactionQuery;
         const transactionIds = transactions?.map(t => t.id) || [];
         let totalItemsSold = 0;
         let totalOrders = transactions?.length || 0;
