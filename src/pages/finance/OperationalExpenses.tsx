@@ -30,8 +30,8 @@ type Expense = {
 
 export default function OperationalExpenses() {
   const { userProfile } = useAuth();
-  const canEdit = userProfile && ['ho_admin', 'branch_manager'].includes(userProfile.role);
-  const canView = userProfile && ['ho_admin', 'branch_manager', 'bh_report'].includes(userProfile.role);
+  const canEdit = userProfile && ['ho_admin', 'branch_manager', 'sb_branch_manager'].includes(userProfile.role);
+  const canView = userProfile && ['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_report'].includes(userProfile.role);
 
   if (!userProfile || !canView) {
     return (
