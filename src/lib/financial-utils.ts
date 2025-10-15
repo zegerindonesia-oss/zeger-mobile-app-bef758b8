@@ -76,9 +76,10 @@ export const calculateRawMaterialCost = async (
     .select(`
       quantity, 
       products!inner(cost_price),
-      transactions!inner(status, transaction_date, rider_id, branch_id)
+      transactions!inner(status, transaction_date, rider_id, branch_id, is_voided)
     `)
     .eq('transactions.status', 'completed')
+    .eq('transactions.is_voided', false)
     .gte('transactions.transaction_date', startDateTime)
     .lte('transactions.transaction_date', endDateTime);
 
@@ -279,6 +280,7 @@ export const calculateSalesData = async (
   const baseFilters = (q: any) => {
     q = q
       .eq('status', 'completed')
+      .eq('is_voided', false)
       .gte('transaction_date', `${startStr}T00:00:00+07:00`)
       .lte('transaction_date', `${endStr}T23:59:59+07:00`);
     

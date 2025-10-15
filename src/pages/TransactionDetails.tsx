@@ -155,6 +155,7 @@ export const TransactionDetails = () => {
           )
         `)
         .eq('status', 'completed')
+        .eq('is_voided', false)
         .gte('transaction_date', startDate + 'T00:00:00')
         .lte('transaction_date', endDate + 'T23:59:59')
         .order('transaction_date', { ascending: false });

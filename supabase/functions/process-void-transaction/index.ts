@@ -91,7 +91,50 @@ Deno.serve(async (req) => {
 
       console.log('Transaction voided successfully');
 
-      // 2. Restore inventory for transaction items
+      // 2. Create financial reversal entries
+      const transactionAmount = voidRequest.transactions.final_amount;
+      
+      // Insert negative revenue entry to reverse the original revenue
+      const { error: revenueReversalError } = await supabaseClient
+        .from('financial_transactions')
+        .insert({
+          transaction_id: voidRequest.transaction_id,
+          branch_id: voidRequest.branch_id,
+          transaction_type: 'revenue',
+          account_type: 'sales',
+          amount: -transactionAmount,
+          description: `Void Transaction - ${voidRequest.transactions.transaction_number}`,
+          reference_number: voidRequest.transactions.transaction_number,
+          created_by: profile.id
+        });
+
+      if (revenueReversalError) {
+        console.error('Revenue reversal error:', revenueReversalError);
+        throw revenueReversalError;
+      }
+
+      // Insert negative cash entry to reverse the original cash receipt
+      const { error: cashReversalError } = await supabaseClient
+        .from('financial_transactions')
+        .insert({
+          transaction_id: voidRequest.transaction_id,
+          branch_id: voidRequest.branch_id,
+          transaction_type: 'asset',
+          account_type: 'cash',
+          amount: -transactionAmount,
+          description: `Void Transaction - ${voidRequest.transactions.transaction_number}`,
+          reference_number: voidRequest.transactions.transaction_number,
+          created_by: profile.id
+        });
+
+      if (cashReversalError) {
+        console.error('Cash reversal error:', cashReversalError);
+        throw cashReversalError;
+      }
+
+      console.log('Financial reversals created successfully');
+
+      // 3. Restore inventory for transaction items
       const { data: txItems, error: itemsError } = await supabaseClient
         .from('transaction_items')
         .select('product_id, quantity')
@@ -126,7 +169,7 @@ Deno.serve(async (req) => {
         console.log('Inventory restored successfully');
       }
 
-      // 3. Update void request status
+      // 4. Update void request status
       const { error: updateError } = await supabaseClient
         .from('transaction_void_requests')
         .update({

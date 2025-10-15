@@ -48,6 +48,8 @@ interface Transaction {
   status: string;
   payment_method: string;
   is_voided?: boolean;
+  voided_at?: string;
+  void_reason?: string;
   customers?: { name: string };
   profiles?: { full_name: string };
   transaction_items?: TransactionItem[];
@@ -128,6 +130,8 @@ export const TransactionsEnhanced = () => {
   const [voidRequests, setVoidRequests] = useState<Map<string, any>>(new Map());
   const [reviewingVoid, setReviewingVoid] = useState<any | null>(null);
   const [reviewerNotes, setReviewerNotes] = useState('');
+  const [activeTab, setActiveTab] = useState<"active" | "voided">("active");
+  const [voidedTransactions, setVoidedTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     if (userProfile?.role !== 'bh_report') {
@@ -143,8 +147,12 @@ export const TransactionsEnhanced = () => {
   }, [shouldAutoFilter, assignedRiderId, selectedRider]);
 
   useEffect(() => {
-    fetchTransactions();
-  }, [selectedRider, selectedPaymentMethod, startDate, endDate]);
+    if (activeTab === "active") {
+      fetchTransactions();
+    } else {
+      fetchVoidedTransactions();
+    }
+  }, [selectedRider, selectedPaymentMethod, startDate, endDate, activeTab]);
 
   const fetchRiders = async () => {
     try {
@@ -202,6 +210,54 @@ export const TransactionsEnhanced = () => {
     }
   };
 
+  const fetchVoidedTransactions = async () => {
+    setLoading(true);
+    try {
+      console.log("🔍 Fetching voided transactions");
+      
+      let query = supabase
+        .from('transactions')
+        .select(`
+          id,
+          transaction_number,
+          transaction_date,
+          final_amount,
+          status,
+          payment_method,
+          customer_id,
+          rider_id,
+          is_voided,
+          voided_at,
+          void_reason,
+          voided_by_profile:profiles!voided_by(full_name)
+        `)
+        .eq('is_voided', true)
+        .gte('transaction_date', startDate)
+        .lte('transaction_date', endDate + 'T23:59:59')
+        .order('voided_at', { ascending: false });
+
+      if (selectedRider !== "all") {
+        query = query.eq('rider_id', selectedRider);
+      }
+
+      if (selectedPaymentMethod !== "all") {
+        query = query.eq('payment_method', selectedPaymentMethod);
+      }
+
+      const { data, error } = await query;
+      console.log("📊 Fetched voided transactions:", data?.length || 0);
+
+      if (error) throw error;
+
+      setVoidedTransactions(data || []);
+
+    } catch (error) {
+      console.error("Error fetching voided transactions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchTransactions = async () => {
     setLoading(true);
     try {
@@ -224,6 +280,7 @@ export const TransactionsEnhanced = () => {
           rider_id
         `)
         .eq('status', 'completed')
+        .eq('is_voided', false)
         .gte('transaction_date', startDate)
         .lte('transaction_date', endDate + 'T23:59:59')
         .order('transaction_date', { ascending: false });
@@ -729,19 +786,37 @@ export const TransactionsEnhanced = () => {
         </div>
       </div>
 
-      {/* Transactions Table */}
+      {/* Transactions Table with Tabs */}
       <Card className={isBhReport ? "bg-white shadow-sm border" : "dashboard-card"}>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">
-            Data Transaksi ({transactions.length} transaksi)
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">
+              Data Transaksi ({activeTab === "active" ? transactions.length : voidedTransactions.length} transaksi)
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant={activeTab === "active" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab("active")}
+              >
+                Transaksi Aktif
+              </Button>
+              <Button
+                variant={activeTab === "voided" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab("voided")}
+              >
+                Transaksi Void
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center min-h-[200px]">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : (
+          ) : activeTab === "active" ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -896,6 +971,47 @@ export const TransactionsEnhanced = () => {
                     <tr>
                       <td colSpan={8} className="py-8 text-center text-gray-500">
                         Tidak ada transaksi ditemukan
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            /* Voided Transactions Table */
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">No. Transaksi</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Tanggal Void</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Jumlah</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Metode Bayar</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Alasan</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Dibatalkan Oleh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {voidedTransactions.map((transaction) => (
+                    <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4 font-medium text-primary">{transaction.transaction_number}</td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {transaction.voided_at ? formatDate(transaction.voided_at) : '-'}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-gray-900">{formatCurrency(transaction.final_amount)}</td>
+                      <td className="py-3 px-4 text-gray-600">{transaction.payment_method || '-'}</td>
+                      <td className="py-3 px-4 text-gray-600 max-w-xs truncate" title={transaction.void_reason || ''}>
+                        {transaction.void_reason || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {(transaction as any).voided_by_profile?.full_name || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                  {voidedTransactions.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500">
+                        Tidak ada transaksi void ditemukan
                       </td>
                     </tr>
                   )}
