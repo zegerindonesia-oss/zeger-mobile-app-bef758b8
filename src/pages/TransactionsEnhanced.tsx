@@ -161,6 +161,47 @@ export const TransactionsEnhanced = () => {
     }
   };
 
+  const fetchVoidRequests = async (transactionIds: string[]) => {
+    if (transactionIds.length === 0) {
+      setVoidRequests(new Map());
+      return;
+    }
+
+    try {
+      console.log("🔍 Fetching void requests for", transactionIds.length, "transactions");
+      
+      const { data, error } = await supabase
+        .from('transaction_void_requests')
+        .select(`
+          id,
+          transaction_id,
+          rider_id,
+          branch_id,
+          reason,
+          status,
+          created_at,
+          profiles:rider_id (
+            full_name,
+            role
+          )
+        `)
+        .in('transaction_id', transactionIds)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      const voidMap = new Map();
+      data?.forEach(req => {
+        voidMap.set(req.transaction_id, req);
+      });
+      
+      console.log("✅ Fetched void requests:", voidMap.size);
+      setVoidRequests(voidMap);
+    } catch (error) {
+      console.error("❌ Error fetching void requests:", error);
+    }
+  };
+
   const fetchTransactions = async () => {
     setLoading(true);
     try {
@@ -331,6 +372,9 @@ export const TransactionsEnhanced = () => {
       );
 
       setTransactions(filteredData);
+
+      // Fetch void requests for all transactions
+      await fetchVoidRequests(transactionIds);
 
       // Use centralized sales calculation for consistency
       const salesData = await calculateSalesData(
