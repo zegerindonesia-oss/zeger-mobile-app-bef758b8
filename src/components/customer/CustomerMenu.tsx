@@ -42,6 +42,11 @@ export function CustomerMenu({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [orderType, setOrderType] = useState<OrderType>('take-away');
+  
+  // Get featured products for Daily Special
+  const featuredProducts = useMemo(() => {
+    return products.filter(p => p.image_url).slice(0, 5);
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(product =>
@@ -67,16 +72,31 @@ export function CustomerMenu({
   }, [groupedProducts]);
 
   const getCategoryIcon = (category: string) => {
-    const icons: { [key: string]: any } = {
+    const iconMap: { [key: string]: any } = {
       'all': Store,
       'Coffee': Coffee,
+      'Kopi': Coffee,
       'Food': Sandwich,
+      'Makanan': Sandwich,
       'Dessert': IceCream,
+      'Minuman': Coffee,
+      'Snack': Cake,
+      'Pastry': Cake,
       'Pizza': Pizza,
-      'Salad': Salad,
-      'Cake': Cake
+      'Salad': Salad
     };
-    return icons[category] || Coffee;
+    
+    // Try exact match first
+    const exactMatch = iconMap[category];
+    if (exactMatch) return exactMatch;
+    
+    // Try partial match
+    const lowerCategory = category.toLowerCase();
+    if (lowerCategory.includes('kopi') || lowerCategory.includes('coffee')) return Coffee;
+    if (lowerCategory.includes('makan') || lowerCategory.includes('food')) return Sandwich;
+    if (lowerCategory.includes('dessert') || lowerCategory.includes('manis')) return IceCream;
+    
+    return Coffee; // Default
   };
 
   const displayProducts = activeCategory === 'all' 
@@ -91,34 +111,37 @@ export function CustomerMenu({
           <button
             onClick={() => setOrderType('dine-in')}
             className={cn(
-              "flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all",
+              "flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-1",
               orderType === 'dine-in' 
                 ? "bg-red-500 text-white shadow-md" 
                 : "text-gray-600 hover:text-gray-900"
             )}
           >
+            <span className="text-lg">🍽️</span>
             Dine In
           </button>
           <button
             onClick={() => setOrderType('take-away')}
             className={cn(
-              "flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all",
+              "flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-1",
               orderType === 'take-away' 
                 ? "bg-red-500 text-white shadow-md" 
                 : "text-gray-600 hover:text-gray-900"
             )}
           >
+            <span className="text-lg">🚶</span>
             Take Away
           </button>
           <button
             onClick={() => setOrderType('delivery')}
             className={cn(
-              "flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all",
+              "flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-1",
               orderType === 'delivery' 
                 ? "bg-red-500 text-white shadow-md" 
                 : "text-gray-600 hover:text-gray-900"
             )}
           >
+            <span className="text-lg">🏍️</span>
             Delivery
           </button>
         </div>
@@ -127,20 +150,18 @@ export function CustomerMenu({
       {/* Outlet Selection Card */}
       {outletName && (
         <div className="px-4 py-3 bg-white border-b">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Store className="h-6 w-6 text-red-500" />
-              </div>
+              <Store className="h-6 w-6 text-red-500" />
               <div>
                 <p className="text-sm font-bold text-gray-900">{outletName}</p>
-                <p className="text-xs text-gray-500">{outletAddress}</p>
+                {outletAddress && <p className="text-xs text-gray-500">{outletAddress}</p>}
               </div>
             </div>
             <Button 
               variant="ghost" 
               size="sm"
-              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 font-semibold"
               onClick={onChangeOutlet}
             >
               Ubah
@@ -155,13 +176,55 @@ export function CustomerMenu({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <Input
             type="text"
-            placeholder="Search menu..."
+            placeholder="Search menu"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 rounded-full border-2 border-gray-200 focus:border-red-500"
+            className="pl-10 pr-4 py-3 rounded-lg bg-gray-100 border-none focus:ring-2 focus:ring-red-500"
           />
         </div>
       </div>
+
+      {/* Daily Special Carousel */}
+      {featuredProducts.length > 0 && (
+        <div className="px-4 py-3 bg-white">
+          <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+            Daily Special <span className="text-orange-500">✨</span>
+          </h2>
+          
+          <div className="relative h-56 rounded-2xl overflow-hidden shadow-lg">
+            <div className="absolute inset-0">
+              <img
+                src={featuredProducts[0].image_url || ''}
+                alt={featuredProducts[0].name}
+                className="w-full h-full object-cover"
+              />
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              
+              {/* Product Info */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <h3 className="font-bold text-lg mb-1">{featuredProducts[0].name}</h3>
+                <p className="text-sm opacity-90 mb-3">
+                  {featuredProducts[0].description || 'Produk spesial hari ini!'}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xl font-bold">
+                    Rp {featuredProducts[0].price.toLocaleString('id-ID')}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => onAddToCart(featuredProducts[0])}
+                    className="bg-green-500 hover:bg-green-600 rounded-full text-white px-4"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Tambah
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content Area with Sidebar */}
       <div className="flex h-[calc(100vh-280px)]">
@@ -211,10 +274,10 @@ export function CustomerMenu({
                 displayProducts.map((product) => (
                   <Card 
                     key={product.id} 
-                    className="overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all border-0"
+                    className="overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all border-0 bg-white"
                   >
                     {/* Product Image */}
-                    <div className="aspect-square relative bg-gray-100">
+                    <div className="aspect-square relative bg-gray-50">
                       {product.image_url ? (
                         <img
                           src={product.image_url}
@@ -222,38 +285,30 @@ export function CustomerMenu({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Coffee className="h-12 w-12 text-gray-300" />
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+                          <Coffee className="h-16 w-16 text-gray-300" />
                         </div>
                       )}
-                      {/* Product Click Area */}
-                      <button
-                        onClick={() => onAddToCart(product)}
-                        className="absolute inset-0 w-full h-full"
-                      >
-                        <span className="sr-only">View {product.name}</span>
-                      </button>
                     </div>
 
                     {/* Product Info */}
-                    <button 
-                      onClick={() => onAddToCart(product)}
-                      className="p-3 w-full text-left"
-                    >
-                      <h3 className="text-base font-semibold text-gray-900 mb-1 line-clamp-2">
+                    <div className="p-3">
+                      <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem]">
                         {product.name}
                       </h3>
-                      {product.description && (
-                        <p className="text-xs text-gray-500 mb-2 line-clamp-1">
-                          {product.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <p className="text-lg font-bold text-red-500">
+                      
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-base font-bold text-red-500">
                           Rp {product.price.toLocaleString('id-ID')}
                         </p>
+                        <button
+                          onClick={() => onAddToCart(product)}
+                          className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md hover:scale-110 transition-all"
+                        >
+                          <Plus className="h-5 w-5" />
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   </Card>
                 ))
               )}

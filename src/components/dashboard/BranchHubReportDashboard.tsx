@@ -49,7 +49,7 @@ export const BranchHubReportDashboard = () => {
   const { userProfile } = useAuth();
   const { assignedRiderId, assignedRiderName, shouldAutoFilter, loading: riderLoading, error: riderError, refreshAssignment } = useRiderFilter();
   const [salesFilter, setSalesFilter] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
-  const [selectedBranchId, setSelectedBranchId] = useState(userProfile?.branch_id || '');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
 
   // Set default dates using Asia/Jakarta timezone
   const getJakartaNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
@@ -144,16 +144,22 @@ export const BranchHubReportDashboard = () => {
 
       // Build branch filter for transactions
       let branchIds: string[] = [];
-      if (selectedBranchId && selectedBranchId !== 'all') {
-        branchIds = [selectedBranchId];
-      } else if (selectedBranchId === 'all' && userProfile?.branch_id) {
+      
+      // CRITICAL FIX: Handle empty selectedBranchId on initial load
+      const effectiveBranchId = selectedBranchId || userProfile?.branch_id || '';
+      
+      if (effectiveBranchId === 'all' && userProfile?.branch_id) {
         // Get hub + all child branches
         const { data: children } = await supabase
           .from('branches')
           .select('id')
           .eq('parent_branch_id', userProfile.branch_id);
         branchIds = [userProfile.branch_id, ...(children?.map(b => b.id) || [])];
+      } else if (effectiveBranchId) {
+        // Single branch selected (including initial load)
+        branchIds = [effectiveBranchId];
       } else if (userProfile?.branch_id) {
+        // Final fallback
         branchIds = [userProfile.branch_id];
       }
 
