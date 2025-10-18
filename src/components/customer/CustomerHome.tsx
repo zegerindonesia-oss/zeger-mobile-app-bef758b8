@@ -76,142 +76,160 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   const membershipInfo = getMembershipBadge();
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Promo Banner Section */}
-      <div className="px-4 pt-2">
-        <Card className="rounded-2xl overflow-hidden shadow-md">
-          <PromoBannerCarousel />
-        </Card>
+    <div className="min-h-screen bg-[#f8f6f6]">
+      {/* Hero Banner with Overlay */}
+      <div className="relative h-64 overflow-hidden">
+        <PromoBannerCarousel />
+        
+        {/* Banner Overlay */}
+        <div className="absolute inset-0 bg-black/30 flex flex-col justify-between p-4 pb-16">
+          {/* Top: Time & Brand */}
+          <div className="flex justify-between items-center text-white">
+            <div>
+              <p className="text-sm font-light">
+                {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+              <p className="text-xl font-semibold tracking-wide">zeger</p>
+            </div>
+          </div>
+          
+          {/* Bottom: Promo Text */}
+          <div className="text-white px-2">
+            <p className="text-sm font-light tracking-wider uppercase mb-1">
+              {activeVouchers.length > 0 ? 'Special Offers' : 'Welcome to Zeger'}
+            </p>
+            <h1 className="text-3xl font-bold leading-tight">
+              {activeVouchers.length > 0 
+                ? `${activeVouchers.length} Voucher Aktif`
+                : 'Nikmati Kopi Terbaik'}
+            </h1>
+            <p className="mt-2 text-sm font-light">Order sekarang dan dapatkan poin!</p>
+          </div>
+        </div>
       </div>
 
-      {/* Member Card - Overlapping Banner */}
-      <div className="px-4 -mt-6 mb-4">
-        <Card className="bg-white rounded-3xl shadow-xl p-4">
-          {/* Greeting & Notification */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-lg">
-                {customerUser?.name?.charAt(0)?.toUpperCase() || 'G'}
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Hi,</p>
-                <h2 className="text-base font-bold text-gray-900">{customerUser?.name?.toUpperCase() || 'GUEST'}</h2>
-              </div>
+      {/* Member Card */}
+      <div className="bg-white rounded-t-3xl -mt-8 p-4 shadow-lg relative z-10">
+        {/* Greeting & Notification */}
+        <div className="flex justify-between items-center mb-6 pt-2">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Hi, {customerUser?.name?.toUpperCase() || 'GUEST'}
+          </h2>
+          <div className="relative">
+            <Bell className="h-7 w-7 text-gray-500" />
+            {activeVouchers.length > 0 && (
+              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                {activeVouchers.length}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Membership Info - Material Style */}
+        <div className="grid grid-cols-3 gap-4 text-center mb-8">
+          {/* Level / Jiwa */}
+          <div className="p-2">
+            <div className="bg-gray-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <span className="text-3xl">{membershipInfo.icon}</span>
             </div>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </Button>
+            <p className="font-semibold text-gray-900 text-sm">Jiwa</p>
+            <p className="text-xs text-gray-500 font-light">
+              {customerUser?.points || 0} /100 Exp
+            </p>
           </div>
 
-          {/* Membership Info Circles */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-2">
-                <Star className="h-8 w-8 text-red-500" fill="currentColor" />
-              </div>
-              <p className="text-xs font-semibold text-gray-900">{membershipInfo.level}</p>
-              <p className="text-xs text-gray-500">Level</p>
+          {/* Points */}
+          <div className="p-2">
+            <div className="bg-gray-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <span className="text-3xl">🪙</span>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-2">
-                <div className="text-2xl font-bold text-red-500">{customerUser?.points || 0}</div>
-              </div>
-              <p className="text-xs font-semibold text-gray-900">Zeger Point</p>
-              <p className="text-xs text-gray-500">Points</p>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-                <CreditCard className="h-8 w-8 text-gray-400" />
-              </div>
-              <p className="text-xs font-semibold text-gray-900">Membership</p>
-              <p className="text-xs text-gray-500">Inactive</p>
-            </div>
+            <p className="font-semibold text-gray-900 text-sm">Zeger Point</p>
+            <p className="text-xs text-gray-500 font-light">
+              {customerUser?.points || 0} Points
+            </p>
           </div>
 
-          {/* Voucher & Referral Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button 
-              variant="outline" 
-              className="h-auto py-3 px-4 flex items-center justify-between border-2 border-gray-200 hover:border-red-500"
-              onClick={() => onNavigate('vouchers')}
-            >
-              <div className="flex items-center gap-2">
-                <Gift className="h-5 w-5 text-red-500" />
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-gray-900">Voucher</p>
-                  <p className="text-xs text-gray-500">{activeVouchers.length} Active</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="h-auto py-3 px-4 flex items-center justify-between border-2 border-gray-200 hover:border-red-500"
-            >
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-red-500" />
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-gray-900">Referral</p>
-                  <p className="text-xs text-gray-500">Share & Earn</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-            </Button>
+          {/* Subscription */}
+          <div className="p-2">
+            <div className="bg-gray-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
+              <span className="text-3xl">🎁</span>
+            </div>
+            <p className="font-semibold text-gray-900 text-sm">Subscription</p>
+            <p className="text-xs text-gray-500 font-light">0 Subscription</p>
           </div>
-        </Card>
-      </div>
+        </div>
 
-      {/* Order Type Section */}
-      <div className="px-4 mb-4">
-        <Card className="bg-white rounded-2xl shadow-lg p-5">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Zeger Kemiri</h3>
-
-          {/* Order Type Buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Zeger Branch Button */}
-            <Button
-              onClick={() => onNavigate('menu')}
-              className="h-32 flex-col gap-3 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
-            >
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] opacity-50"></div>
-              <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                <Store className="h-12 w-12 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
-              </div>
-              <div className="relative z-10">
-                <p className="text-lg font-bold">Zeger Branch</p>
-              </div>
-            </Button>
-
-            {/* Zeger On The Wheels Button */}
-            <Button
-              onClick={() => onNavigate('map')}
-              className="h-32 flex-col gap-3 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-2xl relative overflow-hidden group rounded-3xl"
-            >
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] opacity-50"></div>
-              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                <Bike className="h-10 w-10 relative z-10 drop-shadow-lg" strokeWidth={1.5} />
-              </div>
-              <div className="relative z-10">
-                <p className="text-base font-bold leading-tight">
-                  <span className="block">Zeger</span>
-                  <span className="block">On The Wheels</span>
-                </p>
-                <p className="text-xs opacity-90 mt-1">Layanan Kopi Keliling</p>
-              </div>
-            </Button>
+        {/* Voucher & Referral Cards */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div 
+            className="bg-white p-4 rounded-lg flex justify-between items-center shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-100"
+            onClick={() => onNavigate('vouchers')}
+          >
+            <div>
+              <p className="font-semibold text-gray-900">Voucher Kamu</p>
+              <p className="text-xs text-gray-500 font-light">
+                {activeVouchers.length} Voucher
+              </p>
+            </div>
+            <div className="bg-gray-100 p-2 rounded-full">
+              <Gift className="h-5 w-5 text-red-500" />
+            </div>
           </div>
-        </Card>
-      </div>
+          
+          <div className="bg-white p-4 rounded-lg flex justify-between items-center shadow-sm border border-gray-100">
+            <div>
+              <p className="font-semibold text-gray-900">Referral</p>
+              <p className="text-xs text-gray-500 font-light">Undang Temanmu</p>
+            </div>
+            <div className="bg-gray-100 p-2 rounded-full">
+              <Users className="h-5 w-5 text-red-500" />
+            </div>
+          </div>
+        </div>
 
-      {/* Quick Action Banner - Big Order Full Width */}
-      <div className="px-4 mb-4">
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all">
-          <ShoppingBag className="h-8 w-8 mb-2" />
-          <p className="text-sm font-bold">Big Order</p>
-          <p className="text-xs opacity-90">For Events</p>
-        </Card>
+        {/* Outlet Selection */}
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Buat Pesanan Sekarang</h2>
+        
+        <div className="bg-white p-4 rounded-lg flex justify-between items-center mb-6 shadow-sm border border-gray-200">
+          <div className="flex items-center space-x-3">
+            <Store className="h-8 w-8 text-gray-500" />
+            <div>
+              <p className="text-sm text-gray-500 font-light">SULAWESI SURABAYA</p>
+              <p className="font-semibold text-gray-900">zeger kemiri</p>
+            </div>
+          </div>
+          <button 
+            className="font-semibold text-red-500 text-sm"
+            onClick={() => onNavigate('outlets')}
+          >
+            Ubah
+          </button>
+        </div>
+
+        {/* Order Type Buttons - Material Design Style */}
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => onNavigate('menu')}
+            className="bg-red-500 text-white rounded-lg p-6 text-center shadow-lg relative overflow-hidden hover:bg-red-600 transition-colors"
+          >
+            <div className="absolute inset-0 bg-white/5"></div>
+            <div className="relative flex flex-col items-center justify-center">
+              <Store className="h-10 w-10 mb-2" strokeWidth={1.5} />
+              <p className="font-bold">Zeger Branch</p>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => onNavigate('map')}
+            className="bg-red-500 text-white rounded-lg p-6 text-center shadow-lg relative overflow-hidden hover:bg-red-600 transition-colors"
+          >
+            <div className="absolute inset-0 bg-white/5"></div>
+            <div className="relative flex flex-col items-center justify-center">
+              <Bike className="h-10 w-10 mb-2" strokeWidth={1.5} />
+              <p className="font-bold">Zeger On The Wheels</p>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Active Promotions */}
