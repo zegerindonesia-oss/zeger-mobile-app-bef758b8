@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Wallet, CreditCard, Smartphone, AlertCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -19,10 +16,10 @@ interface CustomerPaymentMethodProps {
 }
 
 const eWalletOptions = [
-  { id: 'GOPAY', name: 'GOPAY', icon: '🔵' },
-  { id: 'SHOPEEPAY', name: 'SHOPEEPAY / SPAYLATER', icon: '🟠' },
-  { id: 'OVO', name: 'OVO', icon: '🟣' },
-  { id: 'JENIUSPAY', name: 'JENIUS PAY', icon: '🔵' },
+  { id: 'GOPAY', name: 'GOPAY', icon: '💚', bgColor: 'bg-green-500' },
+  { id: 'SHOPEEPAY', name: 'SHOPEEPAY / SPAYLATER', icon: '🟠', bgColor: 'bg-orange-500' },
+  { id: 'OVO', name: 'OVO', icon: '🟣', bgColor: 'bg-purple-600' },
+  { id: 'JENIUSPAY', name: 'JENIUS PAY', icon: '🔵', bgColor: 'bg-blue-500' },
 ];
 
 export default function CustomerPaymentMethod({
@@ -49,29 +46,7 @@ export default function CustomerPaymentMethod({
     setLoading(true);
 
     try {
-      // For pickup orders with cash payment, skip Xendit
-      if (orderType === 'outlet_pickup' && selectedMethod === 'CASH') {
-        // Update order status to confirmed
-        const { error: updateError } = await supabase
-          .from('customer_orders')
-          .update({ 
-            payment_method: 'cash',
-            status: 'confirmed' 
-          })
-          .eq('id', orderId);
-        
-        if (updateError) throw updateError;
-        
-        toast({
-          title: 'Pesanan dikonfirmasi',
-          description: 'Silakan bayar tunai saat mengambil pesanan',
-        });
-        
-        onSuccess('CASH');
-        return;
-      }
-
-      // Call Xendit edge function to create invoice
+      // Call Xendit edge function
       const { data, error } = await supabase.functions.invoke('create-xendit-invoice', {
         body: {
           order_id: orderId,
@@ -83,7 +58,6 @@ export default function CustomerPaymentMethod({
       if (error) throw error;
 
       if (data?.invoice_url) {
-        // Redirect to Xendit payment page
         window.location.href = data.invoice_url;
       } else {
         toast({
@@ -105,155 +79,99 @@ export default function CustomerPaymentMethod({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm">
-        <div className="flex items-center gap-3 p-4">
-          <button
-            onClick={onBack}
-            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-all"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-lg font-bold">Pilih Metode Pembayaran</h1>
-            <p className="text-sm text-gray-500">
-              Total: Rp {totalAmount.toLocaleString('id-ID')}
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#f8f6f6] font-display">
+      <div className="container mx-auto max-w-md">
+        <div className="flex flex-col h-screen">
+          {/* Header */}
+          <header className="flex items-center p-4 border-b border-gray-200 bg-white">
+            <button onClick={onBack} className="text-gray-900">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <h1 className="flex-1 text-center text-lg font-medium text-gray-900">
+              Metode Pembayaran
+            </h1>
+            <div className="w-6"></div>
+          </header>
 
-      <div className="p-4 space-y-4">
-        <Alert className="bg-yellow-50 border-yellow-200">
-          <AlertCircle className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="text-sm"><strong>Pastikan Saldo Cukup!</strong> Pastikan saldo kamu cukup sebelum melakukan pembayaran</AlertDescription>
-        </Alert>
-
-        {/* Cash Payment for Pickup */}
-        {orderType === 'outlet_pickup' && (
-          <Card className="p-4">
-            <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              Tunai
-            </h2>
-            <RadioGroup value={selectedMethod} onValueChange={setSelectedMethod}>
-              <Label
-                htmlFor="CASH"
-                className={cn(
-                  'flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border-2',
-                  selectedMethod === 'CASH'
-                    ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]'
-                    : 'border-gray-200 bg-white',
-                  'hover:shadow-lg'
-                )}
-              >
-                <RadioGroupItem value="CASH" id="CASH" />
-                <div className="text-3xl">💵</div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">Bayar di Outlet</p>
-                  <p className="text-sm text-gray-500">Bayar tunai saat mengambil pesanan</p>
-                </div>
-                {selectedMethod === 'CASH' && (
-                  <Badge className="bg-green-500">Dipilih</Badge>
-                )}
-              </Label>
-            </RadioGroup>
-          </Card>
-        )}
-
-        {/* E-Wallet Options */}
-        <Card className="p-4">
-          <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
-            E-Wallet
-          </h2>
-
-          <RadioGroup value={selectedMethod} onValueChange={setSelectedMethod}>
-            <div className="space-y-3">
+          {/* Main Content */}
+          <main className="flex-1 p-4 overflow-y-auto">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">E-Wallet</h2>
+            <div className="space-y-4">
               {eWalletOptions.map((wallet) => (
-                <Label
+                <label 
                   key={wallet.id}
-                  htmlFor={wallet.id}
                   className={cn(
-                    'flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border-2',
-                    selectedMethod === wallet.id
-                      ? 'border-red-500 bg-red-50 shadow-md scale-[1.02]'
-                      : 'border-gray-200 bg-white',
-                    'hover:shadow-lg'
+                    "flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all",
+                    selectedMethod === wallet.id 
+                      ? "border-[#EA2831] bg-red-50" 
+                      : "border-gray-200 bg-white"
                   )}
                 >
-                  <RadioGroupItem value={wallet.id} id={wallet.id} />
-                  <div className="text-3xl">{wallet.icon}</div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{wallet.name}</p>
-                    <p className="text-sm text-gray-500">Instant payment</p>
+                  <div className="flex items-center space-x-4">
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm",
+                      wallet.bgColor
+                    )}>
+                      {wallet.icon}
+                    </div>
+                    <span className="font-medium text-gray-900">{wallet.name}</span>
                   </div>
-                  {selectedMethod === wallet.id && (
-                    <Badge className="bg-red-500">Dipilih</Badge>
-                  )}
-                </Label>
+                  <input 
+                    type="radio"
+                    name="payment_method"
+                    value={wallet.id}
+                    checked={selectedMethod === wallet.id}
+                    onChange={() => setSelectedMethod(wallet.id)}
+                    className="form-radio h-5 w-5 text-[#EA2831]"
+                  />
+                </label>
               ))}
             </div>
-          </RadioGroup>
-        </Card>
 
-        {/* Other Payment Methods (Coming Soon) */}
-        <Card className="p-4 opacity-50">
-          <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Metode Lainnya
-          </h2>
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 bg-gray-50">
-              <Smartphone className="h-6 w-6 text-gray-400" />
-              <div className="flex-1">
-                <p className="font-semibold text-gray-600">QRIS</p>
-                <p className="text-sm text-gray-400">Scan & Pay</p>
+            <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">QRIS</h2>
+            <label className="flex items-center justify-between p-4 rounded-lg bg-white border border-gray-200 cursor-pointer">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-8 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">
+                  QRIS
+                </div>
+                <span className="font-medium text-gray-900">QRIS</span>
               </div>
-              <Badge variant="secondary">Segera Hadir</Badge>
-            </div>
+              <input 
+                type="radio"
+                name="payment_method"
+                value="QRIS"
+                checked={selectedMethod === 'QRIS'}
+                onChange={() => setSelectedMethod('QRIS')}
+                className="form-radio h-5 w-5 text-[#EA2831]"
+              />
+            </label>
+          </main>
 
-            <div className="flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 bg-gray-50">
-              <CreditCard className="h-6 w-6 text-gray-400" />
-              <div className="flex-1">
-                <p className="font-semibold text-gray-600">Virtual Account</p>
-                <p className="text-sm text-gray-400">Transfer Bank</p>
+          {/* Footer */}
+          <footer className="p-4 border-t border-gray-200 bg-white">
+            <div className="bg-purple-900 text-white p-4 rounded-lg flex items-start space-x-3 mb-4">
+              <div className="bg-red-500 rounded-full p-2">
+                <span className="text-white text-xl">📢</span>
               </div>
-              <Badge variant="secondary">Segera Hadir</Badge>
+              <div>
+                <p className="font-bold">Pastikan Saldo Cukup!</p>
+                <p className="text-sm">Pastikan saldo kamu cukup sebelum melakukan pembayaran</p>
+              </div>
             </div>
-          </div>
-        </Card>
-
-        {/* Payment Summary */}
-        <Card className="p-4 bg-gradient-to-r from-red-500 to-red-600 text-white">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm opacity-90">Total Pembayaran</span>
-            <span className="text-2xl font-bold">
-              Rp {totalAmount.toLocaleString('id-ID')}
-            </span>
-          </div>
-          <p className="text-xs opacity-80">
-            Pembayaran akan diproses melalui Xendit Payment Gateway
-          </p>
-        </Card>
-
-        {/* Confirm Button */}
-        <Button
-          size="lg"
-          className="w-full h-14 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-3xl shadow-2xl text-lg font-bold"
-          onClick={handlePayment}
-          disabled={!selectedMethod || loading}
-        >
-          {loading ? 'Memproses...' : 'Bayar Sekarang'}
-        </Button>
-
-        {/* Terms & Conditions */}
-        <p className="text-center text-xs text-gray-500 px-4">
-          Dengan melanjutkan pembayaran, Anda menyetujui{' '}
-          <span className="text-red-500 font-medium">Syarat & Ketentuan</span> yang berlaku
-        </p>
+            <button 
+              onClick={handlePayment}
+              disabled={!selectedMethod || loading}
+              className={cn(
+                "w-full py-4 rounded-full font-bold transition-colors",
+                selectedMethod 
+                  ? "bg-[#EA2831] text-white hover:bg-red-600" 
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              )}
+            >
+              {loading ? 'Memproses...' : 'Konfirmasi'}
+            </button>
+          </footer>
+        </div>
       </div>
     </div>
   );

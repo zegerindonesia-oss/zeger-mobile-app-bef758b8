@@ -2,11 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, ShoppingBag, Bike } from "lucide-react";
+import { ArrowLeft, Store, ShoppingBag, Bike, Gift, ChevronRight, AlertCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CartItem {
@@ -14,6 +12,7 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  image_url?: string;
   customizations?: any;
 }
 
@@ -23,13 +22,6 @@ interface CustomerUser {
   address?: string;
   latitude?: number;
   longitude?: number;
-}
-
-interface Voucher {
-  id: string;
-  code: string;
-  discount_value: number;
-  min_order: number;
 }
 
 interface CustomerCheckoutProps {
@@ -48,28 +40,22 @@ export default function CustomerCheckout({
   const { toast } = useToast();
   const [orderType, setOrderType] = useState<"outlet_pickup" | "outlet_delivery">("outlet_pickup");
   const [deliveryAddress, setDeliveryAddress] = useState(customerUser.address || "");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "e_wallet">("cash");
-  const [voucherCode, setVoucherCode] = useState("");
-  const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
   const [loading, setLoading] = useState(false);
   const [useZegerPoints, setUseZegerPoints] = useState(false);
-  const [pointsToUse, setPointsToUse] = useState(0);
 
   const subtotal = cart.reduce((sum, item) => {
     let itemPrice = item.price;
     if (item.customizations?.size === 'large') itemPrice += 5000;
     if (item.customizations?.size === 'ultimate') itemPrice += 10000;
-    if (item.customizations?.extraShot) itemPrice += 6000;
     return sum + (itemPrice * item.quantity);
   }, 0);
   
-  const deliveryFee = orderType === "outlet_delivery" ? 10000 : 0;
-  const takeAwayCharge = orderType === "outlet_pickup" ? 2000 : 0;
-  const voucherDiscount = appliedVoucher ? Math.floor(subtotal * (appliedVoucher.discount_value / 100)) : 0;
+  const deliveryFee = orderType === "outlet_delivery" ? 25400 : 0;
+  const takeAwayCharge = orderType === "outlet_pickup" ? 3500 : 0;
   const deliveryDiscount = orderType === "outlet_delivery" ? Math.floor(deliveryFee * 0.2) : 0;
   const maxPointsCanUse = Math.min(customerUser.points, Math.floor(subtotal / 500));
-  const pointsDiscount = useZegerPoints ? Math.min(pointsToUse, maxPointsCanUse) * 500 : 0;
-  const total = subtotal + deliveryFee + takeAwayCharge - voucherDiscount - deliveryDiscount - pointsDiscount;
+  const pointsDiscount = useZegerPoints ? maxPointsCanUse * 500 : 0;
+  const total = subtotal + deliveryFee + takeAwayCharge - deliveryDiscount - pointsDiscount;
   const earnedPoints = Math.floor(total / 10000);
 
   const handleConfirmOrder = () => {
@@ -81,30 +67,222 @@ export default function CustomerCheckout({
     onConfirm({
       outletId, orderType, deliveryAddress: orderType === "outlet_delivery" ? deliveryAddress : undefined,
       deliveryLat: customerUser.latitude, deliveryLng: customerUser.longitude,
-      paymentMethod, voucherId: appliedVoucher?.id, totalPrice: total, deliveryFee,
-      discount: voucherDiscount + deliveryDiscount + pointsDiscount,
-      pointsUsed: useZegerPoints ? pointsToUse : 0, pointsEarned: earnedPoints
+      paymentMethod: 'e_wallet', totalPrice: total, deliveryFee,
+      discount: deliveryDiscount + pointsDiscount,
+      pointsUsed: useZegerPoints ? maxPointsCanUse : 0, pointsEarned: earnedPoints
     });
   };
 
   return (
-    <div className="min-h-screen bg-white pb-32">
-      <div className="sticky top-0 bg-white border-b z-10 p-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-5 w-5"/></Button>
-          <h1 className="text-xl font-bold">Konfirmasi Pesanan</h1>
+    <div className="min-h-screen bg-[#f8f6f6] pb-32">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm">
+        <button onClick={onBack} className="text-gray-900">
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+        <h1 className="text-lg font-semibold text-gray-900">Detail Pesanan</h1>
+        <div className="w-8"></div>
+      </header>
+
+      <main className="p-4 space-y-4">
+        {/* Order Type Toggle */}
+        <div className="flex justify-around bg-gray-100 p-1 rounded-full">
+          <button 
+            onClick={() => setOrderType('outlet_pickup')}
+            className={cn(
+              "flex items-center justify-center gap-2 px-4 py-2 rounded-full w-1/2 text-sm font-medium transition-all",
+              orderType === 'outlet_pickup' 
+                ? "bg-[#EA2831] text-white shadow-md" 
+                : "text-gray-500"
+            )}
+          >
+            <ShoppingBag className="h-4 w-4" /> Take Away
+          </button>
+          <button 
+            onClick={() => setOrderType('outlet_delivery')}
+            className={cn(
+              "flex items-center justify-center gap-2 px-4 py-2 rounded-full w-1/2 text-sm font-medium transition-all",
+              orderType === 'outlet_delivery' 
+                ? "bg-[#EA2831] text-white shadow-md" 
+                : "text-gray-500"
+            )}
+          >
+            <Bike className="h-4 w-4" /> Delivery
+          </button>
         </div>
-      </div>
-      <div className="p-4 space-y-4">
-        <div className="flex gap-2">
-          <Button variant={orderType==='outlet_pickup'?'default':'outline'} className={cn("flex-1 rounded-full",orderType==='outlet_pickup'?"bg-red-500 hover:bg-red-600 text-white":"border-gray-300")} onClick={()=>setOrderType('outlet_pickup')}><ShoppingBag className="h-4 w-4 mr-2"/>Take Away</Button>
-          <Button variant={orderType==='outlet_delivery'?'default':'outline'} className={cn("flex-1 rounded-full",orderType==='outlet_delivery'?"bg-red-500 hover:bg-red-600 text-white":"border-gray-300")} onClick={()=>setOrderType('outlet_delivery')}><Bike className="h-4 w-4 mr-2"/>Delivery</Button>
+
+        {/* Outlet Info Card */}
+        <div className="bg-white rounded-lg p-4 space-y-4 shadow-sm">
+          <div className="flex items-center">
+            <span className="text-2xl mr-3">{orderType === 'outlet_pickup' ? '🚶' : '🏍️'}</span>
+            <div className="flex-grow">
+              <h2 className="font-semibold text-gray-900">
+                {orderType === 'outlet_pickup' ? 'Take Away' : 'Delivery'}
+              </h2>
+            </div>
+            <span className="text-xs text-gray-400">0.01 km</span>
+          </div>
+          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+            <div className="flex items-center">
+              <Store className="h-5 w-5 text-gray-500 mr-3" />
+              <span className="font-medium text-gray-900">SULAWESI SURABAYA</span>
+            </div>
+            <button className="text-[#EA2831] font-semibold text-sm">Ubah</button>
+          </div>
         </div>
-        {orderType==='outlet_delivery' && <Input value={deliveryAddress} onChange={e=>setDeliveryAddress(e.target.value)} placeholder="Alamat pengiriman"/>}
-        <Card><CardContent className="p-6 space-y-3"><h3 className="font-bold text-lg mb-4">Zeger Point</h3><div className="flex items-center justify-between mb-3"><div><p className="font-semibold">Tersedia: {customerUser.points} poin</p><p className="text-xs text-gray-500">= Rp {(customerUser.points*500).toLocaleString('id-ID')}</p></div><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" checked={useZegerPoints} onChange={e=>{setUseZegerPoints(e.target.checked);if(!e.target.checked)setPointsToUse(0)}} className="sr-only peer"/><div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div></label></div>{useZegerPoints&&<div className="space-y-2 pt-2 border-t"><Label>Gunakan Poin</Label><div className="flex gap-2"><Input type="number" value={pointsToUse} onChange={e=>setPointsToUse(Math.min(parseInt(e.target.value)||0,maxPointsCanUse))} max={maxPointsCanUse} placeholder={`Max ${maxPointsCanUse}`}/><Button type="button" variant="outline" size="sm" onClick={()=>setPointsToUse(maxPointsCanUse)}>Max</Button></div><p className="text-xs text-gray-600">= Rp {(pointsToUse*500).toLocaleString('id-ID')} diskon</p></div>}</CardContent></Card>
-        <Card><CardContent className="p-6 space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>Rp {subtotal.toLocaleString('id-ID')}</span></div>{deliveryDiscount>0&&<div className="flex justify-between text-red-600 text-sm"><span>🎟️ Diskon Ongkir 20%</span><span>-Rp {deliveryDiscount.toLocaleString('id-ID')}</span></div>}{takeAwayCharge>0&&<div className="flex justify-between text-sm"><span>Take Away Charge</span><span>Rp {takeAwayCharge.toLocaleString('id-ID')}</span></div>}{deliveryFee>0&&<div className="flex justify-between text-sm"><span>Delivery Fee</span><span>Rp {deliveryFee.toLocaleString('id-ID')}</span></div>}{pointsDiscount>0&&<div className="flex justify-between text-purple-600 text-sm"><span>Diskon Zeger Point</span><span>-Rp {pointsDiscount.toLocaleString('id-ID')}</span></div>}<div className="border-t pt-3 flex justify-between font-bold text-lg"><span>Total</span><span className="text-red-600">Rp {total.toLocaleString('id-ID')}</span></div><div className="bg-purple-50 rounded-lg p-3 flex items-center gap-2"><span className="text-2xl">💰</span><div className="text-sm"><p className="font-semibold text-purple-700">Rp {(earnedPoints*500).toLocaleString('id-ID')}</p><p className="text-xs text-gray-600">Total XP: {earnedPoints}</p></div></div></CardContent></Card>
-        <div className="bg-purple-600 text-white text-xs px-4 py-3 rounded-lg text-center">Dengan membayar pesanan, anda telah menyetujui <span className="font-bold">Syarat Dan Ketentuan</span> Kami</div>
-        <Button className="w-full h-14 bg-red-500 hover:bg-red-600 text-white rounded-full text-base font-bold" onClick={handleConfirmOrder} disabled={loading||(!deliveryAddress&&orderType==='outlet_delivery')}>Pilih Pembayaran</Button>
+
+        {/* Pickup Time */}
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <label className="block text-sm font-medium text-gray-900 mb-2">Pilih Waktu</label>
+          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 text-gray-500 mr-3" />
+              <span className="font-medium text-gray-900">Ambil Sekarang</span>
+            </div>
+            <ChevronRight className="h-5 w-5 text-gray-500" />
+          </div>
+        </div>
+
+        {/* Order List */}
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Daftar Pesanan</h2>
+            <button 
+              onClick={onBack}
+              className="bg-[#EA2831] text-white px-4 py-2 rounded-full text-sm font-semibold shadow"
+            >
+              Tambah Menu
+            </button>
+          </div>
+          {cart.map((item) => (
+            <div key={item.id} className="flex items-center mb-3">
+              <img 
+                src={item.image_url || '/placeholder.svg'} 
+                alt={item.name}
+                className="w-16 h-16 rounded-lg object-cover mr-4"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                <p className="text-xs text-gray-500">
+                  {item.customizations?.temperature} Temp, {item.customizations?.size} Size, {item.customizations?.blend} Blend
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Payment Summary */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Total Pembayaran</h2>
+            <AlertCircle className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="flex justify-between items-end mb-4">
+            <span className="text-4xl font-extrabold text-[#EA2831]">
+              Rp{total.toLocaleString('id-ID')}
+            </span>
+            <span className="text-sm text-gray-500 cursor-pointer">Rincian</span>
+          </div>
+          
+          <div className="space-y-2 text-sm mb-4">
+            <div className="flex justify-between text-gray-900">
+              <span className="text-gray-500">Subtotal</span>
+              <span>Rp {subtotal.toLocaleString('id-ID')}</span>
+            </div>
+            {deliveryDiscount > 0 && (
+              <div className="flex justify-between text-[#EA2831]">
+                <span>Diskon Ongkir 20%</span>
+                <span>-Rp {deliveryDiscount.toLocaleString('id-ID')}</span>
+              </div>
+            )}
+            {takeAwayCharge > 0 && (
+              <div className="flex justify-between text-gray-900">
+                <span className="text-gray-500">Take Away Charge</span>
+                <span>Rp {takeAwayCharge.toLocaleString('id-ID')}</span>
+              </div>
+            )}
+            {deliveryFee > 0 && (
+              <div className="flex justify-between text-gray-900">
+                <span className="text-gray-500">Delivery Fee</span>
+                <span>Rp {deliveryFee.toLocaleString('id-ID')}</span>
+              </div>
+            )}
+          </div>
+
+          <hr className="my-4 border-gray-200" />
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center text-gray-500">
+                <span>Zeger Point</span>
+                <AlertCircle className="h-3 w-3 ml-1" />
+              </div>
+              <div className="flex items-center gap-1 text-orange-500">
+                <span className="text-lg">💰</span>
+                <span>Rp {earnedPoints * 500}</span>
+              </div>
+            </div>
+            <div className="flex justify-between text-gray-500">
+              <span>Total XP</span>
+              <span className="text-green-500 font-semibold">{earnedPoints}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Promo Card */}
+        <div className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="bg-red-100 p-2 rounded-full">
+              <Gift className="h-5 w-5 text-[#EA2831]" />
+            </div>
+            <span className="font-semibold text-gray-900">Promo dipakai</span>
+          </div>
+          <ChevronRight className="h-5 w-5 text-gray-400" />
+        </div>
+
+        {/* Zeger Points Toggle */}
+        <div className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="bg-yellow-100 p-2 rounded-full">
+              <span className="text-xl">💰</span>
+            </div>
+            <div>
+              <span className="font-semibold text-gray-900">Zeger Point</span>
+              <p className="text-sm text-gray-500">Saldo: {customerUser.points}</p>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={useZegerPoints}
+              onChange={(e) => setUseZegerPoints(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#EA2831]"></div>
+          </label>
+        </div>
+      </main>
+
+      {/* Purple Alert + Button */}
+      <div className="fixed bottom-0 left-0 right-0 z-20">
+        <div className="bg-purple-800 text-white p-4 flex items-start gap-3 rounded-t-2xl mx-auto max-w-sm shadow-2xl">
+          <span className="text-2xl">📢</span>
+          <p className="text-sm">
+            Dengan membayar pesanan, anda telah menyetujui{' '}
+            <a href="#" className="font-bold underline">Syarat Dan Ketentuan</a> Kami
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] rounded-t-2xl mx-auto max-w-sm">
+          <button 
+            onClick={handleConfirmOrder}
+            disabled={loading}
+            className="w-full bg-[#EA2831] text-white py-4 rounded-full font-bold text-lg shadow-lg"
+          >
+            {loading ? 'Memproses...' : 'Pilih Pembayaran'}
+          </button>
+          <div className="w-32 h-1.5 bg-gray-300 rounded-full mx-auto mt-4"></div>
+        </div>
       </div>
     </div>
   );

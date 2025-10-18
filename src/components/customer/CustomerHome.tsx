@@ -77,35 +77,9 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
   return (
     <div className="min-h-screen bg-[#f8f6f6]">
-      {/* Hero Banner with Overlay */}
+      {/* Hero Banner - Clean without overlay */}
       <div className="relative h-64 overflow-hidden">
         <PromoBannerCarousel />
-        
-        {/* Banner Overlay */}
-        <div className="absolute inset-0 bg-black/30 flex flex-col justify-between p-4 pb-16">
-          {/* Top: Time & Brand */}
-          <div className="flex justify-between items-center text-white">
-            <div>
-              <p className="text-sm font-light">
-                {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-              <p className="text-xl font-semibold tracking-wide">zeger</p>
-            </div>
-          </div>
-          
-          {/* Bottom: Promo Text */}
-          <div className="text-white px-2">
-            <p className="text-sm font-light tracking-wider uppercase mb-1">
-              {activeVouchers.length > 0 ? 'Special Offers' : 'Welcome to Zeger'}
-            </p>
-            <h1 className="text-3xl font-bold leading-tight">
-              {activeVouchers.length > 0 
-                ? `${activeVouchers.length} Voucher Aktif`
-                : 'Nikmati Kopi Terbaik'}
-            </h1>
-            <p className="mt-2 text-sm font-light">Order sekarang dan dapatkan poin!</p>
-          </div>
-        </div>
       </div>
 
       {/* Member Card */}
@@ -132,7 +106,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
             <div className="bg-gray-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
               <span className="text-3xl">{membershipInfo.icon}</span>
             </div>
-            <p className="font-semibold text-gray-900 text-sm">Jiwa</p>
+            <p className="font-semibold text-gray-900 text-sm">Zeger</p>
             <p className="text-xs text-gray-500 font-light">
               {customerUser?.points || 0} /100 Exp
             </p>
@@ -162,7 +136,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         {/* Voucher & Referral Cards */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div 
-            className="bg-white p-4 rounded-lg flex justify-between items-center shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-100"
+            className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md cursor-pointer hover:shadow-xl transition-shadow"
             onClick={() => onNavigate('vouchers')}
           >
             <div>
@@ -172,17 +146,17 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
               </p>
             </div>
             <div className="bg-gray-100 p-2 rounded-full">
-              <Gift className="h-5 w-5 text-red-500" />
+              <Gift className="h-5 w-5 text-[#EA2831]" />
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg flex justify-between items-center shadow-sm border border-gray-100">
+          <div className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md hover:shadow-xl transition-shadow">
             <div>
               <p className="font-semibold text-gray-900">Referral</p>
               <p className="text-xs text-gray-500 font-light">Undang Temanmu</p>
             </div>
             <div className="bg-gray-100 p-2 rounded-full">
-              <Users className="h-5 w-5 text-red-500" />
+              <Users className="h-5 w-5 text-[#EA2831]" />
             </div>
           </div>
         </div>
@@ -190,7 +164,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         {/* Outlet Selection */}
         <h2 className="text-xl font-bold text-gray-900 mb-4">Buat Pesanan Sekarang</h2>
         
-        <div className="bg-white p-4 rounded-lg flex justify-between items-center mb-6 shadow-sm border border-gray-200">
+        <div className="bg-white p-4 rounded-lg flex justify-between items-center mb-6 shadow-lg">
           <div className="flex items-center space-x-3">
             <Store className="h-8 w-8 text-gray-500" />
             <div>
@@ -199,7 +173,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
             </div>
           </div>
           <button 
-            className="font-semibold text-red-500 text-sm"
+            className="font-semibold text-[#EA2831] text-sm"
             onClick={() => onNavigate('outlets')}
           >
             Ubah
@@ -210,7 +184,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => onNavigate('menu')}
-            className="bg-red-500 text-white rounded-lg p-6 text-center shadow-lg relative overflow-hidden hover:bg-red-600 transition-colors"
+            className="bg-[#EA2831] text-white rounded-lg p-6 text-center shadow-2xl relative overflow-hidden hover:shadow-3xl transition-all"
           >
             <div className="absolute inset-0 bg-white/5"></div>
             <div className="relative flex flex-col items-center justify-center">
@@ -221,7 +195,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           
           <button
             onClick={() => onNavigate('map')}
-            className="bg-red-500 text-white rounded-lg p-6 text-center shadow-lg relative overflow-hidden hover:bg-red-600 transition-colors"
+            className="bg-[#EA2831] text-white rounded-lg p-6 text-center shadow-2xl relative overflow-hidden hover:shadow-3xl transition-all"
           >
             <div className="absolute inset-0 bg-white/5"></div>
             <div className="relative flex flex-col items-center justify-center">
@@ -248,10 +222,10 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           </div>
           <div className="space-y-3">
             {activeVouchers.map((voucher) => (
-              <Card key={voucher.id} className="p-4 rounded-2xl shadow-md border-2 border-red-100 hover:border-red-500 transition-all cursor-pointer">
+              <Card key={voucher.id} className="p-4 rounded-2xl shadow-lg border-2 border-red-100 hover:border-[#EA2831] transition-all cursor-pointer">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <Gift className="h-6 w-6 text-red-500" />
+                    <Gift className="h-6 w-6 text-[#EA2831]" />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-gray-900">{voucher.code}</h4>
@@ -287,7 +261,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
             {recentOrders.map((order) => (
               <Card 
                 key={order.id} 
-                className="p-4 rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+                className="p-4 rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-2">
                   <Badge variant={
