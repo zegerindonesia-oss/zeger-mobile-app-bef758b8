@@ -293,12 +293,12 @@ export function CustomerMenu({
 
                     {/* Product Info */}
                     <div className="p-3">
-                      <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem]">
+                      <h3 className="text-xs font-bold text-gray-900 mb-1 line-clamp-2 min-h-[2rem]">
                         {product.name}
                       </h3>
                       
                       <div className="flex items-center justify-between mt-2">
-                        <p className="text-base font-bold text-red-500">
+                        <p className="text-sm font-bold text-red-500">
                           Rp {product.price.toLocaleString('id-ID')}
                         </p>
                         <button
@@ -319,22 +319,22 @@ export function CustomerMenu({
 
       {/* Cart Summary Bottom Bar */}
       {cartItemCount > 0 && (
-        <div className="fixed bottom-20 left-0 right-0 z-50 bg-white p-4 shadow-2xl rounded-t-3xl border-t-2 border-[#EA2831]">
+        <div className="fixed bottom-24 left-0 right-0 z-50 bg-white px-3 py-3 shadow-2xl rounded-t-2xl border-t-2 border-[#EA2831] mb-safe">
           <div className="max-w-sm mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-[#EA2831] text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg">
+            <div className="flex items-center gap-2">
+              <div className="bg-[#EA2831] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
                 {cartItemCount}
               </div>
               <div>
-                <p className="text-xs text-gray-500 font-medium">Total Harga</p>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-[10px] text-gray-500 font-medium">Total Harga</p>
+                <p className="text-base font-bold text-gray-900">
                   Rp{products.reduce((sum, p) => sum + p.price, 0).toLocaleString('id-ID')}
                 </p>
               </div>
             </div>
             <Button
               onClick={onViewCart}
-              className="bg-[#EA2831] hover:bg-red-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg"
+              className="bg-[#EA2831] hover:bg-red-600 text-white px-4 py-2 text-sm rounded-full font-semibold shadow-lg"
             >
               Lihat Pesanan
             </Button>

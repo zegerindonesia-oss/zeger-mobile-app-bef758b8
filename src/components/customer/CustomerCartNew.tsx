@@ -256,11 +256,11 @@ export function CustomerCartNew({
               const itemTotal = itemPrice * item.quantity;
               
               return (
-                <Card key={`${item.id}-${JSON.stringify(item.customizations)}`}>
-                  <CardContent className="p-4">
+          <Card key={`${item.id}-${JSON.stringify(item.customizations)}`}>
+                  <CardContent className="p-3">
                     <div className="flex gap-3">
                       {/* Product Image */}
-                      <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
                         {item.image_url ? (
                           <img 
                             src={item.image_url} 
@@ -269,78 +269,53 @@ export function CustomerCartNew({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <ShoppingBag className="h-8 w-8 text-gray-400" />
+                            <ShoppingBag className="h-6 w-6 text-gray-400" />
                           </div>
                         )}
                       </div>
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-base mb-1">{item.name}</h3>
-                        <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                        <h3 className="font-bold text-xs mb-1">{item.name}</h3>
+                        <p className="text-[10px] text-gray-600 mb-1 line-clamp-2">
                           {formatCustomization(item)}
                         </p>
-                        {item.customizations.notes && (
-                          <p className="text-xs text-gray-500 italic mb-2">
-                            Note: {item.customizations.notes}
-                          </p>
-                        )}
                         
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-red-600 font-bold text-base">
-                            Rp {itemPrice.toLocaleString('id-ID')}
-                          </span>
-                          
-                          {/* Edit & Delete Icons */}
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs font-bold text-[#EA2831]">
+                            Rp{itemPrice.toLocaleString('id-ID')}
+                          </p>
                           <div className="flex items-center gap-1">
-                            {onEditItem && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 hover:bg-gray-100"
-                                onClick={() => onEditItem(item)}
-                              >
-                                <Pencil className="h-4 w-4 text-gray-600" />
-                              </Button>
-                            )}
-                            {onDeleteItem && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 hover:bg-red-50"
-                                onClick={() => onDeleteItem(item)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            )}
-                            
-                            {/* Quantity Controls */}
+                            <button 
+                              onClick={() => onEditItem?.(item)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                            >
+                              <Pencil className="h-3 w-3 text-gray-500" />
+                            </button>
+                            <button 
+                              onClick={() => onDeleteItem?.(item)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                            >
+                              <Trash2 className="h-3 w-3 text-red-500" />
+                            </button>
                             <div className="flex items-center gap-2 ml-2">
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-8 w-8 rounded-full border-gray-300"
+                              <button
                                 onClick={() => onUpdateQuantity(item.id, item.customizations, item.quantity - 1)}
+                                className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                               >
                                 <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-8 w-8 rounded-full border-gray-300"
+                              </button>
+                              <span className="text-xs font-semibold min-w-[1.5rem] text-center">
+                                {item.quantity}
+                              </span>
+                              <button
                                 onClick={() => onUpdateQuantity(item.id, item.customizations, item.quantity + 1)}
+                                className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                               >
                                 <Plus className="h-3 w-3" />
-                              </Button>
+                              </button>
                             </div>
                           </div>
-                        </div>
-                        
-                        <div className="mt-2 text-right">
-                          <span className="text-sm font-semibold">
-                            Total: Rp {itemTotal.toLocaleString('id-ID')}
-                          </span>
                         </div>
                       </div>
                     </div>

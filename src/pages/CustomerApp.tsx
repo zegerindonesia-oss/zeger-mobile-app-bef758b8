@@ -66,7 +66,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'cart' | 'outlets' | 'checkout' | 'order-success' | 'waiting' | 'order-tracking';
+type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'order-success' | 'waiting' | 'order-tracking';
 
 export default function CustomerApp() {
   const { user } = useAuth();
@@ -411,9 +411,9 @@ export default function CustomerApp() {
       description: `${product.name} berhasil ditambahkan`,
     });
     
-    // Navigate to cart after adding
+    // Navigate back to menu
     setSelectedProduct(null);
-    setActiveView('cart');
+    setActiveView('menu');
   };
 
   const updateCartQuantity = (productId: string, customizations: any, newQuantity: number) => {
@@ -423,12 +423,40 @@ export default function CustomerApp() {
       setCart(cart.filter(item => 
         `${item.id}-${JSON.stringify(item.customizations)}` !== cartKey
       ));
+      toast({
+        title: "Item dihapus",
+        description: "Item telah dihapus dari keranjang",
+      });
     } else {
       setCart(cart.map(item =>
         `${item.id}-${JSON.stringify(item.customizations)}` === cartKey
           ? { ...item, quantity: newQuantity }
           : item
       ));
+    }
+  };
+
+  const handleEditCartItem = (item: CartItem) => {
+    const product = products.find(p => p.id === item.id);
+    if (!product) return;
+    
+    setSelectedProduct(product);
+    setActiveView('product-detail');
+  };
+
+  const handleDeleteCartItem = (item: CartItem) => {
+    if (confirm(`Hapus ${item.name} dari keranjang?`)) {
+      setCart(prevCart => 
+        prevCart.filter(cartItem => 
+          !(cartItem.id === item.id && 
+            JSON.stringify(cartItem.customizations) === JSON.stringify(item.customizations))
+        )
+      );
+      
+      toast({
+        title: "Item dihapus",
+        description: `${item.name} telah dihapus dari keranjang`,
+      });
     }
   };
 
@@ -606,6 +634,7 @@ export default function CustomerApp() {
                 products={products}
                 onAddToCart={(product) => {
                   setSelectedProduct(product);
+                  setActiveView('product-detail');
                 }}
                 outletId={selectedOutlet?.id}
                 outletName={selectedOutlet?.name}
@@ -615,7 +644,7 @@ export default function CustomerApp() {
                 onViewCart={() => setActiveView('cart')}
               />
             )}
-            {selectedProduct && (
+            {activeView === 'product-detail' && selectedProduct && (
               <CustomerProductDetail
                 product={selectedProduct}
                 orderType="take-away"
@@ -651,6 +680,10 @@ export default function CustomerApp() {
                 }}
                 onChangeOutlet={() => setActiveView('outlets')}
                 onAddMenu={() => setActiveView('menu')}
+                onEditItem={handleEditCartItem}
+                onDeleteItem={handleDeleteCartItem}
+              />
+            )}
               />
             )}
             {activeView === 'checkout' && selectedOutlet && customerUser && (
