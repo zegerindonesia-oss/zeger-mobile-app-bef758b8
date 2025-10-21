@@ -200,7 +200,13 @@ export default function CustomerOrderTracking({
         setOrderStatus(newStatus);
 
         if (newStatus === 'completed' || newStatus === 'delivered') {
-          onCompleted();
+          toast({
+            title: "Pesanan Selesai!",
+            description: "Pesanan Anda telah sampai. Terima kasih!",
+          });
+          setTimeout(() => {
+            onCompleted();
+          }, 2000);
         }
       })
       .subscribe();
@@ -288,7 +294,8 @@ export default function CustomerOrderTracking({
       case 'in_progress':
         return 'Rider sedang menuju lokasi Anda';
       case 'arrived':
-        return 'Rider telah tiba di lokasi';
+      case 'delivered':
+        return 'Pesanan telah sampai!';
       case 'completed':
         return 'Pesanan selesai';
       default:
@@ -379,12 +386,12 @@ export default function CustomerOrderTracking({
               </div>
               <span className="text-xs mt-1 text-center">Dalam Perjalanan</span>
             </div>
-            <div className={`flex-1 h-1 ${orderStatus === 'arrived' || orderStatus === 'completed' ? 'bg-primary' : 'bg-gray-300'}`} />
+            <div className={`flex-1 h-1 ${orderStatus === 'arrived' || orderStatus === 'delivered' || orderStatus === 'completed' ? 'bg-primary' : 'bg-gray-300'}`} />
             <div className="flex flex-col items-center flex-1">
-              <div className={`w-8 h-8 rounded-full ${orderStatus === 'completed' ? 'bg-green-500' : 'bg-gray-300'} flex items-center justify-center text-white`}>
+              <div className={`w-8 h-8 rounded-full ${orderStatus === 'delivered' || orderStatus === 'completed' ? 'bg-green-500' : 'bg-gray-300'} flex items-center justify-center text-white`}>
                 <CheckCircle2 className="h-5 w-5" />
               </div>
-              <span className="text-xs mt-1 text-center">Selesai</span>
+              <span className="text-xs mt-1 text-center">Pesanan Sampai</span>
             </div>
           </div>
 

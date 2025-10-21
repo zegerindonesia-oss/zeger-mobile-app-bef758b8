@@ -37,7 +37,6 @@ export function CustomerProductDetail({
   const [size, setSize] = useState<'small' | 'large' | '200ml' | '1lt'>('200ml');
   const [iceLevel, setIceLevel] = useState<'normal' | 'less' | 'no-ice'>('normal');
   const [sugarLevel, setSugarLevel] = useState<'normal' | 'less' | 'no-sugar'>('normal');
-  const [milk, setMilk] = useState<string>('');
   const [toppings, setToppings] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
 
@@ -50,16 +49,26 @@ export function CustomerProductDetail({
   ];
 
   const getCustomPrice = () => {
+    console.log('🔍 Product base price:', product.price);
     let price = product.price;
     
     if (size === 'large') price += 5000;
     if (size === '200ml') price += 3000;
     if (size === '1lt') price += 15000;
     
+    console.log('💰 After size adjustment:', price, '(size:', size, ')');
+    
     toppings.forEach(toppingId => {
       const topping = toppingOptions.find(t => t.id === toppingId);
-      if (topping) price += topping.price;
+      if (topping) {
+        console.log('🍪 Adding topping:', topping.name, topping.price);
+        price += topping.price;
+      }
     });
+    
+    console.log('📊 Final price per item:', price);
+    console.log('🔢 Quantity:', quantity);
+    console.log('💵 Total:', price * quantity);
     
     return price * quantity;
   };
@@ -78,7 +87,6 @@ export function CustomerProductDetail({
       size,
       iceLevel,
       sugarLevel,
-      milk,
       toppings,
       notes
     });
@@ -218,26 +226,6 @@ export function CustomerProductDetail({
           </div>
         </div>
 
-        {/* Milk */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Jenis Susu</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {['Susu Sapi', 'Oat Milk', 'Almond Milk', 'Tanpa Susu'].map((m) => (
-              <button
-                key={m}
-                onClick={() => setMilk(m)}
-                className={`p-2 rounded-xl border-2 transition-all ${
-                  milk === m
-                    ? 'border-[#EA2831] bg-red-50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <Milk className={`h-5 w-5 mx-auto mb-1 ${milk === m ? 'text-[#EA2831]' : 'text-gray-400'}`} />
-                <span className={`text-xs font-medium ${milk === m ? 'text-[#EA2831]' : 'text-gray-700'}`}>{m}</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Toppings */}
         <div>
@@ -304,7 +292,7 @@ export function CustomerProductDetail({
           {/* Add to Cart Button */}
           <Button
             onClick={handleAddToCart}
-            className="w-full bg-[#EA2831] hover:bg-red-600 text-white py-2 text-sm rounded-full font-semibold shadow-lg"
+            className="w-full h-12 bg-[#EA2831] hover:bg-red-600 text-white rounded-full text-sm font-bold shadow-lg"
           >
             <ShoppingCart className="h-4 w-4 mr-2" />
             Tambah ke Keranjang - Rp{getCustomPrice().toLocaleString('id-ID')}

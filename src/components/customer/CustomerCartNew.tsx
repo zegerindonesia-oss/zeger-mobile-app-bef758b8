@@ -23,12 +23,13 @@ interface CartItem {
   quantity: number;
   image_url: string;
   customizations: {
-    temperature?: 'hot' | 'ice';
-    size?: 'regular' | 'large' | 'ultimate';
+    temperature?: 'hot' | 'ice' | 'cold';
+    size?: 'regular' | 'large' | 'ultimate' | 'small' | '200ml' | '1lt';
     blend?: 'senja' | 'pagi';
     milk?: 'regular' | 'oat';
-    iceLevel?: 'normal' | 'less';
-    sugarLevel?: 'normal' | 'less';
+    iceLevel?: 'normal' | 'less' | 'no-ice';
+    sugarLevel?: 'normal' | 'less' | 'no-sugar';
+    toppings?: string[];
     extraShot?: boolean;
     notes?: string;
   };
@@ -64,51 +65,67 @@ export function CustomerCartNew({
 
   const getTotalPrice = () => {
     return cart.reduce((total, item) => {
-      let itemPrice = item.price;
-      
-      // Add size upcharge
-      if (item.customizations.size === 'large') itemPrice += 5000;
-      if (item.customizations.size === 'ultimate') itemPrice += 10000;
-      
-      // Add extra shot
-      if (item.customizations.extraShot) itemPrice += 6000;
-      
+      const itemPrice = getItemPrice(item);
       return total + (itemPrice * item.quantity);
     }, 0);
   };
 
   const getItemPrice = (item: CartItem) => {
     let price = item.price;
+    
+    // Add size upcharge
     if (item.customizations.size === 'large') price += 5000;
-    if (item.customizations.size === 'ultimate') price += 10000;
-    if (item.customizations.extraShot) price += 6000;
+    if (item.customizations.size === '200ml') price += 3000;
+    if (item.customizations.size === '1lt') price += 15000;
+    
+    // Add toppings
+    if (item.customizations.toppings && Array.isArray(item.customizations.toppings)) {
+      const toppingPrices: Record<string, number> = {
+        'espresso': 5000,
+        'oreo': 4000,
+        'cheese': 5000,
+        'jelly': 5000,
+        'icecream': 5000
+      };
+      item.customizations.toppings.forEach((t: string) => {
+        price += toppingPrices[t] || 0;
+      });
+    }
+    
     return price;
   };
 
   const formatCustomization = (item: CartItem) => {
     const customs = [];
     if (item.customizations.temperature) {
-      customs.push(`${item.customizations.temperature === 'hot' ? 'Hot' : 'Ice'} Temp`);
+      customs.push(`${item.customizations.temperature === 'hot' ? 'Hot' : 'Ice'}`);
     }
     if (item.customizations.size) {
-      customs.push(`${item.customizations.size.charAt(0).toUpperCase() + item.customizations.size.slice(1)} Size`);
-    }
-    if (item.customizations.blend) {
-      customs.push(`${item.customizations.blend.charAt(0).toUpperCase() + item.customizations.blend.slice(1)} Blend`);
-    }
-    if (item.customizations.milk) {
-      customs.push(`${item.customizations.milk.charAt(0).toUpperCase() + item.customizations.milk.slice(1)} Milk`);
+      customs.push(`Size: ${item.customizations.size}`);
     }
     if (item.customizations.iceLevel) {
-      customs.push(`${item.customizations.iceLevel.charAt(0).toUpperCase() + item.customizations.iceLevel.slice(1)} Ice`);
+      customs.push(`Es: ${item.customizations.iceLevel === 'normal' ? 'Normal' : 'Sedikit'}`);
     }
     if (item.customizations.sugarLevel) {
-      customs.push(`${item.customizations.sugarLevel.charAt(0).toUpperCase() + item.customizations.sugarLevel.slice(1)} Sugar`);
+      customs.push(`Gula: ${item.customizations.sugarLevel === 'normal' ? 'Normal' : 'Sedikit'}`);
     }
-    if (item.customizations.extraShot) {
-      customs.push('Extra Shot');
+    if (item.customizations.toppings && Array.isArray(item.customizations.toppings) && item.customizations.toppings.length > 0) {
+      const toppingMap: Record<string, string> = {
+        'espresso': 'Espresso Shot',
+        'oreo': 'Oreo Crumb',
+        'cheese': 'Cheese',
+        'jelly': 'Jelly Pearl',
+        'icecream': 'Ice Cream'
+      };
+      const toppingNames = item.customizations.toppings.map((t: string) => 
+        toppingMap[t] || t
+      );
+      customs.push(`Topping: ${toppingNames.join(', ')}`);
     }
-    return customs.join(', ');
+    if (item.customizations.notes) {
+      customs.push(`Catatan: ${item.customizations.notes}`);
+    }
+    return customs.join(' • ');
   };
 
   if (cart.length === 0) {
@@ -338,10 +355,10 @@ export function CustomerCartNew({
         {/* CTA Button */}
         <div className="p-4">
           <Button
-            className="w-full h-14 bg-red-500 hover:bg-red-600 text-white rounded-full text-base font-bold"
+            className="w-full h-14 bg-[#EA2831] hover:bg-red-700 text-white rounded-full text-base font-bold shadow-2xl"
             onClick={() => onNavigate('checkout')}
           >
-            Pilih Pembayaran • Rp {getTotalPrice().toLocaleString('id-ID')}
+            Lanjut Pembayaran • Rp {getTotalPrice().toLocaleString('id-ID')}
           </Button>
         </div>
       </div>

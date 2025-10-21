@@ -1023,12 +1023,69 @@ const MobileRiderDashboard = () => {
         isOpen={showOrderDialog}
         onClose={() => {
           setShowOrderDialog(false);
-          setCurrentOrder(null);
+          // Don't set currentOrder to null if order is accepted
         }}
         onAccept={handleAcceptOrder}
         onReject={handleRejectOrder}
         riderLocation={riderLocation}
       />
+
+      {/* Action buttons after order is accepted */}
+      {currentOrder && !showOrderDialog && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 space-y-3 z-50">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-lg">Pesanan Aktif</h3>
+            <span className="text-sm text-muted-foreground">
+              Order #{currentOrder.id.slice(0, 8)}
+            </span>
+          </div>
+          
+          <Button
+            size="lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => {
+              if (currentOrder && currentOrder.latitude && currentOrder.longitude) {
+                openGoogleMapsDirection(currentOrder.latitude, currentOrder.longitude);
+              } else {
+                toast.error('Koordinat lokasi tidak tersedia');
+              }
+            }}
+          >
+            <MapPin className="h-5 w-5 mr-2" />
+            Lihat Peta
+          </Button>
+          
+          <Button
+            size="lg"
+            className="w-full bg-[#EA2831] hover:bg-red-700 text-white"
+            onClick={async () => {
+              if (!currentOrder) return;
+              
+              const { error } = await supabase
+                .from('customer_orders')
+                .update({ 
+                  status: 'delivered',
+                  delivered_at: new Date().toISOString() 
+                })
+                .eq('id', currentOrder.id);
+              
+              if (error) {
+                toast.error('Gagal update status pesanan');
+                console.error('Error updating order status:', error);
+                return;
+              }
+              
+              toast.success('Pesanan telah sampai!');
+              setCurrentOrder(null);
+              fetchDashboardData();
+              fetchPendingOrders();
+            }}
+          >
+            <Package className="h-5 w-5 mr-2" />
+            Sudah Sampai Lokasi
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
