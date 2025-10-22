@@ -345,7 +345,7 @@ export function CustomerCartNew({
       </div>
 
       {/* Sticky Bottom Section */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-[100] pb-safe">
         {/* Terms Banner */}
         <div className="bg-purple-600 text-white text-xs px-4 py-2 text-center">
           Dengan membayar pesanan, anda telah menyetujui{' '}

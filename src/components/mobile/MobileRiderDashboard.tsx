@@ -793,21 +793,16 @@ const MobileRiderDashboard = () => {
       
       if (error) throw error;
 
-      toast.success('Pesanan berhasil diterima!', {
-        description: 'Membuka Google Maps untuk navigasi...'
+      toast.success('Pesanan Diterima!', {
+        description: 'Pesanan telah dikonfirmasi ke customer'
       });
 
-      // Close dialog
-      setShowOrderDialog(false);
-      setCurrentOrder(null);
+      // Keep dialog open and show new buttons
+      // DO NOT close dialog, DO NOT set currentOrder to null
+      // DO NOT auto-redirect to Google Maps
 
       // Refresh pending orders
       fetchPendingOrders();
-
-      // Navigate to customer location
-      if (currentOrder?.latitude && currentOrder?.longitude) {
-        openGoogleMapsDirection(currentOrder.latitude, currentOrder.longitude);
-      }
     } catch (err: any) {
       console.error('❌ Error accepting order:', err);
       toast.error('Gagal menerima pesanan: ' + (err.message || 'Unknown error'));

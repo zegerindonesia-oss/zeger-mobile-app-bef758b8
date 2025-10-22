@@ -391,6 +391,14 @@ export default function CustomerApp() {
   };
 
   const addToCart = (product: Product, quantity: number = 1, customizations: any = {}) => {
+    console.log('🛒 Adding to cart:', {
+      productId: product.id,
+      name: product.name,
+      basePrice: product.price,
+      quantity,
+      customizations
+    });
+
     const cartKey = `${product.id}-${JSON.stringify(customizations)}`;
     const existingItem = cart.find(item => 
       `${item.id}-${JSON.stringify(item.customizations)}` === cartKey
@@ -405,6 +413,8 @@ export default function CustomerApp() {
     } else {
       setCart([...cart, { ...product, quantity, customizations }]);
     }
+
+    console.log('💰 Cart updated. New cart:', cart);
 
     toast({
       title: "Ditambahkan ke keranjang",
@@ -779,7 +789,7 @@ export default function CustomerApp() {
       </div>
 
       {/* Bottom Navigation */}
-      {!['waiting', 'order-success', 'order-tracking'].includes(activeView) && tab !== 'order-detail' && (
+      {!['waiting', 'order-success'].includes(activeView) && tab !== 'order-detail' && (
         <BottomNavigation
           activeView={activeView}
           activeOrdersCount={activeOrdersCount}

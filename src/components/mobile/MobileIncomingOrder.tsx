@@ -67,10 +67,12 @@ export function MobileIncomingOrder({
   const [customReason, setCustomReason] = useState('');
   const [distance, setDistance] = useState<number | null>(null);
   const [eta, setEta] = useState<number | null>(null);
+  const [isAccepted, setIsAccepted] = useState(false);
 
   useEffect(() => {
     if (isOpen && order) {
       setCountdown(60);
+      setIsAccepted(false); // Reset accepted state
       playAlertBeep({ times: 5, freq: 1200, durationMs: 600, volume: 0.9, intervalMs: 800 });
       calculateDistanceAndETA();
       
@@ -125,7 +127,7 @@ export function MobileIncomingOrder({
   const handleAccept = () => {
     if (order) {
       onAccept(order.id);
-      onClose();
+      setIsAccepted(true); // Set accepted state, keep dialog open
     }
   };
 
@@ -246,23 +248,49 @@ export function MobileIncomingOrder({
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <Button
-                variant="destructive"
-                size="lg"
-                onClick={() => setShowRejectModal(true)}
-                className="w-full"
-              >
-                ❌ TOLAK
-              </Button>
-              <Button
-                size="lg"
-                onClick={handleAccept}
-                className="w-full bg-[#DC2626] hover:bg-[#B91C1C] text-white"
-              >
-                ✅ TERIMA
-              </Button>
-            </div>
+            {!isAccepted ? (
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  onClick={() => setShowRejectModal(true)}
+                  className="w-full"
+                >
+                  ❌ TOLAK
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={handleAccept}
+                  className="w-full bg-[#DC2626] hover:bg-[#B91C1C] text-white"
+                >
+                  ✅ TERIMA
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2">
+                <Button
+                  size="lg"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    if (order?.latitude && order?.longitude) {
+                      const url = `https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}&travelmode=driving`;
+                      window.open(url, '_blank');
+                    }
+                  }}
+                >
+                  📍 Lihat Peta
+                </Button>
+                <Button
+                  size="lg"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    onClose();
+                  }}
+                >
+                  ✅ OK, Saya Mengerti
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

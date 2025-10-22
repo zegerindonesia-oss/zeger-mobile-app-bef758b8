@@ -284,7 +284,12 @@ export default function CustomerOrderTracking({
 
   const handleCallRider = () => {
     if (rider.phone) {
-      window.location.href = `tel:${rider.phone}`;
+      // Format phone number: remove leading 0, add 62, remove non-digits
+      let phoneNumber = rider.phone.replace(/^0/, '62');
+      phoneNumber = phoneNumber.replace(/\D/g, '');
+      
+      // Open WhatsApp
+      window.open(`https://wa.me/${phoneNumber}`, '_blank');
     }
   };
 
