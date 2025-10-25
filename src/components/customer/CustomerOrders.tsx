@@ -58,9 +58,29 @@ const statusConfig = {
     color: 'bg-blue-100 text-blue-700',
     icon: Package
   },
+  confirmed: {
+    label: 'Dikonfirmasi',
+    color: 'bg-blue-100 text-blue-700',
+    icon: CheckCircle
+  },
+  in_progress: {
+    label: 'Dalam Pengiriman',
+    color: 'bg-indigo-100 text-indigo-700',
+    icon: MapPin
+  },
+  preparing: {
+    label: 'Diproses',
+    color: 'bg-purple-100 text-purple-700',
+    icon: Package
+  },
   on_the_way: {
     label: 'Dalam Perjalanan',
     color: 'bg-orange-100 text-orange-700',
+    icon: MapPin
+  },
+  on_delivery: {
+    label: 'Dalam Pengiriman',
+    color: 'bg-indigo-100 text-indigo-700',
     icon: MapPin
   },
   delivered: {
@@ -68,9 +88,19 @@ const statusConfig = {
     color: 'bg-green-100 text-green-700',
     icon: CheckCircle
   },
+  completed: {
+    label: 'Selesai',
+    color: 'bg-green-100 text-green-700',
+    icon: CheckCircle
+  },
   cancelled: {
     label: 'Dibatalkan',
     color: 'bg-red-100 text-red-700',
+    icon: XCircle
+  },
+  rejected: {
+    label: 'Ditolak',
+    color: 'bg-gray-100 text-gray-700',
     icon: XCircle
   }
 };
@@ -152,7 +182,11 @@ export function CustomerOrders({ customerUser }: CustomerOrdersProps) {
   };
 
   const OrderCard = ({ order }: { order: Order }) => {
-    const status = statusConfig[order.status as keyof typeof statusConfig];
+    const status = statusConfig[order.status as keyof typeof statusConfig] || {
+      label: order.status,
+      color: 'bg-gray-100 text-gray-700',
+      icon: Clock
+    };
     const StatusIcon = status.icon;
 
     return (
