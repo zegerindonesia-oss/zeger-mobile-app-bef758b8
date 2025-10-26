@@ -71,12 +71,12 @@ export function CustomerCartNew({
   };
 
   const getItemPrice = (item: CartItem) => {
-    let price = item.price;
+    let price = item.price; // Base price includes default size
     
-    // Add size upcharge
+    // Only add upcharge for size UPGRADES (not default sizes)
     if (item.customizations.size === 'large') price += 5000;
-    if (item.customizations.size === '200ml') price += 3000;
     if (item.customizations.size === '1lt') price += 15000;
+    // '200ml' and 'small' are default sizes, no extra charge
     
     // Add toppings
     if (item.customizations.toppings && Array.isArray(item.customizations.toppings)) {

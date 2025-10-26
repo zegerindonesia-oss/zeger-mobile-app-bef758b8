@@ -104,7 +104,7 @@ export function CustomerMenu({
     : groupedProducts[activeCategory] || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Order Type Tabs */}
       <div className="bg-white px-4 py-3 shadow-sm sticky top-0 z-10">
         <div className="flex gap-2 bg-gray-100 p-1 rounded-full">
@@ -274,7 +274,7 @@ export function CustomerMenu({
                 displayProducts.map((product) => (
                   <Card 
                     key={product.id} 
-                    className="overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all border-0 bg-white"
+                    className="overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all border border-gray-100 bg-white"
                   >
                     {/* Product Image */}
                     <div className="aspect-square relative bg-gray-50">

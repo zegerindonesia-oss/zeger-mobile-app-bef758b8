@@ -49,26 +49,20 @@ export function CustomerProductDetail({
   ];
 
   const getCustomPrice = () => {
-    console.log('🔍 Product base price:', product.price);
-    let price = product.price;
+    let price = product.price; // Base price includes default size
     
+    // Only add upcharge for size UPGRADES (not default sizes)
     if (size === 'large') price += 5000;
-    if (size === '200ml') price += 3000;
     if (size === '1lt') price += 15000;
+    // '200ml' and 'small' are default sizes, no extra charge
     
-    console.log('💰 After size adjustment:', price, '(size:', size, ')');
-    
+    // Add toppings
     toppings.forEach(toppingId => {
       const topping = toppingOptions.find(t => t.id === toppingId);
       if (topping) {
-        console.log('🍪 Adding topping:', topping.name, topping.price);
         price += topping.price;
       }
     });
-    
-    console.log('📊 Final price per item:', price);
-    console.log('🔢 Quantity:', quantity);
-    console.log('💵 Total:', price * quantity);
     
     return price * quantity;
   };
@@ -137,25 +131,43 @@ export function CustomerProductDetail({
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setTemperature('hot')}
-              className={`p-2 rounded-xl border-2 transition-all ${
+              className={cn(
+                "p-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-2",
                 temperature === 'hot'
-                  ? 'border-[#EA2831] bg-red-50 shadow-md'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
+                  ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
+                  : 'border border-gray-300 bg-white'
+              )}
             >
-              <Flame className={`h-5 w-5 mx-auto mb-1 ${temperature === 'hot' ? 'text-[#EA2831]' : 'text-gray-400'}`} />
-              <span className={`text-xs font-medium ${temperature === 'hot' ? 'text-[#EA2831]' : 'text-gray-700'}`}>Panas</span>
+              <Flame className={cn(
+                "h-6 w-6",
+                temperature === 'hot' ? 'text-[#EA2831]' : 'text-gray-400'
+              )} />
+              <span className={cn(
+                "text-sm font-semibold",
+                temperature === 'hot' ? 'text-[#EA2831]' : 'text-gray-600'
+              )}>
+                Panas
+              </span>
             </button>
             <button
               onClick={() => setTemperature('cold')}
-              className={`p-2 rounded-xl border-2 transition-all ${
+              className={cn(
+                "p-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-2",
                 temperature === 'cold'
-                  ? 'border-[#EA2831] bg-red-50 shadow-md'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
+                  ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
+                  : 'border border-gray-300 bg-white'
+              )}
             >
-              <Snowflake className={`h-5 w-5 mx-auto mb-1 ${temperature === 'cold' ? 'text-[#EA2831]' : 'text-gray-400'}`} />
-              <span className={`text-xs font-medium ${temperature === 'cold' ? 'text-[#EA2831]' : 'text-gray-700'}`}>Dingin</span>
+              <Snowflake className={cn(
+                "h-6 w-6",
+                temperature === 'cold' ? 'text-[#EA2831]' : 'text-gray-400'
+              )} />
+              <span className={cn(
+                "text-sm font-semibold",
+                temperature === 'cold' ? 'text-[#EA2831]' : 'text-gray-600'
+              )}>
+                Dingin
+              </span>
             </button>
           </div>
         </div>
@@ -168,13 +180,17 @@ export function CustomerProductDetail({
               <button
                 key={s}
                 onClick={() => setSize(s)}
-                className={`p-2 rounded-xl border-2 transition-all ${
+                className={cn(
+                  "p-4 rounded-2xl transition-all",
                   size === s
-                    ? 'border-[#EA2831] bg-red-50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                    ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
+                    : 'border border-gray-300 bg-white'
+                )}
               >
-                <span className={`text-xs font-medium ${size === s ? 'text-[#EA2831]' : 'text-gray-700'}`}>
+                <span className={cn(
+                  "text-base font-semibold",
+                  size === s ? 'text-[#EA2831]' : 'text-gray-700'
+                )}>
                   {s === 'small' ? 'Small' : s === 'large' ? 'Large' : s}
                 </span>
               </button>
@@ -190,13 +206,17 @@ export function CustomerProductDetail({
               <button
                 key={level}
                 onClick={() => setIceLevel(level)}
-                className={`p-2 rounded-xl border-2 transition-all ${
+                className={cn(
+                  "p-3 rounded-2xl transition-all",
                   iceLevel === level
-                    ? 'border-[#EA2831] bg-red-50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                    ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
+                    : 'border border-gray-300 bg-white'
+                )}
               >
-                <span className={`text-xs font-medium ${iceLevel === level ? 'text-[#EA2831]' : 'text-gray-700'}`}>
+                <span className={cn(
+                  "text-sm font-semibold",
+                  iceLevel === level ? 'text-[#EA2831]' : 'text-gray-700'
+                )}>
                   {level === 'normal' ? 'Normal' : level === 'less' ? 'Sedikit' : 'Tanpa Es'}
                 </span>
               </button>
@@ -212,13 +232,17 @@ export function CustomerProductDetail({
               <button
                 key={level}
                 onClick={() => setSugarLevel(level)}
-                className={`p-2 rounded-xl border-2 transition-all ${
+                className={cn(
+                  "p-3 rounded-2xl transition-all",
                   sugarLevel === level
-                    ? 'border-[#EA2831] bg-red-50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                    ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
+                    : 'border border-gray-300 bg-white'
+                )}
               >
-                <span className={`text-xs font-medium ${sugarLevel === level ? 'text-[#EA2831]' : 'text-gray-700'}`}>
+                <span className={cn(
+                  "text-sm font-semibold",
+                  sugarLevel === level ? 'text-[#EA2831]' : 'text-gray-700'
+                )}>
                   {level === 'normal' ? 'Normal' : level === 'less' ? 'Sedikit' : 'Tanpa Gula'}
                 </span>
               </button>

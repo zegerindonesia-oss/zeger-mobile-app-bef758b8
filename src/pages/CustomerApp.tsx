@@ -37,6 +37,7 @@ import CustomerCheckout from '@/components/customer/CustomerCheckout';
 import CustomerOrderSuccess from '@/components/customer/CustomerOrderSuccess';
 import CustomerOrderWaiting from '@/components/customer/CustomerOrderWaiting';
 import CustomerOrderTracking from '@/components/customer/CustomerOrderTracking';
+import CustomerPaymentMethod from '@/components/customer/CustomerPaymentMethod';
 import { useToast } from '@/hooks/use-toast';
 
 interface CustomerUser {
@@ -66,7 +67,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'order-success' | 'waiting' | 'order-tracking';
+type View = 'home' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking';
 
 export default function CustomerApp() {
   const { user } = useAuth();
@@ -112,6 +113,9 @@ export default function CustomerApp() {
   
   // Product detail state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
+  // Pending order data for payment flow
+  const [pendingOrderData, setPendingOrderData] = useState<any>(null);
   
   // Handle query params for order detail
   const tab = searchParams.get('tab');
@@ -478,21 +482,23 @@ export default function CustomerApp() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const handleConfirmOrder = async (orderData: {
-    outletId: string;
-    orderType: 'outlet_pickup' | 'outlet_delivery';
-    deliveryAddress?: string;
-    deliveryLat?: number;
-    deliveryLng?: number;
-    paymentMethod: 'cash' | 'e_wallet' | 'qris';
-    voucherId?: string;
-    totalPrice: number;
-    deliveryFee: number;
-    discount: number;
-    pointsUsed?: number;
-    pointsEarned?: number;
-  }) => {
+  const handleProceedToPayment = (orderData: any) => {
+    // Save order data and navigate to payment selection
+    setPendingOrderData(orderData);
+    setActiveView('payment');
+  };
+
+  const handleConfirmOrder = async (paymentMethodOrString?: string) => {
+    if (!pendingOrderData) return;
+    
+    const paymentMethod = (paymentMethodOrString || 'e_wallet') as 'cash' | 'e_wallet' | 'qris';
+    
     try {
+      const orderData = {
+        ...pendingOrderData,
+        paymentMethod
+      };
+
       // 1. Insert customer_order
       const { data: order, error: orderError } = await supabase
         .from('customer_orders')
@@ -503,7 +509,7 @@ export default function CustomerApp() {
           delivery_address: orderData.deliveryAddress,
           latitude: orderData.deliveryLat,
           longitude: orderData.deliveryLng,
-          payment_method: orderData.paymentMethod,
+          payment_method: paymentMethod,
           voucher_id: orderData.voucherId,
           total_price: orderData.totalPrice,
           delivery_fee: orderData.deliveryFee,
@@ -542,8 +548,9 @@ export default function CustomerApp() {
       // Update local state
       setCustomerUser(prev => prev ? {...prev, points: newPointsBalance} : null);
 
-      // 4. Clear cart
+      // 4. Clear cart and pending order data
       setCart([]);
+      setPendingOrderData(null);
 
       // 5. Navigate to success page
       setLastOrderId(order.id);
@@ -701,8 +708,17 @@ export default function CustomerApp() {
                 outletName={selectedOutlet.name}
                 outletAddress={selectedOutlet.address}
                 customerUser={customerUser}
-                onConfirm={handleConfirmOrder}
+                onConfirm={handleProceedToPayment}
                 onBack={() => setActiveView('cart')}
+              />
+            )}
+            {activeView === 'payment' && pendingOrderData && (
+              <CustomerPaymentMethod
+                orderId=""
+                totalAmount={pendingOrderData.totalPrice}
+                orderType={pendingOrderData.orderType}
+                onBack={() => setActiveView('checkout')}
+                onSuccess={handleConfirmOrder}
               />
             )}
             {activeView === 'order-success' && lastOrderId && (
