@@ -659,6 +659,7 @@ export default function CustomerApp() {
                 onChangeOutlet={() => setActiveView('outlets')}
                 cartItemCount={cart.length}
                 onViewCart={() => setActiveView('cart')}
+                cart={cart}
               />
             )}
             {activeView === 'product-detail' && selectedProduct && (

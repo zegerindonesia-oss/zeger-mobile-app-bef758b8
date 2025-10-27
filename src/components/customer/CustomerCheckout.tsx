@@ -264,22 +264,22 @@ export default function CustomerCheckout({
       </main>
 
       {/* Purple Alert + Button */}
-      <div className="fixed bottom-0 left-0 right-0 z-20">
-        <div className="bg-purple-800 text-white p-4 flex items-start gap-3 rounded-t-2xl mx-auto max-w-sm shadow-2xl">
-          <span className="text-2xl">📢</span>
-          <p className="text-sm">
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="bg-purple-800 text-white p-3 flex items-start gap-3 rounded-t-2xl mx-auto max-w-sm shadow-2xl">
+          <span className="text-xl">📢</span>
+          <p className="text-xs">
             Dengan membayar pesanan, anda telah menyetujui{' '}
             <a href="#" className="font-bold underline">Syarat Dan Ketentuan</a> Kami
           </p>
         </div>
         
-        <div className="bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] rounded-t-2xl mx-auto max-w-sm">
+        <div className="bg-white p-4 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.1)] rounded-t-2xl mx-auto max-w-sm">
           <button 
             onClick={handleConfirmOrder}
-            disabled={loading}
-            className="w-full bg-[#EA2831] text-white py-4 rounded-full font-bold text-lg shadow-lg"
+            disabled={loading || (orderType === 'outlet_delivery' && !deliveryAddress)}
+            className="w-full bg-[#EA2831] hover:bg-[#d11f28] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-full font-bold text-lg shadow-lg transition-colors"
           >
-            {loading ? 'Memproses...' : 'Pilih Pembayaran'}
+            {loading ? 'Memproses...' : `Pilih Pembayaran • Rp${total.toLocaleString('id-ID')}`}
           </button>
           <div className="w-32 h-1.5 bg-gray-300 rounded-full mx-auto mt-4"></div>
         </div>

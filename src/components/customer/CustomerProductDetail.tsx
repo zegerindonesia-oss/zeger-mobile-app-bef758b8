@@ -87,7 +87,7 @@ export function CustomerProductDetail({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-white pb-20">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shadow-sm">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">

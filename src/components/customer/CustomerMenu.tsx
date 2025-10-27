@@ -25,6 +25,7 @@ interface CustomerMenuProps {
   onChangeOutlet?: () => void;
   cartItemCount: number;
   onViewCart: () => void;
+  cart: any[];
 }
 
 type OrderType = 'dine-in' | 'take-away' | 'delivery';
@@ -37,7 +38,8 @@ export function CustomerMenu({
   outletAddress,
   onChangeOutlet,
   cartItemCount,
-  onViewCart
+  onViewCart,
+  cart = []
 }: CustomerMenuProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -272,10 +274,10 @@ export function CustomerMenu({
                 </div>
               ) : (
                 displayProducts.map((product) => (
-                  <Card 
-                    key={product.id} 
-                    className="overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all border border-gray-100 bg-white"
-                  >
+      <Card 
+        key={product.id} 
+        className="overflow-hidden rounded-2xl shadow-[0_4px_20px_rgba(234,40,49,0.15)] hover:shadow-[0_8px_30px_rgba(234,40,49,0.25)] transition-all border border-gray-100 bg-white"
+      >
                     {/* Product Image */}
                     <div className="aspect-square relative bg-gray-50">
                       {product.image_url ? (
@@ -328,7 +330,20 @@ export function CustomerMenu({
               <div>
                 <p className="text-[10px] text-gray-500 font-medium">Total Harga</p>
                 <p className="text-base font-bold text-gray-900">
-                  Rp{products.reduce((sum, p) => sum + p.price, 0).toLocaleString('id-ID')}
+                  Rp{cart.reduce((sum, item) => {
+                    let price = item.price;
+                    if (item.customizations?.size === 'large') price += 5000;
+                    if (item.customizations?.size === '1lt') price += 15000;
+                    if (item.customizations?.toppings && Array.isArray(item.customizations.toppings)) {
+                      const toppingPrices: Record<string, number> = {
+                        'espresso': 5000, 'oreo': 4000, 'cheese': 5000, 'jelly': 5000, 'icecream': 5000
+                      };
+                      item.customizations.toppings.forEach((t: string) => {
+                        price += toppingPrices[t] || 0;
+                      });
+                    }
+                    return sum + (price * item.quantity);
+                  }, 0).toLocaleString('id-ID')}
                 </p>
               </div>
             </div>
