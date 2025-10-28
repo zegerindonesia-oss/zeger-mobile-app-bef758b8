@@ -26,16 +26,16 @@ export function BottomNavigation({ activeView, activeOrdersCount, onNavigate }: 
           <p className={cn("text-xs mt-1", activeView === 'home' && "font-semibold")}>Home</p>
         </button>
 
-        {/* Menu */}
+        {/* Promo & Reward */}
         <button
           className={cn(
             "flex flex-col items-center text-center py-2 px-3",
-            activeView === 'menu' ? 'text-red-500' : 'text-gray-500'
+            activeView === 'promo-reward' ? 'text-red-500' : 'text-gray-500'
           )}
-          onClick={() => onNavigate('menu')}
+          onClick={() => onNavigate('promo-reward')}
         >
-          <Gift className={cn("h-6 w-6", activeView === 'menu' && "fill-red-500")} />
-          <p className={cn("text-xs mt-1", activeView === 'menu' && "font-semibold")}>Menu</p>
+          <Gift className={cn("h-6 w-6", activeView === 'promo-reward' && "fill-red-500")} />
+          <p className={cn("text-xs mt-1", activeView === 'promo-reward' && "font-semibold")}>Promo & Reward</p>
         </button>
 
         {/* Pesanan */}

@@ -103,7 +103,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         <div className="grid grid-cols-3 gap-4 text-center mb-8">
           {/* Level / Jiwa */}
           <div className="p-2">
-            <div className="bg-gray-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
               <span className="text-3xl">{membershipInfo.icon}</span>
             </div>
             <p className="font-semibold text-gray-900 text-sm">Zeger</p>
@@ -114,7 +114,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
           {/* Points */}
           <div className="p-2">
-            <div className="bg-gray-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
               <span className="text-3xl">🪙</span>
             </div>
             <p className="font-semibold text-gray-900 text-sm">Zeger Point</p>
@@ -125,7 +125,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
           {/* Subscription */}
           <div className="p-2">
-            <div className="bg-gray-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-sm">
               <span className="text-3xl">🎁</span>
             </div>
             <p className="font-semibold text-gray-900 text-sm">Subscription</p>
@@ -183,7 +183,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         {/* Order Type Buttons - Material Design Style */}
         <div className="grid grid-cols-2 gap-4">
           <button
-            onClick={() => onNavigate('menu')}
+            onClick={() => onNavigate('outlets')}
             className="bg-[#EA2831] text-white rounded-lg p-6 text-center shadow-2xl relative overflow-hidden hover:shadow-3xl transition-all"
           >
             <div className="absolute inset-0 bg-white/5"></div>
