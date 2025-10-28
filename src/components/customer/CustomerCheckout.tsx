@@ -111,6 +111,22 @@ export default function CustomerCheckout({
           </button>
         </div>
 
+        {/* Delivery Address Input - only show when delivery selected */}
+        {orderType === 'outlet_delivery' && (
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Alamat Pengiriman
+            </label>
+            <Input
+              type="text"
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddress(e.target.value)}
+              placeholder="Masukkan alamat lengkap"
+              className="w-full"
+            />
+          </div>
+        )}
+
         {/* Outlet Info Card */}
         <div className="bg-white rounded-lg p-4 space-y-4 shadow-sm">
           <div className="flex items-center">
@@ -264,10 +280,10 @@ export default function CustomerCheckout({
       </main>
 
       {/* Purple Alert + Button */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white via-white to-transparent pt-6">
-        <div className="container mx-auto max-w-md px-4 pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white via-white to-transparent pt-8 pb-safe">
+        <div className="container mx-auto max-w-md px-4 space-y-0">
           {/* Purple banner */}
-          <div className="bg-purple-800 text-white p-3 flex items-start gap-3 rounded-t-2xl mx-auto max-w-sm shadow-xl relative z-40">
+          <div className="bg-purple-800 text-white p-3 flex items-start gap-3 rounded-t-2xl shadow-xl">
             <div className="bg-red-500 rounded-full p-1.5 shrink-0">
               <span className="text-white text-sm">📢</span>
             </div>
@@ -279,16 +295,16 @@ export default function CustomerCheckout({
           {/* Button dengan total harga */}
           <button 
             onClick={handleConfirmOrder}
-            disabled={loading || (orderType === 'outlet_delivery' && !deliveryAddress)}
+            disabled={loading || (orderType === 'outlet_delivery' && !deliveryAddress.trim())}
             className={cn(
-              "w-full py-4 px-6 rounded-b-2xl font-bold text-white transition-all shadow-2xl mx-auto max-w-sm flex items-center justify-between relative z-50",
-              (loading || (orderType === 'outlet_delivery' && !deliveryAddress))
-                ? "bg-gray-400 cursor-not-allowed" 
-                : "bg-[#EA2831] hover:bg-red-700 active:scale-[0.98]"
+              "w-full py-5 px-6 rounded-b-3xl font-bold text-white text-base transition-all flex items-center justify-between",
+              (loading || (orderType === 'outlet_delivery' && !deliveryAddress.trim()))
+                ? "bg-gray-400 cursor-not-allowed shadow-md" 
+                : "bg-[#EA2831] hover:bg-red-700 active:scale-[0.98] shadow-[0_10px_40px_rgba(234,40,49,0.5)]"
             )}
           >
             <span>{loading ? 'Memproses...' : 'Pilih Pembayaran'}</span>
-            <span className="font-bold text-lg">
+            <span className="font-extrabold text-xl">
               Rp{total.toLocaleString('id-ID')}
             </span>
           </button>

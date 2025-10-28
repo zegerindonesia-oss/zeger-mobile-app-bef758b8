@@ -132,19 +132,19 @@ export function CustomerProductDetail({
             <button
               onClick={() => setTemperature('hot')}
               className={cn(
-                "p-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-2",
+                "p-4 rounded-full transition-all flex flex-col items-center justify-center gap-2 shadow-md",
                 temperature === 'hot'
-                  ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
-                  : 'border border-gray-300 bg-white'
+                  ? 'bg-[#EA2831] shadow-lg shadow-red-200'
+                  : 'bg-white border border-gray-300'
               )}
             >
               <Flame className={cn(
                 "h-6 w-6",
-                temperature === 'hot' ? 'text-[#EA2831]' : 'text-gray-400'
+                temperature === 'hot' ? 'text-white' : 'text-gray-400'
               )} />
               <span className={cn(
-                "text-sm font-semibold",
-                temperature === 'hot' ? 'text-[#EA2831]' : 'text-gray-600'
+                "text-sm font-bold",
+                temperature === 'hot' ? 'text-white' : 'text-gray-600'
               )}>
                 Panas
               </span>
@@ -152,19 +152,19 @@ export function CustomerProductDetail({
             <button
               onClick={() => setTemperature('cold')}
               className={cn(
-                "p-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-2",
+                "p-4 rounded-full transition-all flex flex-col items-center justify-center gap-2 shadow-md",
                 temperature === 'cold'
-                  ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
-                  : 'border border-gray-300 bg-white'
+                  ? 'bg-[#EA2831] shadow-lg shadow-red-200'
+                  : 'bg-white border border-gray-300'
               )}
             >
               <Snowflake className={cn(
                 "h-6 w-6",
-                temperature === 'cold' ? 'text-[#EA2831]' : 'text-gray-400'
+                temperature === 'cold' ? 'text-white' : 'text-gray-400'
               )} />
               <span className={cn(
-                "text-sm font-semibold",
-                temperature === 'cold' ? 'text-[#EA2831]' : 'text-gray-600'
+                "text-sm font-bold",
+                temperature === 'cold' ? 'text-white' : 'text-gray-600'
               )}>
                 Dingin
               </span>
@@ -181,15 +181,15 @@ export function CustomerProductDetail({
                 key={s}
                 onClick={() => setSize(s)}
                 className={cn(
-                  "p-4 rounded-2xl transition-all",
+                  "p-4 rounded-full transition-all shadow-md",
                   size === s
-                    ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
-                    : 'border border-gray-300 bg-white'
+                    ? 'bg-[#EA2831] shadow-lg shadow-red-200'
+                    : 'bg-white border border-gray-300'
                 )}
               >
                 <span className={cn(
-                  "text-base font-semibold",
-                  size === s ? 'text-[#EA2831]' : 'text-gray-700'
+                  "text-base font-bold",
+                  size === s ? 'text-white' : 'text-gray-700'
                 )}>
                   {s === 'small' ? 'Small' : s === 'large' ? 'Large' : s}
                 </span>
@@ -207,15 +207,15 @@ export function CustomerProductDetail({
                 key={level}
                 onClick={() => setIceLevel(level)}
                 className={cn(
-                  "p-3 rounded-2xl transition-all",
+                  "p-3 rounded-full transition-all shadow-md",
                   iceLevel === level
-                    ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
-                    : 'border border-gray-300 bg-white'
+                    ? 'bg-[#EA2831] shadow-lg shadow-red-200'
+                    : 'bg-white border border-gray-300'
                 )}
               >
                 <span className={cn(
-                  "text-sm font-semibold",
-                  iceLevel === level ? 'text-[#EA2831]' : 'text-gray-700'
+                  "text-sm font-bold",
+                  iceLevel === level ? 'text-white' : 'text-gray-700'
                 )}>
                   {level === 'normal' ? 'Normal' : level === 'less' ? 'Sedikit' : 'Tanpa Es'}
                 </span>
@@ -233,15 +233,15 @@ export function CustomerProductDetail({
                 key={level}
                 onClick={() => setSugarLevel(level)}
                 className={cn(
-                  "p-3 rounded-2xl transition-all",
+                  "p-3 rounded-full transition-all shadow-md",
                   sugarLevel === level
-                    ? 'border-2 border-[#EA2831] bg-[#FFE5E7]'
-                    : 'border border-gray-300 bg-white'
+                    ? 'bg-[#EA2831] shadow-lg shadow-red-200'
+                    : 'bg-white border border-gray-300'
                 )}
               >
                 <span className={cn(
-                  "text-sm font-semibold",
-                  sugarLevel === level ? 'text-[#EA2831]' : 'text-gray-700'
+                  "text-sm font-bold",
+                  sugarLevel === level ? 'text-white' : 'text-gray-700'
                 )}>
                   {level === 'normal' ? 'Normal' : level === 'less' ? 'Sedikit' : 'Tanpa Gula'}
                 </span>
