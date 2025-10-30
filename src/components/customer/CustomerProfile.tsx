@@ -256,12 +256,36 @@ export function CustomerProfile({ customerUser, onUpdateProfile }: CustomerProfi
       {/* Menu Options */}
       <div className="space-y-2">
         {[
-          { icon: CreditCard, label: 'Metode Pembayaran', action: () => {} },
-          { icon: Bell, label: 'Notifikasi', action: () => {} },
-          { icon: Settings, label: 'Pengaturan Akun', action: () => {} },
-          { icon: HelpCircle, label: 'Pusat Bantuan', action: () => {} },
-          { icon: Shield, label: 'Kebijakan Privasi', action: () => {} },
-          { icon: FileText, label: 'Syarat & Ketentuan', action: () => {} },
+          { 
+            icon: CreditCard, 
+            label: 'Metode Pembayaran', 
+            action: () => toast({ title: "Metode Pembayaran", description: "Fitur segera hadir untuk mengelola metode pembayaran Anda" }) 
+          },
+          { 
+            icon: Bell, 
+            label: 'Notifikasi', 
+            action: () => toast({ title: "Notifikasi", description: "Fitur segera hadir untuk mengatur preferensi notifikasi" }) 
+          },
+          { 
+            icon: Settings, 
+            label: 'Pengaturan Akun', 
+            action: () => toast({ title: "Pengaturan Akun", description: "Fitur segera hadir untuk mengatur akun Anda" }) 
+          },
+          { 
+            icon: HelpCircle, 
+            label: 'Pusat Bantuan', 
+            action: () => toast({ title: "Pusat Bantuan", description: "Hubungi kami di WhatsApp: 0812-3456-7890" }) 
+          },
+          { 
+            icon: Shield, 
+            label: 'Kebijakan Privasi', 
+            action: () => toast({ title: "Kebijakan Privasi", description: "Fitur segera hadir untuk melihat kebijakan privasi" }) 
+          },
+          { 
+            icon: FileText, 
+            label: 'Syarat & Ketentuan', 
+            action: () => toast({ title: "Syarat & Ketentuan", description: "Fitur segera hadir untuk melihat syarat dan ketentuan" }) 
+          },
         ].map(({ icon: Icon, label, action }) => (
           <Card key={label} className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={action}>
             <CardContent className="p-4">

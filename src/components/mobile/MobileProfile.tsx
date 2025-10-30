@@ -127,11 +127,10 @@ export const MobileProfile = () => {
       const updateData: any = {
         full_name: profile.full_name,
         phone: profile.phone,
-        address: profile.address,
       };
 
       if (profile.avatar_url) {
-        (updateData as any).photo_url = profile.avatar_url;
+        updateData.photo_url = profile.avatar_url;
       }
 
       const { error } = await supabase

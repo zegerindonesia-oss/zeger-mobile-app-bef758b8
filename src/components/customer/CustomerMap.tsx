@@ -481,10 +481,19 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     return (
       <div className="flex flex-col items-center justify-center h-96 p-4">
         <div className="text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Perhatian</h3>
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2 text-gray-900">Tidak Dapat Memuat Peta</h3>
           <p className="text-gray-600 mb-4">{mapError}</p>
-          <Button onClick={requestLocationPermission}>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-left">
+            <p className="text-sm text-gray-700 font-semibold mb-2">Tips:</p>
+            <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+              <li>Pastikan izin lokasi diaktifkan di browser</li>
+              <li>Periksa koneksi internet Anda</li>
+              <li>Coba refresh halaman</li>
+              <li>Gunakan browser Chrome atau Safari</li>
+            </ul>
+          </div>
+          <Button onClick={requestLocationPermission} className="w-full">
             <RefreshCw className="h-4 w-4 mr-2" />
             Coba Lagi
           </Button>
