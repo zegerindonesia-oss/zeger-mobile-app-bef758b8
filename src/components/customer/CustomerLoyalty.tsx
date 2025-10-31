@@ -4,29 +4,27 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
-
 interface CustomerLoyaltyProps {
   customerUser: any;
   onNavigate: (view: string) => void;
   onBack: () => void;
 }
-
-export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLoyaltyProps) {
+export function CustomerLoyalty({
+  customerUser,
+  onNavigate,
+  onBack
+}: CustomerLoyaltyProps) {
   const [loyaltyData, setLoyaltyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     fetchLoyaltyData();
   }, [customerUser]);
-
   const fetchLoyaltyData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('customer_loyalty')
-        .select('*')
-        .eq('customer_id', customerUser.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('customer_loyalty').select('*').eq('customer_id', customerUser.id).single();
       if (error) throw error;
       setLoyaltyData(data);
     } catch (error) {
@@ -35,46 +33,36 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
       setLoading(false);
     }
   };
-
   const xp = loyaltyData?.total_earned_points || 20;
   const maxXp = 100;
-  const xpPercentage = (xp / maxXp) * 100;
-
-  const rewards = [
-    {
-      title: 'Referral Benefit',
-      description: 'Diskon 50% Maks. 20k',
-      icon: '🔄',
-      secondIcon: '👤',
-    },
-    {
-      title: 'Level Up Diskon',
-      description: 'Diskon 50% Maks. 20k',
-      icon: '💯',
-      secondIcon: '📊',
-    },
-    {
-      title: 'Birthday Voucher',
-      description: 'Diskon 50% Maks. 50k',
-      icon: '💯',
-      secondIcon: '🎂',
-    },
-    {
-      title: '4x Voucher Diskon Bulanan',
-      description: 'Diskon 15% Min. pembelian 35k, Maks Diskon 15k',
-      icon: '💯',
-      secondIcon: '📅',
-    },
-    {
-      title: '5x Voucher Diskon Bulanan',
-      description: 'Diskon 10% maksimal 7.5k',
-      icon: '💯',
-      secondIcon: '📅',
-    }
-  ];
-
-  return (
-    <div className="min-h-screen bg-white pb-24">
+  const xpPercentage = xp / maxXp * 100;
+  const rewards = [{
+    title: 'Referral Benefit',
+    description: 'Diskon 50% Maks. 20k',
+    icon: '🔄',
+    secondIcon: '👤'
+  }, {
+    title: 'Level Up Diskon',
+    description: 'Diskon 50% Maks. 20k',
+    icon: '💯',
+    secondIcon: '📊'
+  }, {
+    title: 'Birthday Voucher',
+    description: 'Diskon 50% Maks. 50k',
+    icon: '💯',
+    secondIcon: '🎂'
+  }, {
+    title: '4x Voucher Diskon Bulanan',
+    description: 'Diskon 15% Min. pembelian 35k, Maks Diskon 15k',
+    icon: '💯',
+    secondIcon: '📅'
+  }, {
+    title: '5x Voucher Diskon Bulanan',
+    description: 'Diskon 10% maksimal 7.5k',
+    icon: '💯',
+    secondIcon: '📅'
+  }];
+  return <div className="min-h-screen bg-white pb-24">
       {/* Header - Purple Gradient */}
       <div className="bg-gradient-to-br from-purple-700 to-purple-900 text-white">
         <div className="p-4 flex items-center justify-between">
@@ -118,10 +106,9 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
                 </div>
               </div>
               <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-gradient-to-r from-red-500 to-orange-500 h-3 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${xpPercentage}%` }}
-                />
+                <div className="bg-gradient-to-r from-red-500 to-orange-500 h-3 rounded-full transition-all duration-500 ease-out" style={{
+                width: `${xpPercentage}%`
+              }} />
               </div>
             </div>
           </div>
@@ -141,10 +128,7 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
                 </span>
               </div>
             </div>
-            <Button 
-              className="bg-[#EA2831] hover:bg-[#D12028] text-white rounded-full px-6 shadow-lg"
-              onClick={() => onNavigate('vouchers')}
-            >
+            <Button className="bg-[#EA2831] hover:bg-[#D12028] text-white rounded-full px-6 shadow-lg" onClick={() => onNavigate('vouchers')}>
               History
             </Button>
           </div>
@@ -162,25 +146,19 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
 
         {/* Reward Cards */}
         <div className="space-y-4">
-          {rewards.map((reward, index) => (
-            <Card 
-              key={index}
-              className="bg-gradient-to-br from-[#FF6B6B] to-[#FF5252] text-white rounded-2xl shadow-lg overflow-hidden border-0"
-            >
+          {rewards.map((reward, index) => <Card key={index} className="bg-gradient-to-br from-[#FF6B6B] to-[#FF5252] text-white rounded-2xl shadow-lg overflow-hidden border-0">
               <div className="p-5 flex items-center justify-between">
                 <div className="flex-1">
                   <h3 className="text-lg font-bold mb-1">{reward.title}</h3>
                   <p className="text-sm opacity-90">{reward.description}</p>
                 </div>
                 <div className="ml-4 flex-shrink-0 flex items-center gap-1">
-                  <span className="text-3xl">{reward.icon}</span>
-                  <span className="text-3xl">{reward.secondIcon}</span>
+                  
+                  
                 </div>
               </div>
-            </Card>
-          ))}
+            </Card>)}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
