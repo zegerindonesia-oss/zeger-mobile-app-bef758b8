@@ -33,9 +33,9 @@ interface Promo {
 export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoRewardProps) {
   const [rewardItems, setRewardItems] = useState<RewardItem[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
-  const [activeCategory, setActiveCategory] = useState('Tukar Sekarang');
+  const [activeCategory, setActiveCategory] = useState('Semua');
   
-  const categories = ['Tukar Sekarang', 'Ayam', 'Daging', 'Sarapan'];
+  const categories = ['Semua', 'Espresso Based', 'Milk Based', 'Refresher', 'Botol'];
 
   useEffect(() => {
     fetchRewardItems();
@@ -47,12 +47,52 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
   };
 
   const fetchPromos = async () => {
-    // Fetch promo banners dari database - untuk sementara kosong, akan tampilkan placeholder
+    // Mock data dengan category - temporary solution
+    const mockPromos: Promo[] = [
+      { 
+        id: '1',
+        title: 'Seni Datang, Perut Tenang',
+        category: 'Espresso Based',
+        image_url: '/promo-banners/octobrew-1.png',
+        valid_until: '2025-12-31',
+        description: 'Nikmati kopi sambil menikmati seni'
+      },
+      { 
+        id: '2',
+        title: 'Promo Spesial Oktober',
+        category: 'Milk Based',
+        image_url: '/promo-banners/octobrew-2.png',
+        valid_until: '2025-11-30',
+        description: 'Promo spesial bulan ini'
+      },
+      { 
+        id: '3',
+        title: 'Diskon 50% All Menu',
+        category: 'Refresher',
+        image_url: '/promo-banners/octobrew-3.png',
+        valid_until: '2025-11-30',
+        description: 'Diskon besar-besaran'
+      },
+      { 
+        id: '4',
+        title: 'Beli 2 Gratis 1',
+        category: 'Botol 1 Liter',
+        image_url: '/promo-banners/octobrew-4.png',
+        valid_until: '2025-11-30',
+        description: 'Promo botol spesial'
+      }
+    ];
+    setPromos(mockPromos);
   };
 
-  const filteredPromos = activeCategory === 'Tukar Sekarang' 
+  const filteredPromos = activeCategory === 'Semua' 
     ? promos 
-    : promos.filter(p => p.category === activeCategory);
+    : promos.filter(p => {
+        if (activeCategory === 'Botol') {
+          return p.category === 'Botol 1 Liter' || p.category === 'Botol 200ml';
+        }
+        return p.category === activeCategory;
+      });
 
   return (
     <div className="min-h-screen bg-white pb-24">
@@ -122,10 +162,10 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
-                  "px-6 py-2 rounded-full text-sm font-medium transition-colors flex-shrink-0 border-2",
+                  "px-6 py-2 rounded-full text-sm font-medium transition-all flex-shrink-0 border-2",
                   activeCategory === cat
-                    ? "bg-white border-gray-900 text-gray-900"
-                    : "bg-white border-gray-300 text-gray-600"
+                    ? "bg-[#EA2831] border-[#EA2831] text-white shadow-[0_4px_12px_rgba(234,40,49,0.4)]"
+                    : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
                 )}
               >
                 {cat}
@@ -136,37 +176,35 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
 
         {/* Promo Cards */}
         <div className="space-y-4">
-          {/* Placeholder promo cards - use existing promo images */}
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden shadow-lg rounded-2xl hover:shadow-2xl transition-shadow">
-              <div className="relative">
-                <img 
-                  src={`/promo-banners/octobrew-${i + 1}.png`}
-                  alt={`Promo ${i + 1}`}
-                  className="w-full h-48 object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = '/placeholder.svg';
-                  }}
-                />
-                <Badge className="absolute top-3 left-3 bg-[#EA2831] text-white flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Segera habis masa berlakunya
-                </Badge>
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-lg text-gray-900">
-                  {i === 0 ? 'Seni Datang, Perut Tenang' : 
-                   i === 1 ? 'Promo Spesial Oktober' :
-                   i === 2 ? 'Diskon 50% All Menu' :
-                   'Beli 2 Gratis 1'}
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {i === 0 ? 'Nikmati kopi sambil menikmati seni' : 
-                   'Promo spesial bulan ini'}
-                </p>
-              </div>
+          {filteredPromos.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-gray-500">Tidak ada promo untuk kategori ini</p>
             </Card>
-          ))}
+          ) : (
+            filteredPromos.map((promo) => (
+              <Card key={promo.id} className="overflow-hidden shadow-lg rounded-2xl hover:shadow-2xl transition-shadow">
+                <div className="relative">
+                  <img 
+                    src={promo.image_url}
+                    alt={promo.title}
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
+                  />
+                  <Badge className="absolute top-3 left-3 bg-[#EA2831] text-white flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Segera habis masa berlakunya
+                  </Badge>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-bold text-lg text-gray-900">{promo.title}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{promo.description}</p>
+                  <Badge variant="outline" className="mt-2">{promo.category}</Badge>
+                </div>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Bike, Gift, Star, Bell, Users, CreditCard, ChevronRight, ShoppingBag } from 'lucide-react';
+import { Store, Bike, Gift, Star, Bell, Users, CreditCard, ChevronRight, ShoppingBag, Flame, Coins } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import PromoBannerCarousel from './PromoBannerCarousel';
 
@@ -107,7 +107,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
               className="p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer active:scale-95"
             >
               <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
-                <span className="text-3xl">{membershipInfo.icon}</span>
+                <Flame className="h-7 w-7 text-white" />
               </div>
               <p className="font-semibold text-gray-900 text-sm">Zeger Loyalty</p>
               <p className="text-xs text-gray-500 font-light">
@@ -118,7 +118,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           {/* Points */}
           <div className="p-2">
             <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
-              <span className="text-3xl">🪙</span>
+              <Coins className="h-7 w-7 text-white" />
             </div>
             <p className="font-semibold text-gray-900 text-sm">Zeger Point</p>
             <p className="text-xs text-gray-500 font-light">
@@ -129,7 +129,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           {/* Subscription */}
           <div className="p-2">
             <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
-              <span className="text-3xl">🎁</span>
+              <Gift className="h-7 w-7 text-white" />
             </div>
             <p className="font-semibold text-gray-900 text-sm">Subscription</p>
             <p className="text-xs text-gray-500 font-light">0 Subscription</p>
