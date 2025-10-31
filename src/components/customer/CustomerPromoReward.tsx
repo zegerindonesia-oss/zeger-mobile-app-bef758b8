@@ -174,38 +174,43 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
           </div>
         </ScrollArea>
 
-        {/* Promo Cards */}
-        <div className="space-y-4">
-          {filteredPromos.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-gray-500">Tidak ada promo untuk kategori ini</p>
-            </Card>
-          ) : (
-            filteredPromos.map((promo) => (
-              <Card key={promo.id} className="overflow-hidden shadow-lg rounded-2xl hover:shadow-2xl transition-shadow">
-                <div className="relative">
-                  <img 
-                    src={promo.image_url}
-                    alt={promo.title}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = '/placeholder.svg';
-                    }}
-                  />
-                  <Badge className="absolute top-3 left-3 bg-[#EA2831] text-white flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Segera habis masa berlakunya
-                  </Badge>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-bold text-lg text-gray-900">{promo.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{promo.description}</p>
-                  <Badge variant="outline" className="mt-2">{promo.category}</Badge>
-                </div>
+        {/* Promo Cards - Horizontal Scroll */}
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex gap-4 pb-4">
+            {filteredPromos.length === 0 ? (
+              <Card className="flex-shrink-0 w-80 p-8 text-center">
+                <p className="text-gray-500 whitespace-normal">Tidak ada promo untuk kategori ini</p>
               </Card>
-            ))
-          )}
-        </div>
+            ) : (
+              filteredPromos.map((promo) => (
+                <Card 
+                  key={promo.id} 
+                  className="flex-shrink-0 w-80 overflow-hidden shadow-lg rounded-2xl hover:shadow-2xl transition-shadow"
+                >
+                  <div className="relative">
+                    <img 
+                      src={promo.image_url}
+                      alt={promo.title}
+                      className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                    />
+                    <Badge className="absolute top-3 left-3 bg-[#EA2831] text-white flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Segera habis masa berlakunya
+                    </Badge>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-bold text-lg text-gray-900 whitespace-normal">{promo.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1 whitespace-normal">{promo.description}</p>
+                    <Badge variant="outline" className="mt-2">{promo.category}</Badge>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
