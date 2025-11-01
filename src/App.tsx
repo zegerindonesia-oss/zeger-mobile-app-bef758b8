@@ -36,6 +36,7 @@ import { SmallBranchStockManagement } from "./components/inventory/SmallBranchSt
 import { LocationAnalytics } from "./pages/analytics/LocationAnalytics";
 import CentralKitchenAnalytics from "./pages/analytics/CentralKitchen";
 import CashDeposit from "./pages/analytics/CashDeposit";
+import WasteManagementPage from "./pages/inventory/WasteManagementPage";
 import SettingsUserManagement from "./pages/settings/UserManagement";
 import SettingsRiderManagement from "./pages/settings/RiderManagement";
 import BranchManagement from "./pages/settings/BranchManagement";
@@ -376,6 +377,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['bh_report']}>
                 <BranchHubReportLayout>
                   <RiderPerformance />
+                </BranchHubReportLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/bh-report-waste-management" element={
+              <RoleBasedRoute allowedRoles={['bh_report']}>
+                <BranchHubReportLayout>
+                  <WasteManagementPage />
                 </BranchHubReportLayout>
               </RoleBasedRoute>
             } />
