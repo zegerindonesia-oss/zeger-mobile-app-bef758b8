@@ -298,6 +298,13 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
+            <Route path="/inventory/waste-management" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager']}>
+                <ModernLayout>
+                  <WasteManagementPage />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
             
             {/* Small Branch Specific Routes */}
             <Route path="/inventory/purchasing" element={
