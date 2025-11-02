@@ -31,6 +31,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   
   // Form states
   const [selectedProduct, setSelectedProduct] = useState("");
+  const [selectedInputRider, setSelectedInputRider] = useState("");
   const [quantity, setQuantity] = useState("");
   const [wasteReason, setWasteReason] = useState("");
   const [notes, setNotes] = useState("");
@@ -43,8 +44,11 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   useEffect(() => {
     if (assignedRiderId) {
       setSelectedRider(assignedRiderId);
+    } else if (riders.length > 0 && !selectedRider) {
+      // Auto-select first rider if no rider selected
+      setSelectedRider(riders[0].id);
     }
-  }, [assignedRiderId]);
+  }, [assignedRiderId, riders]);
 
   useEffect(() => {
     fetchWasteData();
@@ -73,12 +77,18 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name')
-        .eq('role', 'rider')
+        .in('role', ['rider', 'bh_rider', 'sb_rider']) // Support all rider types
         .eq('branch_id', userProfile.branch_id)
+        .eq('is_active', true)
         .order('full_name');
 
       if (error) throw error;
       setRiders(data || []);
+      
+      // Auto-select first rider if available and no rider selected
+      if (data && data.length > 0 && !selectedRider && !assignedRiderId) {
+        setSelectedRider(data[0].id);
+      }
     } catch (error: any) {
       toast.error("Gagal fetch data rider");
     }
@@ -117,10 +127,16 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
         .lte('created_at', `${end}T23:59:59`)
         .order('created_at', { ascending: false });
 
-      // Filter by rider
+      // Filter by rider - ALWAYS require a rider
       const riderId = assignedRiderId || selectedRider;
       if (riderId) {
         query = query.eq('rider_id', riderId);
+      } else {
+        // No rider selected, return early with empty data
+        setWasteData([]);
+        setChartData([]);
+        setLoading(false);
+        return;
       }
 
       const { data, error } = await query;
@@ -150,23 +166,38 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   };
 
   const processChartData = (data: any[]) => {
+    if (!data || data.length === 0) {
+      setChartData([]);
+      return;
+    }
+
     const grouped = data.reduce((acc: any, item: any) => {
       const date = format(new Date(item.created_at), 'dd MMM');
       if (!acc[date]) {
         acc[date] = { date };
       }
-      if (!acc[date][item.product_name]) {
-        acc[date][item.product_name] = 0;
+      const productName = item.product_name || 'Unknown';
+      if (!acc[date][productName]) {
+        acc[date][productName] = 0;
       }
-      acc[date][item.product_name] += item.total_waste;
+      acc[date][productName] += Number(item.total_waste || 0);
       return acc;
     }, {});
 
-    const chartArray = Object.values(grouped);
+    const chartArray = Object.values(grouped).sort((a: any, b: any) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+    
     setChartData(chartArray);
   };
 
   const handleSubmitWaste = async () => {
+    // Validation
+    if (!assignedRiderId && !selectedInputRider) {
+      toast.error("Mohon pilih rider");
+      return;
+    }
+    
     if (!selectedProduct || !quantity || !wasteReason) {
       toast.error("Mohon lengkapi semua field yang wajib");
       return;
@@ -174,7 +205,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
 
     try {
       const product = products.find(p => p.id === selectedProduct);
-      const riderId = assignedRiderId || selectedRider || userProfile.id;
+      const riderId = assignedRiderId || selectedInputRider;
 
       const { error } = await supabase
         .from('product_waste')
@@ -194,6 +225,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       toast.success("Waste berhasil ditambahkan");
       
       // Reset form
+      setSelectedInputRider("");
       setSelectedProduct("");
       setQuantity("");
       setWasteReason("");
@@ -352,7 +384,29 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Rider Select - only show if not assigned rider */}
+            {!assignedRiderId && (
+              <div>
+                <Label>Rider *</Label>
+                <Select 
+                  value={selectedInputRider} 
+                  onValueChange={setSelectedInputRider}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih rider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {riders.map(rider => (
+                      <SelectItem key={rider.id} value={rider.id}>
+                        {rider.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
             <div>
               <Label>Product *</Label>
               <Select value={selectedProduct} onValueChange={setSelectedProduct}>

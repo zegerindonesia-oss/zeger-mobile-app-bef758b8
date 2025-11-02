@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useSearchParams } from "react-router-dom";
 import { 
   Package, 
@@ -19,7 +21,9 @@ import {
   Camera,
   Upload,
   CheckCircle,
-  ChevronDown
+  ChevronDown,
+  Search,
+  Filter
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -116,6 +120,14 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   const [dateRangeFilter, setDateRangeFilter] = useState<'today' | 'yesterday' | 'this_week' | 'this_month' | 'custom'>('today');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+  
+  // Product filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([
+    "Espresso Based",
+    "Milk Based", 
+    "Refresher"
+  ]);
 
   const getJakartaNow = () => {
     const now = new Date();
@@ -879,8 +891,69 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                 </AlertDialogContent>
               </AlertDialog>
 
+              {/* Filter & Search Section */}
+              <Card className="bg-white">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    {/* Search Input */}
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <Search className="h-4 w-4" />
+                        Cari Product
+                      </Label>
+                      <Input 
+                        placeholder="Ketik nama product..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    {/* Category Checkboxes */}
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <Filter className="h-4 w-4" />
+                        Filter Kategori
+                      </Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                        {["Espresso Based", "Milk Based", "Refresher", "Botol 200ml", "Botol 1 ltr"].map(cat => (
+                          <div key={cat} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={cat}
+                              checked={selectedCategories.includes(cat)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedCategories([...selectedCategories, cat]);
+                                } else {
+                                  setSelectedCategories(selectedCategories.filter(c => c !== cat));
+                                }
+                              }}
+                            />
+                            <label htmlFor={cat} className="text-sm cursor-pointer">
+                              {cat}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {products.map((product) => (
+                {products
+                  .filter(p => {
+                    // Filter by search query
+                    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                    
+                    // Filter by selected categories
+                    const matchesCategory = selectedCategories.length === 0 || 
+                                           selectedCategories.includes(p.category);
+                    
+                    return matchesSearch && matchesCategory;
+                  })
+                  .sort((a, b) => a.name.localeCompare(b.name)) // Sort A-Z
+                  .map((product) => (
                   <div key={product.id} className="flex items-center justify-between p-3 border rounded bg-white">
                     <div>
                       <p className="font-medium">{product.name}</p>
