@@ -32,6 +32,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   // Form states
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedInputRider, setSelectedInputRider] = useState("");
+  const [wasteDate, setWasteDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [quantity, setQuantity] = useState("");
   const [wasteReason, setWasteReason] = useState("");
   const [notes, setNotes] = useState("");
@@ -127,17 +128,13 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
         .lte('created_at', `${end}T23:59:59`)
         .order('created_at', { ascending: false });
 
-      // Filter by rider - ALWAYS require a rider
-      const riderId = assignedRiderId || selectedRider;
-      if (riderId) {
-        query = query.eq('rider_id', riderId);
-      } else {
-        // No rider selected, return early with empty data
-        setWasteData([]);
-        setChartData([]);
-        setLoading(false);
-        return;
+      // Filter by rider - support "all" option
+      if (assignedRiderId) {
+        query = query.eq('rider_id', assignedRiderId);
+      } else if (selectedRider && selectedRider !== 'all') {
+        query = query.eq('rider_id', selectedRider);
       }
+      // If selectedRider === 'all', no rider filter applied (show all riders)
 
       const { data, error } = await query;
       
@@ -217,7 +214,8 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
           waste_reason: wasteReason,
           notes: notes,
           hpp: product?.cost_price || 0,
-          created_by: userProfile.id
+          created_by: userProfile.id,
+          created_at: `${wasteDate}T00:00:00`
         });
 
       if (error) throw error;
@@ -227,6 +225,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       // Reset form
       setSelectedInputRider("");
       setSelectedProduct("");
+      setWasteDate(format(new Date(), 'yyyy-MM-dd'));
       setQuantity("");
       setWasteReason("");
       setNotes("");
@@ -243,7 +242,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   return (
     <div className="space-y-6">
       {/* Filter Section */}
-      <Card>
+      <Card className="bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -316,7 +315,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       </Card>
 
       {/* Chart Section */}
-      <Card>
+      <Card className="bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-destructive" />
@@ -376,7 +375,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       </Card>
 
       {/* Input Form */}
-      <Card>
+      <Card className="bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -406,6 +405,15 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                 </Select>
               </div>
             )}
+
+            <div>
+              <Label>Tanggal *</Label>
+              <Input 
+                type="date" 
+                value={wasteDate} 
+                onChange={(e) => setWasteDate(e.target.value)}
+              />
+            </div>
             
             <div>
               <Label>Product *</Label>
@@ -466,7 +474,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       </Card>
 
       {/* Report Table */}
-      <Card>
+      <Card className="bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trash2 className="h-5 w-5" />
