@@ -115,7 +115,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
 
         {/* Horizontal Scroll Reward Cards */}
         <ScrollArea className="w-full whitespace-nowrap rounded-md">
-          <div className="flex gap-4 pb-4">
+          <div className="flex gap-4 pb-4 min-w-max pr-2">
             {/* Placeholder cards */}
             {Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="flex-shrink-0 w-44 p-4 text-center shadow-md hover:shadow-xl transition-shadow">
@@ -176,7 +176,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
 
         {/* Promo Cards - Horizontal Scroll */}
         <ScrollArea className="w-full whitespace-nowrap rounded-md">
-          <div className="flex gap-4 pb-4">
+          <div className="flex gap-4 pb-4 min-w-max pr-2">
             {filteredPromos.length === 0 ? (
               <Card className="flex-shrink-0 w-80 p-8 text-center">
                 <p className="text-gray-500 whitespace-normal">Tidak ada promo untuk kategori ini</p>
