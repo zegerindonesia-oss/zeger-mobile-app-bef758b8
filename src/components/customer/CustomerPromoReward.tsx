@@ -114,7 +114,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
         </div>
 
         {/* Horizontal Scroll Reward Cards */}
-        <ScrollArea className="w-full whitespace-nowrap">
+        <ScrollArea className="w-full whitespace-nowrap rounded-md">
           <div className="flex gap-4 pb-4">
             {/* Placeholder cards */}
             {Array.from({ length: 3 }).map((_, i) => (
@@ -175,7 +175,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: CustomerPromoR
         </ScrollArea>
 
         {/* Promo Cards - Horizontal Scroll */}
-        <ScrollArea className="w-full whitespace-nowrap">
+        <ScrollArea className="w-full whitespace-nowrap rounded-md">
           <div className="flex gap-4 pb-4">
             {filteredPromos.length === 0 ? (
               <Card className="flex-shrink-0 w-80 p-8 text-center">

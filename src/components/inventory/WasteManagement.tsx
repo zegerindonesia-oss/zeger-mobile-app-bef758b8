@@ -20,8 +20,8 @@ interface WasteManagementProps {
 
 export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagementProps) => {
   const [riders, setRiders] = useState<any[]>([]);
-  const [selectedRider, setSelectedRider] = useState("");
-  const [period, setPeriod] = useState("today");
+  const [selectedRider, setSelectedRider] = useState("all");
+  const [period, setPeriod] = useState("month");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [products, setProducts] = useState<any[]>([]);
@@ -45,11 +45,9 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   useEffect(() => {
     if (assignedRiderId) {
       setSelectedRider(assignedRiderId);
-    } else if (riders.length > 0 && !selectedRider) {
-      // Auto-select first rider if no rider selected
-      setSelectedRider(riders[0].id);
     }
-  }, [assignedRiderId, riders]);
+    // For branch managers: default to "all" riders
+  }, [assignedRiderId]);
 
   useEffect(() => {
     fetchWasteData();
@@ -85,11 +83,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
 
       if (error) throw error;
       setRiders(data || []);
-      
-      // Auto-select first rider if available and no rider selected
-      if (data && data.length > 0 && !selectedRider && !assignedRiderId) {
-        setSelectedRider(data[0].id);
-      }
+      // Default to "all" riders - no auto-select
     } catch (error: any) {
       toast.error("Gagal fetch data rider");
     }
@@ -238,6 +232,34 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   };
 
   const colors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#84CC16', '#EA2831', '#EC4899', '#06B6D4'];
+
+  const calculateSummary = () => {
+    if (wasteData.length === 0) {
+      return {
+        totalQuantity: 0,
+        totalHPP: 0,
+        totalWaste: 0,
+        avgQuantity: 0,
+        avgHPP: 0,
+        avgWaste: 0
+      };
+    }
+
+    const totalQuantity = wasteData.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalHPP = wasteData.reduce((sum, item) => sum + (item.hpp || 0), 0);
+    const totalWaste = wasteData.reduce((sum, item) => sum + (item.total_waste || 0), 0);
+    
+    return {
+      totalQuantity,
+      totalHPP,
+      totalWaste,
+      avgQuantity: Math.round(totalQuantity / wasteData.length),
+      avgHPP: Math.round(totalHPP / wasteData.length),
+      avgWaste: Math.round(totalWaste / wasteData.length)
+    };
+  };
+
+  const summary = calculateSummary();
 
   return (
     <div className="space-y-6">
@@ -526,6 +548,41 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                       </TableCell>
                     </TableRow>
                   ))
+                )}
+                
+                {/* Summary Rows */}
+                {wasteData.length > 0 && (
+                  <>
+                    {/* Total Row */}
+                    <TableRow className="bg-red-50 border-t-2 border-red-200">
+                      <TableCell colSpan={2} className="font-bold text-right">TOTAL:</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right font-bold">{summary.totalQuantity}</TableCell>
+                      <TableCell className="text-right font-bold">
+                        Rp {summary.totalHPP.toLocaleString('id-ID')}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-red-600 text-lg">
+                        Rp {summary.totalWaste.toLocaleString('id-ID')}
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                    
+                    {/* Average Row */}
+                    <TableRow className="bg-gray-50 border-t">
+                      <TableCell colSpan={2} className="font-bold text-right">AVG:</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right font-semibold text-gray-700">{summary.avgQuantity}</TableCell>
+                      <TableCell className="text-right font-semibold text-gray-700">
+                        Rp {summary.avgHPP.toLocaleString('id-ID')}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-gray-700">
+                        Rp {summary.avgWaste.toLocaleString('id-ID')}
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </>
                 )}
               </TableBody>
             </Table>

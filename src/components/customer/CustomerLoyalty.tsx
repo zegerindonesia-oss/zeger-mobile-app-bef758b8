@@ -146,7 +146,7 @@ export function CustomerLoyalty({
 
         {/* Reward Cards */}
         <div className="space-y-4">
-          {rewards.map((reward, index) => <Card key={index} className="bg-gradient-to-br from-[#FF6B6B] to-[#FF5252] text-white rounded-2xl shadow-lg overflow-hidden border-0">
+          {rewards.map((reward, index) => <Card key={index} className="bg-[#EA2831] text-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border-0">
               <div className="p-5 flex items-center justify-between">
                 <div className="flex-1">
                   <h3 className="text-lg font-bold mb-1">{reward.title}</h3>
