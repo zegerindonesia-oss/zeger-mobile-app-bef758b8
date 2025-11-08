@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
-
 const cleanupAuthState = () => {
   try {
     Object.keys(localStorage).forEach(key => {
@@ -29,10 +28,13 @@ const cleanupAuthState = () => {
     // ignore
   }
 };
-
 const Auth = () => {
   const isMobile = useIsMobile();
-  const { user, userProfile, loading } = useAuth();
+  const {
+    user,
+    userProfile,
+    loading
+  } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -49,24 +51,21 @@ const Auth = () => {
         'rider': '/mobile-seller',
         'sb_rider': '/mobile-seller',
         'bh_rider': '/mobile-seller',
-        'customer': '/customer-app', 
+        'customer': '/customer-app',
         'ho_admin': '/',
         'branch_manager': '/',
         'finance': '/'
       };
-      
       const targetUrl = roleRedirects[userProfile.role as keyof typeof roleRedirects] || '/';
       window.location.replace(targetUrl);
     }
   }, [user, userProfile, loading]);
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -118,7 +117,6 @@ const Auth = () => {
       setAuthLoading(false);
     }
   };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -151,32 +149,27 @@ const Auth = () => {
 
   // Show loading while checking authentication status
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-red-500 to-red-400">
+    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-red-500 to-red-400">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p className="text-white text-lg font-medium">Memuat...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // If user is already authenticated, show loading (will redirect via useEffect)
   if (user && userProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-red-500 to-red-400">
+    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-600 via-red-500 to-red-400">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p className="text-white text-lg font-medium">Mengarahkan ke dashboard...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
   return <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-500 to-red-400 relative overflow-hidden">
       <div className={`flex min-h-screen items-center justify-center relative ${isMobile ? 'p-4' : ''}`}>
         {/* Left Side - Brand Content - Hidden on mobile */}
-        {!isMobile && (
-          <div className="flex-1 flex flex-col justify-center items-start px-8 lg:px-16 text-white max-w-2xl">
+        {!isMobile && <div className="flex-1 flex flex-col justify-center items-start px-8 lg:px-16 text-white max-w-2xl">
             <div className="space-y-8">
               <div className="space-y-6">
                 <div className="flex justify-start">
@@ -196,18 +189,15 @@ const Auth = () => {
                 We deliver a happiness coffee fresh from original Indonesian coffee without any further requirements
               </p>
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Center - Login Form */}
         <div className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-lg mx-8'}`}>
           <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mx-auto">
             {/* Mobile logo */}
-            {isMobile && (
-              <div className="text-center mb-6">
+            {isMobile && <div className="text-center mb-6">
                 <ZegerLogo size="md" className="text-red-600 mx-auto" />
-              </div>
-            )}
+              </div>}
             
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
@@ -228,26 +218,10 @@ const Auth = () => {
                 <TabsContent value="signin" className="mt-6">
                   <form onSubmit={handleSignIn} className="space-y-5">
                     <div className="space-y-2">
-                      <Input 
-                        id="signin-email" 
-                        type="email" 
-                        placeholder="Username" 
-                        value={formData.email} 
-                        onChange={e => handleInputChange("email", e.target.value)} 
-                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
-                        required 
-                      />
+                      <Input id="signin-email" type="email" placeholder="Username" value={formData.email} onChange={e => handleInputChange("email", e.target.value)} className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" required />
                     </div>
                     <div className="space-y-2">
-                      <Input 
-                        id="signin-password" 
-                        type="password" 
-                        placeholder="Password" 
-                        value={formData.password} 
-                        onChange={e => handleInputChange("password", e.target.value)} 
-                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
-                        required 
-                      />
+                      <Input id="signin-password" type="password" placeholder="Password" value={formData.password} onChange={e => handleInputChange("password", e.target.value)} className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" required />
                     </div>
                     <div className="text-right">
                       <a href="#" className="text-sm text-red-600 hover:text-red-700">
@@ -263,53 +237,21 @@ const Auth = () => {
                 <TabsContent value="signup" className="mt-6">
                   <form onSubmit={handleSignUp} className="space-y-5">
                     <div className="space-y-2">
-                      <Input 
-                        id="signup-name" 
-                        placeholder="Full Name" 
-                        value={formData.full_name} 
-                        onChange={e => handleInputChange("full_name", e.target.value)} 
-                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
-                        required 
-                      />
+                      <Input id="signup-name" placeholder="Full Name" value={formData.full_name} onChange={e => handleInputChange("full_name", e.target.value)} className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" required />
                     </div>
                     <div className="space-y-2">
-                      <Input 
-                        id="signup-email" 
-                        type="email" 
-                        placeholder="Email" 
-                        value={formData.email} 
-                        onChange={e => handleInputChange("email", e.target.value)} 
-                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
-                        required 
-                      />
+                      <Input id="signup-email" type="email" placeholder="Email" value={formData.email} onChange={e => handleInputChange("email", e.target.value)} className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" required />
                     </div>
                     <div className="space-y-2">
-                      <Input 
-                        id="signup-phone" 
-                        type="tel" 
-                        placeholder="Phone Number" 
-                        value={formData.phone} 
-                        onChange={e => handleInputChange("phone", e.target.value)} 
-                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
-                      />
+                      <Input id="signup-phone" type="tel" placeholder="Phone Number" value={formData.phone} onChange={e => handleInputChange("phone", e.target.value)} className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" />
                     </div>
                     <div className="space-y-2">
-                      <Input 
-                        id="signup-password" 
-                        type="password" 
-                        placeholder="Password" 
-                        value={formData.password} 
-                        onChange={e => handleInputChange("password", e.target.value)} 
-                        className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" 
-                        required 
-                      />
+                      <Input id="signup-password" type="password" placeholder="Password" value={formData.password} onChange={e => handleInputChange("password", e.target.value)} className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" required />
                     </div>
                     <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white rounded-full py-6 text-lg font-semibold" disabled={authLoading}>
                       {authLoading ? "Creating Account..." : "Sign Up"}
                     </Button>
-                    <p className="text-xs text-gray-500 text-center">
-                      *Sign up untuk customer. Akun staff/karyawan dikelola dari backoffice.
-                    </p>
+                    
                   </form>
                 </TabsContent>
               </Tabs>
