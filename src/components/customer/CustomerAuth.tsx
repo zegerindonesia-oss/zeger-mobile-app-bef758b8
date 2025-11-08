@@ -19,6 +19,8 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState('');
   
   const [formData, setFormData] = useState({
     email: '',
@@ -43,7 +45,20 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
         password: formData.password
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's an email not confirmed error
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "❌ Email Belum Diverifikasi",
+            description: "Silakan cek email Anda dan klik link verifikasi terlebih dahulu.",
+            variant: "destructive",
+            duration: 8000
+          });
+          setLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       if (data.user) {
         // Check if customer profile exists
@@ -98,8 +113,23 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
       if (error) throw error;
 
-      if (data.user) {
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required
+        setUnconfirmedEmail(formData.email);
+        setEmailSent(true);
+        toast({
+          title: "📧 Cek Email Anda!",
+          description: "Kami telah mengirim link verifikasi ke email Anda. Silakan cek inbox atau folder spam.",
+          duration: 8000
+        });
+      } else if (data.user && data.session) {
+        // Auto-login enabled, proceed to complete profile
         setMode('complete-profile');
+        toast({
+          title: "✅ Berhasil Daftar!",
+          description: "Silakan lengkapi profil Anda",
+        });
       }
     } catch (error: any) {
       toast({
@@ -317,6 +347,47 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
     </form>
   );
 
+  const renderEmailSent = () => (
+    <div className="space-y-6 text-center py-4">
+      <div className="text-6xl">📧</div>
+      <div className="space-y-3">
+        <h3 className="font-semibold text-lg">Cek Email Anda!</h3>
+        <p className="text-sm text-muted-foreground">
+          Kami telah mengirim link verifikasi ke:
+        </p>
+        <p className="font-medium text-primary">{unconfirmedEmail}</p>
+        <p className="text-sm text-muted-foreground px-4">
+          Silakan buka email Anda dan klik link verifikasi untuk melanjutkan. Jangan lupa cek folder spam jika tidak menemukannya di inbox.
+        </p>
+      </div>
+      
+      <div className="space-y-2 pt-4">
+        <Button 
+          onClick={() => {
+            setEmailSent(false);
+            setMode('login');
+          }}
+          variant="outline"
+          className="w-full"
+        >
+          Kembali ke Login
+        </Button>
+        
+        <Button 
+          onClick={() => {
+            setEmailSent(false);
+            setMode('register');
+            setFormData(prev => ({ ...prev, email: '', password: '', confirmPassword: '' }));
+          }}
+          variant="ghost"
+          className="w-full"
+        >
+          Daftar dengan Email Lain
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -333,9 +404,13 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
         </CardHeader>
         
         <CardContent>
-          {mode === 'login' && renderLogin()}
-          {mode === 'register' && renderRegister()}
-          {mode === 'complete-profile' && renderCompleteProfile()}
+          {emailSent ? renderEmailSent() : (
+            <>
+              {mode === 'login' && renderLogin()}
+              {mode === 'register' && renderRegister()}
+              {mode === 'complete-profile' && renderCompleteProfile()}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
