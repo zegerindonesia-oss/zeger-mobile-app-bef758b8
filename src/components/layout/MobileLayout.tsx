@@ -94,7 +94,7 @@ export const MobileLayout = ({ children }: MobileLayoutProps) => {
             branch={branch}
           />
           
-          <main className="flex-1 overflow-auto pb-16 mt-16 px-safe">
+          <main className="flex-1 overflow-auto pb-28 mt-16 px-safe">
             <div className="max-w-full overflow-x-hidden">
               {children || <Outlet />}
             </div>

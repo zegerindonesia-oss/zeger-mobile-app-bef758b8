@@ -432,7 +432,7 @@ const MobileSellerEnhanced = () => {
     return final;
   };
   return <div className="w-full max-w-md mx-auto min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white overflow-x-hidden">
-      <div className="bg-white/95 backdrop-blur-md text-gray-800 min-h-screen p-4 max-w-full">
+      <div className="bg-white/95 backdrop-blur-md text-gray-800 min-h-screen p-4 pb-32 max-w-full">
         {/* Header */}
         
         {/* Blocking screens for preconditions */}
@@ -525,7 +525,10 @@ const MobileSellerEnhanced = () => {
 
             <ScrollArea className="h-80">
               <div className="space-y-3">
-                {stockItems.filter(item => item.product.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => {
+                {stockItems
+                  .filter(item => item.product.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .sort((a, b) => b.rider_stock - a.rider_stock)
+                  .map(item => {
               const cartItem = cart.find(c => c.product_id === item.product_id);
               const inCartQuantity = cartItem?.quantity || 0;
                 return <div 
@@ -646,48 +649,45 @@ const MobileSellerEnhanced = () => {
             {/* Payment Method Selection */}
             <div className="space-y-3">
               <label className="text-sm font-medium">Metode Pembayaran: <span className="text-red-500">*</span></label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   type="button"
-                  variant={paymentMethod === 'cash' ? 'default' : 'outline'}
                   onClick={() => setPaymentMethod('cash')}
                   className={cn(
-                    "flex-1 rounded-full h-14 text-lg font-semibold transition-all",
+                    "flex-1 min-w-[100px] rounded-full h-12 text-sm md:text-base font-semibold transition-all",
                     paymentMethod === 'cash' 
-                      ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
-                      : "border-red-200 text-red-600 hover:bg-red-50"
+                      ? "bg-red-600 hover:bg-red-700 text-white shadow-[0_4px_14px_0_rgba(220,38,38,0.5)]" 
+                      : "bg-red-500 hover:bg-red-600 text-white shadow-md"
                   )}
                 >
-                  <DollarSign className="h-5 w-5 mr-2" />
+                  <DollarSign className="h-4 w-4 mr-1" />
                   Tunai
                 </Button>
                 <Button
                   type="button"
-                  variant={paymentMethod === 'qris' ? 'default' : 'outline'}
                   onClick={() => setPaymentMethod('qris')}
                   className={cn(
-                    "flex-1 rounded-full h-14 text-lg font-semibold transition-all",
+                    "flex-1 min-w-[100px] rounded-full h-12 text-sm md:text-base font-semibold transition-all",
                     paymentMethod === 'qris' 
-                      ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
-                      : "border-red-200 text-red-600 hover:bg-red-50"
+                      ? "bg-red-600 hover:bg-red-700 text-white shadow-[0_4px_14px_0_rgba(220,38,38,0.5)]" 
+                      : "bg-red-500 hover:bg-red-600 text-white shadow-md"
                   )}
                 >
-                  <Smartphone className="h-5 w-5 mr-2" />
+                  <Smartphone className="h-4 w-4 mr-1" />
                   QRIS
                 </Button>
                 <Button
                   type="button"
-                  variant={paymentMethod === 'transfer' ? 'default' : 'outline'}
                   onClick={() => setPaymentMethod('transfer')}
                   className={cn(
-                    "flex-1 rounded-full h-14 text-lg font-semibold transition-all",
+                    "flex-1 min-w-[100px] rounded-full h-12 text-sm md:text-base font-semibold transition-all",
                     paymentMethod === 'transfer' 
-                      ? "bg-red-500 hover:bg-red-600 text-white shadow-lg" 
-                      : "border-red-200 text-red-600 hover:bg-red-50"
+                      ? "bg-red-600 hover:bg-red-700 text-white shadow-[0_4px_14px_0_rgba(220,38,38,0.5)]" 
+                      : "bg-red-500 hover:bg-red-600 text-white shadow-md"
                   )}
                 >
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  Transfer Bank
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  Transfer
                 </Button>
               </div>
               {!paymentMethod && (
