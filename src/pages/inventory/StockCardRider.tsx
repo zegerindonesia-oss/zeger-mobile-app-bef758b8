@@ -150,8 +150,7 @@ export default function StockCardRider() {
         `)
         .eq('transactions.rider_id', selectedRider)
         .gte('transactions.created_at', `${start}T00:00:00+07:00`)
-        .lte('transactions.created_at', `${end}T23:59:59+07:00`)
-        .order('transactions.created_at', { ascending: true });
+        .lte('transactions.created_at', `${end}T23:59:59+07:00`);
 
       if (transError) throw transError;
 
@@ -233,7 +232,8 @@ export default function StockCardRider() {
         productMap.set(productId, existing);
       });
 
-      const stockCardArray = Array.from(productMap.values());
+      const stockCardArray = Array.from(productMap.values())
+        .sort((a, b) => a.product_name.localeCompare(b.product_name));
       setStockCardData(stockCardArray);
 
       // Calculate summary
@@ -249,7 +249,7 @@ export default function StockCardRider() {
       setSummaryData(summary);
     } catch (error: any) {
       console.error('Error fetching stock card:', error);
-      toast.error('Gagal memuat data stock card');
+      toast.error(`Gagal memuat data stock card: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
