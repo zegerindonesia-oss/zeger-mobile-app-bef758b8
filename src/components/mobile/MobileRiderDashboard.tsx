@@ -783,6 +783,21 @@ const MobileRiderDashboard = () => {
 
       if (invError) throw invError;
 
+      // Fetch stock returns
+      const { data: stockReturns, error: returnError } = await supabase
+        .from('stock_movements')
+        .select(`
+          quantity,
+          product_id,
+          products(name, cost_price)
+        `)
+        .eq('rider_id', riderProfile.id)
+        .in('movement_type', ['return', 'out'])
+        .gte('created_at', `${start}T00:00:00+07:00`)
+        .lte('created_at', `${end}T23:59:59+07:00`);
+
+      if (returnError) throw returnError;
+
       // Process data by product
       const productMap = new Map<string, any>();
 
@@ -844,12 +859,10 @@ const MobileRiderDashboard = () => {
         }
       });
 
-      // Add remaining stock from inventory
-      let totalRemainingStock = 0;
-      inventory?.forEach((item: any) => {
+      // Process stock returned
+      stockReturns?.forEach((item: any) => {
         const productId = item.product_id;
         const productName = item.products?.name || 'Unknown';
-        const costPrice = item.products?.cost_price || 0;
 
         if (!productMap.has(productId)) {
           productMap.set(productId, {
@@ -863,15 +876,27 @@ const MobileRiderDashboard = () => {
         }
 
         const existing = productMap.get(productId)!;
-        existing.remaining_stock = item.stock_quantity;
-        existing.stock_returned = item.stock_quantity;
-        existing.stock_value = item.stock_quantity * costPrice;
-        totalRemainingStock += item.stock_quantity;
+        existing.stock_returned += item.quantity;
         productMap.set(productId, existing);
       });
 
+      // Calculate remaining stock and value
+      let totalRemainingStock = 0;
+      productMap.forEach((item, productId) => {
+        // Get cost price from inventory
+        const invItem = inventory?.find((inv: any) => inv.product_id === productId);
+        const costPrice = invItem?.products?.cost_price || 0;
+
+        // Calculate remaining stock = stock_in - stock_sold
+        item.remaining_stock = item.stock_in - item.stock_sold;
+        
+        // Calculate stock value = remaining_stock * cost_price
+        item.stock_value = item.remaining_stock * costPrice;
+        totalRemainingStock += item.remaining_stock;
+      });
+
       const stockCardArray = Array.from(productMap.values())
-        .filter(item => item.stock_in > 0 || item.stock_sold > 0 || item.remaining_stock > 0)
+        .filter(item => item.stock_in > 0 || item.stock_sold > 0 || item.remaining_stock > 0 || item.stock_returned > 0)
         .sort((a, b) => a.product_name.localeCompare(b.product_name));
 
       setStockCardData(stockCardArray);
