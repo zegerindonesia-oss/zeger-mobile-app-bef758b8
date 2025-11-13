@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 interface TransactionData {
   date: string;
-  riderName: string;
+  productName: string;
   productsSold: number;
   totalSales: number;
   totalCKPrice: number;
@@ -177,20 +177,15 @@ export default function CentralKitchenAnalytics() {
         return;
       }
 
-      // Process transaction data for detail table
+      // Process transaction data - breakdown per product
       const transactionArray: TransactionData[] = [];
-      
       let totalCKPrice = 0;
 
       transactions.forEach(transaction => {
-        const riderName = transaction.profiles?.full_name || 'Unknown';
+        const transactionDate = format(new Date(transaction.transaction_date), 'yyyy-MM-dd');
         const items = transaction.transaction_items || [];
         
-        let txnProductsSold = 0;
-        let txnTotalSales = 0;
-        let txnTotalCKPrice = 0;
-        let txnTotalHPP = 0;
-
+        // Create separate row for each product
         items.forEach(item => {
           const product = item.products;
           if (!product) return;
@@ -200,29 +195,31 @@ export default function CentralKitchenAnalytics() {
           const costPrice = Number(product.cost_price || 0);
           const sellingPrice = Number(item.unit_price || product.price || 0);
 
-          txnProductsSold += quantity;
-          txnTotalSales += quantity * sellingPrice;
-          txnTotalCKPrice += quantity * ckPrice;
-          txnTotalHPP += quantity * costPrice;
+          const itemTotalSales = quantity * sellingPrice;
+          const itemTotalCKPrice = quantity * ckPrice;
+          const itemTotalHPP = quantity * costPrice;
+          const itemProfitCK = itemTotalHPP - itemTotalCKPrice;
+
+          transactionArray.push({
+            date: transactionDate,
+            productName: product.name,
+            productsSold: quantity,
+            totalSales: itemTotalSales,
+            totalCKPrice: itemTotalCKPrice,
+            totalHPP: itemTotalHPP,
+            profitCK: itemProfitCK
+          });
+
+          totalCKPrice += itemTotalCKPrice;
         });
-
-        const txnProfitCK = txnTotalHPP - txnTotalCKPrice;
-
-        transactionArray.push({
-          date: format(new Date(transaction.transaction_date), 'yyyy-MM-dd'),
-          riderName,
-          productsSold: txnProductsSold,
-          totalSales: txnTotalSales,
-          totalCKPrice: txnTotalCKPrice,
-          totalHPP: txnTotalHPP,
-          profitCK: txnProfitCK
-        });
-
-        totalCKPrice += txnTotalCKPrice;
       });
 
-      // Sort by date
-      transactionArray.sort((a, b) => a.date.localeCompare(b.date));
+      // Sort by date then product name
+      transactionArray.sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        return a.productName.localeCompare(b.productName);
+      });
       setTransactionData(transactionArray);
 
       // Prepare resume data using Dashboard calculation functions
@@ -471,7 +468,7 @@ export default function CentralKitchenAnalytics() {
               <TableRow>
                 <TableHead className="w-16">No</TableHead>
                 <TableHead>Tanggal</TableHead>
-                <TableHead>Nama Rider</TableHead>
+                <TableHead>Nama Produk</TableHead>
                 <TableHead className="text-right">Produk Terjual</TableHead>
                 <TableHead className="text-right">Total Sales</TableHead>
                 <TableHead className="text-right">Harga CK</TableHead>
@@ -491,7 +488,7 @@ export default function CentralKitchenAnalytics() {
                   <TableRow key={`${row.date}-${index}`}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{format(new Date(row.date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{row.riderName}</TableCell>
+                    <TableCell>{row.productName}</TableCell>
                     <TableCell className="text-right">{row.productsSold.toLocaleString()}</TableCell>
                     <TableCell className="text-right">Rp {row.totalSales.toLocaleString()}</TableCell>
                     <TableCell className="text-right">Rp {row.totalCKPrice.toLocaleString()}</TableCell>
