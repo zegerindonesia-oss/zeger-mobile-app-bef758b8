@@ -154,6 +154,7 @@ export const LocationAnalytics = () => {
           transaction_date
         `)
         .eq('status', 'completed')
+        .eq('is_voided', false)
         .not('transaction_latitude', 'is', null)
         .not('transaction_longitude', 'is', null)
         .gte('transaction_date', `${startDate}T00:00:00+07:00`)
