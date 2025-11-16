@@ -168,6 +168,7 @@ export const BranchHubReportDashboard = () => {
         .from('transactions')
         .select('final_amount, id, rider_id, payment_method, branch_id')
         .eq('status', 'completed')
+        .eq('is_voided', false)
         .eq('rider_id', assignedRiderId)
         .gte('transaction_date', `${startStr}T00:00:00`)
         .lte('transaction_date', `${endStr}T23:59:59`);
@@ -318,6 +319,7 @@ export const BranchHubReportDashboard = () => {
             .from('transactions')
             .select('final_amount')
             .eq('status', 'completed')
+            .eq('is_voided', false)
             .eq('rider_id', assignedRiderId)
             .gte('transaction_date', `${dateStr}T00:00:00`)
             .lte('transaction_date', `${dateStr}T23:59:59`);
@@ -344,6 +346,7 @@ export const BranchHubReportDashboard = () => {
             .from('transactions')
             .select('final_amount')
             .eq('status', 'completed')
+            .eq('is_voided', false)
             .eq('rider_id', assignedRiderId)
             .gte('transaction_date', monthStart.toISOString())
             .lte('transaction_date', monthEnd.toISOString());
@@ -373,6 +376,7 @@ export const BranchHubReportDashboard = () => {
             products!inner(name)
           )
         `).eq('status', 'completed')
+        .eq('is_voided', false)
         .eq('rider_id', assignedRiderId)
         .gte('transaction_date', `${startDate}T00:00:00`)
         .lte('transaction_date', `${endDate}T23:59:59`);
@@ -448,6 +452,7 @@ export const BranchHubReportDashboard = () => {
             products!inner(name)
           )
         `).eq('status', 'completed')
+        .eq('is_voided', false)
         .eq('rider_id', assignedRiderId)
         .gte('transaction_date', `${startDate}T00:00:00`)
         .lte('transaction_date', `${endDate}T23:59:59`);

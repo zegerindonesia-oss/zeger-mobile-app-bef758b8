@@ -79,6 +79,7 @@ const MobileRiderAnalytics = () => {
         .from('transactions')
         .select('final_amount')
         .eq('rider_id', profile.id)
+        .eq('is_voided', false)
         .gte('transaction_date', `${today}T00:00:00`)
         .lte('transaction_date', `${today}T23:59:59`);
 
@@ -89,6 +90,7 @@ const MobileRiderAnalytics = () => {
         .from('transactions')
         .select('final_amount')
         .eq('rider_id', profile.id)
+        .eq('is_voided', false)
         .gte('transaction_date', `${weekAgo}T00:00:00`)
         .lte('transaction_date', `${today}T23:59:59`);
 
@@ -99,6 +101,7 @@ const MobileRiderAnalytics = () => {
         .from('transactions')
         .select('final_amount')
         .eq('rider_id', profile.id)
+        .eq('is_voided', false)
         .gte('transaction_date', `${monthAgo}T00:00:00`)
         .lte('transaction_date', `${today}T23:59:59`);
 

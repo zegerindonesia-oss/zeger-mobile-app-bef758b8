@@ -156,7 +156,8 @@ export default function CentralKitchenAnalytics() {
         `)
         .gte('transaction_date', start.toISOString())
         .lte('transaction_date', end.toISOString())
-        .eq('status', 'completed');
+        .eq('status', 'completed')
+        .eq('is_voided', false);
 
       if (userProfile.role === 'branch_manager') {
         transactionQuery = transactionQuery.eq('branch_id', userProfile.branch_id);
