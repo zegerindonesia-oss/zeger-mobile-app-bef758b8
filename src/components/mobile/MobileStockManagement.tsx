@@ -491,6 +491,7 @@ const MobileStockManagement = () => {
         .gte('transaction_date', startRange)
         .lte('transaction_date', endRange)
         .eq('status', 'completed')  // Only completed transactions
+        .eq('is_voided', false)  // Exclude voided transactions
         .order('transaction_date', { ascending: false });
 
       console.log('All transactions today:', allTransactions);
@@ -716,27 +717,50 @@ const MobileStockManagement = () => {
     if (activeShift) return activeShift;
     
     try {
-      // Create a new shift for today
+      const today = getTodayJakarta();
+      
+      // Check if there are any shifts today (active or completed)
+      const { data: existingShifts } = await supabase
+        .from('shift_management')
+        .select('shift_number')
+        .eq('rider_id', userProfile.id)
+        .eq('shift_date', today)
+        .order('shift_number', { ascending: false })
+        .limit(1);
+      
+      // Determine next shift number
+      const nextShiftNumber = existingShifts && existingShifts.length > 0 
+        ? (existingShifts[0].shift_number || 1) + 1 
+        : 1;
+      
+      // Create a new shift with incremented shift number
       const { data: newShift, error: shiftError } = await supabase
         .from('shift_management')
         .insert([{
           rider_id: userProfile.id,
           branch_id: userProfile.branch_id,
-          shift_date: getTodayJakarta(),
-          shift_number: 1,
+          shift_date: today,
+          shift_number: nextShiftNumber,
           status: 'active'
         }])
         .select()
         .single();
 
-      if (shiftError) throw shiftError;
+      if (shiftError) {
+        console.error('Shift creation error:', shiftError);
+        throw new Error(`Tidak dapat membuat shift: ${shiftError.message}`);
+      }
       
       setActiveShift(newShift);
-      toast.success("Shift otomatis dibuat untuk laporan hari ini");
+      if (nextShiftNumber > 1) {
+        toast.success(`Shift ${nextShiftNumber} dibuat untuk melanjutkan laporan hari ini`);
+      } else {
+        toast.success("Shift otomatis dibuat untuk laporan hari ini");
+      }
       return newShift;
     } catch (error: any) {
       console.error('Failed to create shift:', error);
-      toast.error("Gagal membuat shift: " + error.message);
+      toast.error(error.message || "Gagal membuat shift");
       return null;
     }
   };
