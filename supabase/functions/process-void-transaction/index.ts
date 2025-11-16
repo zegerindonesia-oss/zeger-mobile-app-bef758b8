@@ -11,31 +11,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Create client with service role for admin operations
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Verify user authentication using anon key client
+    // Verify user authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Unauthorized: No authorization header');
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const supabaseUser = createClient(
+    // Create client with user's auth token for authentication
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
       console.error('Auth error:', authError);
       throw new Error('Unauthorized');
     }
+
+    // Create admin client for database operations
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     const { void_request_id, action, reviewer_notes } = await req.json();
     console.log('Processing void request:', { void_request_id, action, user_id: user.id });
