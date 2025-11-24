@@ -1020,6 +1020,54 @@ export type Database = {
           },
         ]
       }
+      product_price_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          field_name: string
+          id: string
+          new_value: number
+          notes: string | null
+          old_value: number
+          product_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          field_name: string
+          id?: string
+          new_value: number
+          notes?: string | null
+          old_value: number
+          product_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          field_name?: string
+          id?: string
+          new_value?: number
+          notes?: string | null
+          old_value?: number
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_price_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_waste: {
         Row: {
           branch_id: string
@@ -1527,9 +1575,91 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          branch_id: string | null
+          created_at: string | null
+          current_qty: number
+          id: string
+          is_acknowledged: boolean | null
+          message: string
+          product_id: string
+          resolved_at: string | null
+          rider_id: string | null
+          severity: string
+          threshold_qty: number | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          branch_id?: string | null
+          created_at?: string | null
+          current_qty: number
+          id?: string
+          is_acknowledged?: boolean | null
+          message: string
+          product_id: string
+          resolved_at?: string | null
+          rider_id?: string | null
+          severity?: string
+          threshold_qty?: number | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          branch_id?: string | null
+          created_at?: string | null
+          current_qty?: number
+          id?: string
+          is_acknowledged?: boolean | null
+          message?: string
+          product_id?: string
+          resolved_at?: string | null
+          rider_id?: string | null
+          severity?: string
+          threshold_qty?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           actual_delivery_date: string | null
+          approved_at: string | null
+          approved_by: string | null
           branch_id: string | null
           created_at: string | null
           created_by: string | null
@@ -1541,12 +1671,18 @@ export type Database = {
           quantity: number
           reference_id: string | null
           reference_type: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          requires_approval: boolean | null
           rider_id: string | null
           status: string | null
           verification_photo_url: string | null
         }
         Insert: {
           actual_delivery_date?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1558,12 +1694,18 @@ export type Database = {
           quantity: number
           reference_id?: string | null
           reference_type?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requires_approval?: boolean | null
           rider_id?: string | null
           status?: string | null
           verification_photo_url?: string | null
         }
         Update: {
           actual_delivery_date?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1575,11 +1717,22 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requires_approval?: boolean | null
           rider_id?: string | null
           status?: string | null
           verification_photo_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_movements_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_movements_branch_id_fkey"
             columns: ["branch_id"]
@@ -1602,7 +1755,221 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_movements_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_movements_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_opname: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          opname_date: string
+          opname_number: string
+          rejected_reason: string | null
+          rider_id: string | null
+          status: string
+          submitted_at: string | null
+          total_items: number | null
+          total_variance_qty: number | null
+          total_variance_value: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          opname_date?: string
+          opname_number: string
+          rejected_reason?: string | null
+          rider_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_items?: number | null
+          total_variance_qty?: number | null
+          total_variance_value?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          opname_date?: string
+          opname_number?: string
+          rejected_reason?: string | null
+          rider_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_items?: number | null
+          total_variance_qty?: number | null
+          total_variance_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opname_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opname_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opname_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opname_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_opname_items: {
+        Row: {
+          actual_qty: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          opname_id: string
+          product_id: string
+          system_qty: number
+          unit_cost: number | null
+          variance_qty: number | null
+          variance_value: number | null
+        }
+        Insert: {
+          actual_qty?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opname_id: string
+          product_id: string
+          system_qty?: number
+          unit_cost?: number | null
+          variance_qty?: number | null
+          variance_value?: number | null
+        }
+        Update: {
+          actual_qty?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opname_id?: string
+          product_id?: string
+          system_qty?: number
+          unit_cost?: number | null
+          variance_qty?: number | null
+          variance_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opname_items_opname_id_fkey"
+            columns: ["opname_id"]
+            isOneToOne: false
+            referencedRelation: "stock_opname"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opname_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_reservations: {
+        Row: {
+          branch_id: string | null
+          cancelled_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          fulfilled_at: string | null
+          id: string
+          product_id: string
+          quantity: number
+          reference_id: string
+          reference_type: string
+          rider_id: string | null
+          status: string
+        }
+        Insert: {
+          branch_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          product_id: string
+          quantity: number
+          reference_id: string
+          reference_type: string
+          rider_id?: string | null
+          status?: string
+        }
+        Update: {
+          branch_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          product_id?: string
+          quantity?: number
+          reference_id?: string
+          reference_type?: string
+          rider_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reservations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_rider_id_fkey"
             columns: ["rider_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2007,6 +2374,81 @@ export type Database = {
         }
         Relationships: []
       }
+      v_active_stock_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string | null
+          branch_id: string | null
+          branch_name: string | null
+          created_at: string | null
+          current_qty: number | null
+          id: string | null
+          is_acknowledged: boolean | null
+          message: string | null
+          product_id: string | null
+          product_name: string | null
+          resolved_at: string | null
+          rider_id: string | null
+          rider_name: string | null
+          severity: string | null
+          threshold_qty: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_pending_approvals: {
+        Row: {
+          branch_name: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          id: string | null
+          movement_type:
+            | Database["public"]["Enums"]["stock_movement_type"]
+            | null
+          notes: string | null
+          product_name: string | null
+          quantity: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _postgis_deprecate: {
@@ -2098,6 +2540,10 @@ export type Database = {
         Returns: unknown
       }
       _st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      acknowledge_stock_alert: {
+        Args: { alert_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
       addauth: { Args: { "": string }; Returns: boolean }
       addgeometrycolumn:
         | {
@@ -2136,6 +2582,14 @@ export type Database = {
             }
             Returns: string
           }
+      approve_stock_adjustment: {
+        Args: { approver_uuid: string; movement_uuid: string }
+        Returns: boolean
+      }
+      approve_stock_opname: {
+        Args: { approver_uuid: string; opname_uuid: string }
+        Returns: boolean
+      }
       can_manage_role: {
         Args: {
           manager_role: Database["public"]["Enums"]["user_role"]
@@ -2148,6 +2602,14 @@ export type Database = {
         Args: { customer_user_uuid: string }
         Returns: boolean
       }
+      check_adjustment_approval_required: {
+        Args: {
+          movement_qty: number
+          movement_type_param: Database["public"]["Enums"]["stock_movement_type"]
+        }
+        Returns: boolean
+      }
+      check_stock_levels: { Args: never; Returns: number }
       check_user_role: {
         Args: {
           check_user_id: string
@@ -2195,6 +2657,12 @@ export type Database = {
           }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      expire_old_reservations: { Args: never; Returns: number }
+      fulfill_stock_reservation: {
+        Args: { order_uuid: string }
+        Returns: boolean
+      }
+      generate_opname_number: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -2312,6 +2780,10 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_current_user_role_safe: {
+        Args: never
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
       get_user_level: {
         Args: { user_role_param: Database["public"]["Enums"]["user_role"] }
         Returns: number
@@ -2405,6 +2877,19 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      reject_stock_adjustment: {
+        Args: { movement_uuid: string; reason: string; rejector_uuid: string }
+        Returns: boolean
+      }
+      release_stock_reservation: {
+        Args: { new_status?: string; reservation_uuid: string }
+        Returns: boolean
+      }
+      reserve_stock_for_order: {
+        Args: { order_uuid: string }
+        Returns: boolean
+      }
+      resolve_stock_alert: { Args: { alert_uuid: string }; Returns: boolean }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
