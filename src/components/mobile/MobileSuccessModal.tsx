@@ -6,12 +6,14 @@ interface MobileSuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  message?: string;
 }
 
 export const MobileSuccessModal = ({ 
   isOpen, 
   onClose, 
-  title = "Transaksi Berhasil" 
+  title = "Transaksi Berhasil",
+  message = "Transaksi telah berhasil diproses"
 }: MobileSuccessModalProps) => {
   useEffect(() => {
     if (isOpen) {
@@ -47,7 +49,7 @@ export const MobileSuccessModal = ({
               {title}
             </h2>
             <p className="text-gray-600">
-              Transaksi telah berhasil diproses
+              {message}
             </p>
           </div>
         </div>

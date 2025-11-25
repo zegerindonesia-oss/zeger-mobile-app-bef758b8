@@ -341,6 +341,7 @@ const MobileStockManagement = () => {
   const [pendingStock, setPendingStock] = useState<StockItem[]>([]);
   const [receivedStock, setReceivedStock] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeShift, setActiveShift] = useState<any>(null);
   const [tab, setTab] = useState<'receive' | 'return' | 'history' | 'shift'>('receive');
   const [cashDepositPhoto, setCashDepositPhoto] = useState<File | undefined>(undefined);
@@ -719,21 +720,36 @@ const MobileStockManagement = () => {
     try {
       const today = getTodayJakarta();
       
-      // Check if there are any shifts today (active or completed)
+      // Check if there are any shifts today - get ALL shifts to properly check status
       const { data: existingShifts } = await supabase
         .from('shift_management')
-        .select('shift_number')
+        .select('*')
         .eq('rider_id', userProfile.id)
         .eq('shift_date', today)
-        .order('shift_number', { ascending: false })
-        .limit(1);
+        .order('shift_number', { ascending: false });
+      
+      if (existingShifts && existingShifts.length > 0) {
+        const latestShift = existingShifts[0];
+        
+        // If the latest shift is already completed/closed and report submitted, don't create new shift
+        if ((latestShift.status === 'closed' || latestShift.status === 'completed') && latestShift.report_submitted) {
+          setActiveShift(latestShift);
+          return latestShift;
+        }
+        
+        // If there's an active shift, use it
+        if (latestShift.status === 'active') {
+          setActiveShift(latestShift);
+          return latestShift;
+        }
+      }
       
       // Determine next shift number
       const nextShiftNumber = existingShifts && existingShifts.length > 0 
         ? (existingShifts[0].shift_number || 1) + 1 
         : 1;
       
-      // Create a new shift with incremented shift number
+      // Create a new shift with incremented shift number ONLY if no completed shift exists
       const { data: newShift, error: shiftError } = await supabase
         .from('shift_management')
         .insert([{
@@ -766,6 +782,12 @@ const MobileStockManagement = () => {
   };
 
   const handleSubmitShiftReport = async () => {
+    // Prevent double submission - CRITICAL CHECK FIRST
+    if (isSubmitting) {
+      console.log('Already submitting shift report, ignoring duplicate click');
+      return;
+    }
+    
     if (!userProfile?.id) {
       toast.error("Data pengguna tidak tersedia");
       return;
@@ -783,7 +805,15 @@ const MobileStockManagement = () => {
       toast.error("Gagal memuat atau membuat shift");
       return;
     }
+    
+    // Check if shift is already submitted
+    if (currentShift.report_submitted || currentShift.status === 'closed' || currentShift.status === 'completed') {
+      toast.error('Laporan shift ini sudah dikirim sebelumnya');
+      return;
+    }
 
+    // Set submitting state IMMEDIATELY to prevent double clicks
+    setIsSubmitting(true);
     setLoading(true);
     try {
       // Calculate totals
@@ -910,7 +940,7 @@ const MobileStockManagement = () => {
 
       if (shiftError) throw shiftError;
 
-      // Show success modal instead of toast
+      // Show success modal with clear message
       setShowShiftSuccessModal(true);
       
       setOperationalExpenses([{ type: '', amount: '', description: '' }]);
@@ -918,20 +948,21 @@ const MobileStockManagement = () => {
       setCashDepositPhoto(undefined);
       setCashDepositNotes('');
       
-      // Force update to show completed shift state
-      setActiveShift(null);
-      
-      // Wait for fresh data and then navigate to history tab
+      // Refresh shift data
       await fetchShiftData();
+      
+      // Auto-navigate to history tab after 2 seconds (modal will close itself)
       setTimeout(() => {
         setTab('history');
-      }, 2500); // Wait for modal to close (2s) plus buffer
+      }, 2000);
       
       window.dispatchEvent(new Event('shift-updated'));
     } catch (error: any) {
+      console.error('Shift report submission error:', error);
       toast.error("Gagal kirim laporan: " + error.message);
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -1483,13 +1514,13 @@ const MobileStockManagement = () => {
                                </div>
                             </div>
 
-                             <Button
-                               onClick={handleSubmitShiftReport}
-                               disabled={loading || remainingStockCount > 0 || activeShift?.report_submitted}
-                               className="w-full bg-green-600 hover:bg-green-700"
-                             >
-                               {activeShift?.report_submitted ? "Laporan Sudah Dikirim" : loading ? "Mengirim..." : "Kirim Laporan Shift"}
-                             </Button>
+                              <Button
+                                onClick={handleSubmitShiftReport}
+                                disabled={isSubmitting || loading || remainingStockCount > 0 || activeShift?.report_submitted}
+                                className="w-full bg-green-600 hover:bg-green-700"
+                              >
+                                {activeShift?.report_submitted ? "Laporan Sudah Dikirim" : (isSubmitting || loading) ? "Mengirim..." : "Kirim Laporan Shift"}
+                              </Button>
                           </CardContent>
                         </Card>
                       </div>
@@ -1537,7 +1568,8 @@ const MobileStockManagement = () => {
       <MobileSuccessModal 
         isOpen={showShiftSuccessModal}
         onClose={() => setShowShiftSuccessModal(false)}
-        title="Laporan Shift Berhasil Terkirim"
+        title="Laporan Shift Berhasil Terkirim!"
+        message="Halaman akan beralih ke riwayat..."
       />
     </div>
   );
