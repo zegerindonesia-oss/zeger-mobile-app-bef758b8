@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Calendar } from "lucide-react";
@@ -24,6 +25,13 @@ interface CashDepositData {
   transfer_sales: number;
   operational_expenses: number;
   cash_deposit: number;
+  verified_total_sales: boolean;
+  verified_cash_sales: boolean;
+  verified_qris_sales: boolean;
+  verified_transfer_sales: boolean;
+  verified_operational_expenses: boolean;
+  verified_cash_deposit: boolean;
+  notes: string;
 }
 
 export const CashDepositHistory = () => {
@@ -183,7 +191,14 @@ export const CashDepositHistory = () => {
             qris_sales: 0,
             transfer_sales: 0,
             operational_expenses: 0,
-            cash_deposit: 0
+            cash_deposit: 0,
+            verified_total_sales: false,
+            verified_cash_sales: false,
+            verified_qris_sales: false,
+            verified_transfer_sales: false,
+            verified_operational_expenses: false,
+            verified_cash_deposit: false,
+            notes: ''
           });
         }
 
@@ -212,6 +227,32 @@ export const CashDepositHistory = () => {
         deposit.cash_deposit = deposit.cash_sales - deposit.operational_expenses;
       });
 
+      // Fetch verification data
+      const depositArray = Array.from(depositMap.values());
+      if (depositArray.length > 0) {
+        const { data: verifications } = await supabase
+          .from('cash_deposit_verifications')
+          .select('*')
+          .in('rider_id', depositArray.map(d => d.rider_id))
+          .gte('deposit_date', startYMD)
+          .lte('deposit_date', endYMD);
+
+        // Merge verification data
+        verifications?.forEach(v => {
+          const key = `${v.rider_id}_${v.deposit_date}`;
+          const deposit = depositMap.get(key);
+          if (deposit) {
+            deposit.verified_total_sales = v.verified_total_sales || false;
+            deposit.verified_cash_sales = v.verified_cash_sales || false;
+            deposit.verified_qris_sales = v.verified_qris_sales || false;
+            deposit.verified_transfer_sales = v.verified_transfer_sales || false;
+            deposit.verified_operational_expenses = v.verified_operational_expenses || false;
+            deposit.verified_cash_deposit = v.verified_cash_deposit || false;
+            deposit.notes = v.notes || '';
+          }
+        });
+      }
+
       setCashDeposits(Array.from(depositMap.values()).sort((a, b) => 
         b.date.localeCompare(a.date) || a.rider_name.localeCompare(b.rider_name)
       ));
@@ -238,6 +279,82 @@ export const CashDepositHistory = () => {
       month: 'short',
       year: 'numeric'
     }).format(date);
+  };
+
+  const handleVerificationChange = async (
+    item: CashDepositData,
+    field: keyof Pick<CashDepositData, 'verified_total_sales' | 'verified_cash_sales' | 'verified_qris_sales' | 'verified_transfer_sales' | 'verified_operational_expenses' | 'verified_cash_deposit'>,
+    checked: boolean
+  ) => {
+    try {
+      const { data: currentUser } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', currentUser.user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('cash_deposit_verifications')
+        .upsert({
+          rider_id: item.rider_id,
+          deposit_date: item.date,
+          [field]: checked,
+          verified_by: profile?.id,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'rider_id,deposit_date'
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setCashDeposits(prev => prev.map(d => 
+        d.rider_id === item.rider_id && d.date === item.date 
+          ? { ...d, [field]: checked }
+          : d
+      ));
+
+      toast.success('Status verifikasi diperbarui');
+    } catch (error) {
+      console.error('Error updating verification:', error);
+      toast.error('Gagal memperbarui verifikasi');
+    }
+  };
+
+  const handleNotesChange = async (item: CashDepositData, notes: string) => {
+    try {
+      const { data: currentUser } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', currentUser.user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('cash_deposit_verifications')
+        .upsert({
+          rider_id: item.rider_id,
+          deposit_date: item.date,
+          notes: notes,
+          verified_by: profile?.id,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'rider_id,deposit_date'
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setCashDeposits(prev => prev.map(d => 
+        d.rider_id === item.rider_id && d.date === item.date 
+          ? { ...d, notes }
+          : d
+      ));
+    } catch (error) {
+      console.error('Error updating notes:', error);
+      toast.error('Gagal menyimpan keterangan');
+    }
   };
 
   // Calculate resume data (aggregated by rider)
@@ -423,12 +540,13 @@ export const CashDepositHistory = () => {
                   <TableHead className="text-right">Transfer Bank</TableHead>
                   <TableHead className="text-right">Beban Operasional</TableHead>
                   <TableHead className="text-right">Total Setoran Tunai</TableHead>
+                  <TableHead className="w-32">Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {cashDeposits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
@@ -439,12 +557,75 @@ export const CashDepositHistory = () => {
                         <TableCell>{idx + 1}</TableCell>
                         <TableCell>{formatDate(item.date)}</TableCell>
                         <TableCell className="font-medium">{item.rider_name}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.total_sales)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.cash_sales)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.qris_sales)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.transfer_sales)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.operational_expenses)}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(item.cash_deposit)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Checkbox
+                              checked={item.verified_total_sales}
+                              onCheckedChange={(checked) => handleVerificationChange(item, 'verified_total_sales', checked as boolean)}
+                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <span>{formatCurrency(item.total_sales)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Checkbox
+                              checked={item.verified_cash_sales}
+                              onCheckedChange={(checked) => handleVerificationChange(item, 'verified_cash_sales', checked as boolean)}
+                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <span>{formatCurrency(item.cash_sales)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Checkbox
+                              checked={item.verified_qris_sales}
+                              onCheckedChange={(checked) => handleVerificationChange(item, 'verified_qris_sales', checked as boolean)}
+                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <span>{formatCurrency(item.qris_sales)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Checkbox
+                              checked={item.verified_transfer_sales}
+                              onCheckedChange={(checked) => handleVerificationChange(item, 'verified_transfer_sales', checked as boolean)}
+                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <span>{formatCurrency(item.transfer_sales)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Checkbox
+                              checked={item.verified_operational_expenses}
+                              onCheckedChange={(checked) => handleVerificationChange(item, 'verified_operational_expenses', checked as boolean)}
+                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <span>{formatCurrency(item.operational_expenses)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Checkbox
+                              checked={item.verified_cash_deposit}
+                              onCheckedChange={(checked) => handleVerificationChange(item, 'verified_cash_deposit', checked as boolean)}
+                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <span className="font-semibold">{formatCurrency(item.cash_deposit)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            placeholder="Catatan..."
+                            value={item.notes}
+                            onChange={(e) => handleNotesChange(item, e.target.value)}
+                            onBlur={(e) => handleNotesChange(item, e.target.value)}
+                            className="w-32 h-8 text-xs"
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                     {/* Total Row */}
@@ -456,6 +637,7 @@ export const CashDepositHistory = () => {
                       <TableCell className="text-right">{formatCurrency(totals.transfer_sales)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(totals.operational_expenses)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(totals.cash_deposit)}</TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                     {/* Average Row */}
                     <TableRow className="bg-muted/30 font-semibold">
@@ -466,6 +648,7 @@ export const CashDepositHistory = () => {
                       <TableCell className="text-right">{formatCurrency(averages.transfer_sales)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(averages.operational_expenses)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(averages.cash_deposit)}</TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                   </>
                 )}
