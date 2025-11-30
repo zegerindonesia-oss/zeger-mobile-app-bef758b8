@@ -178,6 +178,69 @@ export type Database = {
           },
         ]
       }
+      cash_deposit_verifications: {
+        Row: {
+          created_at: string | null
+          deposit_date: string
+          id: string
+          notes: string | null
+          rider_id: string
+          updated_at: string | null
+          verified_by: string | null
+          verified_cash_deposit: boolean | null
+          verified_cash_sales: boolean | null
+          verified_operational_expenses: boolean | null
+          verified_qris_sales: boolean | null
+          verified_total_sales: boolean | null
+          verified_transfer_sales: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          deposit_date: string
+          id?: string
+          notes?: string | null
+          rider_id: string
+          updated_at?: string | null
+          verified_by?: string | null
+          verified_cash_deposit?: boolean | null
+          verified_cash_sales?: boolean | null
+          verified_operational_expenses?: boolean | null
+          verified_qris_sales?: boolean | null
+          verified_total_sales?: boolean | null
+          verified_transfer_sales?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          deposit_date?: string
+          id?: string
+          notes?: string | null
+          rider_id?: string
+          updated_at?: string | null
+          verified_by?: string | null
+          verified_cash_deposit?: boolean | null
+          verified_cash_sales?: boolean | null
+          verified_operational_expenses?: boolean | null
+          verified_qris_sales?: boolean | null
+          verified_total_sales?: boolean | null
+          verified_transfer_sales?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_deposit_verifications_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_deposit_verifications_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkpoints: {
         Row: {
           address_info: string | null
