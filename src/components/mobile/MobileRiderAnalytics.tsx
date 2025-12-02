@@ -70,9 +70,16 @@ const MobileRiderAnalytics = () => {
 
       if (!profile) return;
 
-      const today = new Date().toISOString().split('T')[0];
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // Use Jakarta timezone for date filtering
+      const getJakartaDate = (daysAgo: number = 0) => {
+        const date = new Date();
+        date.setDate(date.getDate() - daysAgo);
+        return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      };
+
+      const today = getJakartaDate(0);
+      const weekAgo = getJakartaDate(7);
+      const monthAgo = getJakartaDate(30);
 
       // Fetch today's sales
       const { data: todayTransactions } = await supabase
@@ -80,8 +87,8 @@ const MobileRiderAnalytics = () => {
         .select('final_amount')
         .eq('rider_id', profile.id)
         .eq('is_voided', false)
-        .gte('transaction_date', `${today}T00:00:00`)
-        .lte('transaction_date', `${today}T23:59:59`);
+        .gte('transaction_date', `${today}T00:00:00+07:00`)
+        .lte('transaction_date', `${today}T23:59:59+07:00`);
 
       const todaySales = todayTransactions?.reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
 
@@ -91,8 +98,8 @@ const MobileRiderAnalytics = () => {
         .select('final_amount')
         .eq('rider_id', profile.id)
         .eq('is_voided', false)
-        .gte('transaction_date', `${weekAgo}T00:00:00`)
-        .lte('transaction_date', `${today}T23:59:59`);
+        .gte('transaction_date', `${weekAgo}T00:00:00+07:00`)
+        .lte('transaction_date', `${today}T23:59:59+07:00`);
 
       const weekSales = weekTransactions?.reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
 
@@ -102,8 +109,8 @@ const MobileRiderAnalytics = () => {
         .select('final_amount')
         .eq('rider_id', profile.id)
         .eq('is_voided', false)
-        .gte('transaction_date', `${monthAgo}T00:00:00`)
-        .lte('transaction_date', `${today}T23:59:59`);
+        .gte('transaction_date', `${monthAgo}T00:00:00+07:00`)
+        .lte('transaction_date', `${today}T23:59:59+07:00`);
 
       const monthSales = monthTransactions?.reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
       const totalTransactions = monthTransactions?.length || 0;

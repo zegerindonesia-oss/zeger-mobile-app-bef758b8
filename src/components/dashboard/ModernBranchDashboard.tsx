@@ -333,8 +333,8 @@ export const ModernBranchDashboard = () => {
           transactions!inner(status, transaction_date, rider_id)
         `)
         .eq('transactions.status', 'completed')
-        .gte('transactions.transaction_date', `${start}T00:00:00`)
-        .lte('transactions.transaction_date', `${end}T23:59:59`);
+        .gte('transactions.transaction_date', `${start}T00:00:00+07:00`)
+        .lte('transactions.transaction_date', `${end}T23:59:59+07:00`);
 
       if (error) throw error;
 
@@ -614,8 +614,8 @@ export const ModernBranchDashboard = () => {
             .from('transactions')
             .select('final_amount')
             .eq('status', 'completed')
-            .gte('transaction_date', `${dateStr}T00:00:00`)
-            .lte('transaction_date', `${dateStr}T23:59:59`);
+            .gte('transaction_date', `${dateStr}T00:00:00+07:00`)
+            .lte('transaction_date', `${dateStr}T23:59:59+07:00`);
           if (branchIdFilter) dailyQuery = dailyQuery.eq('branch_id', branchIdFilter);
           if (selectedUser !== 'all') dailyQuery = dailyQuery.eq('rider_id', selectedUser);
           
@@ -707,7 +707,7 @@ export const ModernBranchDashboard = () => {
             quantity,
             products!inner(name)
           )
-        `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00`).lte('transaction_date', `${endDate}T23:59:59`);
+        `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00+07:00`).lte('transaction_date', `${endDate}T23:59:59+07:00`);
       
       if (branchIdFilter) query = query.eq('branch_id', branchIdFilter);
       
@@ -826,7 +826,7 @@ export const ModernBranchDashboard = () => {
             quantity,
             products!inner(name)
           )
-        `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00`).lte('transaction_date', `${endDate}T23:59:59`);
+        `).eq('status', 'completed').gte('transaction_date', `${startDate}T00:00:00+07:00`).lte('transaction_date', `${endDate}T23:59:59+07:00`);
       
       if (branchIdFilter) query = query.eq('branch_id', branchIdFilter);
       
@@ -923,8 +923,8 @@ export const ModernBranchDashboard = () => {
           .select('id, final_amount, branch_id')
           .eq('rider_id', rider.id)
           .eq('status', 'completed')
-          .gte('transaction_date', `${startDate}T00:00:00`)
-          .lte('transaction_date', `${endDate}T23:59:59`);
+          .gte('transaction_date', `${startDate}T00:00:00+07:00`)
+          .lte('transaction_date', `${endDate}T23:59:59+07:00`);
         
         if (branchIdFilter) transactionQuery = transactionQuery.eq('branch_id', branchIdFilter);
         

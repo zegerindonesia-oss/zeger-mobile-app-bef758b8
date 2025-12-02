@@ -124,8 +124,8 @@ const MobileHistory = () => {
           products(name, category)
         `)
         .eq('rider_id', userProfile.id)
-        .gte('created_at', `${dateFilter.from}T00:00:00`)
-        .lte('created_at', `${dateFilter.to}T23:59:59`)
+        .gte('created_at', `${dateFilter.from}T00:00:00+07:00`)
+        .lte('created_at', `${dateFilter.to}T23:59:59+07:00`)
         .order('created_at', { ascending: false });
 
       // Fetch transaction history
@@ -139,8 +139,8 @@ const MobileHistory = () => {
           )
         `)
         .eq('rider_id', userProfile.id)
-        .gte('transaction_date', `${dateFilter.from}T00:00:00`)
-        .lte('transaction_date', `${dateFilter.to}T23:59:59`)
+        .gte('transaction_date', `${dateFilter.from}T00:00:00+07:00`)
+        .lte('transaction_date', `${dateFilter.to}T23:59:59+07:00`)
         .order('transaction_date', { ascending: false });
 
       // Fetch checkpoint history
@@ -148,8 +148,8 @@ const MobileHistory = () => {
         .from('checkpoints')
         .select('*')
         .eq('rider_id', userProfile.id)
-        .gte('created_at', `${dateFilter.from}T00:00:00`)
-        .lte('created_at', `${dateFilter.to}T23:59:59`)
+        .gte('created_at', `${dateFilter.from}T00:00:00+07:00`)
+        .lte('created_at', `${dateFilter.to}T23:59:59+07:00`)
         .order('created_at', { ascending: false });
 
       // Fetch shift reports with proper calculation (only completed shifts)

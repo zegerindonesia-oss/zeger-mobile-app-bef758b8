@@ -40,3 +40,12 @@ export const getNowJakarta = (): Date => {
   
   return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}+07:00`);
 };
+
+/**
+ * Get Jakarta timezone date range for queries
+ * This ensures consistent timezone handling across all date-based queries
+ */
+export const getJakartaDateRange = (date: string) => ({
+  start: `${date}T00:00:00+07:00`,
+  end: `${date}T23:59:59+07:00`
+});

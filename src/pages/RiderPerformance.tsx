@@ -183,8 +183,8 @@ const RiderPerformance = () => {
           .eq('rider_id', rider.id)
           .eq('status', 'completed')
           .eq('is_voided', false)
-          .gte('transaction_date', `${startDate}T00:00:00`)
-          .lte('transaction_date', `${endDate}T23:59:59`)
+          .gte('transaction_date', `${startDate}T00:00:00+07:00`)
+          .lte('transaction_date', `${endDate}T23:59:59+07:00`)
           .order('transaction_date', { ascending: true });
 
         if (error) {

@@ -399,15 +399,15 @@ const MobileRiderDashboard = () => {
 
       const totalStock = inventoryData?.reduce((sum, item) => sum + (item.stock_quantity || 0), 0) || 0;
 
-      // Fetch today's sales
-      const today = new Date().toISOString().split('T')[0];
+      // Fetch today's sales with Jakarta timezone
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
       const { data: salesData, error: salesError } = await supabase
         .from('transactions')
         .select('final_amount, transaction_date')
         .eq('rider_id', riderId)
         .eq('is_voided', false)
-        .gte('transaction_date', `${today}T00:00:00`)
-        .lte('transaction_date', `${today}T23:59:59`);
+        .gte('transaction_date', `${today}T00:00:00+07:00`)
+        .lte('transaction_date', `${today}T23:59:59+07:00`);
 
       if (salesError) {
         console.error('Error fetching sales:', salesError);
