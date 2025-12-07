@@ -232,8 +232,8 @@ export const TransactionsEnhanced = () => {
           voided_by_profile:profiles!voided_by(full_name)
         `)
         .eq('is_voided', true)
-        .gte('transaction_date', startDate)
-        .lte('transaction_date', endDate + 'T23:59:59')
+        .gte('transaction_date', `${startDate}T00:00:00+07:00`)
+        .lte('transaction_date', `${endDate}T23:59:59+07:00`)
         .order('voided_at', { ascending: false });
 
       if (selectedRider !== "all") {
@@ -281,8 +281,8 @@ export const TransactionsEnhanced = () => {
         `)
         .eq('status', 'completed')
         .eq('is_voided', false)
-        .gte('transaction_date', startDate)
-        .lte('transaction_date', endDate + 'T23:59:59')
+        .gte('transaction_date', `${startDate}T00:00:00+07:00`)
+        .lte('transaction_date', `${endDate}T23:59:59+07:00`)
         .order('transaction_date', { ascending: false });
 
       if (selectedRider !== "all") {

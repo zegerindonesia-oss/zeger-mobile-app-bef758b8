@@ -59,7 +59,7 @@ export const SalesReporting = ({ role, userId, branchId }: SalesReportingProps) 
   const [filterPeriod, setFilterPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
 const [dailyReport, setDailyReport] = useState<DailyReport>({
-  report_date: new Date().toISOString().split('T')[0],
+  report_date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()),
   total_sales: 0,
   cash_collected: 0,
   total_transactions: 0,
@@ -83,14 +83,14 @@ const [dailyReport, setDailyReport] = useState<DailyReport>({
 
   const fetchTodayTransactions = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('rider_id', userId)
-        .gte('transaction_date', today + 'T00:00:00.000Z')
-        .lt('transaction_date', today + 'T23:59:59.999Z')
+        .gte('transaction_date', `${today}T00:00:00+07:00`)
+        .lt('transaction_date', `${today}T23:59:59+07:00`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

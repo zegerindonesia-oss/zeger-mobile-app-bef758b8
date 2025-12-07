@@ -265,7 +265,7 @@ export const BranchHubReportDashboard = () => {
       const totalProfit = grossProfit - totalFoodCost - operationalExpenses;
 
       // Active riders = 1 if assigned rider has active shift today, 0 otherwise
-      const today = new Date().toISOString().split('T')[0];
+      const today = formatYMD(getJakartaNow());
       const { data: activeShifts } = await supabase
         .from('shift_management')
         .select('id')

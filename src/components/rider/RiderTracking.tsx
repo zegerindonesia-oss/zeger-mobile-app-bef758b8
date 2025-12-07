@@ -35,8 +35,8 @@ export const RiderTracking = ({ role }: RiderTrackingProps) => {
 
   const fetchActiveRiders = async () => {
     try {
-      // Fetch riders with active shifts today
-      const today = new Date().toISOString().split('T')[0];
+      // Fetch riders with active shifts today - use Jakarta timezone
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       
       const { data: shifts, error } = await supabase
         .from('shift_management')

@@ -377,11 +377,11 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             
             console.log(`Rider ${riderId} transaction data:`, transData?.length || 0, 'transactions');
             
-            // Group by date
+            // Group by date using Jakarta timezone
             const dateGroups: Record<string, any[]> = {};
             (transData || []).forEach((t: any) => {
               const transDate = new Date(t.transaction_date);
-              const dateKey = transDate.toISOString().split('T')[0];
+              const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(transDate);
               if (!dateGroups[dateKey]) dateGroups[dateKey] = [];
               dateGroups[dateKey].push(t);
             });
@@ -449,7 +449,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         
         const salesMap = (window as any).__salesByRiderDate || {};
         const opsMap = (window as any).__opsByShift || {};
-        const shiftDate = new Date(shift.shift_date).toISOString().split('T')[0];
+        const shiftDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(shift.shift_date));
         const key = `${shift.rider_id}-${shiftDate}`;
         const sales = salesMap[key] || { cash: 0, qris: 0, transfer: 0, total: 0 };
         

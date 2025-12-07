@@ -185,8 +185,8 @@ export default function Inventory() {
       
       setRiders(finalMap);
 
-      // Shifts waiting verification
-      const today = new Date().toISOString().split('T')[0];
+      // Shifts waiting verification - use Jakarta timezone
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       const { data: sh, error: shiftError } = await supabase
         .from('shift_management')
         .select('id, rider_id, shift_date, shift_number, shift_start_time, shift_end_time, total_sales, cash_collected, total_transactions, report_submitted, report_verified, notes')
@@ -227,7 +227,8 @@ export default function Inventory() {
       const totalVariance = stockAdjustmentItems.reduce((sum, item) => sum + Math.abs(item.variance), 0);
       const totalValue = stockAdjustmentItems.reduce((sum, item) => sum + item.total_value, 0);
       
-      const transactionId = `SO-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
+      const jakartaToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      const transactionId = `SO-${jakartaToday.replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
       
       const opnameRecord: StockOpnameHistory = {
         id: crypto.randomUUID(),
@@ -298,8 +299,8 @@ export default function Inventory() {
     if (!userProfile) return;
     setLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const start = shift.shift_start_time || `${today}T00:00:00`;
+      const jakartaToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      const start = shift.shift_start_time || `${jakartaToday}T00:00:00+07:00`;
       const end = shift.shift_end_time || new Date().toISOString();
 
       const { data: tx } = await supabase
@@ -347,8 +348,8 @@ export default function Inventory() {
         `)
         .eq('branch_id', userProfile!.branch_id)
         .in('movement_type', ['transfer', 'return'])
-        .gte('created_at', startDate.toISOString().split('T')[0])
-        .lte('created_at', endDate.toISOString().split('T')[0] + 'T23:59:59')
+        .gte('created_at', `${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(startDate)}T00:00:00+07:00`)
+        .lte('created_at', `${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(endDate)}T23:59:59+07:00`)
         .order('created_at', { ascending: false });
 
       if (selectedUser !== "all") {

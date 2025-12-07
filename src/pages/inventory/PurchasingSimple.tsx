@@ -51,7 +51,7 @@ export default function PurchasingSimple() {
   
   // Form states
   const [supplierName, setSupplierName] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [purchaseDate, setPurchaseDate] = useState(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
   const [notes, setNotes] = useState("");
   const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -227,7 +227,7 @@ export default function PurchasingSimple() {
         
         // Reset form
         setSupplierName("");
-        setPurchaseDate(new Date().toISOString().split('T')[0]);
+        setPurchaseDate(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
         setNotes("");
         setPurchaseItems([]);
         

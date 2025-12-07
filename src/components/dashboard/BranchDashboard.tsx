@@ -88,17 +88,27 @@ export const BranchDashboard = () => {
   };
 
   const fetchStats = async () => {
-    // Fetch current month stats
-    const currentMonth = new Date();
-    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    // Use Jakarta timezone for date calculations
+    const getJakartaNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const formatYMD = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    
+    const jakartaNow = getJakartaNow();
+    const startOfMonth = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth(), 1);
+    const endOfMonth = new Date(jakartaNow.getFullYear(), jakartaNow.getMonth() + 1, 0);
+    const startDate = formatYMD(startOfMonth);
+    const endDate = formatYMD(endOfMonth);
 
     // Total Sales
     const { data: salesData } = await supabase
       .from('transactions')
       .select('final_amount')
-      .gte('transaction_date', startOfMonth.toISOString())
-      .lte('transaction_date', endOfMonth.toISOString());
+      .gte('transaction_date', `${startDate}T00:00:00+07:00`)
+      .lte('transaction_date', `${endDate}T23:59:59+07:00`);
 
     const totalSales = salesData?.reduce((sum, t) => sum + (t.final_amount || 0), 0) || 0;
 
@@ -106,8 +116,8 @@ export const BranchDashboard = () => {
     const { data: expensesData } = await supabase
       .from('operational_expenses')
       .select('amount')
-      .gte('expense_date', startOfMonth.toISOString().split('T')[0])
-      .lte('expense_date', endOfMonth.toISOString().split('T')[0]);
+      .gte('expense_date', startDate)
+      .lte('expense_date', endDate);
 
     const totalPurchases = expensesData?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
 
@@ -116,8 +126,8 @@ export const BranchDashboard = () => {
       .from('transactions')
       .select('final_amount')
       .eq('payment_verified', true)
-      .gte('transaction_date', startOfMonth.toISOString())
-      .lte('transaction_date', endOfMonth.toISOString());
+      .gte('transaction_date', `${startDate}T00:00:00+07:00`)
+      .lte('transaction_date', `${endDate}T23:59:59+07:00`);
 
     const totalPaid = paidData?.reduce((sum, t) => sum + (t.final_amount || 0), 0) || 0;
 

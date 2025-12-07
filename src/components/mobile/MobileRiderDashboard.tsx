@@ -511,7 +511,7 @@ const MobileRiderDashboard = () => {
 
   const checkActiveShift = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -544,7 +544,7 @@ const MobileRiderDashboard = () => {
 
   const handleShiftStart = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -582,7 +582,7 @@ const MobileRiderDashboard = () => {
 
   const handleShiftEnd = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
       const { data: profile } = await supabase
         .from('profiles')

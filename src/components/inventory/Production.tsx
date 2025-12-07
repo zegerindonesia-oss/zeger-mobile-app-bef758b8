@@ -259,14 +259,14 @@ export const Production = ({ userProfile }: ProductionProps) => {
 
     setLoading(true);
     try {
-      // Get next batch number for today (reset daily)
-      const today = new Date().toISOString().split('T')[0];
+      // Get next batch number for today (reset daily) - use Jakarta timezone
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       const { data: existingBatches } = await supabase
         .from('production_batches')
         .select('batch_number')
         .eq('branch_id', userProfile.branch_id)
-        .gte('produced_at', `${today}T00:00:00`)
-        .lte('produced_at', `${today}T23:59:59`)
+        .gte('produced_at', `${today}T00:00:00+07:00`)
+        .lte('produced_at', `${today}T23:59:59+07:00`)
         .order('batch_number', { ascending: false })
         .limit(1);
 

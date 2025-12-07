@@ -82,7 +82,7 @@ const MobileAttendance = () => {
     try {
       if (!userProfile?.id) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       const { data } = await supabase
         .from('attendance')
         .select('*')
@@ -218,7 +218,7 @@ const MobileAttendance = () => {
           check_in_time: new Date().toISOString(),
           check_in_location: locationName || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
           check_in_photo_url: photoUrl || null,
-          work_date: new Date().toISOString().split('T')[0]
+          work_date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
         }]);
 
       if (error) throw error;

@@ -58,7 +58,7 @@ export function CustomerVouchers({ customerUser }: CustomerVouchersProps) {
         .from('customer_vouchers')
         .select('*')
         .eq('is_active', true)
-        .gte('valid_until', new Date().toISOString().split('T')[0])
+        .gte('valid_until', new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -144,7 +144,7 @@ export function CustomerVouchers({ customerUser }: CustomerVouchersProps) {
         .select('*')
         .eq('code', promoCode.toUpperCase())
         .eq('is_active', true)
-        .gte('valid_until', new Date().toISOString().split('T')[0])
+        .gte('valid_until', new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
         .single();
 
       if (voucherError) {

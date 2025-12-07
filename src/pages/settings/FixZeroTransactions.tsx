@@ -32,13 +32,13 @@ export default function FixZeroTransactions() {
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
       const { data, error } = await supabase.functions.invoke('fix-zero-transactions', {
         body: {
           rider_id: rider.id,
-          start_date: `${today}T00:00:00`,
-          end_date: `${today}T23:59:59`
+          start_date: `${today}T00:00:00+07:00`,
+          end_date: `${today}T23:59:59+07:00`
         }
       });
 

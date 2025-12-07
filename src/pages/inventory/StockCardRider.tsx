@@ -78,33 +78,40 @@ export default function StockCardRider() {
     }
   };
 
-  // Get date range based on filter
+  // Get date range based on filter - use Jakarta timezone
   const getDateRange = () => {
+    const getJakartaDate = (date: Date) => new Intl.DateTimeFormat('en-CA', { 
+      timeZone: 'Asia/Jakarta', 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    }).format(date);
+    
     const today = new Date();
-    const formatDate = (date: Date) => format(date, 'yyyy-MM-dd');
+    const jakartaToday = getJakartaDate(today);
 
     switch (dateFilter) {
       case 'today':
-        return { start: formatDate(today), end: formatDate(today) };
+        return { start: jakartaToday, end: jakartaToday };
       case 'yesterday':
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        return { start: formatDate(yesterday), end: formatDate(yesterday) };
+        return { start: getJakartaDate(yesterday), end: getJakartaDate(yesterday) };
       case 'week':
         const weekStart = new Date(today);
         weekStart.setDate(weekStart.getDate() - 7);
-        return { start: formatDate(weekStart), end: formatDate(today) };
+        return { start: getJakartaDate(weekStart), end: jakartaToday };
       case 'month':
         const monthStart = new Date(today);
         monthStart.setDate(monthStart.getDate() - 30);
-        return { start: formatDate(monthStart), end: formatDate(today) };
+        return { start: getJakartaDate(monthStart), end: jakartaToday };
       case 'custom':
         if (customDateFrom && customDateTo) {
-          return { start: formatDate(customDateFrom), end: formatDate(customDateTo) };
+          return { start: getJakartaDate(customDateFrom), end: getJakartaDate(customDateTo) };
         }
-        return { start: formatDate(today), end: formatDate(today) };
+        return { start: jakartaToday, end: jakartaToday };
       default:
-        return { start: formatDate(today), end: formatDate(today) };
+        return { start: jakartaToday, end: jakartaToday };
     }
   };
 

@@ -342,11 +342,8 @@ export const MobileStockConfirmationEnhanced = ({ riderId, branchId }: MobileSto
 
   const autoStartShift = async (riderId: string, branchId?: string) => {
     try {
-      const jakartaNow = new Date();
-      // Set timezone to Asia/Jakarta
-      const offset = 7 * 60; // 7 hours in minutes
-      const jakartaTime = new Date(jakartaNow.getTime() + offset * 60 * 1000);
-      const today = jakartaTime.toISOString().split('T')[0];
+      // Use proper Jakarta timezone formatting
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
       // Check if there's already an active shift
       const { data: existingShift } = await supabase
