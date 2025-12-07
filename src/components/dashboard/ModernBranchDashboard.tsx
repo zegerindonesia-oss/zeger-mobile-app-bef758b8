@@ -278,8 +278,8 @@ export const ModernBranchDashboard = () => {
             product:products(name)
           )
         `)
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
+        .gte('created_at', `${today}T00:00:00+07:00`)
+        .lte('created_at', `${today}T23:59:59+07:00`)
         .order('created_at', { ascending: false })
         .limit(10);
 
