@@ -62,13 +62,14 @@ const MobileCheckpoints = () => {
     try {
       if (!userProfile?.id) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      // Use Jakarta timezone for date filtering
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
       const { data } = await supabase
         .from('checkpoints')
         .select('*')
         .eq('rider_id', userProfile.id)
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
+        .gte('created_at', `${today}T00:00:00+07:00`)
+        .lte('created_at', `${today}T23:59:59+07:00`)
         .order('created_at', { ascending: false });
 
       setCheckpoints(data || []);

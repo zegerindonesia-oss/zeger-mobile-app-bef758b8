@@ -367,8 +367,8 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
       // Apply date range filter
       const { startDate, endDate } = getDateRangeFilter();
-      query = query.gte('created_at', `${startDate}T00:00:00`)
-                   .lte('created_at', `${endDate}T23:59:59`);
+      query = query.gte('created_at', `${startDate}T00:00:00+07:00`)
+                   .lte('created_at', `${endDate}T23:59:59+07:00`);
 
       // Apply user filter
       if (selectedUserFilter !== 'all') {

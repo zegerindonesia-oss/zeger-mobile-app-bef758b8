@@ -204,8 +204,8 @@ const MobileRiderAnalyticsEnhanced = () => {
       
       setRiderName(profile.full_name || 'Unknown Rider');
 
-      const startDateTime = `${startDate}T00:00:00`;
-      const endDateTime = `${endDate}T23:59:59`;
+      const startDateTime = `${startDate}T00:00:00+07:00`;
+      const endDateTime = `${endDate}T23:59:59+07:00`;
 
       // Fetch transactions with detailed data
       const { data: transactions } = await supabase

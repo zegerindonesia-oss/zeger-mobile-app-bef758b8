@@ -118,8 +118,8 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
           products (name, cost_price),
           profiles!product_waste_rider_id_fkey (full_name)
         `)
-        .gte('created_at', `${start}T00:00:00`)
-        .lte('created_at', `${end}T23:59:59`)
+        .gte('created_at', `${start}T00:00:00+07:00`)
+        .lte('created_at', `${end}T23:59:59+07:00`)
         .order('created_at', { ascending: false });
 
       // Filter by rider - support "all" option

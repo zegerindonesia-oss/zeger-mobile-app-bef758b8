@@ -443,8 +443,8 @@ const MobileStockManagement = () => {
       setActiveShift(shift);
 
       // Get sales summary for entire day (not just from shift start time)
-      const startRange = `${today}T00:00:00`;
-      const endRange = `${today}T23:59:59`;
+      const startRange = `${today}T00:00:00+07:00`;
+      const endRange = `${today}T23:59:59+07:00`;
       
       // Check remaining rider stock that must be returned before report
       // Only count stock that was received today and still has quantity > 0
@@ -469,8 +469,8 @@ const MobileStockManagement = () => {
             .eq('product_id', item.product_id)
             .eq('movement_type', 'transfer')
             .eq('status', 'received')
-            .gte('actual_delivery_date', `${today}T00:00:00`)
-            .lte('actual_delivery_date', `${today}T23:59:59`)
+            .gte('actual_delivery_date', `${today}T00:00:00+07:00`)
+            .lte('actual_delivery_date', `${today}T23:59:59+07:00`)
             .limit(1);
             
           // If there's a stock movement today for this product, it needs to be returned
