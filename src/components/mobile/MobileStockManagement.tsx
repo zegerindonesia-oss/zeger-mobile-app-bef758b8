@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +68,9 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
 }) => {
   const [returnableStock, setReturnableStock] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentReturnId, setCurrentReturnId] = useState<string | null>(null);
+  const [currentReturnQty, setCurrentReturnQty] = useState<number>(0);
+  const returnFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchReturnableStock();
@@ -93,64 +96,40 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
     }
   };
 
-  const handleStockReturn = async (inventoryId: string, quantity: number) => {
+  // Trigger file input for stock return - called directly from button click
+  const triggerReturnPhoto = (inventoryId: string, quantity: number) => {
+    setCurrentReturnId(inventoryId);
+    setCurrentReturnQty(quantity);
+    // Directly trigger file input - preserves user gesture chain
+    returnFileInputRef.current?.click();
+  };
+
+  // Handle photo selection and process return
+  const handleReturnPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const photo = e.target.files?.[0];
+    
+    // Reset input for next use
+    if (returnFileInputRef.current) {
+      returnFileInputRef.current.value = '';
+    }
+
+    if (!photo) {
+      toast.error("Foto wajib untuk pengembalian stok");
+      setCurrentReturnId(null);
+      setCurrentReturnQty(0);
+      return;
+    }
+
+    if (!currentReturnId) {
+      toast.error("Terjadi kesalahan, silakan coba lagi");
+      return;
+    }
+
     setLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
-
-      // NOTE: Previously we blocked returns if there were active shifts from previous days.
-      // This caused a deadlock with shift reporting. We now allow returns regardless of
-      // previous-day shift state to decouple attendance/shift logic from stock returns.
-
-      // Improved camera/gallery functionality with native mobile support
-      const showImageSourceModal = () => {
-        return new Promise<File | null>((resolve) => {
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const isAndroid = /Android/.test(navigator.userAgent);
-
-          const fileInput = document.createElement('input');
-          fileInput.type = 'file';
-          fileInput.accept = 'image/*';
-          fileInput.style.position = 'fixed';
-          fileInput.style.left = '-9999px';
-          fileInput.style.opacity = '0';
-
-          // Append to DOM to satisfy iOS/Safari requirements
-          document.body.appendChild(fileInput);
-
-          // Ask source on mobile devices
-          if (isIOS || isAndroid) {
-            const useCamera = window.confirm('Pilih sumber foto:\nOK = Kamera, Cancel = Galeri');
-            if (useCamera) {
-              // Prefer back camera
-              fileInput.setAttribute('capture', 'environment');
-              // Some browsers honor this MIME hint
-              fileInput.accept = 'image/*;capture=camera';
-            }
-          }
-
-          fileInput.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0] || null;
-            resolve(file);
-            // Clean up
-            setTimeout(() => fileInput.remove(), 0);
-          };
-
-          // Trigger picker within the same user gesture
-          setTimeout(() => fileInput.click(), 0);
-        });
-      };
-
-      const photo = await showImageSourceModal();
-
-      if (!photo) {
-        toast.error("Foto wajib untuk pengembalian stok");
-        return;
-      }
-
       // Upload photo (robust upload with folder + upsert)
       const fileExt = photo.name.split('.').pop();
-      const fileName = `return-${inventoryId}-${Date.now()}.${fileExt}`;
+      const fileName = `return-${currentReturnId}-${Date.now()}.${fileExt}`;
       const path = `returns/${userProfile?.id}/${fileName}`;
       
       const { error: uploadError } = await supabase.storage
@@ -169,9 +148,9 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
         .insert([{
           rider_id: userProfile.id,
           branch_id: userProfile.branch_id,
-          product_id: returnableStock.find(item => item.id === inventoryId)?.product_id,
+          product_id: returnableStock.find(item => item.id === currentReturnId)?.product_id,
           movement_type: 'return',
-          quantity: quantity,
+          quantity: currentReturnQty,
           status: 'returned',
           verification_photo_url: publicUrl,
           notes: 'Pengembalian stok di akhir shift',
@@ -186,7 +165,7 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
         .update({ 
           stock_quantity: 0  // All remaining stock returned
         })
-        .eq('id', inventoryId);
+        .eq('id', currentReturnId);
 
       if (inventoryError) throw inventoryError;
 
@@ -234,11 +213,22 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
       toast.error("Gagal mengembalikan stok: " + error.message);
     } finally {
       setLoading(false);
+      setCurrentReturnId(null);
+      setCurrentReturnQty(0);
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* Hidden file input for camera/gallery - permanent in DOM for reliable mobile access */}
+      <input
+        ref={returnFileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleReturnPhotoSelected}
+      />
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Pengembalian Stok</h3>
         <div className="flex gap-2">
@@ -292,12 +282,12 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
                    <Button
                      size="sm"
                      variant="destructive"
-                     onClick={() => handleStockReturn(item.id, item.stock_quantity)}
-                     disabled={loading}
+                     onClick={() => triggerReturnPhoto(item.id, item.stock_quantity)}
+                     disabled={loading || currentReturnId === item.id}
                      className="w-full"
                    >
                      <Camera className="h-4 w-4 mr-1" />
-                     Kembalikan Stok (Foto Wajib)
+                     {currentReturnId === item.id ? 'Memproses...' : 'Kembalikan Stok (Foto Wajib)'}
                    </Button>
               </CardContent>
             </Card>
