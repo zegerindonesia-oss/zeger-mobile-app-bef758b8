@@ -68,8 +68,8 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
 }) => {
   const [returnableStock, setReturnableStock] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentReturnId, setCurrentReturnId] = useState<string | null>(null);
-  const [currentReturnQty, setCurrentReturnQty] = useState<number>(0);
+  const [selectedReturnIds, setSelectedReturnIds] = useState<Set<string>>(new Set());
+  const [returnPhoto, setReturnPhoto] = useState<File | null>(null);
   const returnFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -96,88 +96,108 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
     }
   };
 
-  // Trigger file input for stock return - called directly from button click
-  const triggerReturnPhoto = (inventoryId: string, quantity: number) => {
-    setCurrentReturnId(inventoryId);
-    setCurrentReturnQty(quantity);
-    // Directly trigger file input - preserves user gesture chain
-    returnFileInputRef.current?.click();
+  // Toggle checkbox selection
+  const toggleReturnItem = (itemId: string) => {
+    setSelectedReturnIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
   };
 
-  // Handle photo selection and process return
-  const handleReturnPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Select all items
+  const selectAllReturn = () => {
+    setSelectedReturnIds(new Set(returnableStock.map(item => item.id)));
+  };
+
+  // Deselect all items
+  const deselectAllReturn = () => {
+    setSelectedReturnIds(new Set());
+  };
+
+  // Handle optional photo selection
+  const handleOptionalPhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const photo = e.target.files?.[0];
-    
-    // Reset input for next use
+    if (photo) {
+      setReturnPhoto(photo);
+    }
     if (returnFileInputRef.current) {
       returnFileInputRef.current.value = '';
     }
+  };
 
-    if (!photo) {
-      toast.error("Foto wajib untuk pengembalian stok");
-      setCurrentReturnId(null);
-      setCurrentReturnQty(0);
-      return;
-    }
+  // Remove selected photo
+  const removePhoto = () => {
+    setReturnPhoto(null);
+  };
 
-    if (!currentReturnId) {
-      toast.error("Terjadi kesalahan, silakan coba lagi");
+  // Handle bulk return (photo is optional)
+  const handleBulkReturn = async () => {
+    if (selectedReturnIds.size === 0) {
+      toast.error("Pilih minimal 1 produk untuk dikembalikan");
       return;
     }
 
     setLoading(true);
     try {
-      // Upload photo (robust upload with folder + upsert)
-      const fileExt = photo.name.split('.').pop();
-      const fileName = `return-${currentReturnId}-${Date.now()}.${fileExt}`;
-      const path = `returns/${userProfile?.id}/${fileName}`;
+      let photoUrl: string | null = null;
       
-      const { error: uploadError } = await supabase.storage
-        .from('stock-photos')
-        .upload(path, photo, { cacheControl: '3600', upsert: true, contentType: photo.type });
+      // Upload photo if provided (optional)
+      if (returnPhoto) {
+        const fileExt = returnPhoto.name.split('.').pop();
+        const fileName = `return-bulk-${Date.now()}.${fileExt}`;
+        const path = `returns/${userProfile?.id}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('stock-photos')
+          .upload(path, returnPhoto, { cacheControl: '3600', upsert: true, contentType: returnPhoto.type });
 
-      if (uploadError) throw uploadError;
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('stock-photos')
+            .getPublicUrl(path);
+          photoUrl = publicUrl;
+        }
+      }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('stock-photos')
-        .getPublicUrl(path);
+      // Process all selected items
+      for (const itemId of selectedReturnIds) {
+        const item = returnableStock.find(s => s.id === itemId);
+        if (!item) continue;
 
-      // Create return stock movement record
-      const { error: movementError } = await supabase
-        .from('stock_movements')
-        .insert([{
+        // Create return stock movement record
+        await supabase.from('stock_movements').insert([{
           rider_id: userProfile.id,
           branch_id: userProfile.branch_id,
-          product_id: returnableStock.find(item => item.id === currentReturnId)?.product_id,
+          product_id: item.product_id,
           movement_type: 'return',
-          quantity: currentReturnQty,
+          quantity: item.stock_quantity,
           status: 'returned',
-          verification_photo_url: publicUrl,
+          verification_photo_url: photoUrl, // Can be null if no photo
           notes: 'Pengembalian stok di akhir shift',
           actual_delivery_date: new Date().toISOString()
         }]);
 
-      if (movementError) throw movementError;
+        // Update inventory to reduce returned stock
+        await supabase.from('inventory')
+          .update({ stock_quantity: 0 })
+          .eq('id', itemId);
+      }
 
-      // Update inventory to reduce returned stock
-      const { error: inventoryError } = await supabase
-        .from('inventory')
-        .update({ 
-          stock_quantity: 0  // All remaining stock returned
-        })
-        .eq('id', currentReturnId);
-
-      if (inventoryError) throw inventoryError;
-
-      toast.success("Stok berhasil dikembalikan!");
+      toast.success(`${selectedReturnIds.size} produk berhasil dikembalikan!`);
+      setSelectedReturnIds(new Set());
+      setReturnPhoto(null);
       fetchReturnableStock();
       onRefresh();
-      // Beritahu parent untuk refresh status persediaan
       window.dispatchEvent(new Event('inventory-updated'));
       
       // Auto-start shift if needed
       if (!activeShift) {
-        const { data: newShift, error: shiftError } = await supabase
+        await supabase
           .from('shift_management')
           .insert([{
             rider_id: userProfile.id,
@@ -185,16 +205,10 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
             shift_date: new Date().toISOString().split('T')[0],
             shift_number: 1,
             status: 'active'
-          }])
-          .select()
-          .single();
-
-        if (!shiftError && newShift) {
-          console.log('Auto-started shift for stock return');
-        }
+          }]);
       }
 
-      // Check remaining stock for appropriate message  
+      // Check remaining stock
       const { data: remainingAfterReturn } = await supabase
         .from('inventory')
         .select('id')
@@ -203,32 +217,28 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
       
       const remainingCount = remainingAfterReturn?.length || 0;
 
-      // Show appropriate message based on remaining stock
       if (remainingCount === 0) {
         toast.success("Semua stok telah dikembalikan! Silakan lengkapi laporan shift.");
-      } else {
-        toast.success(`Stok berhasil dikembalikan! Masih ada ${remainingCount} jenis produk yang harus dikembalikan.`);
       }
     } catch (error: any) {
       toast.error("Gagal mengembalikan stok: " + error.message);
     } finally {
       setLoading(false);
-      setCurrentReturnId(null);
-      setCurrentReturnQty(0);
     }
   };
 
   return (
     <div className="space-y-4">
-      {/* Hidden file input for camera/gallery - permanent in DOM for reliable mobile access */}
+      {/* Hidden file input for optional photo */}
       <input
         ref={returnFileInputRef}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={handleReturnPhotoSelected}
+        onChange={handleOptionalPhotoSelected}
       />
+      
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Pengembalian Stok</h3>
         <div className="flex gap-2">
@@ -254,41 +264,75 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
         </div>
       </div>
       
-      <ScrollArea className="h-96">
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground mb-4">
-            Stok sisa yang harus dikembalikan ke branch di akhir shift:
-          </p>
+      {returnableStock.length > 0 && (
+        <>
+          {/* Select All / Deselect All buttons */}
+          <div className="flex gap-2 mb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={selectAllReturn}
+              disabled={selectedReturnIds.size === returnableStock.length}
+            >
+              Pilih Semua
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={deselectAllReturn}
+              disabled={selectedReturnIds.size === 0}
+            >
+              Batal Pilih
+            </Button>
+          </div>
           
+          <p className="text-sm text-muted-foreground">
+            Pilih stok yang akan dikembalikan ke branch:
+          </p>
+        </>
+      )}
+
+      <ScrollArea className="h-72">
+        <div className="space-y-3">
           {returnableStock.map((item) => (
-            <Card key={item.id} className="border-l-4 border-l-orange-500">
+            <Card 
+              key={item.id} 
+              className={`border-l-4 cursor-pointer transition-colors ${
+                selectedReturnIds.has(item.id) 
+                  ? 'border-l-green-500 bg-green-50 dark:bg-green-950/20' 
+                  : 'border-l-orange-500'
+              }`}
+              onClick={() => toggleReturnItem(item.id)}
+            >
               <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
+                <div className="flex items-center gap-3">
+                  {/* Checkbox */}
+                  <div 
+                    className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                      selectedReturnIds.has(item.id)
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : 'border-muted-foreground'
+                    }`}
+                  >
+                    {selectedReturnIds.has(item.id) && <CheckCircle className="h-4 w-4" />}
+                  </div>
+                  
+                  {/* Product Info */}
+                  <div className="flex-1">
                     <h4 className="font-medium">{item.products?.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      Sisa: {item.stock_quantity} | Kategori: {item.products?.category}
+                      Sisa: {item.stock_quantity} | {item.products?.category}
                     </p>
                     <p className="text-xs text-orange-600">
-                      Harga: Rp {item.products?.price?.toLocaleString('id-ID')}
+                      Rp {item.products?.price?.toLocaleString('id-ID')}
                     </p>
                   </div>
+                  
                   <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                     <Package className="h-3 w-3 mr-1" />
-                    Sisa Stok
+                    Sisa
                   </Badge>
                 </div>
-
-                   <Button
-                     size="sm"
-                     variant="destructive"
-                     onClick={() => triggerReturnPhoto(item.id, item.stock_quantity)}
-                     disabled={loading || currentReturnId === item.id}
-                     className="w-full"
-                   >
-                     <Camera className="h-4 w-4 mr-1" />
-                     {currentReturnId === item.id ? 'Memproses...' : 'Kembalikan Stok (Foto Wajib)'}
-                   </Button>
               </CardContent>
             </Card>
           ))}
@@ -311,6 +355,51 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
           )}
         </div>
       </ScrollArea>
+
+      {/* Bottom section: Optional photo + Return button */}
+      {returnableStock.length > 0 && (
+        <div className="space-y-3 pt-3 border-t">
+          {/* Optional Photo Section */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Foto Bukti (Opsional)</Label>
+            {returnPhoto ? (
+              <div className="flex items-center gap-3 p-2 bg-muted rounded-lg">
+                <Camera className="h-5 w-5 text-green-500" />
+                <span className="text-sm flex-1 truncate">{returnPhoto.name}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={removePhoto}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => returnFileInputRef.current?.click()}
+                className="w-full"
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Ambil Foto (Opsional)
+              </Button>
+            )}
+          </div>
+
+          {/* Bulk Return Button */}
+          <Button
+            onClick={handleBulkReturn}
+            disabled={loading || selectedReturnIds.size === 0}
+            className="w-full bg-red-600 hover:bg-red-700 text-white"
+            size="lg"
+          >
+            <Package className="h-5 w-5 mr-2" />
+            {loading ? 'Memproses...' : `KEMBALIKAN STOCK PRODUCT (${selectedReturnIds.size} item)`}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
