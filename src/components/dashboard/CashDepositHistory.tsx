@@ -34,6 +34,37 @@ interface CashDepositData {
   notes: string;
 }
 
+// Separate component with local state to prevent race conditions
+const NotesInput = ({ 
+  item, 
+  onSave 
+}: { 
+  item: CashDepositData; 
+  onSave: (item: CashDepositData, notes: string) => void;
+}) => {
+  const [localNotes, setLocalNotes] = useState(item.notes || '');
+
+  // Sync with prop when item changes (e.g., when data is refetched)
+  useEffect(() => {
+    setLocalNotes(item.notes || '');
+  }, [item.rider_id, item.date, item.notes]);
+
+  return (
+    <Input
+      placeholder="Ketik keterangan..."
+      value={localNotes}
+      onChange={(e) => setLocalNotes(e.target.value)}
+      onBlur={() => {
+        if (localNotes !== item.notes) {
+          onSave(item, localNotes);
+        }
+      }}
+      maxLength={1000}
+      className="min-w-[200px] h-8 text-sm"
+    />
+  );
+};
+
 export const CashDepositHistory = () => {
   const [riders, setRiders] = useState<Rider[]>([]);
   const [selectedRider, setSelectedRider] = useState<string>("all");
@@ -618,13 +649,9 @@ export const CashDepositHistory = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Input
-                            placeholder="Ketik keterangan..."
-                            value={item.notes}
-                            onChange={(e) => handleNotesChange(item, e.target.value)}
-                            onBlur={(e) => handleNotesChange(item, e.target.value)}
-                            maxLength={1000}
-                            className="min-w-[200px] h-8 text-sm"
+                          <NotesInput 
+                            item={item} 
+                            onSave={handleNotesChange}
                           />
                         </TableCell>
                       </TableRow>
