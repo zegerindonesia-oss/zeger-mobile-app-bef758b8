@@ -540,7 +540,7 @@ export const CashDepositHistory = () => {
                   <TableHead className="text-right">Transfer Bank</TableHead>
                   <TableHead className="text-right">Beban Operasional</TableHead>
                   <TableHead className="text-right">Total Setoran Tunai</TableHead>
-                  <TableHead className="w-32">Keterangan</TableHead>
+                  <TableHead className="min-w-[200px]">Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -619,11 +619,12 @@ export const CashDepositHistory = () => {
                         </TableCell>
                         <TableCell>
                           <Input
-                            placeholder="Catatan..."
+                            placeholder="Ketik keterangan..."
                             value={item.notes}
                             onChange={(e) => handleNotesChange(item, e.target.value)}
                             onBlur={(e) => handleNotesChange(item, e.target.value)}
-                            className="w-32 h-8 text-xs"
+                            maxLength={1000}
+                            className="min-w-[200px] h-8 text-sm"
                           />
                         </TableCell>
                       </TableRow>
