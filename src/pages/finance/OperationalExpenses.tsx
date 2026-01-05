@@ -234,11 +234,6 @@ export default function OperationalExpenses() {
   };
 
   const handleEdit = (expense: Expense) => {
-    if (expense.source !== 'operational') {
-      toast.error('Hanya beban operasional yang bisa diedit');
-      return;
-    }
-    
     setEditingExpense(expense);
     setEditCategory(expense.expense_category);
     setEditAmount(expense.amount.toString());
@@ -264,41 +259,62 @@ export default function OperationalExpenses() {
       toast.error('Jumlah tidak valid');
       return;
     }
-    if (!editAssignedUser) {
-      toast.error('Pilih user yang ditugaskan');
-      return;
-    }
     if (!editingExpense) return;
 
-    const selectedUserName = allUsers.find(u => u.id === editAssignedUser)?.full_name || '';
-    
-    // Create description combining category, user name, and notes
-    let expenseDescription = `${editCategory} - ${selectedUserName}`;
-    if (editNotes.trim()) {
-      expenseDescription += ` | Catatan: ${editNotes.trim()}`;
-    }
-    
     // Format expense date for database (YYYY-MM-DD)
     const formatDateForDB = (date: Date) => {
       const offset = 7 * 60; // Jakarta timezone offset
       const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
       return jakartaDate.toISOString().split('T')[0];
     };
-    
-    const { error } = await supabase
-      .from('operational_expenses')
-      .update({
-        expense_category: editCategory,
-        amount: amt,
-        description: expenseDescription,
-        expense_date: formatDateForDB(editExpenseDate),
-        created_by: editAssignedUser
-      })
-      .eq('id', editingExpense.id);
-    
-    if (error) { 
-      toast.error(error.message); 
-      return; 
+
+    // Handle update based on source type
+    if ((editingExpense as any).source === 'rider') {
+      // Update daily_operational_expenses (rider expense)
+      const { error } = await supabase
+        .from('daily_operational_expenses')
+        .update({
+          expense_type: editCategory,
+          amount: amt,
+          description: editNotes,
+          expense_date: formatDateForDB(editExpenseDate)
+        })
+        .eq('id', editingExpense.id);
+      
+      if (error) { 
+        toast.error(error.message); 
+        return; 
+      }
+    } else {
+      // Update operational_expenses (operational expense)
+      if (!editAssignedUser) {
+        toast.error('Pilih user yang ditugaskan');
+        return;
+      }
+
+      const selectedUserName = allUsers.find(u => u.id === editAssignedUser)?.full_name || '';
+      
+      // Create description combining category, user name, and notes
+      let expenseDescription = `${editCategory} - ${selectedUserName}`;
+      if (editNotes.trim()) {
+        expenseDescription += ` | Catatan: ${editNotes.trim()}`;
+      }
+      
+      const { error } = await supabase
+        .from('operational_expenses')
+        .update({
+          expense_category: editCategory,
+          amount: amt,
+          description: expenseDescription,
+          expense_date: formatDateForDB(editExpenseDate),
+          created_by: editAssignedUser
+        })
+        .eq('id', editingExpense.id);
+      
+      if (error) { 
+        toast.error(error.message); 
+        return; 
+      }
     }
     
     toast.success('Beban berhasil diupdate');
@@ -307,15 +323,29 @@ export default function OperationalExpenses() {
     load();
   };
 
-  const handleDelete = async (expenseId: string) => {
-    const { error } = await supabase
-      .from('operational_expenses')
-      .delete()
-      .eq('id', expenseId);
-    
-    if (error) { 
-      toast.error(error.message); 
-      return; 
+  const handleDelete = async (expenseId: string, source?: string) => {
+    if (source === 'rider') {
+      // Delete from daily_operational_expenses
+      const { error } = await supabase
+        .from('daily_operational_expenses')
+        .delete()
+        .eq('id', expenseId);
+      
+      if (error) { 
+        toast.error(error.message); 
+        return; 
+      }
+    } else {
+      // Delete from operational_expenses
+      const { error } = await supabase
+        .from('operational_expenses')
+        .delete()
+        .eq('id', expenseId);
+      
+      if (error) { 
+        toast.error(error.message); 
+        return; 
+      }
     }
     
     toast.success('Beban berhasil dihapus');
@@ -606,8 +636,8 @@ export default function OperationalExpenses() {
                       </Dialog>
                     )}
                     
-                    {/* Edit/Delete buttons - only for operational expenses and users with edit permissions */}
-                    {(it as any).source === 'operational' && canEdit && (
+                    {/* Edit/Delete buttons - for both operational and rider expenses, for users with edit permissions */}
+                    {((it as any).source === 'operational' || (it as any).source === 'rider') && canEdit && (
                       <>
                         <Button
                           variant="outline"
@@ -638,7 +668,7 @@ export default function OperationalExpenses() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(it.id)}>
+                              <AlertDialogAction onClick={() => handleDelete(it.id, (it as any).source)}>
                                 Hapus
                               </AlertDialogAction>
                             </AlertDialogFooter>

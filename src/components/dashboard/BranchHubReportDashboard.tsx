@@ -239,22 +239,37 @@ export const BranchHubReportDashboard = () => {
         }
       }
 
-      // Get operational expenses for this rider
-      const { data: expenses } = await supabase
+      // Get operational expenses for this rider from daily_operational_expenses
+      const { data: dailyExpenses } = await supabase
         .from('daily_operational_expenses')
         .select('amount, expense_type, rider_id')
         .eq('rider_id', assignedRiderId)
         .gte('expense_date', startStr)
         .lte('expense_date', endStr);
 
-      const operationalExpenses = (expenses || []).reduce((sum, expense: any) => {
+      // ALSO get operational expenses from operational_expenses table (to match Finance page)
+      const { data: opExpenses } = await supabase
+        .from('operational_expenses')
+        .select('amount, expense_category')
+        .eq('created_by', assignedRiderId)
+        .gte('expense_date', startStr)
+        .lte('expense_date', endStr);
+
+      // Calculate daily operational expenses (excluding food/raw material costs)
+      const dailyTotal = (dailyExpenses || []).reduce((sum, expense: any) => {
         const type = (expense.expense_type || '').toLowerCase();
-        // Exclude food/raw material costs from operational expenses
         if (!type.includes('food') && !type.includes('bahan')) {
           return sum + Number(expense.amount || 0);
         }
         return sum;
       }, 0);
+
+      // Calculate operational expenses from operational_expenses table
+      const opTotal = (opExpenses || []).reduce((sum, expense: any) => 
+        sum + Number(expense.amount || 0), 0);
+
+      // Combine both sources for total operational expenses
+      const operationalExpenses = dailyTotal + opTotal;
 
       const totalSales = cashRevenue + qrisRevenue + transferRevenue;
       const totalTransactions = transactions?.length || 0;
