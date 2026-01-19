@@ -330,10 +330,17 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
         // Match returns to shifts by rider and date
         shiftsData.forEach((shift: any) => {
-          const shiftDate = new Date(shift.shift_date).toDateString();
+          // Use shift_date directly (format: "YYYY-MM-DD")
+          const shiftDateStr = shift.shift_date;
           const matchingReturns = (returnsRes || []).filter((ret: any) => {
-            const returnDate = new Date(ret.created_at).toDateString();
-            return ret.rider_id === shift.rider_id && returnDate === shiftDate;
+            // Convert created_at to Jakarta timezone date (YYYY-MM-DD)
+            const returnDateJakarta = new Intl.DateTimeFormat('en-CA', { 
+              timeZone: 'Asia/Jakarta', 
+              year: 'numeric', 
+              month: '2-digit', 
+              day: '2-digit' 
+            }).format(new Date(ret.created_at));
+            return ret.rider_id === shift.rider_id && returnDateJakarta === shiftDateStr;
           });
           returnsByShift[shift.id] = matchingReturns;
         });
@@ -500,7 +507,12 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                       <div>
                         <CardTitle className="text-lg">{report.riderName}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(), "dd MMM yyyy", { locale: id })}
+                          {report.stockReturns.length > 0 
+                            ? format(new Date(report.stockReturns[0].created_at), "dd MMM yyyy", { locale: id })
+                            : report.cashDeposit 
+                              ? format(new Date(report.cashDeposit.shift_date), "dd MMM yyyy", { locale: id })
+                              : format(new Date(), "dd MMM yyyy", { locale: id })
+                          }
                         </p>
                       </div>
                       <Badge variant="secondary">Menunggu Verifikasi</Badge>
