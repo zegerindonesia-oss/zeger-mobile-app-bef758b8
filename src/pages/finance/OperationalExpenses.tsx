@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { Trophy } from "lucide-react";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -65,7 +66,8 @@ export default function OperationalExpenses() {
   const [riders, setRiders] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [userSummary, setUserSummary] = useState<{riderId: string, riderName: string, totalExpenses: number}[]>([]);
+  const [userSummary, setUserSummary] = useState<{riderId: string, riderName: string, totalExpenses: number, sales: number, percentage: number}[]>([]);
+  const [totalOmset, setTotalOmset] = useState(0);
 
   // Edit/Delete states
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -199,13 +201,49 @@ export default function OperationalExpenses() {
         .map(([riderId, userData]) => ({
           riderId,
           riderName: userData.name,
-          totalExpenses: userData.total
+          totalExpenses: userData.total,
+          sales: 0,
+          percentage: 0
         }))
         .sort((a, b) => b.totalExpenses - a.totalExpenses);
       
-      setUserSummary(summaryArray);
+      // Calculate total sales (omset) for percentage calculation
+      const startDateTimeStr = `${startDateStr}T00:00:00+07:00`;
+      const endDateTimeStr = `${endDateStr}T23:59:59+07:00`;
+      
+      // Fetch all transactions for the period to calculate omset per rider
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('rider_id, final_amount')
+        .eq('status', 'completed')
+        .eq('is_voided', false)
+        .gte('transaction_date', startDateTimeStr)
+        .lte('transaction_date', endDateTimeStr);
+      
+      // Calculate sales per rider
+      const salesByRider: { [key: string]: number } = {};
+      let totalSales = 0;
+      (transactions || []).forEach(tx => {
+        const amount = Number(tx.final_amount || 0);
+        totalSales += amount;
+        if (tx.rider_id) {
+          salesByRider[tx.rider_id] = (salesByRider[tx.rider_id] || 0) + amount;
+        }
+      });
+      
+      setTotalOmset(totalSales);
+      
+      // Update summary with sales data and percentage
+      const updatedSummary = summaryArray.map(item => ({
+        ...item,
+        sales: salesByRider[item.riderId] || 0,
+        percentage: totalSales > 0 ? (item.totalExpenses / totalSales) * 100 : 0
+      }));
+      
+      setUserSummary(updatedSummary);
     } else {
       setUserSummary([]);
+      setTotalOmset(0);
     }
   };
 
@@ -546,35 +584,90 @@ export default function OperationalExpenses() {
 
       {/* Tabel Summary per User - ditampilkan jika filter = all */}
       {selectedUser === "all" && userSummary.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ringkasan Beban per User</CardTitle>
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-destructive text-destructive-foreground rounded-t-lg">
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Ringkasan Beban Operasional per User
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto mt-4">
+              {/* Summary info */}
+              <div className="mb-4 p-4 bg-muted/30 rounded-lg">
+                <div className="flex flex-wrap gap-6 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Total Omset:</span>
+                    <span className="ml-2 font-semibold text-primary">{currency.format(totalOmset)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Beban Operasional:</span>
+                    <span className="ml-2 font-semibold text-red-600">{currency.format(totalExpenses)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Persentase terhadap Omset:</span>
+                    <span className="ml-2 font-semibold text-orange-600">
+                      ({totalOmset > 0 ? ((totalExpenses / totalOmset) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
               <table className="w-full">
                 <thead>
-                  <tr className="border-b bg-muted/50">
+                  <tr className="border-b bg-destructive/10">
                     <th className="text-left p-3 font-semibold">No.</th>
                     <th className="text-left p-3 font-semibold">Nama</th>
+                    <th className="text-right p-3 font-semibold">Total Sales</th>
                     <th className="text-right p-3 font-semibold">Total Beban Operasional</th>
+                    <th className="text-right p-3 font-semibold">% terhadap Omset</th>
                   </tr>
                 </thead>
                 <tbody>
                   {userSummary.map((item, index) => (
                     <tr key={item.riderId} className="border-b hover:bg-muted/30">
-                      <td className="p-3">{index + 1}</td>
+                      <td className="p-3">
+                        {index < 3 ? (
+                          <span className="flex items-center gap-1">
+                            {index + 1}
+                            <Trophy className={cn(
+                              "h-4 w-4",
+                              index === 0 && "text-yellow-500",
+                              index === 1 && "text-gray-400",
+                              index === 2 && "text-amber-600"
+                            )} />
+                          </span>
+                        ) : (
+                          index + 1
+                        )}
+                      </td>
                       <td className="p-3">{item.riderName}</td>
+                      <td className="p-3 text-right font-medium">
+                        {currency.format(item.sales)}
+                      </td>
                       <td className="p-3 text-right font-medium text-red-600">
                         {currency.format(item.totalExpenses)}
+                      </td>
+                      <td className="p-3 text-right">
+                        <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm font-medium">
+                          ({item.percentage.toFixed(1)}%)
+                        </span>
                       </td>
                     </tr>
                   ))}
                   {/* Total Row */}
-                  <tr className="bg-muted/50 font-bold">
-                    <td colSpan={2} className="p-3 text-right">Total</td>
+                  <tr className="bg-destructive/10 font-bold">
+                    <td colSpan={2} className="p-3">Total</td>
+                    <td className="p-3 text-right">
+                      {currency.format(totalOmset)}
+                    </td>
                     <td className="p-3 text-right text-red-600">
                       {currency.format(totalExpenses)}
+                    </td>
+                    <td className="p-3 text-right">
+                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
+                        ({totalOmset > 0 ? ((totalExpenses / totalOmset) * 100).toFixed(1) : 0}%)
+                      </span>
                     </td>
                   </tr>
                 </tbody>
