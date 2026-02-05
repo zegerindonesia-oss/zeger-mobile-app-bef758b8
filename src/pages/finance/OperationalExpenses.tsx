@@ -65,6 +65,7 @@ export default function OperationalExpenses() {
   const [riders, setRiders] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [userSummary, setUserSummary] = useState<{riderId: string, riderName: string, totalExpenses: number}[]>([]);
 
   // Edit/Delete states
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -97,10 +98,11 @@ export default function OperationalExpenses() {
   const load = async () => {
     // Format dates to YYYY-MM-DD for proper filtering
     const formatDateForQuery = (date: Date) => {
-      // Use Indonesia timezone offset (UTC+7)
-      const offset = 7 * 60; // 7 hours in minutes
-      const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
-      return jakartaDate.toISOString().split('T')[0];
+      // Extract date components directly (consistent with dashboard)
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     };
     
     const startDateStr = formatDateForQuery(startDate);
@@ -166,6 +168,45 @@ export default function OperationalExpenses() {
     // Calculate total expenses
     const total = combinedExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     setTotalExpenses(total);
+
+    // Calculate summary per user when "all" is selected
+    if (selectedUser === "all") {
+      const summaryMap: { [key: string]: { name: string; total: number } } = {};
+      
+      // Aggregate from rider expenses
+      (riderExpenses || []).forEach((exp: any) => {
+        const rider = riders.find(r => r.id === exp.rider_id);
+        if (rider) {
+          if (!summaryMap[exp.rider_id]) {
+            summaryMap[exp.rider_id] = { name: rider.full_name, total: 0 };
+          }
+          summaryMap[exp.rider_id].total += Number(exp.amount || 0);
+        }
+      });
+      
+      // Aggregate from operational expenses
+      (data || []).forEach((exp: any) => {
+        const user = allUsers.find(u => u.id === exp.created_by);
+        if (user) {
+          if (!summaryMap[exp.created_by]) {
+            summaryMap[exp.created_by] = { name: user.full_name, total: 0 };
+          }
+          summaryMap[exp.created_by].total += Number(exp.amount || 0);
+        }
+      });
+      
+      const summaryArray = Object.entries(summaryMap)
+        .map(([riderId, userData]) => ({
+          riderId,
+          riderName: userData.name,
+          totalExpenses: userData.total
+        }))
+        .sort((a, b) => b.totalExpenses - a.totalExpenses);
+      
+      setUserSummary(summaryArray);
+    } else {
+      setUserSummary([]);
+    }
   };
 
   useEffect(() => { 
@@ -206,9 +247,10 @@ export default function OperationalExpenses() {
     
     // Format expense date for database (YYYY-MM-DD)
     const formatDateForDB = (date: Date) => {
-      const offset = 7 * 60; // Jakarta timezone offset
-      const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
-      return jakartaDate.toISOString().split('T')[0];
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     };
     
     const { error } = await supabase.from('operational_expenses').insert({
@@ -263,9 +305,10 @@ export default function OperationalExpenses() {
 
     // Format expense date for database (YYYY-MM-DD)
     const formatDateForDB = (date: Date) => {
-      const offset = 7 * 60; // Jakarta timezone offset
-      const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
-      return jakartaDate.toISOString().split('T')[0];
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     };
 
     // Handle update based on source type
@@ -500,6 +543,46 @@ export default function OperationalExpenses() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Tabel Summary per User - ditampilkan jika filter = all */}
+      {selectedUser === "all" && userSummary.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ringkasan Beban per User</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-3 font-semibold">No.</th>
+                    <th className="text-left p-3 font-semibold">Nama</th>
+                    <th className="text-right p-3 font-semibold">Total Beban Operasional</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userSummary.map((item, index) => (
+                    <tr key={item.riderId} className="border-b hover:bg-muted/30">
+                      <td className="p-3">{index + 1}</td>
+                      <td className="p-3">{item.riderName}</td>
+                      <td className="p-3 text-right font-medium text-red-600">
+                        {currency.format(item.totalExpenses)}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Total Row */}
+                  <tr className="bg-muted/50 font-bold">
+                    <td colSpan={2} className="p-3 text-right">Total</td>
+                    <td className="p-3 text-right text-red-600">
+                      {currency.format(totalExpenses)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {canEdit && (
         <Card>
