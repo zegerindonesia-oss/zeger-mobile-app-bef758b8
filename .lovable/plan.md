@@ -1,178 +1,67 @@
 
-## Rencana Perbaikan
+## Rencana Perbaikan: Perbedaan Data Sales Dashboard vs Finance
 
 ### Masalah yang Ditemukan
 
-#### Masalah 1: Perbedaan Jumlah Beban Operasional Dashboard vs Finance
-**Root Cause:**
-Dashboard dan Finance menggunakan metode formatting tanggal yang berbeda:
-- **Dashboard** menggunakan `formatYMD()` yang mengekstrak langsung dari komponen tanggal (tahun, bulan, hari)
-- **Finance** menggunakan `formatDateForQuery()` yang menambahkan offset 7 jam, yang dapat menyebabkan tanggal bergeser ke hari berikutnya
+**Root Cause: Supabase 1000 Row Limit**
 
-```javascript
-// Dashboard - benar
-const formatYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
+| Sumber Data | Sales Pak Tri (Jan 2026) | Jumlah Transaksi |
+|-------------|--------------------------|------------------|
+| Dashboard | 7,316,000 | 346 |
+| Operational Expenses | 6,391,000 | 285 |
+| Database (actual) | 7,316,000 | 346 |
 
-// Finance - bermasalah (offset bisa geser tanggal)
-const formatDateForQuery = (date: Date) => {
-  const offset = 7 * 60; // 7 hours in minutes
-  const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
-  return jakartaDate.toISOString().split('T')[0];  // BUG: Bisa jadi hari berikutnya
-};
-```
-
-#### Masalah 2: Perlu Tabel Summary All User
-User meminta tabel yang menampilkan semua rider dan total beban operasional per rider, ditampilkan secara default saat filter "all" dipilih.
+**Penjelasan:**
+- Total transaksi di Januari 2026 adalah **1,194 transaksi**
+- Supabase memiliki default limit **1000 rows per query**
+- Query di `OperationalExpenses.tsx` tidak menggunakan pagination
+- Ketika mengambil 1000 transaksi pertama, Pak Tri hanya mendapat 285 transaksi (bukan 346)
+- Ini menyebabkan perbedaan **925,000 IDR** (61 transaksi hilang)
 
 ---
 
 ### Perubahan pada File: `src/pages/finance/OperationalExpenses.tsx`
 
-#### Fix 1: Perbaiki Formatting Tanggal (Timezone Issue)
+#### Perbaikan: Implementasi Pagination untuk Query Transactions
 
-**Perubahan di `formatDateForQuery` function (baris 99-104):**
+**Lokasi:** fungsi `load()` sekitar baris 210-232
 
+**Sebelum (tanpa pagination):**
 ```typescript
-// SEBELUM (bermasalah):
-const formatDateForQuery = (date: Date) => {
-  const offset = 7 * 60;
-  const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
-  return jakartaDate.toISOString().split('T')[0];
-};
-
-// SESUDAH (benar - konsisten dengan dashboard):
-const formatDateForQuery = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
+// Fetch all transactions for the period to calculate omset per rider
+const { data: transactions } = await supabase
+  .from('transactions')
+  .select('rider_id, final_amount')
+  .eq('status', 'completed')
+  .eq('is_voided', false)
+  .gte('transaction_date', startDateTimeStr)
+  .lte('transaction_date', endDateTimeStr);
 ```
 
-**Perubahan di `formatDateForDB` function (baris 208-212 dan 265-269):**
-
+**Sesudah (dengan pagination):**
 ```typescript
-// SEBELUM (bermasalah):
-const formatDateForDB = (date: Date) => {
-  const offset = 7 * 60;
-  const jakartaDate = new Date(date.getTime() + offset * 60 * 1000);
-  return jakartaDate.toISOString().split('T')[0];
-};
+// Fetch all transactions with pagination to avoid 1000 row limit
+const batchSize = 1000;
+let from = 0;
+const allTransactions: any[] = [];
 
-// SESUDAH (benar):
-const formatDateForDB = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-```
-
----
-
-#### Fix 2: Tambah Tabel Summary All User
-
-**Lokasi: Setelah card "Resume Total Beban" (sekitar baris 502)**
-
-Tambahkan komponen tabel ringkasan yang menampilkan:
-- Nomor urut
-- Nama Rider
-- Total Beban Operasional per rider
-- Ditampilkan ketika filter user = "all"
-
-**State baru yang diperlukan:**
-```typescript
-const [userSummary, setUserSummary] = useState<{riderId: string, riderName: string, totalExpenses: number}[]>([]);
-```
-
-**Modifikasi fungsi `load()` untuk menghitung summary per user:**
-```typescript
-// Setelah combine data, hitung summary per rider
-if (selectedUser === "all") {
-  const summaryMap: { [key: string]: { name: string; total: number } } = {};
+while (true) {
+  const { data: batch } = await supabase
+    .from('transactions')
+    .select('rider_id, final_amount')
+    .eq('status', 'completed')
+    .eq('is_voided', false)
+    .gte('transaction_date', startDateTimeStr)
+    .lte('transaction_date', endDateTimeStr)
+    .range(from, from + batchSize - 1);
   
-  // Aggregate dari rider expenses
-  (riderExpenses || []).forEach(exp => {
-    const rider = riders.find(r => r.id === exp.rider_id);
-    if (rider) {
-      if (!summaryMap[exp.rider_id]) {
-        summaryMap[exp.rider_id] = { name: rider.full_name, total: 0 };
-      }
-      summaryMap[exp.rider_id].total += Number(exp.amount || 0);
-    }
-  });
-  
-  // Aggregate dari operational expenses
-  (data || []).forEach(exp => {
-    const user = allUsers.find(u => u.id === exp.created_by);
-    if (user) {
-      if (!summaryMap[exp.created_by]) {
-        summaryMap[exp.created_by] = { name: user.full_name, total: 0 };
-      }
-      summaryMap[exp.created_by].total += Number(exp.amount || 0);
-    }
-  });
-  
-  const summaryArray = Object.entries(summaryMap)
-    .map(([riderId, data]) => ({
-      riderId,
-      riderName: data.name,
-      totalExpenses: data.total
-    }))
-    .sort((a, b) => b.totalExpenses - a.totalExpenses);
-  
-  setUserSummary(summaryArray);
-} else {
-  setUserSummary([]);
+  if (!batch || batch.length === 0) break;
+  allTransactions.push(...batch);
+  if (batch.length < batchSize) break;
+  from += batchSize;
 }
-```
 
-**UI Tabel Summary (setelah Resume Total Beban):**
-```tsx
-{/* Tabel Summary per User - ditampilkan jika filter = all */}
-{selectedUser === "all" && userSummary.length > 0 && (
-  <Card>
-    <CardHeader>
-      <CardTitle>Ringkasan Beban per User</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="text-left p-3 font-semibold">No.</th>
-              <th className="text-left p-3 font-semibold">Nama</th>
-              <th className="text-right p-3 font-semibold">Total Beban Operasional</th>
-            </tr>
-          </thead>
-          <tbody>
-            {userSummary.map((item, index) => (
-              <tr key={item.riderId} className="border-b hover:bg-muted/30">
-                <td className="p-3">{index + 1}</td>
-                <td className="p-3">{item.riderName}</td>
-                <td className="p-3 text-right font-medium text-red-600">
-                  {currency.format(item.totalExpenses)}
-                </td>
-              </tr>
-            ))}
-            {/* Total Row */}
-            <tr className="bg-muted/50 font-bold">
-              <td colSpan={2} className="p-3 text-right">Total</td>
-              <td className="p-3 text-right text-red-600">
-                {currency.format(totalExpenses)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </CardContent>
-  </Card>
-)}
+const transactions = allTransactions;
 ```
 
 ---
@@ -181,21 +70,18 @@ if (selectedUser === "all") {
 
 | File | Lokasi | Perubahan |
 |------|--------|-----------|
-| `OperationalExpenses.tsx` | baris 99-104 | Fix `formatDateForQuery` - gunakan komponen tanggal langsung |
-| `OperationalExpenses.tsx` | baris 208-212, 265-269 | Fix `formatDateForDB` - gunakan komponen tanggal langsung |
-| `OperationalExpenses.tsx` | baru (state) | Tambah state `userSummary` |
-| `OperationalExpenses.tsx` | fungsi `load()` | Tambah kalkulasi summary per user |
-| `OperationalExpenses.tsx` | setelah baris 502 | Tambah UI tabel summary |
+| `OperationalExpenses.tsx` | baris 210-232 (fungsi load) | Implementasi pagination untuk query transactions |
 
 ### Hasil yang Diharapkan
-1. **Dashboard dan Finance menampilkan jumlah yang sama** untuk beban operasional (contoh: Pak Tri 1-31 Jan 2026)
-2. **Tabel ringkasan per user** muncul ketika filter = "Semua User" menampilkan:
-   - Nomor urut
-   - Nama rider/user
-   - Total beban operasional masing-masing
-   - Total keseluruhan di baris terakhir
+
+1. **Data Sales Konsisten** antara Dashboard dan Finance
+   - Pak Tri Jan 2026: **7,316,000** (sama di kedua halaman)
+2. **Semua transaksi terhitung** - tidak ada yang terpotong karena limit 1000 rows
+3. **Persentase beban terhadap omset akurat** karena total omset sekarang benar
 
 ### Tidak Ada Perubahan Pada
-- Fitur lain di Finance
-- Dashboard atau halaman lainnya
+
+- Timezone handling (sudah benar menggunakan +07:00)
+- Format tanggal (sudah konsisten dengan dashboard)
 - RLS policies atau database
+- Fitur lain di halaman ini
