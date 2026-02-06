@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Target } from "lucide-react";
 
 interface TargetProgressCardProps {
@@ -61,10 +60,9 @@ export const TargetProgressCard = ({
       <CardContent className="p-4 space-y-4">
         {/* Motivational Text */}
         <div className="text-center">
-          <p className="text-sm font-medium opacity-90">
+          <p className="text-base font-semibold">
             Bismillah Allah mudahkan, Yuk Semangat Capai Targetmu
           </p>
-          <p className="text-xs opacity-75 mt-1">Tabel Progress Omset</p>
         </div>
 
         {/* Percentage Display */}
@@ -73,12 +71,18 @@ export const TargetProgressCard = ({
           <span className="text-4xl font-bold">{actualPercentage}%</span>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Bar with Gradient and Glow */}
         <div className="space-y-2">
-          <Progress 
-            value={percentage} 
-            className="h-3 bg-white/30"
-          />
+          <div className="relative h-4 w-full overflow-hidden rounded-full bg-white/20 shadow-inner">
+            <div 
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{ 
+                width: `${percentage}%`,
+                background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,200,200,0.8) 30%, rgba(239,68,68,0.9) 100%)',
+                boxShadow: '0 0 20px rgba(255,255,255,0.6), 0 0 40px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.4)'
+              }}
+            />
+          </div>
         </div>
 
         {/* Sales Info */}
