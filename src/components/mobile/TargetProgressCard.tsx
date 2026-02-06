@@ -82,11 +82,11 @@ export const TargetProgressCard = ({
                 boxShadow: '0 0 15px rgba(255,255,255,0.8), 0 0 30px rgba(239,68,68,0.5), inset 0 2px 0 rgba(255,255,255,0.5)'
               }}
             >
-              {/* Circle indicator at the end */}
+              {/* Circle indicator at the end - red fill with white border */}
               <div 
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-white border-2 border-white"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-red-500 border-[3px] border-white"
                 style={{
-                  boxShadow: '0 0 20px rgba(255,255,255,1), 0 0 40px rgba(255,255,255,0.8), 0 2px 8px rgba(0,0,0,0.15)'
+                  boxShadow: '0 0 20px rgba(255,255,255,0.9), 0 0 40px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.2)'
                 }}
               />
             </div>
