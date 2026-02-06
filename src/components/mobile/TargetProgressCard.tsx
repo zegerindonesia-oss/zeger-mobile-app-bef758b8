@@ -75,13 +75,21 @@ export const TargetProgressCard = ({
         <div className="space-y-2">
           <div className="relative h-6 w-full overflow-hidden rounded-full bg-white shadow-lg">
             <div 
-              className="h-full rounded-full transition-all duration-500 ease-out"
+              className="h-full rounded-full transition-all duration-500 ease-out relative"
               style={{ 
                 width: `${percentage}%`,
                 background: 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,220,220,0.9) 40%, rgba(239,68,68,1) 100%)',
                 boxShadow: '0 0 15px rgba(255,255,255,0.8), 0 0 30px rgba(239,68,68,0.5), inset 0 2px 0 rgba(255,255,255,0.5)'
               }}
-            />
+            >
+              {/* Circle indicator at the end */}
+              <div 
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-white border-2 border-white"
+                style={{
+                  boxShadow: '0 0 20px rgba(255,255,255,1), 0 0 40px rgba(255,255,255,0.8), 0 2px 8px rgba(0,0,0,0.15)'
+                }}
+              />
+            </div>
           </div>
         </div>
 
