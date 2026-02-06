@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MobileIncomingOrder } from './MobileIncomingOrder';
 import { unlockAudio, playAlertBeep, ensureUnlockListeners } from '@/lib/audio';
+import { TargetProgressCard } from './TargetProgressCard';
 
 interface DashboardStats {
   totalStock: number;
@@ -1106,6 +1107,14 @@ const MobileRiderDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Target Progress Card */}
+      <TargetProgressCard 
+        currentSales={stockCardStats.totalSales}
+        filterPeriod={stockCardFilter}
+        startDate={customStockDateFrom ? format(customStockDateFrom, 'yyyy-MM-dd') : undefined}
+        endDate={customStockDateTo ? format(customStockDateTo, 'yyyy-MM-dd') : undefined}
+      />
 
       {/* GPS Status Card */}
       <Card className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950 dark:to-orange-950 border-red-200">
