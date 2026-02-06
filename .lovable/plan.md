@@ -1,87 +1,134 @@
 
-## Rencana Perbaikan: Perbedaan Data Sales Dashboard vs Finance
+## Rencana: Tambah Tabel Target Progress di Dashboard dan Analytics Rider
 
-### Masalah yang Ditemukan
+### Fitur yang Akan Ditambahkan
 
-**Root Cause: Supabase 1000 Row Limit**
+Menambahkan komponen **Target Progress Card** di bagian **paling atas** pada:
+1. Tab **Dashboard** (MobileRiderDashboard.tsx)
+2. Tab **Analytics** (MobileRiderAnalyticsEnhanced.tsx)
 
-| Sumber Data | Sales Pak Tri (Jan 2026) | Jumlah Transaksi |
-|-------------|--------------------------|------------------|
-| Dashboard | 7,316,000 | 346 |
-| Operational Expenses | 6,391,000 | 285 |
-| Database (actual) | 7,316,000 | 346 |
+### Spesifikasi Target
 
-**Penjelasan:**
-- Total transaksi di Januari 2026 adalah **1,194 transaksi**
-- Supabase memiliki default limit **1000 rows per query**
-- Query di `OperationalExpenses.tsx` tidak menggunakan pagination
-- Ketika mengambil 1000 transaksi pertama, Pak Tri hanya mendapat 285 transaksi (bukan 346)
-- Ini menyebabkan perbedaan **925,000 IDR** (61 transaksi hilang)
+| Filter | Target Omset |
+|--------|--------------|
+| Hari Ini (today/yesterday) | Rp 500.000 |
+| Minggu Ini (weekly) | Rp 3.500.000 |
+| Bulan Ini (monthly) | Rp 15.000.000 |
+| Custom | Dihitung proporsional berdasarkan jumlah hari |
+
+### Desain Komponen
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Bismillah Allah mudahkan, Yuk Semangat Capai Targetmu │
+│                                                         │
+│  Tabel Progress Omset                                   │
+│                                                         │
+│  🎯 90%                                                 │
+│  ███████████████████░░░  (progress bar merah)          │
+│                                                         │
+│  Omset Saat Ini: Rp 450.000                            │
+│  Target: Rp 500.000                                     │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-### Perubahan pada File: `src/pages/finance/OperationalExpenses.tsx`
+### Perubahan File
 
-#### Perbaikan: Implementasi Pagination untuk Query Transactions
+#### 1. File Baru: `src/components/mobile/TargetProgressCard.tsx`
 
-**Lokasi:** fungsi `load()` sekitar baris 210-232
+Membuat komponen reusable yang dapat digunakan di Dashboard dan Analytics.
 
-**Sebelum (tanpa pagination):**
+**Props:**
+- `currentSales: number` - Total penjualan saat ini
+- `filterPeriod: string` - Filter periode yang aktif ('today', 'weekly', 'monthly', dll)
+- `startDate?: string` - Tanggal mulai (untuk custom)
+- `endDate?: string` - Tanggal akhir (untuk custom)
+
+**Logika Target:**
 ```typescript
-// Fetch all transactions for the period to calculate omset per rider
-const { data: transactions } = await supabase
-  .from('transactions')
-  .select('rider_id, final_amount')
-  .eq('status', 'completed')
-  .eq('is_voided', false)
-  .gte('transaction_date', startDateTimeStr)
-  .lte('transaction_date', endDateTimeStr);
-```
-
-**Sesudah (dengan pagination):**
-```typescript
-// Fetch all transactions with pagination to avoid 1000 row limit
-const batchSize = 1000;
-let from = 0;
-const allTransactions: any[] = [];
-
-while (true) {
-  const { data: batch } = await supabase
-    .from('transactions')
-    .select('rider_id, final_amount')
-    .eq('status', 'completed')
-    .eq('is_voided', false)
-    .gte('transaction_date', startDateTimeStr)
-    .lte('transaction_date', endDateTimeStr)
-    .range(from, from + batchSize - 1);
+const getTarget = (period: string, startDate?: string, endDate?: string) => {
+  const DAILY_TARGET = 500000;
+  const WEEKLY_TARGET = 3500000;
+  const MONTHLY_TARGET = 15000000;
   
-  if (!batch || batch.length === 0) break;
-  allTransactions.push(...batch);
-  if (batch.length < batchSize) break;
-  from += batchSize;
-}
-
-const transactions = allTransactions;
+  switch (period) {
+    case 'today':
+    case 'yesterday':
+      return DAILY_TARGET;
+    case 'weekly':
+      return WEEKLY_TARGET;
+    case 'monthly':
+      return MONTHLY_TARGET;
+    case 'custom':
+      // Hitung jumlah hari, target = jumlah hari x 500.000
+      if (startDate && endDate) {
+        const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+        return days * DAILY_TARGET;
+      }
+      return DAILY_TARGET;
+    default:
+      return DAILY_TARGET;
+  }
+};
 ```
+
+**Komponen UI:**
+- Card dengan gradient merah (tema Zeger)
+- Motivational text di atas
+- Persentase pencapaian yang besar dan jelas
+- Progress bar dengan warna merah
+- Omset saat ini dan target
+
+---
+
+#### 2. Modifikasi: `src/components/mobile/MobileRiderDashboard.tsx`
+
+**Lokasi:** Setelah Sound Enable Banner (baris ~1108), sebelum GPS Status Card (baris ~1110)
+
+**Perubahan:**
+- Import TargetProgressCard component
+- Tambahkan komponen TargetProgressCard dengan props:
+  - `currentSales={stockCardStats.totalSales}`
+  - `filterPeriod={stockCardFilter}`
+  - `startDate` dan `endDate` dari custom date jika ada
+
+---
+
+#### 3. Modifikasi: `src/components/mobile/MobileRiderAnalyticsEnhanced.tsx`
+
+**Lokasi:** Setelah Filter Period Card (baris ~451), sebelum Sales Overview cards (baris ~454)
+
+**Perubahan:**
+- Import TargetProgressCard component
+- Tambahkan komponen TargetProgressCard dengan props:
+  - `currentSales={analytics.todaySales}`
+  - `filterPeriod={filterPeriod}`
+  - `startDate` dan `endDate` dari state yang ada
 
 ---
 
 ### Ringkasan Perubahan
 
-| File | Lokasi | Perubahan |
-|------|--------|-----------|
-| `OperationalExpenses.tsx` | baris 210-232 (fungsi load) | Implementasi pagination untuk query transactions |
+| File | Aksi | Deskripsi |
+|------|------|-----------|
+| `src/components/mobile/TargetProgressCard.tsx` | **CREATE** | Komponen baru untuk target progress |
+| `src/components/mobile/MobileRiderDashboard.tsx` | **MODIFY** | Import dan tambahkan TargetProgressCard setelah banner |
+| `src/components/mobile/MobileRiderAnalyticsEnhanced.tsx` | **MODIFY** | Import dan tambahkan TargetProgressCard setelah filter |
+
+### Yang Tidak Berubah
+
+- Semua logika dan fungsi yang sudah ada
+- Filter functionality
+- Data fetching
+- Layout cards lainnya
+- Navigasi dan tab switching
 
 ### Hasil yang Diharapkan
 
-1. **Data Sales Konsisten** antara Dashboard dan Finance
-   - Pak Tri Jan 2026: **7,316,000** (sama di kedua halaman)
-2. **Semua transaksi terhitung** - tidak ada yang terpotong karena limit 1000 rows
-3. **Persentase beban terhadap omset akurat** karena total omset sekarang benar
-
-### Tidak Ada Perubahan Pada
-
-- Timezone handling (sudah benar menggunakan +07:00)
-- Format tanggal (sudah konsisten dengan dashboard)
-- RLS policies atau database
-- Fitur lain di halaman ini
+1. **Target Progress Card** muncul di paling atas Dashboard dan Analytics
+2. **Progress bar merah** yang mengikuti tema Zeger
+3. **Persentase dinamis** yang berubah sesuai filter (harian 90%, mingguan 50%, dll)
+4. **Motivational text** "Bismillah Allah mudahkan, Yuk Semangat Capai Targetmu"
+5. **Responsive** dan sesuai dengan desain mobile app yang ada
