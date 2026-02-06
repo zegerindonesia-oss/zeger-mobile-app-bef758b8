@@ -17,6 +17,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EReceipt } from './EReceipt';
+import { TargetProgressCard } from './TargetProgressCard';
 
 interface TransactionDetail {
   id: string;
@@ -449,6 +450,14 @@ const MobileRiderAnalyticsEnhanced = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Target Progress Card */}
+        <TargetProgressCard 
+          currentSales={analytics.todaySales}
+          filterPeriod={filterPeriod}
+          startDate={startDate}
+          endDate={endDate}
+        />
 
         {/* Sales Overview */}
         <div className="grid grid-cols-2 gap-4">
