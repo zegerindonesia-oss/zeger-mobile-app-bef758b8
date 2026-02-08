@@ -72,10 +72,10 @@ export const TargetProgressCard = ({
         </div>
 
         {/* Progress Bar with Gradient and Glow */}
-        <div className="space-y-2">
-          <div className="relative h-6 w-full overflow-hidden rounded-full bg-white shadow-lg">
+        <div className="space-y-2 px-4">
+          <div className="relative h-6 w-full rounded-full bg-white shadow-lg">
             <div 
-              className="h-full rounded-full transition-all duration-500 ease-out relative"
+              className="h-full rounded-full transition-all duration-500 ease-out relative overflow-visible"
               style={{ 
                 width: `${percentage}%`,
                 background: 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,220,220,0.9) 40%, rgba(239,68,68,1) 100%)',
@@ -84,7 +84,7 @@ export const TargetProgressCard = ({
             >
               {/* Circle indicator at the end - red fill with white border */}
               <div 
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-red-500 border-[3px] border-white"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-red-500 border-[3px] border-white z-10"
                 style={{
                   boxShadow: '0 0 20px rgba(255,255,255,0.9), 0 0 40px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.2)'
                 }}

@@ -405,49 +405,48 @@ const MobileRiderAnalyticsEnhanced = () => {
       <div className="p-4 space-y-6">
         {/* Filter Period Dropdown */}
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <Filter className="h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <Label>Filter Periode</Label>
-                <Select value={filterPeriod} onValueChange={handleFilterChange}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">Hari Ini</SelectItem>
-                    <SelectItem value="yesterday">Kemarin</SelectItem>
-                    <SelectItem value="weekly">Minggu Ini</SelectItem>
-                    <SelectItem value="monthly">Bulan Ini</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Custom Date Range */}
-              {filterPeriod === "custom" && (
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <Label>Dari Tanggal</Label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Sampai Tanggal</Label>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-              )}
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-red-600" />
+              <Label className="text-base font-medium">Filter Periode</Label>
             </div>
+            
+            <Select value={filterPeriod} onValueChange={handleFilterChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hari Ini</SelectItem>
+                <SelectItem value="yesterday">Kemarin</SelectItem>
+                <SelectItem value="weekly">Minggu Ini</SelectItem>
+                <SelectItem value="monthly">Bulan Ini</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Custom Date Range */}
+            {filterPeriod === "custom" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm">Dari Tanggal</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Sampai Tanggal</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
