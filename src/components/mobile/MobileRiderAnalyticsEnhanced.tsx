@@ -459,59 +459,51 @@ const MobileRiderAnalyticsEnhanced = () => {
         />
 
         {/* Sales Overview */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="min-w-0 overflow-hidden">
+            <CardContent className="p-3">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-2 bg-green-100 rounded-lg mb-2">
                   <DollarSign className="h-5 w-5 text-green-600" />
                 </div>
-                <div>
-                  <p className="text-lg font-bold">{formatCurrency(analytics.todaySales)}</p>
-                  <p className="text-sm text-muted-foreground">Total Penjualan</p>
-                </div>
+                <p className="text-base font-bold truncate w-full">{formatCurrency(analytics.todaySales)}</p>
+                <p className="text-xs text-muted-foreground">Total Penjualan</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
+          <Card className="min-w-0 overflow-hidden">
+            <CardContent className="p-3">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-2 bg-blue-100 rounded-lg mb-2">
                   <ShoppingCart className="h-5 w-5 text-blue-600" />
                 </div>
-                <div>
-                  <p className="text-lg font-bold">{analytics.totalTransactions}</p>
-                  <p className="text-sm text-muted-foreground">Total Transaksi</p>
-                </div>
+                <p className="text-base font-bold">{analytics.totalTransactions}</p>
+                <p className="text-xs text-muted-foreground">Total Transaksi</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
+          <Card className="min-w-0 overflow-hidden">
+            <CardContent className="p-3">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-2 bg-purple-100 rounded-lg mb-2">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                 </div>
-                <div>
-                  <p className="text-lg font-bold">{formatCurrency(analytics.averageTransaction)}</p>
-                  <p className="text-sm text-muted-foreground">Rata-rata</p>
-                </div>
+                <p className="text-base font-bold truncate w-full">{formatCurrency(analytics.averageTransaction)}</p>
+                <p className="text-xs text-muted-foreground">Rata-rata</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
+          <Card className="min-w-0 overflow-hidden">
+            <CardContent className="p-3">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-2 bg-orange-100 rounded-lg mb-2">
                   <Package className="h-5 w-5 text-orange-600" />
                 </div>
-                <div>
-                  <p className="text-lg font-bold">{analytics.productsSold.reduce((total, product) => total + product.quantity, 0)}</p>
-                  <p className="text-sm text-muted-foreground">Produk Terjual</p>
-                </div>
+                <p className="text-base font-bold">{analytics.productsSold.reduce((total, product) => total + product.quantity, 0)}</p>
+                <p className="text-xs text-muted-foreground">Produk Terjual</p>
               </div>
             </CardContent>
           </Card>

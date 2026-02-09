@@ -56,35 +56,35 @@ export const TargetProgressCard = ({
   const actualPercentage = Math.round((currentSales / target) * 100);
 
   return (
-    <Card className="bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white border-0 shadow-lg">
+    <Card className="bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white border-0 shadow-lg overflow-hidden">
       <CardContent className="p-4 space-y-4">
         {/* Motivational Text */}
-        <div className="text-center">
-          <p className="text-base font-semibold">
+        <div className="text-center px-2">
+          <p className="text-base font-semibold leading-tight">
             Bismillah Allah mudahkan, Yuk Semangat Capai Targetmu
           </p>
         </div>
 
         {/* Percentage Display */}
         <div className="flex items-center justify-center gap-2">
-          <Target className="h-6 w-6" />
+          <Target className="h-6 w-6 flex-shrink-0" />
           <span className="text-4xl font-bold">{actualPercentage}%</span>
         </div>
 
         {/* Progress Bar with Gradient and Glow */}
-        <div className="space-y-2 px-4">
-          <div className="relative h-6 w-full rounded-full bg-white shadow-lg">
+        <div className="space-y-2 px-2">
+          <div className="relative h-6 w-full rounded-full bg-white shadow-lg overflow-visible">
             <div 
-              className="h-full rounded-full transition-all duration-500 ease-out relative overflow-visible"
+              className="h-full rounded-full transition-all duration-500 ease-out relative"
               style={{ 
-                width: `${percentage}%`,
+                width: `${Math.max(percentage, 8)}%`,
                 background: 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,220,220,0.9) 40%, rgba(239,68,68,1) 100%)',
                 boxShadow: '0 0 15px rgba(255,255,255,0.8), 0 0 30px rgba(239,68,68,0.5), inset 0 2px 0 rgba(255,255,255,0.5)'
               }}
             >
               {/* Circle indicator at the end - red fill with white border */}
               <div 
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-8 h-8 rounded-full bg-red-500 border-[3px] border-white z-10"
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-red-500 border-[3px] border-white z-10"
                 style={{
                   boxShadow: '0 0 20px rgba(255,255,255,0.9), 0 0 40px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.2)'
                 }}
@@ -94,14 +94,14 @@ export const TargetProgressCard = ({
         </div>
 
         {/* Sales Info */}
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div>
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="min-w-0">
             <p className="text-xs opacity-75">Omset Saat Ini</p>
-            <p className="text-lg font-bold">{formatCurrency(currentSales)}</p>
+            <p className="text-base font-bold truncate">{formatCurrency(currentSales)}</p>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs opacity-75">Target</p>
-            <p className="text-lg font-bold">{formatCurrency(target)}</p>
+            <p className="text-base font-bold truncate">{formatCurrency(target)}</p>
           </div>
         </div>
       </CardContent>
