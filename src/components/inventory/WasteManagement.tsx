@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Trash2, Plus, TrendingDown, Filter } from "lucide-react";
+import { Trash2, Plus, TrendingDown, Filter, Trophy, FileDown, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, startOfMonth, subDays } from "date-fns";
+import jsPDF from "jspdf";
 
 interface WasteManagementProps {
   userProfile: any;
@@ -46,7 +47,6 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
     if (assignedRiderId) {
       setSelectedRider(assignedRiderId);
     }
-    // For branch managers: default to "all" riders
   }, [assignedRiderId]);
 
   useEffect(() => {
@@ -76,14 +76,13 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name')
-        .in('role', ['rider', 'bh_rider', 'sb_rider']) // Support all rider types
+        .in('role', ['rider', 'bh_rider', 'sb_rider'])
         .eq('branch_id', userProfile.branch_id)
         .eq('is_active', true)
         .order('full_name');
 
       if (error) throw error;
       setRiders(data || []);
-      // Default to "all" riders - no auto-select
     } catch (error: any) {
       toast.error("Gagal fetch data rider");
     }
@@ -122,13 +121,11 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
         .lte('created_at', `${end}T23:59:59+07:00`)
         .order('created_at', { ascending: false });
 
-      // Filter by rider - support "all" option
       if (assignedRiderId) {
         query = query.eq('rider_id', assignedRiderId);
       } else if (selectedRider && selectedRider !== 'all') {
         query = query.eq('rider_id', selectedRider);
       }
-      // If selectedRider === 'all', no rider filter applied (show all riders)
 
       const { data, error } = await query;
       
@@ -183,7 +180,6 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   };
 
   const handleSubmitWaste = async () => {
-    // Validation
     if (!assignedRiderId && !selectedInputRider) {
       toast.error("Mohon pilih rider");
       return;
@@ -216,7 +212,6 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
 
       toast.success("Waste berhasil ditambahkan");
       
-      // Reset form
       setSelectedInputRider("");
       setSelectedProduct("");
       setWasteDate(format(new Date(), 'yyyy-MM-dd'));
@@ -224,7 +219,6 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
       setWasteReason("");
       setNotes("");
 
-      // Refresh data
       fetchWasteData();
     } catch (error: any) {
       toast.error("Gagal menambahkan waste: " + error.message);
@@ -235,14 +229,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
 
   const calculateSummary = () => {
     if (wasteData.length === 0) {
-      return {
-        totalQuantity: 0,
-        totalHPP: 0,
-        totalWaste: 0,
-        avgQuantity: 0,
-        avgHPP: 0,
-        avgWaste: 0
-      };
+      return { totalQuantity: 0, totalHPP: 0, totalWaste: 0, avgQuantity: 0, avgHPP: 0, avgWaste: 0 };
     }
 
     const totalQuantity = wasteData.reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -261,9 +248,189 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
 
   const summary = calculateSummary();
 
+  // Resume per rider ranking
+  const riderResume = useMemo(() => {
+    if (wasteData.length === 0) return [];
+
+    const grouped: Record<string, { rider_name: string; totalQty: number; totalWaste: number; days: Set<string> }> = {};
+
+    wasteData.forEach(item => {
+      const name = item.rider_name;
+      if (!grouped[name]) {
+        grouped[name] = { rider_name: name, totalQty: 0, totalWaste: 0, days: new Set() };
+      }
+      grouped[name].totalQty += item.quantity || 0;
+      grouped[name].totalWaste += item.total_waste || 0;
+      grouped[name].days.add(format(new Date(item.created_at), 'yyyy-MM-dd'));
+    });
+
+    return Object.values(grouped)
+      .map(r => ({
+        rider_name: r.rider_name,
+        totalQty: r.totalQty,
+        totalWaste: r.totalWaste,
+        avgQtyPerDay: r.days.size > 0 ? Math.round(r.totalQty / r.days.size) : 0,
+        avgWastePerDay: r.days.size > 0 ? Math.round(r.totalWaste / r.days.size) : 0,
+      }))
+      .sort((a, b) => b.totalWaste - a.totalWaste);
+  }, [wasteData]);
+
+  const getTrophyColor = (rank: number) => {
+    if (rank === 1) return '#FFD700';
+    if (rank === 2) return '#C0C0C0';
+    if (rank === 3) return '#CD7F32';
+    return undefined;
+  };
+
+  const handleExportPDF = () => {
+    if (wasteData.length === 0) {
+      toast.error("Tidak ada data untuk diekspor");
+      return;
+    }
+
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const { start, end } = getDateRange();
+
+    doc.setFontSize(16);
+    doc.text('Laporan Product Waste', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Periode: ${start} s/d ${end}`, 14, 22);
+    doc.text(`Dicetak: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 27);
+
+    const headers = ['No', 'Tanggal', 'Nama Rider', 'Nama Product', 'Jumlah', 'HPP', 'Total Waste', 'Alasan'];
+    const colWidths = [10, 25, 40, 50, 20, 35, 35, 30];
+    let y = 35;
+
+    // Header row
+    doc.setFillColor(220, 53, 69);
+    doc.rect(14, y, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    let x = 14;
+    headers.forEach((h, i) => {
+      doc.text(h, x + 2, y + 5.5);
+      x += colWidths[i];
+    });
+
+    // Data rows
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    y += 8;
+
+    wasteData.forEach((item, idx) => {
+      if (y > 190) {
+        doc.addPage();
+        y = 15;
+      }
+      x = 14;
+      const row = [
+        String(idx + 1),
+        format(new Date(item.created_at), 'dd/MM/yyyy'),
+        item.rider_name,
+        item.product_name,
+        String(item.quantity),
+        `Rp ${(item.hpp || 0).toLocaleString('id-ID')}`,
+        `Rp ${(item.total_waste || 0).toLocaleString('id-ID')}`,
+        item.waste_reason
+      ];
+      row.forEach((cell, i) => {
+        doc.text(cell, x + 2, y + 5);
+        x += colWidths[i];
+      });
+      y += 7;
+    });
+
+    // Summary
+    y += 3;
+    doc.setFontSize(10);
+    doc.setFont(undefined as any, 'bold');
+    doc.text(`Total Qty: ${summary.totalQuantity}`, 14, y + 5);
+    doc.text(`Total Waste: Rp ${summary.totalWaste.toLocaleString('id-ID')}`, 80, y + 5);
+    doc.text(`Avg Waste: Rp ${summary.avgWaste.toLocaleString('id-ID')}`, 160, y + 5);
+
+    doc.save(`Laporan_Waste_${start}_${end}.pdf`);
+    toast.success("PDF berhasil diexport");
+  };
+
   return (
     <div className="space-y-6">
-      {/* Filter Section */}
+      {/* 1. Input Product Waste */}
+      <Card className="bg-white shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Input Product Waste
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {!assignedRiderId && (
+              <div>
+                <Label>Rider *</Label>
+                <Select value={selectedInputRider} onValueChange={setSelectedInputRider}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih rider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {riders.map(rider => (
+                      <SelectItem key={rider.id} value={rider.id}>
+                        {rider.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div>
+              <Label>Tanggal *</Label>
+              <Input type="date" value={wasteDate} onChange={(e) => setWasteDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Product *</Label>
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} (HPP: Rp {p.cost_price?.toLocaleString('id-ID')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Jumlah *</Label>
+              <Input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label>Alasan Waste *</Label>
+              <Select value={wasteReason} onValueChange={setWasteReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih alasan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tumpah">Tumpah</SelectItem>
+                  <SelectItem value="bocor">Bocor</SelectItem>
+                  <SelectItem value="basi">Basi</SelectItem>
+                  <SelectItem value="expired">Expired Date</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Keterangan</Label>
+              <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keterangan tambahan (optional)" />
+            </div>
+          </div>
+          <Button className="mt-4" onClick={handleSubmitWaste}>
+            <Plus className="h-4 w-4 mr-2" />
+            Tambah Waste
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* 2. Filter Waste Data */}
       <Card className="bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -273,29 +440,20 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Rider Select - disabled for BH Report users */}
             <div>
               <Label>Rider</Label>
-              <Select 
-                value={selectedRider} 
-                onValueChange={setSelectedRider}
-                disabled={!!assignedRiderId}
-              >
+              <Select value={selectedRider} onValueChange={setSelectedRider} disabled={!!assignedRiderId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih rider" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua Rider</SelectItem>
                   {riders.map(rider => (
-                    <SelectItem key={rider.id} value={rider.id}>
-                      {rider.full_name}
-                    </SelectItem>
+                    <SelectItem key={rider.id} value={rider.id}>{rider.full_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Period Select */}
             <div>
               <Label>Periode</Label>
               <Select value={period} onValueChange={setPeriod}>
@@ -310,25 +468,15 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Custom Date Range */}
             {period === 'custom' && (
               <>
                 <div>
                   <Label>Tanggal Mulai</Label>
-                  <Input 
-                    type="date" 
-                    value={startDate} 
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                 </div>
                 <div>
                   <Label>Tanggal Akhir</Label>
-                  <Input 
-                    type="date" 
-                    value={endDate} 
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
+                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                 </div>
               </>
             )}
@@ -336,7 +484,66 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
         </CardContent>
       </Card>
 
-      {/* Chart Section */}
+      {/* 3. Resume Product Waste */}
+      <Card className="bg-white shadow-sm border-destructive/30">
+        <CardHeader className="bg-gradient-to-r from-destructive/10 to-destructive/5 rounded-t-lg">
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <Award className="h-5 w-5" />
+            Resume Product Waste - Ranking Rider
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {riderResume.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              Tidak ada data waste untuk periode yang dipilih
+            </div>
+          ) : (
+            <ScrollArea className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-destructive/10">
+                    <TableHead className="w-12 text-destructive font-bold">No</TableHead>
+                    <TableHead className="text-destructive font-bold">Nama Rider</TableHead>
+                    <TableHead className="text-right text-destructive font-bold">Total Qty</TableHead>
+                    <TableHead className="text-right text-destructive font-bold">Avg Qty/day</TableHead>
+                    <TableHead className="text-right text-destructive font-bold">Total Waste (Rp)</TableHead>
+                    <TableHead className="text-right text-destructive font-bold">Avg Waste/day (Rp)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {riderResume.map((rider, idx) => (
+                    <TableRow key={rider.rider_name} className={idx < 3 ? 'bg-destructive/5' : ''}>
+                      <TableCell className="font-bold">{idx + 1}</TableCell>
+                      <TableCell className="font-semibold flex items-center gap-2">
+                        {idx < 3 && (
+                          <Trophy className="h-4 w-4" style={{ color: getTrophyColor(idx + 1) }} />
+                        )}
+                        {rider.rider_name}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{rider.totalQty}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary" className="bg-destructive/10 text-destructive">
+                          {rider.avgQtyPerDay}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-destructive">
+                        Rp {rider.totalWaste.toLocaleString('id-ID')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="destructive">
+                          Rp {rider.avgWastePerDay.toLocaleString('id-ID')}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 4. Grafik Product Waste */}
       <Card className="bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -357,37 +564,17 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
             <ResponsiveContainer width="100%" height={400}>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="hsl(var(--muted-foreground))"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))"
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => `Rp ${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
+                <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} tickFormatter={(value) => `Rp ${(value / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
                   formatter={(value: any) => `Rp ${value.toLocaleString('id-ID')}`}
                 />
                 <Legend />
                 {chartData.length > 0 && Object.keys(chartData[0])
                   .filter(key => key !== 'date')
                   .map((productName, idx) => (
-                    <Line 
-                      key={productName}
-                      type="monotone" 
-                      dataKey={productName} 
-                      stroke={colors[idx % colors.length]} 
-                      strokeWidth={2} 
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
+                    <Line key={productName} type="monotone" dataKey={productName} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   ))
                 }
               </LineChart>
@@ -396,112 +583,17 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
         </CardContent>
       </Card>
 
-      {/* Input Form */}
+      {/* 5. Laporan Waste + Export PDF */}
       <Card className="bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Input Product Waste
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Rider Select - only show if not assigned rider */}
-            {!assignedRiderId && (
-              <div>
-                <Label>Rider *</Label>
-                <Select 
-                  value={selectedInputRider} 
-                  onValueChange={setSelectedInputRider}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih rider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {riders.map(rider => (
-                      <SelectItem key={rider.id} value={rider.id}>
-                        {rider.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div>
-              <Label>Tanggal *</Label>
-              <Input 
-                type="date" 
-                value={wasteDate} 
-                onChange={(e) => setWasteDate(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label>Product *</Label>
-              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} (HPP: Rp {p.cost_price?.toLocaleString('id-ID')})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Jumlah *</Label>
-              <Input 
-                type="number" 
-                min="1"
-                value={quantity} 
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label>Alasan Waste *</Label>
-              <Select value={wasteReason} onValueChange={setWasteReason}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih alasan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tumpah">Tumpah</SelectItem>
-                  <SelectItem value="bocor">Bocor</SelectItem>
-                  <SelectItem value="basi">Basi</SelectItem>
-                  <SelectItem value="expired">Expired Date</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Keterangan</Label>
-              <Input 
-                value={notes} 
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Keterangan tambahan (optional)"
-              />
-            </div>
-          </div>
-          <Button 
-            className="mt-4"
-            onClick={handleSubmitWaste}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Tambah Waste
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Report Table */}
-      <Card className="bg-white shadow-sm">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Trash2 className="h-5 w-5" />
             Laporan Waste
           </CardTitle>
+          <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={wasteData.length === 0}>
+            <FileDown className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px]">
@@ -540,9 +632,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                         Rp {item.total_waste?.toLocaleString('id-ID')}
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={item.waste_reason === 'expired' ? 'destructive' : 'secondary'}
-                        >
+                        <Badge variant={item.waste_reason === 'expired' ? 'destructive' : 'secondary'}>
                           {item.waste_reason}
                         </Badge>
                       </TableCell>
@@ -550,10 +640,8 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                   ))
                 )}
                 
-                {/* Summary Rows */}
                 {wasteData.length > 0 && (
                   <>
-                    {/* Total Row */}
                     <TableRow className="bg-red-50 border-t-2 border-red-200">
                       <TableCell colSpan={2} className="font-bold text-right">TOTAL:</TableCell>
                       <TableCell></TableCell>
@@ -567,8 +655,6 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                       </TableCell>
                       <TableCell></TableCell>
                     </TableRow>
-                    
-                    {/* Average Row */}
                     <TableRow className="bg-gray-50 border-t">
                       <TableCell colSpan={2} className="font-bold text-right">AVG:</TableCell>
                       <TableCell></TableCell>
