@@ -1,67 +1,32 @@
 
-## Rencana Perbaikan: Layout Mobile Responsive untuk Analytics
+## Rencana: Tambah Report Waste di App Rider (Read-Only)
 
-### Masalah yang Ditemukan
+### Tujuan
+Menambahkan tab "Waste Report" di app rider sehingga setiap rider bisa melihat data waste product mereka sendiri, tetapi **hanya bisa melihat (read-only)** - tidak bisa menambah atau mengubah data. Input waste tetap dilakukan dari app Branch Hub Manager.
 
-Dari screenshot, beberapa elemen terpotong di sisi kanan layar:
+### Perubahan yang Akan Dilakukan
 
-1. **TargetProgressCard**: 
-   - Headline text terpotong di ujung kanan
-   - Progress bar indicator tidak memiliki ruang cukup
+#### 1. Buat komponen baru: `src/components/mobile/MobileWasteReport.tsx`
+- Komponen read-only untuk menampilkan data waste rider
+- Filter periode (Hari Ini, Kemarin, Bulan Ini, Custom)
+- Tabel laporan waste: tanggal, produk, jumlah, HPP, total waste, alasan
+- Summary total dan rata-rata di bawah tabel
+- Desain mobile-friendly mengikuti pattern yang sudah ada di MobileRiderAnalyticsEnhanced
+- Fetch data dari tabel `product_waste` berdasarkan `rider_id` milik rider yang login
+- **Tidak ada form input** - murni tampilan laporan saja
 
-2. **Stats Cards (4 kartu grid)**:
-   - Layout horizontal (icon + text side-by-side) menyebabkan overflow
-   - Currency format panjang seperti "Rp 514.000" tidak wrap dengan benar
-   - Cards tidak memiliki `min-w-0` dalam grid layout
+#### 2. Update `src/pages/MobileSeller.tsx`
+- Import `MobileWasteReport`
+- Tambah case `'waste'` di switch `renderContent()`
 
-### Solusi yang Akan Diterapkan
+#### 3. Update `src/components/layout/MobileSidebar.tsx`
+- Tambah menu "Waste Report" dengan icon `Trash2` di navigation items
+- Key: `waste`, href: `/mobile-seller?tab=waste`
 
-#### 1. File: `src/components/mobile/TargetProgressCard.tsx`
-
-**Perubahan**:
-- Tambah `overflow-hidden` pada Card untuk mencegah overflow keluar container
-- Tambah padding ekstra pada progress bar container untuk ruang indicator
-- Headline text tetap dengan line height yang baik
-
-#### 2. File: `src/components/mobile/MobileRiderAnalyticsEnhanced.tsx`
-
-**Perubahan pada Stats Cards (baris 461-518)**:
-
-**Sebelum:**
-```
-┌─────────────────┬─────────────────┐
-│ [Icon] Rp 514.000    │ [Icon] 30             │  ← Terpotong
-│        Total...      │        Total Transak │
-└─────────────────┴─────────────────┘
-```
-
-**Sesudah:**
-```
-┌─────────────────┬─────────────────┐
-│  [Icon]         │  [Icon]         │
-│  Rp 514.000     │  30             │
-│  Total Penjual. │  Total Transaksi│
-└─────────────────┴─────────────────┘
-```
-
-Perubahan spesifik:
-- Ubah layout dari horizontal (`flex items-center gap-3`) ke vertikal (`flex flex-col items-center`)
-- Icon dipindah ke atas, centered
-- Text dan label di bawah icon, centered
-- Tambah `min-w-0` pada Cards untuk mencegah grid overflow
-- Currency text menggunakan `text-base` agar lebih compact
-- Tambah `truncate` pada text label jika perlu
-
-### Detail Teknis
-
-| File | Perubahan |
-|------|-----------|
-| `TargetProgressCard.tsx` | Tambah overflow-hidden dan padding yang lebih baik |
-| `MobileRiderAnalyticsEnhanced.tsx` | Ubah Stats Cards ke layout vertikal centered |
+### RLS Policy
+Sudah ada policy "Riders can view own waste" pada tabel `product_waste` yang mengizinkan rider melihat data waste miliknya sendiri. Tidak perlu perubahan database.
 
 ### Yang Tidak Berubah
-
-- Semua logika perhitungan dan filtering
-- Warna dan gradient
-- Fungsionalitas lainnya
-- Struktur data dan API calls
+- Alur input waste tetap dari Branch Hub Manager / WasteManagement component
+- Tidak ada form input di komponen rider
+- Rider tidak bisa edit atau hapus data waste
