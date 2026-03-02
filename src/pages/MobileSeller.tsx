@@ -9,6 +9,7 @@ import MobileStockManagement from "@/components/mobile/MobileStockManagement";
 import MobileAttendance from "@/components/mobile/MobileAttendance";
 import MobileCheckpoints from "@/components/mobile/MobileCheckpoints";
 import MobileHistory from "@/components/mobile/MobileHistory";
+import MobileWasteReport from "@/components/mobile/MobileWasteReport";
 import { CustomerManagement } from "@/components/customer/CustomerManagement";
 import { MobileProfile } from "@/components/mobile/MobileProfile";
 import { MobileOrdersOnline } from "@/components/mobile/MobileOrdersOnline";
@@ -67,6 +68,8 @@ export default function MobileSeller() {
         return <MobileCheckpoints />;
       case 'history':
         return <MobileHistory />;
+      case 'waste':
+        return <MobileWasteReport />;
       case 'customers':
         return (
           <div className="p-4 h-full bg-gradient-to-br from-white via-red-50/30 to-white">
