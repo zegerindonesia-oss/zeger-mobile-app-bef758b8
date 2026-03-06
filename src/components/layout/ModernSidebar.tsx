@@ -107,6 +107,15 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     ]
   },
   {
+    id: "data-master",
+    label: "Data Master",
+    icon: Database,
+    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"],
+    children: [
+      { id: "master-products", label: "Product", icon: Coffee, path: "/master/products" }
+    ]
+  },
+  {
     id: "finance",
     label: "Finance",
     icon: DollarSign,
