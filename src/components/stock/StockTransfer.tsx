@@ -128,7 +128,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
     "Milk Based", 
     "Refresher",
     "Botol 200ml",
-    "Botol 1 Liter"
+    "Botol 1 Liter",
+    "Can Series",
+    "Paket Ramadhan",
+    "Snack"
   ]);
 
   const getJakartaNow = () => {
@@ -918,7 +921,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                         Filter Kategori
                       </Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                        {["Espresso Based", "Milk Based", "Refresher", "Botol 200ml", "Botol 1 Liter"].map(cat => (
+                        {["Espresso Based", "Milk Based", "Refresher", "Botol 200ml", "Botol 1 Liter", "Can Series", "Paket Ramadhan", "Snack"].map(cat => (
                           <div key={cat} className="flex items-center space-x-2">
                             <Checkbox 
                               id={cat}
