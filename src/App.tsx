@@ -50,6 +50,7 @@ import CRMManagement from "./pages/settings/CRMManagement";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
+import ProductManagement from "./pages/master/ProductManagement";
 
 const queryClient = new QueryClient();
 
@@ -456,6 +457,15 @@ const App = () => (
               </RoleBasedRoute>
             } />
             
+            {/* Data Master Routes */}
+            <Route path="/master/products" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
+                <ModernLayout>
+                  <ProductManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
         </Routes>
