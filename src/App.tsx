@@ -51,6 +51,7 @@ import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
 import ProductManagement from "./pages/master/ProductManagement";
+import RiderIncome from "./pages/finance/RiderIncome";
 
 const queryClient = new QueryClient();
 
