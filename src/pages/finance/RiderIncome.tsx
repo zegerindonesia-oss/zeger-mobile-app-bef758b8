@@ -117,17 +117,7 @@ const RiderIncome = () => {
         const txStartStr = formatDateStr(weekStart);
         const txEndStr = formatDateStr(weekEnd);
 
-        // 1. Attendance
-        let attQ = supabase
-          .from("attendance")
-          .select("rider_id, work_date, check_in_time")
-          .gte("work_date", startDate)
-          .lte("work_date", endDate)
-          .not("check_in_time", "is", null);
-        if (branchId) attQ = attQ.eq("branch_id", branchId);
-        if (selectedRider !== "all") attQ = attQ.eq("rider_id", selectedRider);
-
-        // 2. Transactions (full weeks)
+        // 1. Transactions (full weeks)
         let txQ = supabase
           .from("transactions")
           .select("rider_id, final_amount, transaction_date")
