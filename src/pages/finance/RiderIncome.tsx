@@ -276,6 +276,7 @@ const RiderIncome = () => {
       date: string;
       riderId: string;
       riderName: string;
+      sales: number;
       dailyCommission: number;
       salesCommission: number;
       waste: number;
@@ -285,26 +286,28 @@ const RiderIncome = () => {
     const details: DetailRow[] = [];
     const resumeAgg = new Map<
       string,
-      { riderName: string; dailyCommission: number; salesCommission: number; waste: number }
+      { riderName: string; sales: number; dailyCommission: number; salesCommission: number; waste: number }
     >();
 
     riderIds.forEach((riderId) => {
       const name = riderMap.get(riderId) || riderId.slice(0, 8);
       if (!resumeAgg.has(riderId))
-        resumeAgg.set(riderId, { riderName: name, dailyCommission: 0, salesCommission: 0, waste: 0 });
+        resumeAgg.set(riderId, { riderName: name, sales: 0, dailyCommission: 0, salesCommission: 0, waste: 0 });
       const agg = resumeAgg.get(riderId)!;
 
       dates.forEach((date) => {
-        const hasAttendance = attendanceDays.get(riderId)?.has(date) || false;
-        const daily = hasAttendance ? DAILY_COMMISSION : 0;
-        const sales = weeklyCommissionPerRiderDay.get(riderId)?.get(date) || 0;
+        const daySales = dailySales.get(riderId)?.get(date) || 0;
+        // If rider has sales on this day, they're considered working
+        const daily = daySales > 0 ? DAILY_COMMISSION : 0;
+        const salesComm = weeklyCommissionPerRiderDay.get(riderId)?.get(date) || 0;
         const waste = wasteByRiderDate.get(riderId)?.get(date) || 0;
-        const total = daily + sales - waste;
+        const total = daily + salesComm - waste;
 
-        if (daily > 0 || sales > 0 || waste > 0) {
-          details.push({ date, riderId, riderName: name, dailyCommission: daily, salesCommission: sales, waste, total });
+        if (daySales > 0 || salesComm > 0 || waste > 0) {
+          details.push({ date, riderId, riderName: name, sales: daySales, dailyCommission: daily, salesCommission: salesComm, waste, total });
+          agg.sales += daySales;
           agg.dailyCommission += daily;
-          agg.salesCommission += sales;
+          agg.salesCommission += salesComm;
           agg.waste += waste;
         }
       });
@@ -316,7 +319,7 @@ const RiderIncome = () => {
         ...agg,
         total: agg.dailyCommission + agg.salesCommission - agg.waste,
       }))
-      .filter((r) => r.dailyCommission > 0 || r.salesCommission > 0 || r.waste > 0)
+      .filter((r) => r.sales > 0 || r.salesCommission > 0 || r.waste > 0)
       .sort((a, b) => b.total - a.total);
 
     details.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : b.total - a.total));
