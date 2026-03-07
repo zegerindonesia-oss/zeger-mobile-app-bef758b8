@@ -224,7 +224,7 @@ const RiderIncome = () => {
 
     // Get unique rider IDs from all data sources
     const riderIds = new Set<string>();
-    attendanceData.forEach((a) => riderIds.add(a.rider_id));
+    transactionData.forEach((tx) => { if (tx.rider_id) riderIds.add(tx.rider_id); });
     wasteData.forEach((w) => riderIds.add(w.rider_id));
     // Also add from riders list if selectedRider is specific
     if (selectedRider !== "all") {
