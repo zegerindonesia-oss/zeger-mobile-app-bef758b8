@@ -313,7 +313,7 @@ const RiderIncome = () => {
     details.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : b.total - a.total));
 
     return { resumeData: resume, detailData: details };
-  }, [attendanceData, transactionData, wasteData, riders, startDate, endDate, selectedRider]);
+  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider]);
 
   const handleQuickFilter = (type: string) => {
     const now = getJakartaNow();
