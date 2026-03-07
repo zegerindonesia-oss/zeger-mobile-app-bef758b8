@@ -477,42 +477,45 @@ const RiderIncome = () => {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-primary/10">
-                  <TableHead className="w-12">No</TableHead>
-                  <TableHead>Nama Rider</TableHead>
-                  <TableHead className="text-right">Komisi Harian</TableHead>
-                  <TableHead className="text-right">Komisi Penjualan</TableHead>
-                  <TableHead className="text-right">Waste (-)</TableHead>
-                  <TableHead className="text-right">Total Pendapatan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resumeData.map((row, idx) => (
-                  <TableRow key={row.riderId}>
-                    <TableCell className="font-medium">
-                      {idx < 3 ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Trophy className={`h-4 w-4 ${idx === 0 ? "text-yellow-500" : idx === 1 ? "text-gray-400" : "text-amber-600"}`} />
-                          {idx + 1}
-                        </span>
-                      ) : (
-                        idx + 1
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{row.riderName}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
-                    <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={2}>Total</TableCell>
-                  <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
-                  <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.waste, 0))}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(totalAll)}</TableCell>
-                </TableRow>
+                 <TableRow className="bg-primary/10">
+                   <TableHead className="w-12">No</TableHead>
+                   <TableHead>Nama Rider</TableHead>
+                   <TableHead className="text-right">Sales</TableHead>
+                   <TableHead className="text-right">Komisi Harian</TableHead>
+                   <TableHead className="text-right">Komisi Penjualan</TableHead>
+                   <TableHead className="text-right">Waste (-)</TableHead>
+                   <TableHead className="text-right">Total Pendapatan</TableHead>
+                 </TableRow>
+               </TableHeader>
+               <TableBody>
+                 {resumeData.map((row, idx) => (
+                   <TableRow key={row.riderId}>
+                     <TableCell className="font-medium">
+                       {idx < 3 ? (
+                         <span className="inline-flex items-center gap-1">
+                           <Trophy className={`h-4 w-4 ${idx === 0 ? "text-yellow-500" : idx === 1 ? "text-gray-400" : "text-amber-600"}`} />
+                           {idx + 1}
+                         </span>
+                       ) : (
+                         idx + 1
+                       )}
+                     </TableCell>
+                     <TableCell className="font-medium">{row.riderName}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
+                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
+                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
+                   </TableRow>
+                 ))}
+                 <TableRow className="bg-muted/50 font-bold">
+                   <TableCell colSpan={2}>Total</TableCell>
+                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.sales, 0))}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
+                   <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.waste, 0))}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(totalAll)}</TableCell>
+                 </TableRow>
               </TableBody>
             </Table>
           )}
