@@ -79,7 +79,7 @@ const RiderIncome = () => {
   const [endDate, setEndDate] = useState(todayStr);
 
   // Raw data
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  // attendanceData removed - using transactions to determine working days
   const [transactionData, setTransactionData] = useState<any[]>([]);
   const [wasteData, setWasteData] = useState<any[]>([]);
 
@@ -117,17 +117,7 @@ const RiderIncome = () => {
         const txStartStr = formatDateStr(weekStart);
         const txEndStr = formatDateStr(weekEnd);
 
-        // 1. Attendance
-        let attQ = supabase
-          .from("attendance")
-          .select("rider_id, work_date, check_in_time")
-          .gte("work_date", startDate)
-          .lte("work_date", endDate)
-          .not("check_in_time", "is", null);
-        if (branchId) attQ = attQ.eq("branch_id", branchId);
-        if (selectedRider !== "all") attQ = attQ.eq("rider_id", selectedRider);
-
-        // 2. Transactions (full weeks)
+        // 1. Transactions (full weeks)
         let txQ = supabase
           .from("transactions")
           .select("rider_id, final_amount, transaction_date")
@@ -161,13 +151,11 @@ const RiderIncome = () => {
           return all;
         };
 
-        const [att, tx, waste] = await Promise.all([
-          fetchAll(attQ),
+        const [tx, waste] = await Promise.all([
           fetchAll(txQ),
           fetchAll(wasteQ),
         ]);
 
-        setAttendanceData(att);
         setTransactionData(tx);
         setWasteData(waste);
       } catch (err: any) {
@@ -184,23 +172,24 @@ const RiderIncome = () => {
     const riderMap = new Map<string, string>();
     riders.forEach((r) => riderMap.set(r.id, r.full_name));
 
-    // Attendance days per rider per date
-    const attendanceDays = new Map<string, Set<string>>();
-    attendanceData.forEach((a) => {
-      const key = a.rider_id;
-      if (!attendanceDays.has(key)) attendanceDays.set(key, new Set());
-      attendanceDays.get(key)!.add(a.work_date);
-    });
-
-    // Weekly revenue per rider per week
+    // Daily sales per rider per date + weekly revenue
+    const dailySales = new Map<string, Map<string, number>>(); // riderId -> date -> sales
     const weeklyRevenue = new Map<string, Map<string, number>>();
     transactionData.forEach((tx) => {
       if (!tx.rider_id) return;
       const txDate = tx.transaction_date.split("T")[0];
+      const amount = Number(tx.final_amount || 0);
+      
+      // Daily sales
+      if (!dailySales.has(tx.rider_id)) dailySales.set(tx.rider_id, new Map());
+      const riderDaily = dailySales.get(tx.rider_id)!;
+      riderDaily.set(txDate, (riderDaily.get(txDate) || 0) + amount);
+      
+      // Weekly revenue
       const wk = getWeekKey(txDate);
       if (!weeklyRevenue.has(tx.rider_id)) weeklyRevenue.set(tx.rider_id, new Map());
       const riderWeeks = weeklyRevenue.get(tx.rider_id)!;
-      riderWeeks.set(wk, (riderWeeks.get(wk) || 0) + Number(tx.final_amount || 0));
+      riderWeeks.set(wk, (riderWeeks.get(wk) || 0) + amount);
     });
 
     // Waste per rider per date
@@ -223,7 +212,7 @@ const RiderIncome = () => {
 
     // Get unique rider IDs from all data sources
     const riderIds = new Set<string>();
-    attendanceData.forEach((a) => riderIds.add(a.rider_id));
+    transactionData.forEach((tx) => { if (tx.rider_id) riderIds.add(tx.rider_id); });
     wasteData.forEach((w) => riderIds.add(w.rider_id));
     // Also add from riders list if selectedRider is specific
     if (selectedRider !== "all") {
@@ -275,6 +264,7 @@ const RiderIncome = () => {
       date: string;
       riderId: string;
       riderName: string;
+      sales: number;
       dailyCommission: number;
       salesCommission: number;
       waste: number;
@@ -284,26 +274,28 @@ const RiderIncome = () => {
     const details: DetailRow[] = [];
     const resumeAgg = new Map<
       string,
-      { riderName: string; dailyCommission: number; salesCommission: number; waste: number }
+      { riderName: string; sales: number; dailyCommission: number; salesCommission: number; waste: number }
     >();
 
     riderIds.forEach((riderId) => {
       const name = riderMap.get(riderId) || riderId.slice(0, 8);
       if (!resumeAgg.has(riderId))
-        resumeAgg.set(riderId, { riderName: name, dailyCommission: 0, salesCommission: 0, waste: 0 });
+        resumeAgg.set(riderId, { riderName: name, sales: 0, dailyCommission: 0, salesCommission: 0, waste: 0 });
       const agg = resumeAgg.get(riderId)!;
 
       dates.forEach((date) => {
-        const hasAttendance = attendanceDays.get(riderId)?.has(date) || false;
-        const daily = hasAttendance ? DAILY_COMMISSION : 0;
-        const sales = weeklyCommissionPerRiderDay.get(riderId)?.get(date) || 0;
+        const daySales = dailySales.get(riderId)?.get(date) || 0;
+        // If rider has sales on this day, they're considered working
+        const daily = daySales > 0 ? DAILY_COMMISSION : 0;
+        const salesComm = weeklyCommissionPerRiderDay.get(riderId)?.get(date) || 0;
         const waste = wasteByRiderDate.get(riderId)?.get(date) || 0;
-        const total = daily + sales - waste;
+        const total = daily + salesComm - waste;
 
-        if (daily > 0 || sales > 0 || waste > 0) {
-          details.push({ date, riderId, riderName: name, dailyCommission: daily, salesCommission: sales, waste, total });
+        if (daySales > 0 || salesComm > 0 || waste > 0) {
+          details.push({ date, riderId, riderName: name, sales: daySales, dailyCommission: daily, salesCommission: salesComm, waste, total });
+          agg.sales += daySales;
           agg.dailyCommission += daily;
-          agg.salesCommission += sales;
+          agg.salesCommission += salesComm;
           agg.waste += waste;
         }
       });
@@ -315,13 +307,13 @@ const RiderIncome = () => {
         ...agg,
         total: agg.dailyCommission + agg.salesCommission - agg.waste,
       }))
-      .filter((r) => r.dailyCommission > 0 || r.salesCommission > 0 || r.waste > 0)
+      .filter((r) => r.sales > 0 || r.salesCommission > 0 || r.waste > 0)
       .sort((a, b) => b.total - a.total);
 
     details.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : b.total - a.total));
 
     return { resumeData: resume, detailData: details };
-  }, [attendanceData, transactionData, wasteData, riders, startDate, endDate, selectedRider]);
+  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider]);
 
   const handleQuickFilter = (type: string) => {
     const now = getJakartaNow();
@@ -473,42 +465,45 @@ const RiderIncome = () => {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-primary/10">
-                  <TableHead className="w-12">No</TableHead>
-                  <TableHead>Nama Rider</TableHead>
-                  <TableHead className="text-right">Komisi Harian</TableHead>
-                  <TableHead className="text-right">Komisi Penjualan</TableHead>
-                  <TableHead className="text-right">Waste (-)</TableHead>
-                  <TableHead className="text-right">Total Pendapatan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resumeData.map((row, idx) => (
-                  <TableRow key={row.riderId}>
-                    <TableCell className="font-medium">
-                      {idx < 3 ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Trophy className={`h-4 w-4 ${idx === 0 ? "text-yellow-500" : idx === 1 ? "text-gray-400" : "text-amber-600"}`} />
-                          {idx + 1}
-                        </span>
-                      ) : (
-                        idx + 1
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{row.riderName}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
-                    <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={2}>Total</TableCell>
-                  <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
-                  <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.waste, 0))}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(totalAll)}</TableCell>
-                </TableRow>
+                 <TableRow className="bg-primary/10">
+                   <TableHead className="w-12">No</TableHead>
+                   <TableHead>Nama Rider</TableHead>
+                   <TableHead className="text-right">Sales</TableHead>
+                   <TableHead className="text-right">Komisi Harian</TableHead>
+                   <TableHead className="text-right">Komisi Penjualan</TableHead>
+                   <TableHead className="text-right">Waste (-)</TableHead>
+                   <TableHead className="text-right">Total Pendapatan</TableHead>
+                 </TableRow>
+               </TableHeader>
+               <TableBody>
+                 {resumeData.map((row, idx) => (
+                   <TableRow key={row.riderId}>
+                     <TableCell className="font-medium">
+                       {idx < 3 ? (
+                         <span className="inline-flex items-center gap-1">
+                           <Trophy className={`h-4 w-4 ${idx === 0 ? "text-yellow-500" : idx === 1 ? "text-gray-400" : "text-amber-600"}`} />
+                           {idx + 1}
+                         </span>
+                       ) : (
+                         idx + 1
+                       )}
+                     </TableCell>
+                     <TableCell className="font-medium">{row.riderName}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
+                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
+                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
+                   </TableRow>
+                 ))}
+                 <TableRow className="bg-muted/50 font-bold">
+                   <TableCell colSpan={2}>Total</TableCell>
+                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.sales, 0))}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
+                   <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.waste, 0))}</TableCell>
+                   <TableCell className="text-right">{formatCurrency(totalAll)}</TableCell>
+                 </TableRow>
               </TableBody>
             </Table>
           )}
@@ -530,26 +525,28 @@ const RiderIncome = () => {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Nama Rider</TableHead>
-                  <TableHead className="text-right">Komisi Harian</TableHead>
-                  <TableHead className="text-right">Komisi Penjualan</TableHead>
-                  <TableHead className="text-right">Waste (-)</TableHead>
-                  <TableHead className="text-right">Total Pendapatan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detailData.map((row, idx) => (
-                  <TableRow key={`${row.date}-${row.riderId}-${idx}`}>
-                    <TableCell>{new Date(row.date + "T00:00:00").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
-                    <TableCell className="font-medium">{row.riderName}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
-                    <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
-                  </TableRow>
-                ))}
+                 <TableRow className="bg-muted/30">
+                   <TableHead>Tanggal</TableHead>
+                   <TableHead>Nama Rider</TableHead>
+                   <TableHead className="text-right">Sales</TableHead>
+                   <TableHead className="text-right">Komisi Harian</TableHead>
+                   <TableHead className="text-right">Komisi Penjualan</TableHead>
+                   <TableHead className="text-right">Waste (-)</TableHead>
+                   <TableHead className="text-right">Total Pendapatan</TableHead>
+                 </TableRow>
+               </TableHeader>
+               <TableBody>
+                 {detailData.map((row, idx) => (
+                   <TableRow key={`${row.date}-${row.riderId}-${idx}`}>
+                     <TableCell>{new Date(row.date + "T00:00:00").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
+                     <TableCell className="font-medium">{row.riderName}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
+                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
+                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
+                   </TableRow>
+                 ))}
               </TableBody>
             </Table>
           )}
