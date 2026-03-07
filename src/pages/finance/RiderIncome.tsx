@@ -537,26 +537,28 @@ const RiderIncome = () => {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Nama Rider</TableHead>
-                  <TableHead className="text-right">Komisi Harian</TableHead>
-                  <TableHead className="text-right">Komisi Penjualan</TableHead>
-                  <TableHead className="text-right">Waste (-)</TableHead>
-                  <TableHead className="text-right">Total Pendapatan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detailData.map((row, idx) => (
-                  <TableRow key={`${row.date}-${row.riderId}-${idx}`}>
-                    <TableCell>{new Date(row.date + "T00:00:00").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
-                    <TableCell className="font-medium">{row.riderName}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
-                    <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
-                  </TableRow>
-                ))}
+                 <TableRow className="bg-muted/30">
+                   <TableHead>Tanggal</TableHead>
+                   <TableHead>Nama Rider</TableHead>
+                   <TableHead className="text-right">Sales</TableHead>
+                   <TableHead className="text-right">Komisi Harian</TableHead>
+                   <TableHead className="text-right">Komisi Penjualan</TableHead>
+                   <TableHead className="text-right">Waste (-)</TableHead>
+                   <TableHead className="text-right">Total Pendapatan</TableHead>
+                 </TableRow>
+               </TableHeader>
+               <TableBody>
+                 {detailData.map((row, idx) => (
+                   <TableRow key={`${row.date}-${row.riderId}-${idx}`}>
+                     <TableCell>{new Date(row.date + "T00:00:00").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
+                     <TableCell className="font-medium">{row.riderName}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
+                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
+                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
+                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
+                   </TableRow>
+                 ))}
               </TableBody>
             </Table>
           )}
