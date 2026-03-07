@@ -184,23 +184,24 @@ const RiderIncome = () => {
     const riderMap = new Map<string, string>();
     riders.forEach((r) => riderMap.set(r.id, r.full_name));
 
-    // Attendance days per rider per date
-    const attendanceDays = new Map<string, Set<string>>();
-    attendanceData.forEach((a) => {
-      const key = a.rider_id;
-      if (!attendanceDays.has(key)) attendanceDays.set(key, new Set());
-      attendanceDays.get(key)!.add(a.work_date);
-    });
-
-    // Weekly revenue per rider per week
+    // Daily sales per rider per date + weekly revenue
+    const dailySales = new Map<string, Map<string, number>>(); // riderId -> date -> sales
     const weeklyRevenue = new Map<string, Map<string, number>>();
     transactionData.forEach((tx) => {
       if (!tx.rider_id) return;
       const txDate = tx.transaction_date.split("T")[0];
+      const amount = Number(tx.final_amount || 0);
+      
+      // Daily sales
+      if (!dailySales.has(tx.rider_id)) dailySales.set(tx.rider_id, new Map());
+      const riderDaily = dailySales.get(tx.rider_id)!;
+      riderDaily.set(txDate, (riderDaily.get(txDate) || 0) + amount);
+      
+      // Weekly revenue
       const wk = getWeekKey(txDate);
       if (!weeklyRevenue.has(tx.rider_id)) weeklyRevenue.set(tx.rider_id, new Map());
       const riderWeeks = weeklyRevenue.get(tx.rider_id)!;
-      riderWeeks.set(wk, (riderWeeks.get(wk) || 0) + Number(tx.final_amount || 0));
+      riderWeeks.set(wk, (riderWeeks.get(wk) || 0) + amount);
     });
 
     // Waste per rider per date
