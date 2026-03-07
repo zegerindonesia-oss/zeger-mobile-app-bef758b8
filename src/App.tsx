@@ -51,6 +51,7 @@ import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
 import ProductManagement from "./pages/master/ProductManagement";
+import RiderIncome from "./pages/finance/RiderIncome";
 
 const queryClient = new QueryClient();
 
@@ -462,6 +463,15 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
                 <ModernLayout>
                   <ProductManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+
+            {/* Rider Income */}
+            <Route path="/finance/rider-income" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
+                <ModernLayout>
+                  <RiderIncome />
                 </ModernLayout>
               </RoleBasedRoute>
             } />
