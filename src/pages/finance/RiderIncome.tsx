@@ -151,13 +151,11 @@ const RiderIncome = () => {
           return all;
         };
 
-        const [att, tx, waste] = await Promise.all([
-          fetchAll(attQ),
+        const [tx, waste] = await Promise.all([
           fetchAll(txQ),
           fetchAll(wasteQ),
         ]);
 
-        setAttendanceData(att);
         setTransactionData(tx);
         setWasteData(waste);
       } catch (err: any) {
