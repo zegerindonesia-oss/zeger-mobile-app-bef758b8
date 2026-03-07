@@ -467,6 +467,15 @@ const App = () => (
               </RoleBasedRoute>
             } />
 
+            {/* Rider Income */}
+            <Route path="/finance/rider-income" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
+                <ModernLayout>
+                  <RiderIncome />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
         </Routes>
