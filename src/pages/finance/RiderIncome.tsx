@@ -79,7 +79,7 @@ const RiderIncome = () => {
   const [endDate, setEndDate] = useState(todayStr);
 
   // Raw data
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  // attendanceData removed - using transactions to determine working days
   const [transactionData, setTransactionData] = useState<any[]>([]);
   const [wasteData, setWasteData] = useState<any[]>([]);
 
