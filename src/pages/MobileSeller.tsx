@@ -81,6 +81,8 @@ export default function MobileSeller() {
             <CustomerManagement />
           </div>
         );
+      case 'cash-deposit':
+        return <MobileCashDeposit userProfile={userProfile} />;
       case 'orders-online':
         return <MobileOrdersOnline />;
       case 'profile':

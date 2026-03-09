@@ -81,6 +81,12 @@ const navigationItems = [
     key: "waste"
   },
   {
+    title: "Setoran Tunai",
+    href: "/mobile-seller?tab=cash-deposit",
+    icon: Wallet,
+    key: "cash-deposit"
+  },
+  {
     title: "Customers",
     href: "/mobile-seller?tab=customers",
     icon: Users,
