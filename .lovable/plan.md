@@ -1,32 +1,61 @@
 
 
-## Rencana: Tambah Laporan Setoran Tunai di App Rider
+## Rencana: Tambah Data Master - Product Management
 
-### Perubahan
+### Analisis Masalah "Produk Tidak Muncul"
 
-#### 1. Buat komponen baru: `src/components/mobile/MobileCashDeposit.tsx`
+Produk baru (Paket Ramadhan, Can Series 330ml, Snack) **sudah ada di database** dan `is_active = true`. Semua query di app menggunakan `.eq('is_active', true)` jadi produk seharusnya muncul. Kemungkinan masalah:
+- Cache browser belum refresh
+- User belum login ulang setelah menambah produk
 
-Komponen read-only (tanpa verifikasi/checkbox) yang menampilkan laporan setoran tunai untuk rider yang sedang login saja. Menggunakan logika yang sama dengan `CashDepositHistory.tsx` tetapi:
-- **Tanpa filter rider** — otomatis mengambil data rider yang login (`userProfile.id`)
-- **Tanpa checkbox verifikasi** — rider hanya bisa melihat, tidak bisa verify
-- **Tanpa kolom Keterangan** — read-only view
-- Filter periode: Hari Ini, Kemarin, Minggu Ini, Bulan Ini, Custom
-- Resume table (aggregated) + Detail table (per hari)
-- Mobile-friendly layout dengan scroll horizontal pada tabel
-- Kolom: Tanggal, Total Sales, Penjualan Tunai, QRIS, Transfer Bank, Beban Operasional, Total Setoran Tunai
+Saya akan memastikan produk tampil dengan benar setelah menambahkan fitur Data Master.
 
-#### 2. Update `src/components/layout/MobileSidebar.tsx`
+### Perubahan yang Akan Dilakukan
 
-Tambah menu item "Setoran Tunai" dengan icon `Wallet` setelah "Waste Report":
+#### 1. Buat halaman baru: `src/pages/master/ProductManagement.tsx`
+
+CRUD lengkap untuk produk dengan field:
+- **Nama** (text, required)
+- **Code** (text, required, auto-generate)
+- **Category** (select/input - dari kategori yang ada + tambah baru)
+- **Harga Jual / Price** (number)
+- **HPP / Cost Price** (number)
+- **HPP CK / CK Price** (number)
+- **Deskripsi** (textarea)
+- **Foto Produk / Image URL** (text input untuk URL)
+- **Custom Options** (JSON editor sederhana)
+- **Status Aktif** (switch)
+
+Fitur:
+- Tabel daftar produk dengan search dan filter kategori
+- Dialog form untuk tambah/edit produk
+- Tombol aktif/nonaktif produk
+- Tombol hapus produk
+
+#### 2. Update Sidebar: `src/components/layout/ModernSidebar.tsx`
+
+Tambah menu "Data Master" setelah "Inventory" dengan sub-menu:
 ```
-{ title: "Setoran Tunai", href: "/mobile-seller?tab=cash-deposit", icon: Wallet, key: "cash-deposit" }
+Data Master
+  └── Product
 ```
 
-#### 3. Update `src/pages/MobileSeller.tsx`
+Roles: ho_admin, branch_manager (dan variant level-nya)
 
-Tambah case `cash-deposit` di switch statement yang merender `MobileCashDeposit`.
+#### 3. Update Routes: `src/App.tsx`
+
+Tambah route `/master/products` dengan RoleBasedRoute.
+
+#### 4. RLS Policy
+
+Products sudah punya RLS:
+- SELECT: semua authenticated user
+- INSERT/UPDATE/DELETE: hanya ho_admin dan 1_HO_Admin
+
+Perlu **tambah branch_manager** ke INSERT/UPDATE policy agar branch manager juga bisa mengelola produk. Atau biarkan hanya HO admin - tergantung kebutuhan.
 
 ### Yang Tidak Berubah
-- `CashDepositHistory.tsx` untuk branch hub tetap utuh
-- Semua komponen dan halaman lain tidak diubah
+- Semua fitur existing tetap utuh
+- Tidak mengubah komponen atau halaman yang sudah ada
+- Hanya menambah file baru + sidebar entry + route
 

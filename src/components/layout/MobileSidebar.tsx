@@ -15,7 +15,8 @@ import {
   X,
   LogOut,
   ShoppingBag,
-  Trash2
+  Trash2,
+  Wallet
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -78,6 +79,12 @@ const navigationItems = [
     href: "/mobile-seller?tab=waste",
     icon: Trash2,
     key: "waste"
+  },
+  {
+    title: "Setoran Tunai",
+    href: "/mobile-seller?tab=cash-deposit",
+    icon: Wallet,
+    key: "cash-deposit"
   },
   {
     title: "Customers",

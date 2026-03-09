@@ -13,6 +13,7 @@ import MobileWasteReport from "@/components/mobile/MobileWasteReport";
 import { CustomerManagement } from "@/components/customer/CustomerManagement";
 import { MobileProfile } from "@/components/mobile/MobileProfile";
 import { MobileOrdersOnline } from "@/components/mobile/MobileOrdersOnline";
+import MobileCashDeposit from "@/components/mobile/MobileCashDeposit";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { Users } from "lucide-react";
 
@@ -80,6 +81,8 @@ export default function MobileSeller() {
             <CustomerManagement />
           </div>
         );
+      case 'cash-deposit':
+        return <MobileCashDeposit userProfile={userProfile} />;
       case 'orders-online':
         return <MobileOrdersOnline />;
       case 'profile':
