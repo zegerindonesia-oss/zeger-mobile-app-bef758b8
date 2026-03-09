@@ -13,6 +13,7 @@ import MobileWasteReport from "@/components/mobile/MobileWasteReport";
 import { CustomerManagement } from "@/components/customer/CustomerManagement";
 import { MobileProfile } from "@/components/mobile/MobileProfile";
 import { MobileOrdersOnline } from "@/components/mobile/MobileOrdersOnline";
+import MobileCashDeposit from "@/components/mobile/MobileCashDeposit";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { Users } from "lucide-react";
 
