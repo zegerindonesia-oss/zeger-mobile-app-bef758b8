@@ -15,7 +15,8 @@ import {
   X,
   LogOut,
   ShoppingBag,
-  Trash2
+  Trash2,
+  Wallet
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
