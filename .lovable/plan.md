@@ -1,61 +1,42 @@
 
 
-## Rencana: Tambah Data Master - Product Management
+## Rencana: Perbaiki Pendapatan Rider di Branch Hub + Export PDF
 
-### Analisis Masalah "Produk Tidak Muncul"
+### File yang Diubah
+`src/pages/finance/RiderIncome.tsx`
 
-Produk baru (Paket Ramadhan, Can Series 330ml, Snack) **sudah ada di database** dan `is_active = true`. Semua query di app menggunakan `.eq('is_active', true)` jadi produk seharusnya muncul. Kemungkinan masalah:
-- Cache browser belum refresh
-- User belum login ulang setelah menambah produk
+### 1. Fix Komisi Penjualan
+Saat ini komisi mingguan dibagi 7 per hari (`totalCommission / 7`). Ini salah — komisi penjualan adalah lump sum mingguan. Perbaikan:
+- Komisi penjualan ditampilkan sebagai total mingguan di baris hari Minggu (atau hari terakhir minggu dalam filter)
+- Hari lain dalam minggu menampilkan Rp 0 untuk kolom komisi penjualan
 
-Saya akan memastikan produk tampil dengan benar setelah menambahkan fitur Data Master.
+### 2. Tambah Kolom "Hari"
+- Tambah kolom "Hari" setelah "Tanggal" di detail table dan resume tidak perlu
+- Format: Senin, Selasa, dst (`toLocaleDateString("id-ID", { weekday: "long" })`)
 
-### Perubahan yang Akan Dilakukan
+### 3. Export PDF
+- Tombol "Export PDF" di atas tabel resume
+- Menggunakan `jspdf` (sudah terinstall)
+- **Judul**: "Laporan Pendapatan Rider Zeger Coffee"
+- **Sub-judul**: "Periode {tgl mulai} s/d {tgl akhir} {Bulan} {Tahun}"
+- Jika filter rider spesifik, nama rider disertakan
+- Render kedua tabel (Resume + Detail) secara manual ke PDF landscape A4
 
-#### 1. Buat halaman baru: `src/pages/master/ProductManagement.tsx`
+### Detail Teknis Perhitungan
 
-CRUD lengkap untuk produk dengan field:
-- **Nama** (text, required)
-- **Code** (text, required, auto-generate)
-- **Category** (select/input - dari kategori yang ada + tambah baru)
-- **Harga Jual / Price** (number)
-- **HPP / Cost Price** (number)
-- **HPP CK / CK Price** (number)
-- **Deskripsi** (textarea)
-- **Foto Produk / Image URL** (text input untuk URL)
-- **Custom Options** (JSON editor sederhana)
-- **Status Aktif** (switch)
+```text
+Saat ini (SALAH):
+  perDay = (weeklyRevenue × rate) / 7   ← dibagi rata per hari
 
-Fitur:
-- Tabel daftar produk dengan search dan filter kategori
-- Dialog form untuk tambah/edit produk
-- Tombol aktif/nonaktif produk
-- Tombol hapus produk
-
-#### 2. Update Sidebar: `src/components/layout/ModernSidebar.tsx`
-
-Tambah menu "Data Master" setelah "Inventory" dengan sub-menu:
+Seharusnya (BENAR):
+  salesCommission = weeklyRevenue × rate  ← lump sum
+  Ditampilkan hanya di hari terakhir minggu yang masuk filter range
+  Hari lain: salesCommission = 0
 ```
-Data Master
-  └── Product
-```
-
-Roles: ho_admin, branch_manager (dan variant level-nya)
-
-#### 3. Update Routes: `src/App.tsx`
-
-Tambah route `/master/products` dengan RoleBasedRoute.
-
-#### 4. RLS Policy
-
-Products sudah punya RLS:
-- SELECT: semua authenticated user
-- INSERT/UPDATE/DELETE: hanya ho_admin dan 1_HO_Admin
-
-Perlu **tambah branch_manager** ke INSERT/UPDATE policy agar branch manager juga bisa mengelola produk. Atau biarkan hanya HO admin - tergantung kebutuhan.
 
 ### Yang Tidak Berubah
-- Semua fitur existing tetap utuh
-- Tidak mengubah komponen atau halaman yang sudah ada
-- Hanya menambah file baru + sidebar entry + route
+- Komisi harian tetap Rp 30.000 per hari ada transaksi
+- Waste tetap sebagai pengurang
+- Resume table tetap menampilkan total aggregated
+- Sidebar dan routing tidak berubah
 
