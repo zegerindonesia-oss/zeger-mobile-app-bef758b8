@@ -496,11 +496,9 @@ const RiderIncome = () => {
       formatCurrencyShort(r.total),
     ]);
 
-    if (cy + 20 > pageH - 12) {
+    if (y + 20 > pageH - 12) {
       doc.addPage();
       y = 14;
-    } else {
-      y = cy;
     }
 
     drawTable("Detail Pendapatan Rider", detailHeaders, detailColWidths, detailRows, y);
