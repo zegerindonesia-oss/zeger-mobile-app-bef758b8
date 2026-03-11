@@ -5,13 +5,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Filter, Trophy, TrendingUp, Users, AlertTriangle, FileDown } from "lucide-react";
+import { Filter, Trophy, TrendingUp, Users, AlertTriangle, FileDown, Target, Zap, Calendar, ArrowUpRight, Star } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 
 const DAILY_COMMISSION = 30000;
+const DAILY_TARGET = 500000;
+const WEEKLY_TARGET = 3500000;
+const MONTHLY_TARGET = 15000000;
 
 const COMMISSION_TIERS = [
   { min: 6000000, rate: 0.175 },
@@ -32,6 +36,18 @@ const getCommissionRate = (weeklyRevenue: number): number => {
     if (weeklyRevenue >= tier.min) return tier.rate;
   }
   return 0;
+};
+
+const getNextTier = (weeklyRevenue: number): { nextMin: number; nextRate: number } | null => {
+  // COMMISSION_TIERS is sorted descending by min
+  // Find the next tier above current sales
+  const reversedTiers = [...COMMISSION_TIERS].reverse(); // ascending
+  for (const tier of reversedTiers) {
+    if (weeklyRevenue < tier.min) {
+      return { nextMin: tier.min, nextRate: tier.rate };
+    }
+  }
+  return null; // already at max tier
 };
 
 const formatCurrency = (amount: number) =>
@@ -109,6 +125,201 @@ type ResumeRow = {
   total: number;
 };
 
+// === Commission Tier Card Component ===
+const CommissionTierCard = ({ weeklySales }: { weeklySales: number }) => {
+  const currentRate = getCommissionRate(weeklySales);
+  const nextTier = getNextTier(weeklySales);
+  const currentCommission = weeklySales * currentRate;
+
+  // Progress to next tier
+  const currentTierMin = COMMISSION_TIERS.slice().reverse().find(t => weeklySales >= t.min)?.min || 0;
+  const nextTierMin = nextTier?.nextMin || currentTierMin;
+  const progressToNext = nextTier
+    ? Math.min(((weeklySales - currentTierMin) / (nextTierMin - currentTierMin)) * 100, 100)
+    : 100;
+
+  return (
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Star className="h-5 w-5 text-yellow-500" /> Tier Komisi Saat Ini
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">Penjualan Minggu Ini</p>
+            <p className="text-2xl font-bold text-foreground">{formatCurrency(weeklySales)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Rate Komisi</p>
+            <p className="text-3xl font-bold text-primary">{(currentRate * 100).toFixed(1)}%</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">Komisi Penjualan Minggu Ini</p>
+          <p className="text-xl font-bold text-green-600">{formatCurrency(currentCommission)}</p>
+        </div>
+
+        {weeklySales < 1000000 && (
+          <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            ⚠️ Penjualan belum mencapai Rp 1.000.000 — belum dapat komisi penjualan. Hanya mendapat bonus kehadiran.
+          </div>
+        )}
+
+        {nextTier && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Menuju tier berikutnya ({(nextTier.nextRate * 100).toFixed(1)}%)</span>
+              <span className="font-medium text-foreground">
+                {formatCurrency(nextTier.nextMin - weeklySales)} lagi
+              </span>
+            </div>
+            <Progress value={progressToNext} className="h-3" />
+            <p className="text-xs text-muted-foreground text-right">
+              Target: {formatCurrency(nextTier.nextMin)}
+            </p>
+          </div>
+        )}
+
+        {!nextTier && weeklySales >= 6000000 && (
+          <div className="rounded-lg bg-green-500/10 p-3 text-sm text-green-700">
+            🏆 Sudah di tier tertinggi! Komisi 17.5%
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// === Target Tracker Component ===
+const TargetTrackerCard = ({ todaySales, weeklySales, monthlySales }: { todaySales: number; weeklySales: number; monthlySales: number }) => {
+  const targets = [
+    { label: "Harian", current: todaySales, target: DAILY_TARGET, icon: Target },
+    { label: "Mingguan", current: weeklySales, target: WEEKLY_TARGET, icon: Calendar },
+    { label: "Bulanan", current: monthlySales, target: MONTHLY_TARGET, icon: TrendingUp },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" /> Target Penjualan
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {targets.map(({ label, current, target, icon: Icon }) => {
+          const pct = Math.min(Math.round((current / target) * 100), 100);
+          const achieved = current >= target;
+          return (
+            <div key={label} className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{label}</span>
+                </div>
+                <span className={`text-sm font-bold ${achieved ? "text-green-600" : "text-foreground"}`}>
+                  {pct}%
+                </span>
+              </div>
+              <Progress value={pct} className="h-2.5" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{formatCurrency(current)}</span>
+                <span>{formatCurrency(target)}</span>
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+};
+
+// === Income Projection Component ===
+const IncomeProjectionCard = ({ weeklySales, daysWorkedThisWeek, monthlySales }: { weeklySales: number; daysWorkedThisWeek: number; monthlySales: number }) => {
+  const rate = getCommissionRate(weeklySales);
+  const weeklyCommission = weeklySales * rate;
+  const weeklyAttendance = daysWorkedThisWeek * DAILY_COMMISSION;
+  const estimatedWeeklyIncome = weeklyCommission + weeklyAttendance;
+
+  // Estimate monthly: assume 4 weeks similar performance
+  const estimatedMonthlyIncome = estimatedWeeklyIncome * 4;
+
+  return (
+    <Card className="border-green-500/20 bg-gradient-to-br from-green-500/5 to-emerald-500/10">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Zap className="h-5 w-5 text-green-600" /> Proyeksi Pendapatan
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Estimasi Minggu Ini</p>
+            <p className="text-xl font-bold text-foreground">{formatCurrency(estimatedWeeklyIncome)}</p>
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <p>Komisi: {formatCurrency(weeklyCommission)}</p>
+              <p>Kehadiran: {formatCurrency(weeklyAttendance)}</p>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Estimasi Bulanan</p>
+            <p className="text-xl font-bold text-foreground">{formatCurrency(estimatedMonthlyIncome)}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <ArrowUpRight className="h-3 w-3" /> Berdasarkan performa saat ini
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// === Commission Tiers Reference ===
+const CommissionTiersReference = ({ currentWeeklySales }: { currentWeeklySales: number }) => {
+  const tiersAsc = [...COMMISSION_TIERS].reverse();
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Tabel Tier Komisi</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30">
+              <TableHead>Penjualan Mingguan</TableHead>
+              <TableHead className="text-right">Rate</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow className={currentWeeklySales < 1000000 ? "bg-destructive/5" : ""}>
+              <TableCell className="text-sm">&lt; Rp 1.000.000</TableCell>
+              <TableCell className="text-right font-medium text-destructive">0%</TableCell>
+            </TableRow>
+            {tiersAsc.map((tier, idx) => {
+              const nextTier = tiersAsc[idx + 1];
+              const isActive = currentWeeklySales >= tier.min && (!nextTier || currentWeeklySales < nextTier.min);
+              return (
+                <TableRow key={tier.min} className={isActive ? "bg-primary/10 font-bold" : ""}>
+                  <TableCell className="text-sm">
+                    {nextTier
+                      ? `Rp ${formatCurrencyShort(tier.min)} – ${formatCurrencyShort(nextTier.min - 1)}`
+                      : `≥ Rp ${formatCurrencyShort(tier.min)}`
+                    }
+                    {isActive && <span className="ml-2 text-primary">← Saat Ini</span>}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{(tier.rate * 100).toFixed(1)}%</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+};
+
 const RiderIncome = () => {
   const { userProfile } = useAuth();
   const [riders, setRiders] = useState<RiderProfile[]>([]);
@@ -125,6 +336,7 @@ const RiderIncome = () => {
 
   const branchId = userProfile?.branch_id;
 
+  // === Existing fetch riders ===
   useEffect(() => {
     const fetchRiders = async () => {
       let q = supabase
@@ -139,6 +351,7 @@ const RiderIncome = () => {
     fetchRiders();
   }, [branchId]);
 
+  // === Existing fetch data ===
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -195,7 +408,8 @@ const RiderIncome = () => {
     fetchData();
   }, [startDate, endDate, selectedRider, branchId]);
 
-  const { resumeData, detailData } = useMemo(() => {
+  // === Existing data computation + new rider stats ===
+  const { resumeData, detailData, riderStats } = useMemo(() => {
     const riderMap = new Map<string, string>();
     riders.forEach((r) => riderMap.set(r.id, r.full_name));
 
@@ -244,9 +458,8 @@ const RiderIncome = () => {
       riders.forEach((r) => riderIds.add(r.id));
     }
 
-    // For each rider+week, determine which date in the filter range is the "last day" of that week
-    // Sales commission lump sum goes on that day only
-    const salesCommissionDay = new Map<string, Map<string, number>>(); // riderId -> date -> commission
+    // Sales commission lump sum mapping
+    const salesCommissionDay = new Map<string, Map<string, number>>();
 
     riderIds.forEach((riderId) => {
       const riderWeeks = weeklyRevenue.get(riderId);
@@ -256,11 +469,8 @@ const RiderIncome = () => {
         const rate = getCommissionRate(revenue);
         const totalCommission = revenue * rate;
 
-        // Find the last day of this week (Sun) that falls within filter range
         const monday = new Date(weekMonday + "T00:00:00");
-        const sunday = getSunday(monday);
 
-        // Last day of this week within filter range
         let lastDayInRange: string | null = null;
         for (let i = 6; i >= 0; i--) {
           const day = new Date(monday);
@@ -328,7 +538,46 @@ const RiderIncome = () => {
 
     details.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : b.total - a.total));
 
-    return { resumeData: resume, detailData: details };
+    // === Calculate rider stats for dashboard cards ===
+    const jakartaNow = getJakartaNow();
+    const todayDateStr = formatDateStr(jakartaNow);
+    const currentWeekMonday = formatDateStr(getMonday(jakartaNow));
+    const currentMonthStart = formatDateStr(new Date(jakartaNow.getFullYear(), jakartaNow.getMonth(), 1));
+
+    // Per-rider stats (for single rider view)
+    const stats = new Map<string, { todaySales: number; weeklySales: number; monthlySales: number; daysWorkedThisWeek: number }>();
+
+    riderIds.forEach((riderId) => {
+      const riderDailySales = dailySales.get(riderId) || new Map();
+
+      let todaySalesVal = 0;
+      let weeklySalesVal = 0;
+      let monthlySalesVal = 0;
+      let daysWorked = 0;
+
+      riderDailySales.forEach((amount, date) => {
+        if (date === todayDateStr) todaySalesVal += amount;
+        if (date >= currentWeekMonday) {
+          weeklySalesVal += amount;
+          if (amount > 0) daysWorked++;
+        }
+        if (date >= currentMonthStart) monthlySalesVal += amount;
+      });
+
+      // Also check weeklyRevenue for current week (it may include full week data)
+      const riderWeeklyRev = weeklyRevenue.get(riderId)?.get(currentWeekMonday) || 0;
+      // Use the larger value (weeklyRevenue includes the full week fetched data)
+      const finalWeeklySales = Math.max(weeklySalesVal, riderWeeklyRev);
+
+      stats.set(riderId, {
+        todaySales: todaySalesVal,
+        weeklySales: finalWeeklySales,
+        monthlySales: monthlySalesVal,
+        daysWorkedThisWeek: daysWorked,
+      });
+    });
+
+    return { resumeData: resume, detailData: details, riderStats: stats };
   }, [transactionData, wasteData, riders, startDate, endDate, selectedRider]);
 
   const handleQuickFilter = (type: string) => {
@@ -364,6 +613,11 @@ const RiderIncome = () => {
 
   const totalAll = resumeData.reduce((s, r) => s + r.total, 0);
 
+  // Get current rider stats for dashboard
+  const currentRiderStats = selectedRider !== "all" ? riderStats.get(selectedRider) : null;
+  const currentRiderWeeklySales = currentRiderStats?.weeklySales || 0;
+
+  // === Existing PDF export ===
   const handleExportPDF = useCallback(() => {
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
@@ -373,13 +627,11 @@ const RiderIncome = () => {
     const contentW = pageW - marginL - marginR;
     let y = 16;
 
-    // Title
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("Laporan Pendapatan Rider Zeger Coffee", pageW / 2, y, { align: "center" });
     y += 7;
 
-    // Subtitle with period
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     const riderName = selectedRider !== "all" ? riders.find(r => r.id === selectedRider)?.full_name : null;
@@ -387,7 +639,6 @@ const RiderIncome = () => {
     doc.text(riderName ? `${periodText} — Rider: ${riderName}` : periodText, pageW / 2, y, { align: "center" });
     y += 10;
 
-    // Helper to draw a table
     const drawTable = (
       title: string,
       headers: string[],
@@ -397,7 +648,6 @@ const RiderIncome = () => {
     ): number => {
       let cy = startY;
 
-      // Section title
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.text(title, marginL, cy);
@@ -406,7 +656,6 @@ const RiderIncome = () => {
       const rowH = 6;
       const headerH = 7;
 
-      // Header
       doc.setFillColor(59, 130, 246);
       doc.rect(marginL, cy, contentW, headerH, "F");
       doc.setFontSize(7);
@@ -421,7 +670,6 @@ const RiderIncome = () => {
       });
       cy += headerH;
 
-      // Rows
       doc.setFont("helvetica", "normal");
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(7);
@@ -458,7 +706,6 @@ const RiderIncome = () => {
       return cy + 4;
     };
 
-    // Resume Table
     const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Total Pendapatan"];
     const resumeColWidths = [10, 50, 38, 38, 38, 38, 47];
     const resumeRows = resumeData.map((r, i) => [
@@ -482,7 +729,6 @@ const RiderIncome = () => {
     y = drawTable("Resume Pendapatan Rider", resumeHeaders, resumeColWidths, resumeRows, y);
     y += 4;
 
-    // Detail Table
     const detailHeaders = ["Tanggal", "Hari", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Total"];
     const detailColWidths = [28, 22, 45, 35, 35, 35, 35, 38];
     const detailRows = detailData.map((r) => [
@@ -612,6 +858,56 @@ const RiderIncome = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* === NEW: Rider Dashboard Cards (when specific rider selected) === */}
+      {selectedRider !== "all" && currentRiderStats && (
+        <div className="space-y-4">
+          {/* Sales Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+              <CardContent className="pt-6">
+                <p className="text-xs text-muted-foreground">Penjualan Hari Ini</p>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(currentRiderStats.todaySales)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Target: {formatCurrency(DAILY_TARGET)}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+              <CardContent className="pt-6">
+                <p className="text-xs text-muted-foreground">Penjualan Minggu Ini</p>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(currentRiderStats.weeklySales)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Target: {formatCurrency(WEEKLY_TARGET)}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
+              <CardContent className="pt-6">
+                <p className="text-xs text-muted-foreground">Penjualan Bulan Ini</p>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(currentRiderStats.monthlySales)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Target: {formatCurrency(MONTHLY_TARGET)}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Commission Tier + Target Tracker */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <CommissionTierCard weeklySales={currentRiderWeeklySales} />
+            <TargetTrackerCard
+              todaySales={currentRiderStats.todaySales}
+              weeklySales={currentRiderStats.weeklySales}
+              monthlySales={currentRiderStats.monthlySales}
+            />
+          </div>
+
+          {/* Income Projection + Tier Reference */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <IncomeProjectionCard
+              weeklySales={currentRiderStats.weeklySales}
+              daysWorkedThisWeek={currentRiderStats.daysWorkedThisWeek}
+              monthlySales={currentRiderStats.monthlySales}
+            />
+            <CommissionTiersReference currentWeeklySales={currentRiderWeeklySales} />
+          </div>
+        </div>
+      )}
 
       {/* Resume Table */}
       <Card>
