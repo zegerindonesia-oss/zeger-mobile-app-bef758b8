@@ -85,6 +85,7 @@ export default function CustomerOrderTracking({
 
     const initializeMap = () => {
       if (!mapContainer.current || !(window as any).google?.maps) return;
+      const google = (window as any).google;
 
       // Create map
       map.current = new google.maps.Map(mapContainer.current, {

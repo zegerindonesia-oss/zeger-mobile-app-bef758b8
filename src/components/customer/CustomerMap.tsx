@@ -206,6 +206,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   const initializeMap = () => {
     if (!mapContainer.current || !(window as any).google?.maps || !userLocation) return;
+    const google = (window as any).google;
 
     console.log('🗺️ Creating map instance...');
     // Create map
