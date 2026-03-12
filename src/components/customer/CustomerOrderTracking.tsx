@@ -176,6 +176,7 @@ export default function CustomerOrderTracking({
 
         // Center map to show both markers
         if (map.current) {
+          const google = (window as any).google;
           const bounds = new google.maps.LatLngBounds();
           bounds.extend({ lat: newLat, lng: newLng });
           bounds.extend({ lat: customerLat, lng: customerLng });
