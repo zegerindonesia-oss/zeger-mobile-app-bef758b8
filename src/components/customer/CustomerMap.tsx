@@ -41,9 +41,9 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<google.maps.Map | null>(null);
-  const markers = useRef<google.maps.Marker[]>([]);
-  const riderMarkersMap = useRef<Map<string, google.maps.Marker>>(new Map());
+  const map = useRef<any>(null);
+  const markers = useRef<any[]>([]);
+  const riderMarkersMap = useRef<Map<string, any>>(new Map());
 
   useEffect(() => {
     requestLocationPermission();
@@ -206,6 +206,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   const initializeMap = () => {
     if (!mapContainer.current || !(window as any).google?.maps || !userLocation) return;
+    const google = (window as any).google;
 
     console.log('🗺️ Creating map instance...');
     // Create map
