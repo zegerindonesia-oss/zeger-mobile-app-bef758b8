@@ -42,9 +42,9 @@ export default function CustomerOrderTracking({
   const [orderStatus, setOrderStatus] = useState<string>('in_progress');
   const [mapLoadError, setMapLoadError] = useState(false);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<google.maps.Map | null>(null);
-  const riderMarker = useRef<google.maps.Marker | null>(null);
-  const polyline = useRef<google.maps.Polyline | null>(null);
+  const map = useRef<any>(null);
+  const riderMarker = useRef<any>(null);
+  const polyline = useRef<any>(null);
 
   // Initialize map
   useEffect(() => {
