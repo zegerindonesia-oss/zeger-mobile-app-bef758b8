@@ -27,7 +27,6 @@
     "useDefineForClassFields": true
   },
   "include": [
-    "src",
-    "src/types/google-maps.d.ts"
+    "src"
   ]
 }
