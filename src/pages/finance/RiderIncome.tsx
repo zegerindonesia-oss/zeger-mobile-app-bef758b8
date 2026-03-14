@@ -584,7 +584,7 @@ const RiderIncome = () => {
     });
 
     return { resumeData: resume, detailData: details, riderStats: stats };
-  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider]);
+  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider, kasbonValues]);
 
   const handleQuickFilter = (type: string) => {
     const now = getJakartaNow();
