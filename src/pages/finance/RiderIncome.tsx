@@ -1042,6 +1042,16 @@ const RiderIncome = () => {
                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
                   </TableRow>
                 ))}
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell>Total</TableCell>
+                  <TableCell>{detailData.length} hari</TableCell>
+                  <TableCell></TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.sales, 0))}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
+                  <TableCell className="text-right text-destructive">{formatCurrency(detailData.reduce((s, r) => s + r.waste, 0))}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.total, 0))}</TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           )}
