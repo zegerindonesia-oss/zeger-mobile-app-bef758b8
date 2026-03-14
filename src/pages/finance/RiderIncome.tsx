@@ -950,6 +950,7 @@ const RiderIncome = () => {
                   <TableHead className="text-right">Komisi Harian</TableHead>
                   <TableHead className="text-right">Komisi Penjualan</TableHead>
                   <TableHead className="text-right">Waste (-)</TableHead>
+                  <TableHead className="text-right">Kasbon (-)</TableHead>
                   <TableHead className="text-right">Total Pendapatan</TableHead>
                 </TableRow>
               </TableHeader>
@@ -971,6 +972,19 @@ const RiderIncome = () => {
                     <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
+                    <TableCell className="text-right">
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-28 text-right ml-auto"
+                        value={kasbonValues[row.riderId] || ""}
+                        placeholder="0"
+                        onChange={(e) => {
+                          const val = Number(e.target.value) || 0;
+                          setKasbonValues((prev) => ({ ...prev, [row.riderId]: val }));
+                        }}
+                      />
+                    </TableCell>
                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
                   </TableRow>
                 ))}
@@ -980,6 +994,7 @@ const RiderIncome = () => {
                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
                   <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.waste, 0))}</TableCell>
+                  <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.kasbon, 0))}</TableCell>
                   <TableCell className="text-right">{formatCurrency(totalAll)}</TableCell>
                 </TableRow>
               </TableBody>
