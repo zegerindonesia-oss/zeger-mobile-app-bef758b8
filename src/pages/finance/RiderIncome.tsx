@@ -326,6 +326,7 @@ const RiderIncome = () => {
   const [riders, setRiders] = useState<RiderProfile[]>([]);
   const [selectedRider, setSelectedRider] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [kasbonValues, setKasbonValues] = useState<Record<string, number>>({});
 
   const now = getJakartaNow();
   const todayStr = formatDateStr(now);
