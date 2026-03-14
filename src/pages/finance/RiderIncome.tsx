@@ -712,8 +712,8 @@ const RiderIncome = () => {
       return cy + 4;
     };
 
-    const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Total Pendapatan"];
-    const resumeColWidths = [10, 50, 38, 38, 38, 38, 47];
+    const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Kasbon (-)", "Total Pendapatan"];
+    const resumeColWidths = [10, 44, 34, 34, 34, 34, 34, 40];
     const resumeRows = resumeData.map((r, i) => [
       String(i + 1),
       r.riderName,
@@ -721,6 +721,7 @@ const RiderIncome = () => {
       formatCurrencyShort(r.dailyCommission),
       formatCurrencyShort(r.salesCommission),
       formatCurrencyShort(r.waste),
+      formatCurrencyShort(r.kasbon),
       formatCurrencyShort(r.total),
     ]);
     resumeRows.push([
@@ -729,6 +730,7 @@ const RiderIncome = () => {
       formatCurrencyShort(resumeData.reduce((s, r) => s + r.dailyCommission, 0)),
       formatCurrencyShort(resumeData.reduce((s, r) => s + r.salesCommission, 0)),
       formatCurrencyShort(resumeData.reduce((s, r) => s + r.waste, 0)),
+      formatCurrencyShort(resumeData.reduce((s, r) => s + r.kasbon, 0)),
       formatCurrencyShort(totalAll),
     ]);
 
@@ -746,6 +748,15 @@ const RiderIncome = () => {
       formatCurrencyShort(r.salesCommission),
       formatCurrencyShort(r.waste),
       formatCurrencyShort(r.total),
+    ]);
+    // Add total row for detail PDF
+    detailRows.push([
+      "TOTAL", `${detailData.length} hari`, "",
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.sales, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.dailyCommission, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.salesCommission, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.waste, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.total, 0)),
     ]);
 
     if (y + 20 > pageH - 12) {
