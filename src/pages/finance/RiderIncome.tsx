@@ -530,11 +530,15 @@ const RiderIncome = () => {
     });
 
     const resume: ResumeRow[] = Array.from(resumeAgg.entries())
-      .map(([riderId, agg]) => ({
-        riderId,
-        ...agg,
-        total: agg.dailyCommission + agg.salesCommission - agg.waste,
-      }))
+      .map(([riderId, agg]) => {
+        const kasbon = kasbonValues[riderId] || 0;
+        return {
+          riderId,
+          ...agg,
+          kasbon,
+          total: agg.dailyCommission + agg.salesCommission - agg.waste - kasbon,
+        };
+      })
       .filter((r) => r.sales > 0 || r.salesCommission > 0 || r.waste > 0)
       .sort((a, b) => b.total - a.total);
 
