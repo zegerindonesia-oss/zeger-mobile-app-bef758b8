@@ -122,6 +122,7 @@ type ResumeRow = {
   dailyCommission: number;
   salesCommission: number;
   waste: number;
+  kasbon: number;
   total: number;
 };
 
