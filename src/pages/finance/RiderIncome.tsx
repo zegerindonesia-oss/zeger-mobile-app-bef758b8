@@ -122,6 +122,7 @@ type ResumeRow = {
   dailyCommission: number;
   salesCommission: number;
   waste: number;
+  kasbon: number;
   total: number;
 };
 
@@ -325,6 +326,7 @@ const RiderIncome = () => {
   const [riders, setRiders] = useState<RiderProfile[]>([]);
   const [selectedRider, setSelectedRider] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [kasbonValues, setKasbonValues] = useState<Record<string, number>>({});
 
   const now = getJakartaNow();
   const todayStr = formatDateStr(now);
@@ -528,11 +530,15 @@ const RiderIncome = () => {
     });
 
     const resume: ResumeRow[] = Array.from(resumeAgg.entries())
-      .map(([riderId, agg]) => ({
-        riderId,
-        ...agg,
-        total: agg.dailyCommission + agg.salesCommission - agg.waste,
-      }))
+      .map(([riderId, agg]) => {
+        const kasbon = kasbonValues[riderId] || 0;
+        return {
+          riderId,
+          ...agg,
+          kasbon,
+          total: agg.dailyCommission + agg.salesCommission - agg.waste - kasbon,
+        };
+      })
       .filter((r) => r.sales > 0 || r.salesCommission > 0 || r.waste > 0)
       .sort((a, b) => b.total - a.total);
 
@@ -578,7 +584,7 @@ const RiderIncome = () => {
     });
 
     return { resumeData: resume, detailData: details, riderStats: stats };
-  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider]);
+  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider, kasbonValues]);
 
   const handleQuickFilter = (type: string) => {
     const now = getJakartaNow();
@@ -706,8 +712,8 @@ const RiderIncome = () => {
       return cy + 4;
     };
 
-    const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Total Pendapatan"];
-    const resumeColWidths = [10, 50, 38, 38, 38, 38, 47];
+    const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Kasbon (-)", "Total Pendapatan"];
+    const resumeColWidths = [10, 44, 34, 34, 34, 34, 34, 40];
     const resumeRows = resumeData.map((r, i) => [
       String(i + 1),
       r.riderName,
@@ -715,6 +721,7 @@ const RiderIncome = () => {
       formatCurrencyShort(r.dailyCommission),
       formatCurrencyShort(r.salesCommission),
       formatCurrencyShort(r.waste),
+      formatCurrencyShort(r.kasbon),
       formatCurrencyShort(r.total),
     ]);
     resumeRows.push([
@@ -723,6 +730,7 @@ const RiderIncome = () => {
       formatCurrencyShort(resumeData.reduce((s, r) => s + r.dailyCommission, 0)),
       formatCurrencyShort(resumeData.reduce((s, r) => s + r.salesCommission, 0)),
       formatCurrencyShort(resumeData.reduce((s, r) => s + r.waste, 0)),
+      formatCurrencyShort(resumeData.reduce((s, r) => s + r.kasbon, 0)),
       formatCurrencyShort(totalAll),
     ]);
 
@@ -740,6 +748,15 @@ const RiderIncome = () => {
       formatCurrencyShort(r.salesCommission),
       formatCurrencyShort(r.waste),
       formatCurrencyShort(r.total),
+    ]);
+    // Add total row for detail PDF
+    detailRows.push([
+      "TOTAL", `${detailData.length} hari`, "",
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.sales, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.dailyCommission, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.salesCommission, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.waste, 0)),
+      formatCurrencyShort(detailData.reduce((s, r) => s + r.total, 0)),
     ]);
 
     if (y + 20 > pageH - 12) {
@@ -933,6 +950,7 @@ const RiderIncome = () => {
                   <TableHead className="text-right">Komisi Harian</TableHead>
                   <TableHead className="text-right">Komisi Penjualan</TableHead>
                   <TableHead className="text-right">Waste (-)</TableHead>
+                  <TableHead className="text-right">Kasbon (-)</TableHead>
                   <TableHead className="text-right">Total Pendapatan</TableHead>
                 </TableRow>
               </TableHeader>
@@ -954,6 +972,19 @@ const RiderIncome = () => {
                     <TableCell className="text-right">{formatCurrency(row.dailyCommission)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
+                    <TableCell className="text-right">
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-28 text-right ml-auto"
+                        value={kasbonValues[row.riderId] || ""}
+                        placeholder="0"
+                        onChange={(e) => {
+                          const val = Number(e.target.value) || 0;
+                          setKasbonValues((prev) => ({ ...prev, [row.riderId]: val }));
+                        }}
+                      />
+                    </TableCell>
                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
                   </TableRow>
                 ))}
@@ -963,6 +994,7 @@ const RiderIncome = () => {
                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
                   <TableCell className="text-right">{formatCurrency(resumeData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
                   <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.waste, 0))}</TableCell>
+                  <TableCell className="text-right text-destructive">{formatCurrency(resumeData.reduce((s, r) => s + r.kasbon, 0))}</TableCell>
                   <TableCell className="text-right">{formatCurrency(totalAll)}</TableCell>
                 </TableRow>
               </TableBody>
@@ -1010,6 +1042,16 @@ const RiderIncome = () => {
                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
                   </TableRow>
                 ))}
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell>Total</TableCell>
+                  <TableCell>{detailData.length} hari</TableCell>
+                  <TableCell></TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.sales, 0))}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.dailyCommission, 0))}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
+                  <TableCell className="text-right text-destructive">{formatCurrency(detailData.reduce((s, r) => s + r.waste, 0))}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.total, 0))}</TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           )}
