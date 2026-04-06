@@ -27,8 +27,8 @@ const COMMISSION_TIERS = [
   { min: 3000000, rate: 0.14 },
   { min: 2500000, rate: 0.13 },
   { min: 2000000, rate: 0.11 },
-  { min: 1500000, rate: 0.10 },
-  { min: 1000000, rate: 0.07 },
+  { min: 1500000, rate: 0.08 },
+  { min: 1000000, rate: 0.05 },
 ];
 
 const getCommissionRate = (weeklyRevenue: number): number => {
