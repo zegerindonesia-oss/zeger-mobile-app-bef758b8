@@ -335,7 +335,7 @@ const RiderIncome = () => {
 
   const [transactionData, setTransactionData] = useState<any[]>([]);
   const [wasteData, setWasteData] = useState<any[]>([]);
-
+  const [productSalesData, setProductSalesData] = useState<{ name: string; qty: number }[]>([]);
   const branchId = userProfile?.branch_id;
 
   // === Existing fetch riders ===
