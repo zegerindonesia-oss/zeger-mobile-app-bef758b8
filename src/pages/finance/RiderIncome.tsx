@@ -645,7 +645,7 @@ const RiderIncome = () => {
   const currentRiderStats = selectedRider !== "all" ? riderStats.get(selectedRider) : null;
   const currentRiderWeeklySales = currentRiderStats?.weeklySales || 0;
 
-  // === Existing PDF export ===
+  // === PDF export with logo, red brand, tier table, menu terjual ===
   const handleExportPDF = useCallback(() => {
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
@@ -654,6 +654,13 @@ const RiderIncome = () => {
     const marginR = 14;
     const contentW = pageW - marginL - marginR;
     let y = 16;
+
+    // Add logo top-right
+    try {
+      const logoImg = new Image();
+      logoImg.src = "/images/zeger-logo.png";
+      doc.addImage(logoImg, "PNG", pageW - marginR - 35, 6, 35, 14);
+    } catch (e) { /* skip */ }
 
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -667,6 +674,8 @@ const RiderIncome = () => {
     doc.text(riderName ? `${periodText} — Rider: ${riderName}` : periodText, pageW / 2, y, { align: "center" });
     y += 10;
 
+    const brandRed = 220, brandGn = 38, brandBl = 38;
+
     const drawTable = (
       title: string,
       headers: string[],
@@ -675,16 +684,16 @@ const RiderIncome = () => {
       startY: number
     ): number => {
       let cy = startY;
-
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
       doc.text(title, marginL, cy);
       cy += 6;
 
       const rowH = 6;
       const headerH = 7;
 
-      doc.setFillColor(59, 130, 246);
+      doc.setFillColor(brandRed, brandGn, brandBl);
       doc.rect(marginL, cy, contentW, headerH, "F");
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
@@ -707,18 +716,16 @@ const RiderIncome = () => {
           doc.addPage();
           cy = 14;
         }
-
         const isTotal = row[0] === "TOTAL";
         if (rowIdx % 2 === 0 && !isTotal) {
-          doc.setFillColor(245, 245, 245);
+          doc.setFillColor(255, 240, 240);
           doc.rect(marginL, cy, contentW, rowH, "F");
         }
         if (isTotal) {
-          doc.setFillColor(220, 220, 220);
+          doc.setFillColor(254, 202, 202);
           doc.rect(marginL, cy, contentW, rowH, "F");
           doc.setFont("helvetica", "bold");
         }
-
         cx = marginL;
         row.forEach((cell, i) => {
           const align = i >= 2 ? "right" : "left";
@@ -726,25 +733,20 @@ const RiderIncome = () => {
           doc.text(cell, tx, cy + 4.5, { align });
           cx += colWidths[i];
         });
-
         if (isTotal) doc.setFont("helvetica", "normal");
         cy += rowH;
       });
-
       return cy + 4;
     };
 
+    // Resume Table
     const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Kasbon (-)", "Total Pendapatan"];
     const resumeColWidths = [10, 44, 34, 34, 34, 34, 34, 40];
     const resumeRows = resumeData.map((r, i) => [
-      String(i + 1),
-      r.riderName,
-      formatCurrencyShort(r.sales),
-      formatCurrencyShort(r.dailyCommission),
-      formatCurrencyShort(r.salesCommission),
-      formatCurrencyShort(r.waste),
-      formatCurrencyShort(r.kasbon),
-      formatCurrencyShort(r.total),
+      String(i + 1), r.riderName,
+      formatCurrencyShort(r.sales), formatCurrencyShort(r.dailyCommission),
+      formatCurrencyShort(r.salesCommission), formatCurrencyShort(r.waste),
+      formatCurrencyShort(r.kasbon), formatCurrencyShort(r.total),
     ]);
     resumeRows.push([
       "TOTAL", "",
@@ -755,23 +757,18 @@ const RiderIncome = () => {
       formatCurrencyShort(resumeData.reduce((s, r) => s + r.kasbon, 0)),
       formatCurrencyShort(totalAll),
     ]);
-
     y = drawTable("Resume Pendapatan Rider", resumeHeaders, resumeColWidths, resumeRows, y);
     y += 4;
 
+    // Detail Table
     const detailHeaders = ["Tanggal", "Hari", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Total"];
     const detailColWidths = [28, 22, 45, 35, 35, 35, 35, 38];
     const detailRows = detailData.map((r) => [
-      formatDateDisplay(r.date),
-      r.dayName,
-      r.riderName,
-      formatCurrencyShort(r.sales),
-      formatCurrencyShort(r.dailyCommission),
-      formatCurrencyShort(r.salesCommission),
-      formatCurrencyShort(r.waste),
+      formatDateDisplay(r.date), r.dayName, r.riderName,
+      formatCurrencyShort(r.sales), formatCurrencyShort(r.dailyCommission),
+      formatCurrencyShort(r.salesCommission), formatCurrencyShort(r.waste),
       formatCurrencyShort(r.total),
     ]);
-    // Add total row for detail PDF
     detailRows.push([
       "TOTAL", `${detailData.length} hari`, "",
       formatCurrencyShort(detailData.reduce((s, r) => s + r.sales, 0)),
@@ -781,17 +778,142 @@ const RiderIncome = () => {
       formatCurrencyShort(detailData.reduce((s, r) => s + r.total, 0)),
     ]);
 
-    if (y + 20 > pageH - 12) {
-      doc.addPage();
-      y = 14;
-    }
+    if (y + 20 > pageH - 12) { doc.addPage(); y = 14; }
+    y = drawTable("Detail Pendapatan Rider", detailHeaders, detailColWidths, detailRows, y);
 
-    drawTable("Detail Pendapatan Rider", detailHeaders, detailColWidths, detailRows, y);
+    // === New Page: Tier Komisi + Menu Terjual ===
+    doc.addPage();
+    y = 16;
+    try {
+      const logoImg2 = new Image();
+      logoImg2.src = "/images/zeger-logo.png";
+      doc.addImage(logoImg2, "PNG", pageW - marginR - 35, 6, 35, 14);
+    } catch (e) { /* skip */ }
+
+    // Tier Table
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("Tabel Tier Komisi Penjualan", marginL, y);
+    y += 6;
+
+    const tierRowH = 6, tierHeaderH = 7;
+    const tierTotalW = 120;
+
+    doc.setFillColor(brandRed, brandGn, brandBl);
+    doc.rect(marginL, y, tierTotalW, tierHeaderH, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Penjualan Mingguan", marginL + 2, y + 5);
+    doc.text("Rate", marginL + tierTotalW - 2, y + 5, { align: "right" });
+    y += tierHeaderH;
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+
+    doc.setFillColor(255, 240, 240);
+    doc.rect(marginL, y, tierTotalW, tierRowH, "F");
+    doc.text("< Rp 1.000.000", marginL + 2, y + 4.5);
+    doc.setTextColor(brandRed, brandGn, brandBl);
+    doc.text("0%", marginL + tierTotalW - 2, y + 4.5, { align: "right" });
+    doc.setTextColor(0, 0, 0);
+    y += tierRowH;
+
+    const tiersAsc = [...COMMISSION_TIERS].reverse();
+    tiersAsc.forEach((tier, idx) => {
+      const nextTier = tiersAsc[idx + 1];
+      if (idx % 2 === 1) {
+        doc.setFillColor(255, 240, 240);
+        doc.rect(marginL, y, tierTotalW, tierRowH, "F");
+      }
+      const label = nextTier
+        ? `Rp ${formatCurrencyShort(tier.min)} - ${formatCurrencyShort(nextTier.min - 1)}`
+        : `>= Rp ${formatCurrencyShort(tier.min)}`;
+      doc.text(label, marginL + 2, y + 4.5);
+      doc.text(`${(tier.rate * 100).toFixed(1)}%`, marginL + tierTotalW - 2, y + 4.5, { align: "right" });
+      y += tierRowH;
+    });
+    y += 10;
+
+    // Menu Terjual with donut chart
+    if (productSalesData.length > 0) {
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
+      doc.text("Menu Terjual", marginL, y);
+      y += 6;
+
+      const totalQty = productSalesData.reduce((s, p) => s + p.qty, 0);
+      const top5 = productSalesData.slice(0, 5);
+      const othersQty = productSalesData.slice(5).reduce((s, p) => s + p.qty, 0);
+
+      const centerX = marginL + 30;
+      const centerY2 = y + 30;
+      const outerR = 25, innerR = 14;
+      const chartColors: [number, number, number][] = [
+        [220, 38, 38], [239, 68, 68], [252, 165, 165],
+        [254, 202, 202], [254, 226, 226], [200, 200, 200],
+      ];
+
+      const items = [...top5];
+      if (othersQty > 0) items.push({ name: "Lainnya", qty: othersQty });
+
+      let startAngle = -Math.PI / 2;
+      items.forEach((item, idx) => {
+        const sliceAngle = (item.qty / totalQty) * 2 * Math.PI;
+        const [cr, cg, cb] = chartColors[idx % chartColors.length];
+        const steps = Math.max(Math.round(sliceAngle * 30), 2);
+        const pts: [number, number][] = [];
+        for (let i = 0; i <= steps; i++) {
+          const a = startAngle + (sliceAngle * i) / steps;
+          pts.push([centerX + Math.cos(a) * outerR, centerY2 + Math.sin(a) * outerR]);
+        }
+        for (let i = steps; i >= 0; i--) {
+          const a = startAngle + (sliceAngle * i) / steps;
+          pts.push([centerX + Math.cos(a) * innerR, centerY2 + Math.sin(a) * innerR]);
+        }
+        doc.setFillColor(cr, cg, cb);
+        for (let i = 1; i < pts.length - 1; i++) {
+          doc.triangle(pts[0][0], pts[0][1], pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], "F");
+        }
+        startAngle += sliceAngle;
+      });
+
+      doc.setFillColor(255, 255, 255);
+      doc.circle(centerX, centerY2, innerR - 1, "F");
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
+      doc.text(String(totalQty), centerX, centerY2 + 1, { align: "center" });
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.text("Products", centerX, centerY2 + 5, { align: "center" });
+
+      let legendY = y + 8;
+      const legendX = marginL + 65;
+      items.forEach((item, idx) => {
+        const [cr, cg, cb] = chartColors[idx % chartColors.length];
+        doc.setFillColor(cr, cg, cb);
+        doc.circle(legendX, legendY, 2, "F");
+        doc.setFontSize(8);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "normal");
+        const pct = Math.round((item.qty / totalQty) * 100);
+        doc.text(item.name, legendX + 5, legendY + 1);
+        doc.text(String(item.qty), legendX + 75, legendY + 1, { align: "right" });
+        doc.setFontSize(7);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`${pct}%`, legendX + 85, legendY + 1, { align: "right" });
+        legendY += 7;
+      });
+    }
 
     const fileName = `Pendapatan_Rider_${startDate}_${endDate}.pdf`;
     doc.save(fileName);
     toast.success("PDF berhasil diexport!");
-  }, [resumeData, detailData, startDate, endDate, selectedRider, riders, totalAll]);
+  }, [resumeData, detailData, startDate, endDate, selectedRider, riders, totalAll, productSalesData]);
 
   return (
     <div className="space-y-6">
