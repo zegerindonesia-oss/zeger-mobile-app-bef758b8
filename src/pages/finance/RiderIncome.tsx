@@ -655,11 +655,12 @@ const RiderIncome = () => {
     const contentW = pageW - marginL - marginR;
     let y = 16;
 
-    // Add logo top-right
+    // Add logo top-right (1:1 aspect ratio)
     try {
       const logoImg = new Image();
       logoImg.src = "/images/zeger-logo.png";
-      doc.addImage(logoImg, "PNG", pageW - marginR - 35, 6, 35, 14);
+      const logoSize = 18;
+      doc.addImage(logoImg, "PNG", pageW - marginR - logoSize, 4, logoSize, logoSize);
     } catch (e) { /* skip */ }
 
     doc.setFontSize(14);
@@ -741,7 +742,7 @@ const RiderIncome = () => {
 
     // Resume Table
     const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Kasbon (-)", "Total Pendapatan"];
-    const resumeColWidths = [10, 44, 34, 34, 34, 34, 34, 40];
+    const resumeColWidths = [10, 40, 32, 32, 34, 32, 32, 52];
     const resumeRows = resumeData.map((r, i) => [
       String(i + 1), r.riderName,
       formatCurrencyShort(r.sales), formatCurrencyShort(r.dailyCommission),
@@ -762,7 +763,7 @@ const RiderIncome = () => {
 
     // Detail Table
     const detailHeaders = ["Tanggal", "Hari", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Total"];
-    const detailColWidths = [28, 22, 45, 35, 35, 35, 35, 38];
+    const detailColWidths = [26, 20, 40, 34, 34, 34, 32, 53];
     const detailRows = detailData.map((r) => [
       formatDateDisplay(r.date), r.dayName, r.riderName,
       formatCurrencyShort(r.sales), formatCurrencyShort(r.dailyCommission),
@@ -787,7 +788,8 @@ const RiderIncome = () => {
     try {
       const logoImg2 = new Image();
       logoImg2.src = "/images/zeger-logo.png";
-      doc.addImage(logoImg2, "PNG", pageW - marginR - 35, 6, 35, 14);
+      const logoSize2 = 18;
+      doc.addImage(logoImg2, "PNG", pageW - marginR - logoSize2, 4, logoSize2, logoSize2);
     } catch (e) { /* skip */ }
 
     // Tier Table
