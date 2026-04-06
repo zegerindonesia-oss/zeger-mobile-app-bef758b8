@@ -655,11 +655,12 @@ const RiderIncome = () => {
     const contentW = pageW - marginL - marginR;
     let y = 16;
 
-    // Add logo top-right
+    // Add logo top-right (1:1 aspect ratio)
     try {
       const logoImg = new Image();
       logoImg.src = "/images/zeger-logo.png";
-      doc.addImage(logoImg, "PNG", pageW - marginR - 35, 6, 35, 14);
+      const logoSize = 18;
+      doc.addImage(logoImg, "PNG", pageW - marginR - logoSize, 4, logoSize, logoSize);
     } catch (e) { /* skip */ }
 
     doc.setFontSize(14);
