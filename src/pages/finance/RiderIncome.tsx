@@ -788,7 +788,8 @@ const RiderIncome = () => {
     try {
       const logoImg2 = new Image();
       logoImg2.src = "/images/zeger-logo.png";
-      doc.addImage(logoImg2, "PNG", pageW - marginR - 35, 6, 35, 14);
+      const logoSize2 = 18;
+      doc.addImage(logoImg2, "PNG", pageW - marginR - logoSize2, 4, logoSize2, logoSize2);
     } catch (e) { /* skip */ }
 
     // Tier Table
