@@ -763,7 +763,7 @@ const RiderIncome = () => {
 
     // Detail Table
     const detailHeaders = ["Tanggal", "Hari", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Total"];
-    const detailColWidths = [28, 22, 45, 35, 35, 35, 35, 38];
+    const detailColWidths = [26, 20, 40, 34, 34, 34, 32, 53];
     const detailRows = detailData.map((r) => [
       formatDateDisplay(r.date), r.dayName, r.riderName,
       formatCurrencyShort(r.sales), formatCurrencyShort(r.dailyCommission),
