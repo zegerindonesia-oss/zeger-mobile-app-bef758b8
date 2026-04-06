@@ -401,6 +401,28 @@ const RiderIncome = () => {
         const [tx, waste] = await Promise.all([fetchAll(txQ), fetchAll(wasteQ)]);
         setTransactionData(tx);
         setWasteData(waste);
+
+        // Fetch product sales data for menu terjual
+        let prodQ = supabase
+          .from("transaction_items")
+          .select(`quantity, products!inner(name), transactions!inner(status, is_voided, transaction_date, branch_id, rider_id)`)
+          .eq("transactions.status", "completed")
+          .eq("transactions.is_voided", false)
+          .gte("transactions.transaction_date", `${startDate}T00:00:00+07:00`)
+          .lte("transactions.transaction_date", `${endDate}T23:59:59+07:00`);
+        if (branchId) prodQ = prodQ.eq("transactions.branch_id", branchId);
+        if (selectedRider !== "all") prodQ = prodQ.eq("transactions.rider_id", selectedRider);
+
+        const prodItems = await fetchAll(prodQ);
+        const prodMap = new Map<string, number>();
+        prodItems.forEach((item: any) => {
+          const name = item.products?.name || "Unknown";
+          prodMap.set(name, (prodMap.get(name) || 0) + Number(item.quantity || 0));
+        });
+        const sorted = Array.from(prodMap.entries())
+          .map(([name, qty]) => ({ name, qty }))
+          .sort((a, b) => b.qty - a.qty);
+        setProductSalesData(sorted);
       } catch (err: any) {
         toast.error("Gagal memuat data: " + err.message);
       } finally {
