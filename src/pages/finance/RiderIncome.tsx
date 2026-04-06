@@ -742,7 +742,7 @@ const RiderIncome = () => {
 
     // Resume Table
     const resumeHeaders = ["No", "Nama Rider", "Sales", "Komisi Harian", "Komisi Penjualan", "Waste (-)", "Kasbon (-)", "Total Pendapatan"];
-    const resumeColWidths = [10, 44, 34, 34, 34, 34, 34, 40];
+    const resumeColWidths = [10, 40, 32, 32, 34, 32, 32, 52];
     const resumeRows = resumeData.map((r, i) => [
       String(i + 1), r.riderName,
       formatCurrencyShort(r.sales), formatCurrencyShort(r.dailyCommission),
