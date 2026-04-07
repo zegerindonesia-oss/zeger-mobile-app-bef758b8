@@ -431,14 +431,16 @@ export const CashDepositHistory = () => {
     qris_sales: acc.qris_sales + curr.qris_sales,
     transfer_sales: acc.transfer_sales + curr.transfer_sales,
     operational_expenses: acc.operational_expenses + curr.operational_expenses,
-    cash_deposit: acc.cash_deposit + curr.cash_deposit
+    cash_deposit: acc.cash_deposit + curr.cash_deposit,
+    verified_outlet_deposit: acc.verified_outlet_deposit + (curr.verified_outlet ? curr.cash_deposit : 0),
+    verified_finance_deposit: acc.verified_finance_deposit + (curr.verified_finance ? curr.cash_deposit : 0),
+    verified_outlet_count: acc.verified_outlet_count + (curr.verified_outlet ? 1 : 0),
+    verified_finance_count: acc.verified_finance_count + (curr.verified_finance ? 1 : 0),
   }), {
-    total_sales: 0,
-    cash_sales: 0,
-    qris_sales: 0,
-    transfer_sales: 0,
-    operational_expenses: 0,
-    cash_deposit: 0
+    total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0,
+    operational_expenses: 0, cash_deposit: 0,
+    verified_outlet_deposit: 0, verified_finance_deposit: 0,
+    verified_outlet_count: 0, verified_finance_count: 0,
   });
 
   const averages = {
