@@ -593,8 +593,8 @@ export const CashDepositHistory = () => {
                   <TableHead className="text-right px-2">Transfer</TableHead>
                   <TableHead className="text-right px-2">Beban Op.</TableHead>
                   <TableHead className="text-right px-2">Setoran Tunai</TableHead>
-                  <TableHead className="px-2 min-w-[160px]">Verifikasi Outlet</TableHead>
-                  <TableHead className="px-2 min-w-[160px]">Verifikasi Finance</TableHead>
+                   <TableHead className="px-2 min-w-[130px]"><div>Verifikasi</div><div>Outlet</div></TableHead>
+                   <TableHead className="px-2 min-w-[130px]"><div>Verifikasi</div><div>Finance</div></TableHead>
                   <TableHead className="px-2 min-w-[150px]">Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
