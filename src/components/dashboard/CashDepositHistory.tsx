@@ -290,6 +290,10 @@ export const CashDepositHistory = () => {
             deposit.verified_transfer_sales = v.verified_transfer_sales || false;
             deposit.verified_operational_expenses = v.verified_operational_expenses || false;
             deposit.verified_cash_deposit = v.verified_cash_deposit || false;
+            deposit.verified_outlet = (v as any).verified_outlet || false;
+            deposit.verified_outlet_by = (v as any).verified_outlet_by || '';
+            deposit.verified_finance = (v as any).verified_finance || false;
+            deposit.verified_finance_by = (v as any).verified_finance_by || '';
             deposit.notes = v.notes || '';
           }
         });
