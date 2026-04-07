@@ -15,6 +15,9 @@ interface Rider {
   full_name: string;
 }
 
+const OUTLET_STAFF = ['Putri', 'Lily', 'Nieka'];
+const FINANCE_STAFF = ['Nieka', 'Wibisono'];
+
 interface CashDepositData {
   rider_id: string;
   rider_name: string;
@@ -31,6 +34,10 @@ interface CashDepositData {
   verified_transfer_sales: boolean;
   verified_operational_expenses: boolean;
   verified_cash_deposit: boolean;
+  verified_outlet: boolean;
+  verified_outlet_by: string;
+  verified_finance: boolean;
+  verified_finance_by: string;
   notes: string;
 }
 
@@ -60,7 +67,7 @@ const NotesInput = ({
         }
       }}
       maxLength={1000}
-      className="min-w-[200px] h-8 text-sm"
+      className="min-w-[130px] h-7 text-xs"
     />
   );
 };
@@ -229,6 +236,10 @@ export const CashDepositHistory = () => {
             verified_transfer_sales: false,
             verified_operational_expenses: false,
             verified_cash_deposit: false,
+            verified_outlet: false,
+            verified_outlet_by: '',
+            verified_finance: false,
+            verified_finance_by: '',
             notes: ''
           });
         }
@@ -279,6 +290,10 @@ export const CashDepositHistory = () => {
             deposit.verified_transfer_sales = v.verified_transfer_sales || false;
             deposit.verified_operational_expenses = v.verified_operational_expenses || false;
             deposit.verified_cash_deposit = v.verified_cash_deposit || false;
+            deposit.verified_outlet = (v as any).verified_outlet || false;
+            deposit.verified_outlet_by = (v as any).verified_outlet_by || '';
+            deposit.verified_finance = (v as any).verified_finance || false;
+            deposit.verified_finance_by = (v as any).verified_finance_by || '';
             deposit.notes = v.notes || '';
           }
         });
@@ -314,8 +329,15 @@ export const CashDepositHistory = () => {
 
   const handleVerificationChange = async (
     item: CashDepositData,
-    field: keyof Pick<CashDepositData, 'verified_total_sales' | 'verified_cash_sales' | 'verified_qris_sales' | 'verified_transfer_sales' | 'verified_operational_expenses' | 'verified_cash_deposit'>,
+    field: string,
     checked: boolean
+  ) => {
+    await handleVerificationFieldChange(item, { [field]: checked });
+  };
+
+  const handleVerificationFieldChange = async (
+    item: CashDepositData,
+    updates: Record<string, any>
   ) => {
     try {
       const { data: currentUser } = await supabase.auth.getUser();
@@ -330,7 +352,7 @@ export const CashDepositHistory = () => {
         .upsert({
           rider_id: item.rider_id,
           deposit_date: item.date,
-          [field]: checked,
+          ...updates,
           verified_by: profile?.id,
           updated_at: new Date().toISOString()
         }, {
@@ -339,10 +361,9 @@ export const CashDepositHistory = () => {
 
       if (error) throw error;
 
-      // Update local state
-      setCashDeposits(prev => prev.map(d => 
-        d.rider_id === item.rider_id && d.date === item.date 
-          ? { ...d, [field]: checked }
+      setCashDeposits(prev => prev.map(d =>
+        d.rider_id === item.rider_id && d.date === item.date
+          ? { ...d, ...updates }
           : d
       ));
 
@@ -376,9 +397,8 @@ export const CashDepositHistory = () => {
 
       if (error) throw error;
 
-      // Update local state
-      setCashDeposits(prev => prev.map(d => 
-        d.rider_id === item.rider_id && d.date === item.date 
+      setCashDeposits(prev => prev.map(d =>
+        d.rider_id === item.rider_id && d.date === item.date
           ? { ...d, notes }
           : d
       ));
@@ -411,14 +431,16 @@ export const CashDepositHistory = () => {
     qris_sales: acc.qris_sales + curr.qris_sales,
     transfer_sales: acc.transfer_sales + curr.transfer_sales,
     operational_expenses: acc.operational_expenses + curr.operational_expenses,
-    cash_deposit: acc.cash_deposit + curr.cash_deposit
+    cash_deposit: acc.cash_deposit + curr.cash_deposit,
+    verified_outlet_deposit: acc.verified_outlet_deposit + (curr.verified_outlet ? curr.cash_deposit : 0),
+    verified_finance_deposit: acc.verified_finance_deposit + (curr.verified_finance ? curr.cash_deposit : 0),
+    verified_outlet_count: acc.verified_outlet_count + (curr.verified_outlet ? 1 : 0),
+    verified_finance_count: acc.verified_finance_count + (curr.verified_finance ? 1 : 0),
   }), {
-    total_sales: 0,
-    cash_sales: 0,
-    qris_sales: 0,
-    transfer_sales: 0,
-    operational_expenses: 0,
-    cash_deposit: 0
+    total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0,
+    operational_expenses: 0, cash_deposit: 0,
+    verified_outlet_deposit: 0, verified_finance_deposit: 0,
+    verified_outlet_count: 0, verified_finance_count: 0,
   });
 
   const averages = {
@@ -562,22 +584,24 @@ export const CashDepositHistory = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>No</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Nama Rider</TableHead>
-                  <TableHead className="text-right">Total Sales</TableHead>
-                  <TableHead className="text-right">Penjualan Tunai</TableHead>
-                  <TableHead className="text-right">QRIS</TableHead>
-                  <TableHead className="text-right">Transfer Bank</TableHead>
-                  <TableHead className="text-right">Beban Operasional</TableHead>
-                  <TableHead className="text-right">Total Setoran Tunai</TableHead>
-                  <TableHead className="min-w-[200px]">Keterangan</TableHead>
+                  <TableHead className="px-2">No</TableHead>
+                  <TableHead className="px-2">Tanggal</TableHead>
+                  <TableHead className="px-2">Rider</TableHead>
+                  <TableHead className="text-right px-2">Total Sales</TableHead>
+                  <TableHead className="text-right px-2">Tunai</TableHead>
+                  <TableHead className="text-right px-2">QRIS</TableHead>
+                  <TableHead className="text-right px-2">Transfer</TableHead>
+                  <TableHead className="text-right px-2">Beban Op.</TableHead>
+                  <TableHead className="text-right px-2">Setoran Tunai</TableHead>
+                  <TableHead className="px-2 min-w-[160px]">Verifikasi Outlet</TableHead>
+                  <TableHead className="px-2 min-w-[160px]">Verifikasi Finance</TableHead>
+                  <TableHead className="px-2 min-w-[150px]">Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {cashDeposits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
@@ -585,70 +609,116 @@ export const CashDepositHistory = () => {
                   <>
                     {cashDeposits.map((item, idx) => (
                       <TableRow key={`${item.rider_id}_${item.date}`}>
-                        <TableCell>{idx + 1}</TableCell>
-                        <TableCell>{formatDate(item.date)}</TableCell>
-                        <TableCell className="font-medium">{item.rider_name}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <TableCell className="px-2">{idx + 1}</TableCell>
+                        <TableCell className="px-2 whitespace-nowrap text-xs">{formatDate(item.date)}</TableCell>
+                        <TableCell className="px-2 font-medium text-xs">{item.rider_name}</TableCell>
+                        <TableCell className="text-right px-2">
+                          <div className="flex items-center justify-end gap-1">
                             <Checkbox
                               checked={item.verified_total_sales}
                               onCheckedChange={(checked) => handleVerificationChange(item, 'verified_total_sales', checked as boolean)}
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                             />
-                            <span>{formatCurrency(item.total_sales)}</span>
+                            <span className="text-xs">{formatCurrency(item.total_sales)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <TableCell className="text-right px-2">
+                          <div className="flex items-center justify-end gap-1">
                             <Checkbox
                               checked={item.verified_cash_sales}
                               onCheckedChange={(checked) => handleVerificationChange(item, 'verified_cash_sales', checked as boolean)}
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                             />
-                            <span>{formatCurrency(item.cash_sales)}</span>
+                            <span className="text-xs">{formatCurrency(item.cash_sales)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <TableCell className="text-right px-2">
+                          <div className="flex items-center justify-end gap-1">
                             <Checkbox
                               checked={item.verified_qris_sales}
                               onCheckedChange={(checked) => handleVerificationChange(item, 'verified_qris_sales', checked as boolean)}
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                             />
-                            <span>{formatCurrency(item.qris_sales)}</span>
+                            <span className="text-xs">{formatCurrency(item.qris_sales)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <TableCell className="text-right px-2">
+                          <div className="flex items-center justify-end gap-1">
                             <Checkbox
                               checked={item.verified_transfer_sales}
                               onCheckedChange={(checked) => handleVerificationChange(item, 'verified_transfer_sales', checked as boolean)}
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                             />
-                            <span>{formatCurrency(item.transfer_sales)}</span>
+                            <span className="text-xs">{formatCurrency(item.transfer_sales)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <TableCell className="text-right px-2">
+                          <div className="flex items-center justify-end gap-1">
                             <Checkbox
                               checked={item.verified_operational_expenses}
                               onCheckedChange={(checked) => handleVerificationChange(item, 'verified_operational_expenses', checked as boolean)}
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                             />
-                            <span>{formatCurrency(item.operational_expenses)}</span>
+                            <span className="text-xs">{formatCurrency(item.operational_expenses)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <TableCell className="text-right px-2">
+                          <div className="flex items-center justify-end gap-1">
                             <Checkbox
                               checked={item.verified_cash_deposit}
                               onCheckedChange={(checked) => handleVerificationChange(item, 'verified_cash_deposit', checked as boolean)}
-                              className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                             />
-                            <span className="font-semibold">{formatCurrency(item.cash_deposit)}</span>
+                            <span className="text-xs font-semibold">{formatCurrency(item.cash_deposit)}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        {/* Verifikasi Outlet */}
+                        <TableCell className="px-2">
+                          <div className="flex items-center gap-1">
+                            <Checkbox
+                              checked={item.verified_outlet}
+                              onCheckedChange={(checked) => handleVerificationFieldChange(item, { verified_outlet: checked as boolean })}
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <Select
+                              value={item.verified_outlet_by || ''}
+                              onValueChange={(val) => handleVerificationFieldChange(item, { verified_outlet_by: val })}
+                            >
+                              <SelectTrigger className="h-7 text-xs px-2 min-w-[90px]">
+                                <SelectValue placeholder="Pilih" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {OUTLET_STAFF.map(name => (
+                                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </TableCell>
+                        {/* Verifikasi Finance */}
+                        <TableCell className="px-2">
+                          <div className="flex items-center gap-1">
+                            <Checkbox
+                              checked={item.verified_finance}
+                              onCheckedChange={(checked) => handleVerificationFieldChange(item, { verified_finance: checked as boolean })}
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                            />
+                            <Select
+                              value={item.verified_finance_by || ''}
+                              onValueChange={(val) => handleVerificationFieldChange(item, { verified_finance_by: val })}
+                            >
+                              <SelectTrigger className="h-7 text-xs px-2 min-w-[90px]">
+                                <SelectValue placeholder="Pilih" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {FINANCE_STAFF.map(name => (
+                                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-2">
                           <NotesInput 
                             item={item} 
                             onSave={handleNotesChange}
@@ -658,25 +728,27 @@ export const CashDepositHistory = () => {
                     ))}
                     {/* Total Row */}
                     <TableRow className="bg-muted/50 font-semibold">
-                      <TableCell colSpan={3}>TOTAL</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totals.total_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totals.cash_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totals.qris_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totals.transfer_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totals.operational_expenses)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totals.cash_deposit)}</TableCell>
+                      <TableCell colSpan={3} className="px-2">TOTAL</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.total_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.cash_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.qris_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.transfer_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.operational_expenses)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.cash_deposit)}</TableCell>
+                      <TableCell className="px-2 text-xs text-center">{totals.verified_outlet_count}/{cashDeposits.length} ✓ ({formatCurrency(totals.verified_outlet_deposit)})</TableCell>
+                      <TableCell className="px-2 text-xs text-center">{totals.verified_finance_count}/{cashDeposits.length} ✓ ({formatCurrency(totals.verified_finance_deposit)})</TableCell>
                       <TableCell></TableCell>
                     </TableRow>
                     {/* Average Row */}
                     <TableRow className="bg-muted/30 font-semibold">
-                      <TableCell colSpan={3}>RATA-RATA</TableCell>
-                      <TableCell className="text-right">{formatCurrency(averages.total_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(averages.cash_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(averages.qris_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(averages.transfer_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(averages.operational_expenses)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(averages.cash_deposit)}</TableCell>
-                      <TableCell></TableCell>
+                      <TableCell colSpan={3} className="px-2">RATA-RATA</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.total_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.cash_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.qris_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.transfer_sales)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.operational_expenses)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.cash_deposit)}</TableCell>
+                      <TableCell colSpan={3}></TableCell>
                     </TableRow>
                   </>
                 )}
