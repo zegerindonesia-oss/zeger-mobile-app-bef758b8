@@ -222,7 +222,11 @@ export type Database = {
           verified_by: string | null
           verified_cash_deposit: boolean | null
           verified_cash_sales: boolean | null
+          verified_finance: boolean | null
+          verified_finance_by: string | null
           verified_operational_expenses: boolean | null
+          verified_outlet: boolean | null
+          verified_outlet_by: string | null
           verified_qris_sales: boolean | null
           verified_total_sales: boolean | null
           verified_transfer_sales: boolean | null
@@ -237,7 +241,11 @@ export type Database = {
           verified_by?: string | null
           verified_cash_deposit?: boolean | null
           verified_cash_sales?: boolean | null
+          verified_finance?: boolean | null
+          verified_finance_by?: string | null
           verified_operational_expenses?: boolean | null
+          verified_outlet?: boolean | null
+          verified_outlet_by?: string | null
           verified_qris_sales?: boolean | null
           verified_total_sales?: boolean | null
           verified_transfer_sales?: boolean | null
@@ -252,7 +260,11 @@ export type Database = {
           verified_by?: string | null
           verified_cash_deposit?: boolean | null
           verified_cash_sales?: boolean | null
+          verified_finance?: boolean | null
+          verified_finance_by?: string | null
           verified_operational_expenses?: boolean | null
+          verified_outlet?: boolean | null
+          verified_outlet_by?: string | null
           verified_qris_sales?: boolean | null
           verified_total_sales?: boolean | null
           verified_transfer_sales?: boolean | null

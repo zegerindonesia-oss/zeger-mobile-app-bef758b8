@@ -15,6 +15,9 @@ interface Rider {
   full_name: string;
 }
 
+const OUTLET_STAFF = ['Putri', 'Lily', 'Nieka'];
+const FINANCE_STAFF = ['Nieka', 'Wibisono'];
+
 interface CashDepositData {
   rider_id: string;
   rider_name: string;
@@ -31,6 +34,10 @@ interface CashDepositData {
   verified_transfer_sales: boolean;
   verified_operational_expenses: boolean;
   verified_cash_deposit: boolean;
+  verified_outlet: boolean;
+  verified_outlet_by: string;
+  verified_finance: boolean;
+  verified_finance_by: string;
   notes: string;
 }
 
