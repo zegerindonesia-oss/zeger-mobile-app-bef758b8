@@ -67,7 +67,7 @@ const NotesInput = ({
         }
       }}
       maxLength={1000}
-      className="min-w-[200px] h-8 text-sm"
+      className="min-w-[130px] h-7 text-xs"
     />
   );
 };
