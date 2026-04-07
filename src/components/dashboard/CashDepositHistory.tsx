@@ -760,13 +760,3 @@ export const CashDepositHistory = () => {
     </div>
   );
 };
-                  </>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
