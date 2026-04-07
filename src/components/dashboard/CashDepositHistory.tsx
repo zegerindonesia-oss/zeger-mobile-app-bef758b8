@@ -236,6 +236,10 @@ export const CashDepositHistory = () => {
             verified_transfer_sales: false,
             verified_operational_expenses: false,
             verified_cash_deposit: false,
+            verified_outlet: false,
+            verified_outlet_by: '',
+            verified_finance: false,
+            verified_finance_by: '',
             notes: ''
           });
         }
