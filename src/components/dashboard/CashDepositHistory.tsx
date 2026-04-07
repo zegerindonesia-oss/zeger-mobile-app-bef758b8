@@ -368,6 +368,45 @@ export const CashDepositHistory = () => {
     }
   };
 
+  const handleVerificationFieldChange = async (
+    item: CashDepositData,
+    updates: Record<string, any>
+  ) => {
+    try {
+      const { data: currentUser } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', currentUser.user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('cash_deposit_verifications')
+        .upsert({
+          rider_id: item.rider_id,
+          deposit_date: item.date,
+          ...updates,
+          verified_by: profile?.id,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'rider_id,deposit_date'
+        });
+
+      if (error) throw error;
+
+      setCashDeposits(prev => prev.map(d =>
+        d.rider_id === item.rider_id && d.date === item.date
+          ? { ...d, ...updates }
+          : d
+      ));
+
+      toast.success('Status verifikasi diperbarui');
+    } catch (error) {
+      console.error('Error updating verification:', error);
+      toast.error('Gagal memperbarui verifikasi');
+    }
+  };
+
   const handleNotesChange = async (item: CashDepositData, notes: string) => {
     try {
       const { data: currentUser } = await supabase.auth.getUser();
@@ -391,9 +430,8 @@ export const CashDepositHistory = () => {
 
       if (error) throw error;
 
-      // Update local state
-      setCashDeposits(prev => prev.map(d => 
-        d.rider_id === item.rider_id && d.date === item.date 
+      setCashDeposits(prev => prev.map(d =>
+        d.rider_id === item.rider_id && d.date === item.date
           ? { ...d, notes }
           : d
       ));
