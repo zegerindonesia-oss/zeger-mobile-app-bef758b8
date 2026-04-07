@@ -329,43 +329,10 @@ export const CashDepositHistory = () => {
 
   const handleVerificationChange = async (
     item: CashDepositData,
-    field: keyof Pick<CashDepositData, 'verified_total_sales' | 'verified_cash_sales' | 'verified_qris_sales' | 'verified_transfer_sales' | 'verified_operational_expenses' | 'verified_cash_deposit'>,
+    field: string,
     checked: boolean
   ) => {
-    try {
-      const { data: currentUser } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', currentUser.user?.id)
-        .single();
-
-      const { error } = await supabase
-        .from('cash_deposit_verifications')
-        .upsert({
-          rider_id: item.rider_id,
-          deposit_date: item.date,
-          [field]: checked,
-          verified_by: profile?.id,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'rider_id,deposit_date'
-        });
-
-      if (error) throw error;
-
-      // Update local state
-      setCashDeposits(prev => prev.map(d => 
-        d.rider_id === item.rider_id && d.date === item.date 
-          ? { ...d, [field]: checked }
-          : d
-      ));
-
-      toast.success('Status verifikasi diperbarui');
-    } catch (error) {
-      console.error('Error updating verification:', error);
-      toast.error('Gagal memperbarui verifikasi');
-    }
+    await handleVerificationFieldChange(item, { [field]: checked });
   };
 
   const handleVerificationFieldChange = async (
