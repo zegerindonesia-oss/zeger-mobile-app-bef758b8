@@ -1270,7 +1270,7 @@ const MobileStockManagement = () => {
                                 </div>
                               ))}
 
-                              {item.expected_delivery_date && group.items[0]?.expected_delivery_date && (
+                              {group.items[0]?.expected_delivery_date && (
                                 <p className="text-xs text-muted-foreground">
                                   Target: {new Date(group.items[0].expected_delivery_date).toLocaleString('id-ID')}
                                 </p>
