@@ -1163,15 +1163,81 @@ const MobileStockManagement = () => {
 
                 <ScrollArea className="h-96">
                   <div className="space-y-4">
-                     {pendingStock.map((item) => (
-                       <Card key={item.id} className="border-l-4 border-l-orange-500 table-row-highlight">
-                          <CardContent className="p-4">
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                    {(() => {
+                      // Group pending stock by reference_id
+                      const groups: StockGroup[] = [];
+                      const groupMap: Record<string, StockGroup> = {};
+                      
+                      pendingStock.forEach((item) => {
+                        const key = item.reference_id || `single_${item.id}`;
+                        if (!groupMap[key]) {
+                          groupMap[key] = {
+                            reference_id: key,
+                            notes: item.notes,
+                            created_at: item.created_at,
+                            items: [],
+                            total_quantity: 0,
+                            total_value: 0,
+                          };
+                          groups.push(groupMap[key]);
+                        }
+                        groupMap[key].items.push(item);
+                        groupMap[key].total_quantity += item.quantity;
+                        groupMap[key].total_value += (item.product?.price || 0) * item.quantity;
+                      });
+
+                      if (groups.length === 0) {
+                        return (
+                          <div className="text-center py-8">
+                            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">Tidak ada stok pending</p>
+                          </div>
+                        );
+                      }
+
+                      return groups.map((group, groupIndex) => {
+                        const shortId = group.reference_id.startsWith('single_') 
+                          ? group.reference_id.replace('single_', '').slice(0, 8).toUpperCase()
+                          : group.reference_id.slice(0, 8).toUpperCase();
+                        const dateStr = new Date(group.created_at).toLocaleString('id-ID', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
+                        });
+                        const hasCustomNote = group.notes && group.notes !== 'Stok dikirim dari branch ke rider';
+
+                        return (
+                          <Card key={group.reference_id} className="border-l-4 border-l-orange-500">
+                            <CardContent className="p-4 space-y-3">
+                              {/* Group Header */}
+                              <div className="bg-orange-50 p-3 rounded-lg space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-bold text-orange-900">
+                                    Pengiriman Stok ke-{groupIndex + 1}
+                                  </span>
+                                  <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Menunggu
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-orange-700">
+                                  Kode: TRF-{shortId} • {dateStr}
+                                </p>
+                                <p className="text-xs text-orange-700">
+                                  {group.items.length} item(s) • Total: {group.total_quantity} unit • Nilai: Rp {group.total_value.toLocaleString('id-ID')}
+                                </p>
+                                {hasCustomNote && (
+                                  <div className="mt-1 p-2 bg-white rounded border border-orange-200">
+                                    <p className="text-xs font-medium text-orange-800">📝 Note: {group.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Items in this group */}
+                              {group.items.map((item) => (
+                                <div key={item.id} className="flex items-start gap-3 bg-muted/50 p-3 rounded-lg">
                                   <input
                                     type="checkbox"
-                                    className="w-4 h-4 rounded-full border-2 border-primary"
+                                    className="w-4 h-4 mt-1 rounded-full border-2 border-primary"
                                     checked={selectedStockIds.has(item.id)}
                                     onChange={(e) => {
                                       const newSelected = new Set(selectedStockIds);
@@ -1180,50 +1246,40 @@ const MobileStockManagement = () => {
                                       } else {
                                         newSelected.delete(item.id);
                                       }
-                                     setSelectedStockIds(newSelected);
-                                   }}
-                                 />
-                                 <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                                   <Clock className="h-3 w-3 mr-1" />
-                                   Menunggu
-                                 </Badge>
-                               </div>
-                             </div>
-                             
-                              <div className="bg-muted/50 p-3 rounded-lg">
-                                <h4 className="text-lg font-bold text-foreground mb-2">
-                                  {item.product?.name || `Produk ID: ${item.product_id}`}
-                                </h4>
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <Package className="h-4 w-4 text-primary" />
-                                    <span className="font-semibold text-primary">Jumlah: {item.quantity} pcs</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Tag className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">
-                                      Kategori: {item.product?.category || 'Tidak diketahui'}
-                                    </span>
+                                      setSelectedStockIds(newSelected);
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <h4 className="font-bold text-foreground">
+                                      {item.product?.name || `Produk ID: ${item.product_id}`}
+                                    </h4>
+                                    <div className="flex flex-col gap-0.5 mt-1">
+                                      <span className="text-sm text-muted-foreground">
+                                        {item.product?.category || 'Tidak diketahui'}
+                                      </span>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-semibold text-primary">
+                                          {item.quantity} unit
+                                        </span>
+                                        <span className="text-sm text-green-600 font-medium">
+                                          Rp {((item.product?.price || 0) * item.quantity).toLocaleString('id-ID')}
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                             
-                             {item.expected_delivery_date && (
-                               <p className="text-xs text-muted-foreground">
-                                 Target: {new Date(item.expected_delivery_date).toLocaleString('id-ID')}
-                               </p>
-                             )}
-                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                              ))}
 
-                    {pendingStock.length === 0 && (
-                      <div className="text-center py-8">
-                        <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">Tidak ada stok pending</p>
-                      </div>
-                    )}
+                              {item.expected_delivery_date && group.items[0]?.expected_delivery_date && (
+                                <p className="text-xs text-muted-foreground">
+                                  Target: {new Date(group.items[0].expected_delivery_date).toLocaleString('id-ID')}
+                                </p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      });
+                    })()}
                   </div>
                 </ScrollArea>
 
