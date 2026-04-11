@@ -901,6 +901,12 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                               })
                             }
                           </div>
+                          {transferNotes.trim() && (
+                            <div className="mt-2 pt-2 border-t">
+                              <p className="text-xs text-muted-foreground">Catatan:</p>
+                              <p className="text-sm">{transferNotes}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </AlertDialogDescription>
