@@ -35,6 +35,7 @@ interface StockItem {
     id: string;
     name: string;
     category: string;
+    price?: number;
   };
   quantity: number;
   status: string;
@@ -43,6 +44,16 @@ interface StockItem {
   actual_delivery_date?: string;
   verification_photo_url?: string;
   notes?: string;
+  reference_id?: string;
+}
+
+interface StockGroup {
+  reference_id: string;
+  notes?: string;
+  created_at: string;
+  items: StockItem[];
+  total_quantity: number;
+  total_value: number;
 }
 
 interface ShiftSummary {
