@@ -113,6 +113,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   const [filterType, setFilterType] = useState<'sent' | 'received' | 'all'>('all');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [hasPendingShifts, setHasPendingShifts] = useState(false);
+  const [transferNotes, setTransferNotes] = useState("");
   const [pendingShiftsCount, setPendingShiftsCount] = useState(0);
   
   // New filter states
@@ -582,7 +583,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         status: 'sent',
         reference_id: referenceId,
         expected_delivery_date: expectedDeliveryDate.toISOString(),
-        notes: 'Stok dikirim dari branch ke rider'
+        notes: transferNotes.trim() || 'Stok dikirim dari branch ke rider'
       }));
 
       const { error: movementError } = await supabase
@@ -615,6 +616,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       toast.success(`Transfer stok ke rider berhasil dikirim! Total: ${totalItems} items`);
       setProductQuantities({});
       setSelectedRider("");
+      setTransferNotes("");
       await fetchTransfers();
       await fetchRiderShifts();
       window.dispatchEvent(new Event('stock-sent'));
