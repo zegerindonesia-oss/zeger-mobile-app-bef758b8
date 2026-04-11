@@ -853,6 +853,21 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                 </Card>
               )}
 
+              {/* Transfer Notes */}
+              {getTotalStockToSend() > 0 && (
+                <Card className="bg-white border-red-200">
+                  <CardContent className="p-4">
+                    <Label className="text-sm font-medium mb-2 block">Catatan Pengiriman (Opsional)</Label>
+                    <Textarea
+                      placeholder="Contoh: Sesuai invoice no: 8989898, Sesuai stok tgl 10/04/2026..."
+                      value={transferNotes}
+                      onChange={(e) => setTransferNotes(e.target.value)}
+                      className="min-h-[60px] border-red-200 focus:border-red-400"
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
               <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
                 <AlertDialogTrigger asChild>
                   <Button 
