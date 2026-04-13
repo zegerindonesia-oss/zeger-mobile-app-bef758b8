@@ -1327,19 +1327,31 @@ const MobileRiderDashboard = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                stockCardData.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="text-xs">{index + 1}</TableCell>
-                    <TableCell className="text-xs font-medium">{item.product_name}</TableCell>
-                    <TableCell className="text-xs text-right">{item.stock_in}</TableCell>
-                    <TableCell className="text-xs text-right">{item.stock_sold}</TableCell>
-                    <TableCell className="text-xs text-right">{item.remaining_stock}</TableCell>
-                    <TableCell className="text-xs text-right">{item.stock_returned}</TableCell>
+                <>
+                  {stockCardData.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="text-xs">{index + 1}</TableCell>
+                      <TableCell className="text-xs font-medium">{item.product_name}</TableCell>
+                      <TableCell className="text-xs text-right">{item.stock_in}</TableCell>
+                      <TableCell className="text-xs text-right">{item.stock_sold}</TableCell>
+                      <TableCell className="text-xs text-right">{item.remaining_stock}</TableCell>
+                      <TableCell className="text-xs text-right">{item.stock_returned}</TableCell>
+                      <TableCell className="text-xs text-right">
+                        {(item.stock_value / 1000).toFixed(0)}k
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50 font-semibold border-t-2">
+                    <TableCell className="text-xs" colSpan={2}>Total</TableCell>
+                    <TableCell className="text-xs text-right">{stockCardData.reduce((s, i) => s + i.stock_in, 0)}</TableCell>
+                    <TableCell className="text-xs text-right">{stockCardData.reduce((s, i) => s + i.stock_sold, 0)}</TableCell>
+                    <TableCell className="text-xs text-right">{stockCardData.reduce((s, i) => s + i.remaining_stock, 0)}</TableCell>
+                    <TableCell className="text-xs text-right">{stockCardData.reduce((s, i) => s + i.stock_returned, 0)}</TableCell>
                     <TableCell className="text-xs text-right">
-                      {(item.stock_value / 1000).toFixed(0)}k
+                      {(stockCardData.reduce((s, i) => s + i.stock_value, 0) / 1000).toFixed(0)}k
                     </TableCell>
                   </TableRow>
-                ))
+                </>
               )}
             </TableBody>
           </Table>
