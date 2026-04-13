@@ -236,6 +236,9 @@ const ProductManagement = () => {
         </CardContent>
       </Card>
 
+      {/* Bulk Upload */}
+      <ProductBulkUpload products={products} onComplete={fetchProducts} />
+
       {/* Product Table */}
       <Card>
         <CardHeader>
