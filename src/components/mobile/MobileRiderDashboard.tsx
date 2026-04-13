@@ -744,19 +744,25 @@ const MobileRiderDashboard = () => {
     const { start, end } = getStockCardDateRange();
 
     try {
-      // Fetch stock movements (stock in)
+      // Fetch stock movements (stock in) - only CONFIRMED/received stock
+      // Stock is only valid after rider confirms ("Terima Stok")
+      // selling_date = DATE(actual_delivery_date) = date rider confirmed
       const { data: stockIn, error: stockInError } = await supabase
         .from('stock_movements')
         .select(`
+          actual_delivery_date,
           quantity,
           movement_type,
           product_id,
+          status,
           products(name, cost_price)
         `)
         .eq('rider_id', riderProfile.id)
         .in('movement_type', ['transfer', 'in', 'adjustment'])
-        .gte('created_at', `${start}T00:00:00+07:00`)
-        .lte('created_at', `${end}T23:59:59+07:00`);
+        .eq('status', 'received')
+        .not('actual_delivery_date', 'is', null)
+        .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
+        .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
 
       if (stockInError) throw stockInError;
 
@@ -784,18 +790,19 @@ const MobileRiderDashboard = () => {
 
       if (invError) throw invError;
 
-      // Fetch stock returns
+      // Fetch stock returns - use actual_delivery_date as anchor
       const { data: stockReturns, error: returnError } = await supabase
         .from('stock_movements')
         .select(`
           quantity,
           product_id,
+          actual_delivery_date,
           products(name, cost_price)
         `)
         .eq('rider_id', riderProfile.id)
         .in('movement_type', ['return', 'out'])
-        .gte('created_at', `${start}T00:00:00+07:00`)
-        .lte('created_at', `${end}T23:59:59+07:00`);
+        .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
+        .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
 
       if (returnError) throw returnError;
 
