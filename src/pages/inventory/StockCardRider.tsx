@@ -176,18 +176,19 @@ export default function StockCardRider() {
 
       if (invError) throw invError;
 
-      // Fetch stock returns
+      // Fetch stock returns - use actual_delivery_date as the anchor date
       const { data: stockReturns, error: returnError } = await supabase
         .from('stock_movements')
         .select(`
           quantity,
           product_id,
+          actual_delivery_date,
           products(name, cost_price)
         `)
         .eq('rider_id', selectedRider)
         .in('movement_type', ['return', 'out'])
-        .gte('created_at', `${start}T00:00:00+07:00`)
-        .lte('created_at', `${end}T23:59:59+07:00`);
+        .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
+        .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
 
       if (returnError) throw returnError;
 
