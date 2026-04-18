@@ -54,7 +54,12 @@ const Auth = () => {
         'customer': '/customer-app',
         'ho_admin': '/',
         'branch_manager': '/',
-        'finance': '/'
+        'sb_branch_manager': '/',
+        'finance': '/',
+        'bh_kasir': '/pos',
+        'sb_kasir': '/pos',
+        '2_Hub_Kasir': '/pos',
+        '3_SB_Kasir': '/pos'
       };
       const targetUrl = roleRedirects[userProfile.role as keyof typeof roleRedirects] || '/';
       window.location.replace(targetUrl);

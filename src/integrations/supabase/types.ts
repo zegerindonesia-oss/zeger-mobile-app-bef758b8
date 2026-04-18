@@ -1164,6 +1164,276 @@ export type Database = {
           },
         ]
       }
+      pos_cash_movements: {
+        Row: {
+          amount: number
+          branch_id: string
+          created_at: string
+          id: string
+          kasir_id: string
+          movement_type: string
+          reason: string | null
+          shift_id: string
+        }
+        Insert: {
+          amount?: number
+          branch_id: string
+          created_at?: string
+          id?: string
+          kasir_id: string
+          movement_type: string
+          reason?: string | null
+          shift_id: string
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          created_at?: string
+          id?: string
+          kasir_id?: string
+          movement_type?: string
+          reason?: string | null
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_cash_movements_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_shifts: {
+        Row: {
+          branch_id: string
+          cash_difference: number | null
+          closed_at: string | null
+          closing_cash: number | null
+          created_at: string
+          expected_cash: number | null
+          id: string
+          kasir_id: string
+          notes: string | null
+          opened_at: string
+          opening_cash: number
+          shift_type: string
+          status: string
+          total_cash_in: number
+          total_cash_out: number
+          total_sales: number
+          total_transactions: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          cash_difference?: number | null
+          closed_at?: string | null
+          closing_cash?: number | null
+          created_at?: string
+          expected_cash?: number | null
+          id?: string
+          kasir_id: string
+          notes?: string | null
+          opened_at?: string
+          opening_cash?: number
+          shift_type?: string
+          status?: string
+          total_cash_in?: number
+          total_cash_out?: number
+          total_sales?: number
+          total_transactions?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          cash_difference?: number | null
+          closed_at?: string | null
+          closing_cash?: number | null
+          created_at?: string
+          expected_cash?: number | null
+          id?: string
+          kasir_id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_cash?: number
+          shift_type?: string
+          status?: string
+          total_cash_in?: number
+          total_cash_out?: number
+          total_sales?: number
+          total_transactions?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pos_transaction_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          discount_item: number
+          id: string
+          notes: string | null
+          price: number
+          product_code: string | null
+          product_id: string | null
+          product_name: string
+          qty: number
+          size: string | null
+          subtotal_item: number
+          transaction_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          discount_item?: number
+          id?: string
+          notes?: string | null
+          price?: number
+          product_code?: string | null
+          product_id?: string | null
+          product_name: string
+          qty?: number
+          size?: string | null
+          subtotal_item?: number
+          transaction_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          discount_item?: number
+          id?: string
+          notes?: string | null
+          price?: number
+          product_code?: string | null
+          product_id?: string | null
+          product_name?: string
+          qty?: number
+          size?: string | null
+          subtotal_item?: number
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "pos_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_transactions: {
+        Row: {
+          amount_1: number
+          amount_2: number
+          branch_id: string
+          cash_received: number
+          change_amount: number
+          created_at: string
+          customer_id: string | null
+          customer_name: string | null
+          discount_bill: number
+          discount_item: number
+          external_order_id: string | null
+          id: string
+          kasir_id: string
+          notes: string | null
+          order_type: string
+          paid_at: string | null
+          payment_method_1: string | null
+          payment_method_2: string | null
+          point_earned: number
+          point_redeemed: number
+          service_charge: number
+          shift_id: string | null
+          status: string
+          subtotal: number
+          table_number: string | null
+          tax: number
+          total: number
+          transaction_number: string
+          void_at: string | null
+          void_by: string | null
+          void_reason: string | null
+        }
+        Insert: {
+          amount_1?: number
+          amount_2?: number
+          branch_id: string
+          cash_received?: number
+          change_amount?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          discount_bill?: number
+          discount_item?: number
+          external_order_id?: string | null
+          id?: string
+          kasir_id: string
+          notes?: string | null
+          order_type?: string
+          paid_at?: string | null
+          payment_method_1?: string | null
+          payment_method_2?: string | null
+          point_earned?: number
+          point_redeemed?: number
+          service_charge?: number
+          shift_id?: string | null
+          status?: string
+          subtotal?: number
+          table_number?: string | null
+          tax?: number
+          total?: number
+          transaction_number: string
+          void_at?: string | null
+          void_by?: string | null
+          void_reason?: string | null
+        }
+        Update: {
+          amount_1?: number
+          amount_2?: number
+          branch_id?: string
+          cash_received?: number
+          change_amount?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          discount_bill?: number
+          discount_item?: number
+          external_order_id?: string | null
+          id?: string
+          kasir_id?: string
+          notes?: string | null
+          order_type?: string
+          paid_at?: string | null
+          payment_method_1?: string | null
+          payment_method_2?: string | null
+          point_earned?: number
+          point_redeemed?: number
+          service_charge?: number
+          shift_id?: string | null
+          status?: string
+          subtotal?: number
+          table_number?: string | null
+          tax?: number
+          total?: number
+          transaction_number?: string
+          void_at?: string | null
+          void_by?: string | null
+          void_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_transactions_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_price_history: {
         Row: {
           changed_at: string
