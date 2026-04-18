@@ -34,7 +34,11 @@ export const RoleBasedRoute = ({
           'branch_manager': '/',
           'sb_branch_manager': '/',
           'finance': '/',
-          'bh_report': '/bh-report-dashboard'
+          'bh_report': '/bh-report-dashboard',
+          'bh_kasir': '/pos',
+          'sb_kasir': '/pos',
+          '2_Hub_Kasir': '/pos',
+          '3_SB_Kasir': '/pos'
         };
         
         const targetUrl = roleRedirects[userProfile.role as keyof typeof roleRedirects] || '/';
