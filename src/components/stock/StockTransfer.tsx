@@ -393,11 +393,21 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       const groupedTransfers: Record<string, StockTransferGroup> = {};
       
       data?.forEach((transfer) => {
-        const date = transfer.created_at.split('T')[0];
-        const time = new Date(transfer.created_at).toLocaleTimeString('id-ID', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
+        const createdDate = new Date(transfer.created_at);
+        // Format date in Jakarta timezone (YYYY-MM-DD)
+        const date = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Jakarta',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(createdDate);
+        // Format time in Jakarta timezone (HH:mm)
+        const time = new Intl.DateTimeFormat('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).format(createdDate);
         const groupKey = transfer.reference_id || `single_${transfer.id}`;
         
         if (!groupedTransfers[groupKey]) {
