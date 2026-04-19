@@ -1,88 +1,97 @@
 
-## Login POS yang Sudah Ada
+Lanjutan POS dari Phase 1 → Phase 2.
 
-Saya menemukan 2 user kasir yang sudah pernah dibuat:
+## Status Saat Ini
+Phase 1 sudah selesai: kasir bisa login, buka shift, scan produk, cart, bayar (cash/QRIS/transfer/mixed), struk digital, tutup shift. Tabel `pos_*` sudah ada dan ter-sync ke dashboard.
 
-| Email | Nama | Role | Branch |
-|---|---|---|---|
-| `kasirkemiri@email.com` | Kasir Kemiri | `bh_kasir` (Hub) | Branch Hub Zeger Kemiri |
-| `kasircontoh@email.com` | kasir contoh | `3_SB_Kasir` (Small Branch) | Zeger Coffee Malang |
+## PHASE 2 — Promo, Voucher, Bundle, Split Bill & Sync Stok
 
-Password tidak bisa saya lihat (hash). Kalau lupa, nanti bisa di-reset lewat menu User Management atau saya bantu buatkan ulang.
+**Tujuan**: POS bisa apply diskon/promo/voucher dengan benar, kasir bisa split bill, dan setiap transaksi POS otomatis kurangi stok + masuk ke tabel `transactions` existing supaya dashboard penjualan tetap akurat.
 
-**Catatan penting**: Saat ini route `/pos` di `App.tsx` HANYA mengizinkan role `ho_admin`, `branch_manager`, `sb_branch_manager` — **kasir tidak bisa masuk POS**. Ini bug yang harus diperbaiki di Phase 1.
+### Cakupan Phase 2
 
----
+**1. Promo Engine (Open Promo — kasir bisa apply langsung)**
+- Diskon % per item (klik item di cart → input % atau Rp)
+- Diskon Rp per item
+- Diskon % per bill (sudah ada Rp, tambah %)
+- Free item (Buy X Get Y manual pilih item gratis)
+- Tampilkan rincian diskon di summary cart
 
-## Strategi Bertahap (Tanpa Mengubah Logic Existing)
+**2. Voucher & Promo Terkontrol (dari HQ)**
+- Tabel baru: `pos_promotions` (id, name, type, scope, value, min_purchase, start_at, end_at, applicable_hours, applicable_branch_ids[], applicable_product_ids[], is_active)
+- Tabel baru: `pos_vouchers` (id, code, promotion_id, customer_id nullable, is_used, used_at, used_by_transaction_id)
+- Input kode voucher di cart → validasi real-time (cek expired, branch, min purchase, sudah dipakai)
+- Happy Hour: auto-apply jika jam transaksi masuk window
+- Halaman manajemen promo di HQ Dashboard (`/settings/promo-management`) — CRUD untuk admin/HO
 
-POS dikembangkan di **route baru `/pos`** dengan komponen baru di folder `src/pages/pos/` dan `src/components/pos/`. File `src/pages/POS.tsx` lama dipertahankan (atau dijadikan fallback) — tidak menyentuh logic dashboard, inventory, stock card, rider, customer app, dll.
+**3. Bundle / Paket**
+- Tabel baru: `pos_bundles` (id, name, price, components jsonb [{product_id, qty}], is_active, branch_ids[])
+- Tampil sebagai card khusus di grid produk dengan badge "BUNDLE"
+- Saat dipilih → expand jadi item-item komponen di cart (qty terikat) tapi dihitung 1 harga bundle
 
-Tabel database baru menggunakan prefix `pos_*` agar tidak bentrok dengan `transactions`, `inventory`, `customers` yang sudah berjalan. Sinkronisasi ke stock card lewat insert ke `stock_movements` (read-only pattern, mengikuti logic yang sudah ada).
+**4. Open Price & Custom Item**
+- Tombol "+ Custom Item" di grid → modal input nama, harga, qty → masuk cart sebagai item non-master
+- Untuk item internal/test
 
----
+**5. Split Bill**
+- Tombol "Split Bill" di cart (muncul kalau ada item)
+- Mode: Split by Item (drag/checkbox item ke bill A/B/C), Split Equal (bagi rata jumlah orang), Split Custom (input nominal manual)
+- Hasil: multiple `pos_transactions` dengan `parent_transaction_id` referensi
+- Bayar masing-masing terpisah (metode bayar bisa beda per split)
 
-### PHASE 1 — Foundation & Akses Kasir (yang akan kita kerjakan sekarang)
+**6. Sync ke Existing System (PENTING)**
+- Saat transaksi POS `paid` → trigger DB atau function call:
+  - Insert ke `transactions` existing (mark `source = 'pos_kasir'`)
+  - Insert ke `transaction_items` existing
+  - Update `inventory` kurangi stok per item (mengikuti pola `MobileSellerEnhanced`)
+  - Insert ke `stock_movements` dengan type `sale_pos`
+- Bahaya yang harus dijaga: TIDAK boleh sentuh logic rider/branch hub existing — POS hanya menulis ke tabel existing dengan source berbeda
 
-**Tujuan**: Kasir bisa login, masuk halaman POS layout baru, lihat menu real-time dari DB master, tambah ke cart, bayar tunai/QRIS, struk auto-generate, transaksi ter-sync ke dashboard.
+**7. Pengaturan Pajak & Service Charge per Branch**
+- Tambah kolom `pos_tax_percent` & `pos_service_charge_percent` di tabel `branches`
+- Kasir auto-load setting ini saat buka shift
+- Halaman setting di Branch Management (HQ only)
 
-**Cakupan Phase 1**:
-1. **Akses & Routing**
-   - Tambah role `bh_kasir`, `sb_kasir`, `2_Hub_Kasir`, `3_SB_Kasir` ke `RoleBasedRoute` `/pos`
-   - Auto-redirect kasir ke `/pos` setelah login (di `Auth.tsx`)
-   - POS pakai `Layout` minimal (tanpa sidebar dashboard) supaya fokus kasir
+### Database Migration (akan minta approval)
+```
+- pos_promotions
+- pos_vouchers  
+- pos_bundles
+- branches.pos_tax_percent (default 0)
+- branches.pos_service_charge_percent (default 0)
+- pos_transactions.parent_transaction_id (untuk split bill)
+- RLS: HO/admin full access, kasir read-only untuk promo aktif di branchnya
+```
 
-2. **Database baru** (migration, tidak menyentuh tabel existing):
-   - `pos_shifts` (open/close shift, modal awal, kas akhir, selisih)
-   - `pos_transactions` (header transaksi POS dengan order_type, mixed payment, service_charge, tax)
-   - `pos_transaction_items` (detail item + notes per item)
-   - `pos_cash_movements` (cash in/out selama shift)
-   - RLS: kasir hanya bisa CRUD untuk branch-nya sendiri; manager/HO bisa view semua
+### File Baru
+- `src/components/pos/POSPromoDialog.tsx` — apply promo per item / per bill
+- `src/components/pos/POSVoucherInput.tsx` — input + validasi kode voucher
+- `src/components/pos/POSBundleCard.tsx` — render bundle di grid
+- `src/components/pos/POSCustomItemDialog.tsx` — input open price item
+- `src/components/pos/POSSplitBillDialog.tsx` — UI split bill 3 mode
+- `src/pages/settings/PromoManagement.tsx` — CRUD promo HQ
+- `src/pages/settings/BundleManagement.tsx` — CRUD bundle HQ
+- `src/hooks/usePOSPromo.tsx` — logic apply/calc promo
 
-3. **POS Interface v1** — split screen layout:
-   - **Kiri 60%**: Header (logo, nama branch, nama kasir, jam realtime, indikator online), tab kategori, grid produk dari `products` (foto, nama, harga, badge stok), search bar
-   - **Kanan 40%**: Cart aktif (qty +/-, hapus, catatan per item), tipe order (Dine In / Take Away / GoFood / GrabFood / ShopeeFood / Zeger App / Internal), summary (subtotal, diskon, pajak opsional, total besar), tombol Bayar
+### File yang Disentuh (minimal)
+- `src/hooks/usePOSCart.tsx` — tambah field `applied_promos[]`, `voucher_code`, recalc total dengan promo
+- `src/components/pos/POSCart.tsx` — tombol promo per item, voucher input, split bill button
+- `src/pages/pos/POSMain.tsx` — handler trigger sync ke `transactions` existing setelah paid
+- `src/App.tsx` — route promo management & bundle management
+- TIDAK ada perubahan ke logic rider/dashboard/inventory/stock card existing
 
-4. **Pembayaran v1**:
-   - Tunai (input nominal → kembalian otomatis)
-   - QRIS (display saja dulu, mark sebagai paid)
-   - Transfer (input bukti manual)
-   - Mixed payment 2 metode
+### Belum Dikerjakan (Phase berikutnya)
+- Phase 3: Online order (GoFood/Grab/Shopee) panel + KDS
+- Phase 4: Table management visual
+- Phase 5: Void/refund + audit log
+- Phase 6: CRM + loyalty point earn/redeem
+- Phase 7: Offline mode
+- Phase 8: Advanced report POS
 
-5. **Shift Management v1**:
-   - Open Shift modal saat kasir pertama kali buka POS (pilih shift, input modal kas)
-   - Header: tombol "Tutup Shift" → modal hitung kas fisik, tampilkan expected vs actual + selisih
-   - Cash In/Cash Out sederhana
+### Asumsi
+- Voucher dipakai 1x per kode (kecuali `is_reusable=true` future)
+- Split bill: minimal 2 maksimal 6 split per transaksi
+- Bundle: harga bundle override total komponen, stok tetap kurangi per komponen
+- Sync ke `transactions` existing pakai trigger DB (lebih aman dari race condition daripada client-side)
 
-6. **Struk Digital**:
-   - Modal preview struk setelah bayar
-   - Tombol Print (window.print pakai CSS thermal 58mm/80mm)
-   - Tombol kirim WhatsApp (wa.me link dengan teks struk)
-
-7. **Sync ke Existing System**:
-   - Setiap transaksi POS yang `paid` → insert juga ke `transactions` + `transaction_items` (tabel existing) supaya dashboard, finance, sales report tetap jalan tanpa perubahan
-   - Stok berkurang via update `inventory` (mengikuti pola existing)
-
-**Yang BELUM dikerjakan di Phase 1** (akan masuk Phase berikutnya):
-- Phase 2: Promo engine lengkap, voucher, bundle, happy hour, split bill
-- Phase 3: Online order integration (GoFood/Grab/Shopee notifikasi panel) + Kitchen Display System
-- Phase 4: Table Management (layout meja drag-drop, merge, move)
-- Phase 5: Void/Refund flow dengan PIN supervisor + audit log
-- Phase 6: CRM lengkap (customer search, birthday promo) + Loyalty earn/redeem di POS
-- Phase 7: Offline mode (IndexedDB + sync queue)
-- Phase 8: Advanced reports di POS (peak hour, top item realtime)
-
----
-
-### Technical Notes
-- Stack tetap: React + Vite + Tailwind + shadcn + Supabase (tidak ada perubahan)
-- File baru: `src/pages/pos/POSMain.tsx`, `src/components/pos/POSHeader.tsx`, `POSProductGrid.tsx`, `POSCart.tsx`, `POSPayment.tsx`, `POSShiftModal.tsx`, `POSReceipt.tsx`
-- Hook baru: `src/hooks/usePOSShift.tsx`, `usePOSCart.tsx`
-- Tidak ada file existing yang dihapus. `App.tsx` hanya ditambah role di `allowedRoles` route `/pos` dan `Auth.tsx` ditambah redirect kasir.
-
-### Konfirmasi yang Saya Butuhkan Sebelum Eksekusi Phase 1
-Setelah Anda approve plan ini, saya akan langsung kerjakan Phase 1 end-to-end. Untuk Phase 1 saya akan asumsikan:
-- Pajak default **0%** (toggle off), bisa diaktifkan per branch nanti di Phase 2
-- Service charge default **0%**
-- Nomor meja Dine In = input text bebas (belum ada layout meja)
-- Online order (GoFood/Grab/Shopee) di Phase 1 = **input manual** nomor order saja, integrasi API masuk Phase 3
+Setelah approve, saya jalankan migration dulu, lalu build UI Phase 2 end-to-end.
