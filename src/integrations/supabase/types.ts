@@ -163,6 +163,8 @@ export type Database = {
           name: string
           parent_branch_id: string | null
           phone: string | null
+          pos_service_charge_percent: number
+          pos_tax_percent: number
           updated_at: string | null
         }
         Insert: {
@@ -181,6 +183,8 @@ export type Database = {
           name: string
           parent_branch_id?: string | null
           phone?: string | null
+          pos_service_charge_percent?: number
+          pos_tax_percent?: number
           updated_at?: string | null
         }
         Update: {
@@ -199,6 +203,8 @@ export type Database = {
           name?: string
           parent_branch_id?: string | null
           phone?: string | null
+          pos_service_charge_percent?: number
+          pos_tax_percent?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -1164,6 +1170,48 @@ export type Database = {
           },
         ]
       }
+      pos_bundles: {
+        Row: {
+          applicable_branch_ids: string[] | null
+          components: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          applicable_branch_ids?: string[] | null
+          components?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          applicable_branch_ids?: string[] | null
+          components?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pos_cash_movements: {
         Row: {
           amount: number
@@ -1204,6 +1252,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pos_promotions: {
+        Row: {
+          applicable_branch_ids: string[] | null
+          applicable_product_ids: string[] | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_at: string | null
+          hour_end: number | null
+          hour_start: number | null
+          id: string
+          is_active: boolean
+          min_purchase: number
+          name: string
+          promo_type: string
+          scope: string
+          start_at: string | null
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          applicable_branch_ids?: string[] | null
+          applicable_product_ids?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_at?: string | null
+          hour_end?: number | null
+          hour_start?: number | null
+          id?: string
+          is_active?: boolean
+          min_purchase?: number
+          name: string
+          promo_type: string
+          scope?: string
+          start_at?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          applicable_branch_ids?: string[] | null
+          applicable_product_ids?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_at?: string | null
+          hour_end?: number | null
+          hour_start?: number | null
+          id?: string
+          is_active?: boolean
+          min_purchase?: number
+          name?: string
+          promo_type?: string
+          scope?: string
+          start_at?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
       }
       pos_shifts: {
         Row: {
@@ -1342,6 +1450,7 @@ export type Database = {
           notes: string | null
           order_type: string
           paid_at: string | null
+          parent_transaction_id: string | null
           payment_method_1: string | null
           payment_method_2: string | null
           point_earned: number
@@ -1375,6 +1484,7 @@ export type Database = {
           notes?: string | null
           order_type?: string
           paid_at?: string | null
+          parent_transaction_id?: string | null
           payment_method_1?: string | null
           payment_method_2?: string | null
           point_earned?: number
@@ -1408,6 +1518,7 @@ export type Database = {
           notes?: string | null
           order_type?: string
           paid_at?: string | null
+          parent_transaction_id?: string | null
           payment_method_1?: string | null
           payment_method_2?: string | null
           point_earned?: number
@@ -1426,10 +1537,58 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "pos_transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "pos_transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pos_transactions_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_vouchers: {
+        Row: {
+          code: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          is_used: boolean
+          promotion_id: string | null
+          used_at: string | null
+          used_by_transaction_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_used?: boolean
+          promotion_id?: string | null
+          used_at?: string | null
+          used_by_transaction_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_used?: boolean
+          promotion_id?: string | null
+          used_at?: string | null
+          used_by_transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_vouchers_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "pos_promotions"
             referencedColumns: ["id"]
           },
         ]
