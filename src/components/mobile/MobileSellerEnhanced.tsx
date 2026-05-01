@@ -327,12 +327,8 @@ const MobileSellerEnhanced = () => {
       return;
     }
 
-    // Check payment proof only for transfer (QRIS no longer requires proof)
+    // Payment proof is now optional for all payment methods
     const paymentProofInput = document.getElementById('payment-proof') as HTMLInputElement;
-    if (paymentMethod === 'transfer' && !paymentProofInput?.files?.[0]) {
-      toast.error("Bukti pembayaran wajib diupload untuk Transfer Bank");
-      return;
-    }
     setLoading(true);
     try {
       const {
@@ -775,12 +771,12 @@ const MobileSellerEnhanced = () => {
               )}
             </div>
 
-            {/* Payment Proof Upload for Transfer only (QRIS tidak perlu) */}
+            {/* Payment Proof Upload — opsional untuk Transfer */}
             {paymentMethod === 'transfer' && <div className="space-y-2">
-                <label className="text-sm font-medium text-red-600">Bukti Pembayaran *</label>
-                <input type="file" accept="image/*" id="payment-proof" className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" required />
-                <p className="text-xs text-red-600">
-                  *Wajib upload foto bukti pembayaran untuk Transfer Bank
+                <label className="text-sm font-medium text-muted-foreground">Bukti Pembayaran (opsional)</label>
+                <input type="file" accept="image/*" id="payment-proof" className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                <p className="text-xs text-muted-foreground">
+                  Upload bukti pembayaran jika diperlukan (tidak wajib)
                 </p>
               </div>}
 
