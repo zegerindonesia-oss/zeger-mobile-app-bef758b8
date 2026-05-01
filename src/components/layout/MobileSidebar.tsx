@@ -16,7 +16,8 @@ import {
   LogOut,
   ShoppingBag,
   Trash2,
-  Wallet
+  Wallet,
+  DollarSign
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -85,6 +86,12 @@ const navigationItems = [
     href: "/mobile-seller?tab=cash-deposit",
     icon: Wallet,
     key: "cash-deposit"
+  },
+  {
+    title: "Pendapatan",
+    href: "/mobile-seller?tab=income",
+    icon: DollarSign,
+    key: "income"
   },
   {
     title: "Customers",
