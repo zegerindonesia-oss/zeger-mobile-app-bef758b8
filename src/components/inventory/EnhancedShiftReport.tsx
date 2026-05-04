@@ -182,6 +182,36 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         };
       });
 
+      // Fetch sales breakdown per rider per shift_date for pending shifts
+      if (shiftData && shiftData.length > 0) {
+        for (const shift of shiftData) {
+          try {
+            const { data: txs } = await supabase
+              .from('transactions')
+              .select('final_amount, payment_method')
+              .eq('status', 'completed')
+              .eq('is_voided', false)
+              .eq('rider_id', shift.rider_id)
+              .gte('transaction_date', `${shift.shift_date}T00:00:00+07:00`)
+              .lte('transaction_date', `${shift.shift_date}T23:59:59+07:00`);
+            const breakdown = { cash: 0, qris: 0, transfer: 0, total: 0 };
+            (txs || []).forEach((t: any) => {
+              const amt = Number(t.final_amount || 0);
+              const m = (t.payment_method || '').toLowerCase().trim();
+              if (m === 'cash' || m === 'tunai') breakdown.cash += amt;
+              else if (m === 'qris') breakdown.qris += amt;
+              else if (m === 'transfer' || m === 'bank_transfer') breakdown.transfer += amt;
+              breakdown.total += amt;
+            });
+            if (riderMap[shift.rider_id]) {
+              riderMap[shift.rider_id].salesBreakdown = breakdown;
+            }
+          } catch (e) {
+            console.error('sales breakdown error', e);
+          }
+        }
+      }
+
       setCombinedReports(Object.values(riderMap));
     } catch (error: any) {
       console.error('Error fetching combined reports:', error);
