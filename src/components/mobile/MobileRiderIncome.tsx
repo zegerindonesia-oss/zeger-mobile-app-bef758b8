@@ -85,7 +85,7 @@ const formatDateDisplay = (dateStr: string): string => {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
 };
 
-type Period = "today" | "yesterday" | "week" | "month";
+type Period = "today" | "yesterday" | "week" | "month" | "custom";
 
 interface DetailRow {
   date: string;
@@ -102,6 +102,8 @@ const MobileRiderIncome = () => {
   const riderId = userProfile?.id;
 
   const [period, setPeriod] = useState<Period>("today");
+  const [customStart, setCustomStart] = useState<string>(() => formatDateStr(getJakartaNow()));
+  const [customEnd, setCustomEnd] = useState<string>(() => formatDateStr(getJakartaNow()));
   const [loading, setLoading] = useState(false);
   const [transactionData, setTransactionData] = useState<any[]>([]);
   const [wasteData, setWasteData] = useState<any[]>([]);
@@ -127,8 +129,13 @@ const MobileRiderIncome = () => {
         const ms = new Date(now.getFullYear(), now.getMonth(), 1);
         return { startDate: formatDateStr(ms), endDate: today };
       }
+      case "custom": {
+        const s = customStart || today;
+        const e = customEnd || today;
+        return s <= e ? { startDate: s, endDate: e } : { startDate: e, endDate: s };
+      }
     }
-  }, [period]);
+  }, [period, customStart, customEnd]);
 
   const fetchData = async () => {
     if (!riderId) return;
@@ -357,12 +364,13 @@ const MobileRiderIncome = () => {
       </div>
 
       {/* Period Filter */}
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-5 gap-1.5">
         {([
           { v: "today", l: "Hari Ini" },
           { v: "yesterday", l: "Kemarin" },
           { v: "week", l: "Minggu" },
           { v: "month", l: "Bulan" },
+          { v: "custom", l: "Custom" },
         ] as { v: Period; l: string }[]).map((p) => (
           <Button
             key={p.v}
@@ -375,6 +383,33 @@ const MobileRiderIncome = () => {
           </Button>
         ))}
       </div>
+
+      {period === "custom" && (
+        <Card>
+          <CardContent className="p-3 grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Dari Tanggal</label>
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="w-full border rounded-lg px-2 py-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Sampai Tanggal</label>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="w-full border rounded-lg px-2 py-1.5 text-sm"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Total Income Hero */}
       <Card className="bg-gradient-to-br from-red-600 to-red-700 text-white border-0 shadow-lg">
