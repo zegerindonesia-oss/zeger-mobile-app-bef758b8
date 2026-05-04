@@ -559,47 +559,88 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                           <Package className="h-5 w-5" />
                           Pengembalian Barang
                         </h3>
-                        
-                        <div className="space-y-4">
-                          {report.stockReturns.map((item) => (
-                            <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg bg-muted/20">
-                              {item.verification_photo_url && (
-                                <img 
-                                  src={item.verification_photo_url} 
-                                  alt={item.products.name}
-                                  className="w-20 h-20 object-cover rounded-lg border"
-                                />
-                              )}
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-lg">{item.products.name}</h4>
-                                <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                  <p className="flex justify-between">
-                                    <span>Tidak terjual:</span>
-                                    <span className="font-medium">{item.quantity}</span>
-                                  </p>
-                                  <p className="flex justify-between">
-                                    <span>Kembali:</span>
-                                    <span className="font-medium">{item.quantity}</span>
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-center gap-2 min-w-[120px]">
-                                <Label htmlFor={`verify-${item.id}`} className="text-sm font-medium">
-                                  Jumlah Diterima:
-                                </Label>
-                                <Input
-                                  id={`verify-${item.id}`}
-                                  type="number"
-                                  min="0"
-                                  max={item.quantity}
-                                  className="w-20 text-center font-semibold"
-                                  value={report.verificationQuantities[item.id] || ''}
-                                  onChange={(e) => updateVerificationQuantity(report.riderId, item.id, parseInt(e.target.value) || 0)}
-                                  placeholder="0"
-                                />
-                              </div>
-                            </div>
-                          ))}
+
+                        {/* Total pengembalian summary */}
+                        <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between">
+                          <span className="font-medium text-amber-900">Total Pengembalian Stok</span>
+                          <span className="font-bold text-amber-900">
+                            {report.stockReturns.reduce((s, it) => s + (it.quantity || 0), 0)} item
+                          </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nama Menu</TableHead>
+                                <TableHead className="text-right">Harga Menu</TableHead>
+                                <TableHead className="text-center">Stok Sistem</TableHead>
+                                <TableHead className="text-center">Stok Fisik</TableHead>
+                                <TableHead className="text-center">Selisih Jumlah Stok</TableHead>
+                                <TableHead className="text-right">Selisih Nilai Stok</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {report.stockReturns.map((item) => {
+                                const fisik = report.verificationQuantities[item.id] ?? item.quantity;
+                                const selisih = fisik - item.quantity;
+                                const price = Number((item.products as any).price || 0);
+                                const selisihNilai = selisih * price;
+                                return (
+                                  <TableRow key={item.id}>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        {item.verification_photo_url && (
+                                          <img src={item.verification_photo_url} alt={item.products.name} className="w-10 h-10 object-cover rounded border" />
+                                        )}
+                                        <span className="font-medium">{item.products.name}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">Rp {price.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="text-center font-medium">{item.quantity}</TableCell>
+                                    <TableCell className="text-center">
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        className="w-20 text-center mx-auto"
+                                        value={report.verificationQuantities[item.id] ?? ''}
+                                        onChange={(e) => updateVerificationQuantity(report.riderId, item.id, parseInt(e.target.value) || 0)}
+                                        placeholder="0"
+                                      />
+                                    </TableCell>
+                                    <TableCell className={`text-center font-semibold ${selisih < 0 ? 'text-red-600' : selisih > 0 ? 'text-green-600' : ''}`}>
+                                      {selisih > 0 ? `+${selisih}` : selisih}
+                                    </TableCell>
+                                    <TableCell className={`text-right font-semibold ${selisihNilai < 0 ? 'text-red-600' : selisihNilai > 0 ? 'text-green-600' : ''}`}>
+                                      {selisihNilai < 0 ? '-' : ''}Rp {Math.abs(selisihNilai).toLocaleString('id-ID')}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                              {(() => {
+                                const totalSistem = report.stockReturns.reduce((s, it) => s + (it.quantity || 0), 0);
+                                const totalFisik = report.stockReturns.reduce((s, it) => s + (report.verificationQuantities[it.id] ?? it.quantity), 0);
+                                const totalSelisih = totalFisik - totalSistem;
+                                const totalNilai = report.stockReturns.reduce((s, it) => {
+                                  const fisik = report.verificationQuantities[it.id] ?? it.quantity;
+                                  return s + ((fisik - it.quantity) * Number((it.products as any).price || 0));
+                                }, 0);
+                                return (
+                                  <TableRow className="bg-muted/40 font-bold">
+                                    <TableCell colSpan={2}>Total</TableCell>
+                                    <TableCell className="text-center">{totalSistem}</TableCell>
+                                    <TableCell className="text-center">{totalFisik}</TableCell>
+                                    <TableCell className={`text-center ${totalSelisih < 0 ? 'text-red-600' : totalSelisih > 0 ? 'text-green-600' : ''}`}>
+                                      {totalSelisih > 0 ? `+${totalSelisih}` : totalSelisih}
+                                    </TableCell>
+                                    <TableCell className={`text-right ${totalNilai < 0 ? 'text-red-600' : totalNilai > 0 ? 'text-green-600' : ''}`}>
+                                      {totalNilai < 0 ? '-' : ''}Rp {Math.abs(totalNilai).toLocaleString('id-ID')}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })()}
+                            </TableBody>
+                          </Table>
                         </div>
                       </div>
                     )}
@@ -611,66 +652,72 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                           <DollarSign className="h-5 w-5" />
                           Laporan Setoran Tunai
                         </h3>
-                        
-                        <div className="p-4 border rounded-lg bg-blue-50/50">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div className="space-y-2">
-                              <div className="flex justify-between p-2 bg-white/80 rounded">
-                                <span className="font-medium">Total Penjualan:</span>
-                                <span className="font-bold">
-                                  Rp {report.cashDeposit.total_sales.toLocaleString('id-ID')}
-                                </span>
-                              </div>
-                              <div className="flex justify-between p-2 bg-white/80 rounded">
-                                <span className="font-medium">Total Transaksi:</span>
-                                <span className="font-semibold">
-                                  {report.cashDeposit.total_transactions}
-                                </span>
-                              </div>
-                              <div className="flex justify-between p-2 bg-white/80 rounded">
-                                <span className="font-medium">Setoran Tunai:</span>
-                                <span className="font-bold text-green-600">
-                                  Rp {report.cashDeposit.cash_collected.toLocaleString('id-ID')}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            {/* Operational Expenses */}
-                            <div className="space-y-2">
-                              <h4 className="font-semibold text-sm">Beban Operasional:</h4>
-                              {report.cashDeposit.operationalExpenses && report.cashDeposit.operationalExpenses.length > 0 ? (
-                                <div className="space-y-1">
-                                  {report.cashDeposit.operationalExpenses.map((expense: any, index: number) => (
-                                    <div key={index} className="flex justify-between p-2 bg-white/80 rounded text-sm">
-                                      <span>{expense.expense_type}: {expense.description}</span>
-                                      <span className="font-medium text-red-600">
-                                        -Rp {Number(expense.amount).toLocaleString('id-ID')}
-                                      </span>
-                                    </div>
-                                  ))}
-                                  <div className="flex justify-between p-2 bg-white/80 rounded font-semibold border-t">
-                                    <span>Total Beban:</span>
-                                    <span className="text-red-600">
-                                      -Rp {report.cashDeposit.operationalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0).toLocaleString('id-ID')}
-                                    </span>
-                                  </div>
+
+                        {(() => {
+                          const sb = report.salesBreakdown || { cash: 0, qris: 0, transfer: 0, total: Number(report.cashDeposit.total_sales || 0) };
+                          const totalPenjualan = sb.total || (sb.cash + sb.qris + sb.transfer);
+                          const expenses = report.cashDeposit.operationalExpenses || [];
+                          const totalPengeluaran = expenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+                          const setoran = sb.cash - totalPengeluaran;
+                          return (
+                            <div className="p-5 border rounded-lg bg-white space-y-4">
+                              {/* (A) Total Penjualan */}
+                              <div>
+                                <div className="flex justify-between items-center font-bold border-b pb-2 mb-2">
+                                  <span>(A) Total Penjualan</span>
+                                  <span>Rp {totalPenjualan.toLocaleString('id-ID')}</span>
                                 </div>
-                              ) : (
-                                <div className="p-2 bg-white/80 rounded text-sm text-gray-500">
-                                  Tidak ada beban operasional
+                                <div className="pl-4 space-y-1 text-sm">
+                                  <div className="flex justify-between"><span>Tunai</span><span>Rp {sb.cash.toLocaleString('id-ID')}</span></div>
+                                  <div className="flex justify-between"><span>QRIS</span><span>Rp {sb.qris.toLocaleString('id-ID')}</span></div>
+                                  <div className="flex justify-between"><span>Bank Transfer</span><span>Rp {sb.transfer.toLocaleString('id-ID')}</span></div>
+                                </div>
+                              </div>
+
+                              {/* (B) Total Pengeluaran Tunai */}
+                              <div>
+                                <div className="flex justify-between items-center font-bold border-b pb-2 mb-2">
+                                  <span>(B) Total Pengeluaran Tunai</span>
+                                  <span>Rp {totalPengeluaran.toLocaleString('id-ID')}</span>
+                                </div>
+                                {expenses.length > 0 ? (
+                                  <div className="pl-4 space-y-1 text-sm">
+                                    <div className="flex justify-between font-medium">
+                                      <span>Beban Operasional</span>
+                                      <span>Rp {totalPengeluaran.toLocaleString('id-ID')}</span>
+                                    </div>
+                                    <div className="pl-4 space-y-1 text-muted-foreground">
+                                      {expenses.map((e: any, i: number) => (
+                                        <div key={i} className="flex justify-between">
+                                          <span>{e.description || e.expense_type}</span>
+                                          <span>Rp {Number(e.amount || 0).toLocaleString('id-ID')}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="pl-4 text-sm text-muted-foreground">Tidak ada pengeluaran</div>
+                                )}
+                              </div>
+
+                              {/* (A-B) Total Setoran Tunai */}
+                              <div className="border-t-2 pt-3">
+                                <div className="flex justify-between items-center font-bold text-base">
+                                  <span>(A-B) Total Setoran Tunai</span>
+                                  <span className="text-green-600">Rp {setoran.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai - Pengeluaran Tunai</div>
+                              </div>
+
+                              {report.cashDeposit.notes && (
+                                <div className="mt-3 p-3 bg-muted/30 rounded">
+                                  <h4 className="font-semibold text-sm mb-1">Catatan:</h4>
+                                  <p className="text-sm">{report.cashDeposit.notes}</p>
                                 </div>
                               )}
                             </div>
-                          </div>
-                          
-                          {/* Notes Section */}
-                          {report.cashDeposit.notes && (
-                            <div className="mt-4 p-3 bg-white/80 rounded">
-                              <h4 className="font-semibold text-sm mb-2">Catatan:</h4>
-                              <p className="text-sm text-gray-700">{report.cashDeposit.notes}</p>
-                            </div>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </div>
                     )}
 
