@@ -859,33 +859,35 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                     <div>
                       <h4 className="font-semibold mb-2">Setoran Tunai</h4>
                       {shift.sales_breakdown && (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-3 gap-4 text-sm">
-                            <div className="p-2 bg-green-50 rounded">
-                              <div className="font-medium">Tunai</div>
-                              <div className="text-green-600">Rp {Number(shift.sales_breakdown.cash || 0).toLocaleString('id-ID')}</div>
+                        <div className="p-4 border rounded-lg bg-white space-y-4">
+                          <div>
+                            <div className="flex justify-between items-center font-bold border-b pb-2 mb-2">
+                              <span>(A) Total Penjualan</span>
+                              <span>Rp {Number(shift.sales_breakdown.total || 0).toLocaleString('id-ID')}</span>
                             </div>
-                            <div className="p-2 bg-blue-50 rounded">
-                              <div className="font-medium">QRIS</div>
-                              <div className="text-blue-600">Rp {Number(shift.sales_breakdown.qris || 0).toLocaleString('id-ID')}</div>
-                            </div>
-                            <div className="p-2 bg-purple-50 rounded">
-                              <div className="font-medium">Transfer</div>
-                              <div className="text-purple-600">Rp {Number(shift.sales_breakdown.transfer || 0).toLocaleString('id-ID')}</div>
+                            <div className="pl-4 space-y-1 text-sm">
+                              <div className="flex justify-between"><span>Tunai</span><span>Rp {Number(shift.sales_breakdown.cash || 0).toLocaleString('id-ID')}</span></div>
+                              <div className="flex justify-between"><span>QRIS</span><span>Rp {Number(shift.sales_breakdown.qris || 0).toLocaleString('id-ID')}</span></div>
+                              <div className="flex justify-between"><span>Bank Transfer</span><span>Rp {Number(shift.sales_breakdown.transfer || 0).toLocaleString('id-ID')}</span></div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between p-3 rounded-lg border bg-yellow-50">
-                            <span className="font-medium">Total Penjualan</span>
-                            <span className="font-bold text-yellow-700">Rp {Number(shift.sales_breakdown.total || 0).toLocaleString('id-ID')}</span>
+                          <div>
+                            <div className="flex justify-between items-center font-bold border-b pb-2 mb-2">
+                              <span>(B) Total Pengeluaran Tunai</span>
+                              <span>Rp {Number(shift.operational_daily || 0).toLocaleString('id-ID')}</span>
+                            </div>
+                            <div className="pl-4 text-sm flex justify-between">
+                              <span>Beban Operasional</span>
+                              <span>Rp {Number(shift.operational_daily || 0).toLocaleString('id-ID')}</span>
+                            </div>
                           </div>
-                           <div className="flex items-center justify-between p-3 rounded-lg border bg-red-500 text-white">
-                             <span className="font-medium">Beban Operasional</span>
-                             <span className="font-bold text-white">Rp {Number(shift.operational_daily || 0).toLocaleString('id-ID')}</span>
-                           </div>
-                           <div className="flex items-center justify-between p-3 rounded-lg border bg-red-500 text-white">
-                             <span className="font-medium">Setoran Tunai (Tunai - Operasional)</span>
-                             <span className="font-bold text-white">Rp {Number(shift.calculated_cash_deposit || 0).toLocaleString('id-ID')}</span>
-                           </div>
+                          <div className="border-t-2 pt-3">
+                            <div className="flex justify-between items-center font-bold text-base">
+                              <span>(A-B) Total Setoran Tunai</span>
+                              <span className="text-green-600">Rp {Number(shift.calculated_cash_deposit || 0).toLocaleString('id-ID')}</span>
+                            </div>
+                            <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai - Pengeluaran Tunai</div>
+                          </div>
                         </div>
                       )}
                       {shift.deposit_photos?.length > 0 && (
