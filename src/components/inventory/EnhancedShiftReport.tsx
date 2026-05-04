@@ -28,6 +28,7 @@ interface StockMovement {
   products: {
     name: string;
     category: string;
+    price?: number;
   };
   profiles: {
     full_name: string;
@@ -66,6 +67,7 @@ interface CombinedRiderReport {
   stockReturns: StockMovement[];
   cashDeposit?: Shift;
   verificationQuantities: Record<string, number>;
+  salesBreakdown?: { cash: number; qris: number; transfer: number; total: number };
 }
 
 interface EnhancedShiftReportProps {
@@ -104,7 +106,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           branch_id,
           status,
           verification_photo_url,
-          products!inner(name, category),
+          products!inner(name, category, price),
           profiles!stock_movements_rider_id_fkey(full_name)
         `)
         .eq('movement_type', 'return')
