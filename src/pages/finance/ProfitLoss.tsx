@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
-import { calculateSalesData, calculateRawMaterialCost, calculateOperationalExpenses, calculateRevenue, calculateNetProfit, type RevenueBreakdown, type ExpenseBreakdown } from "@/lib/financial-utils";
+import { calculateSalesData, calculateRawMaterialCost, calculateOperationalExpenses, calculateRevenue, calculateNetProfit, calculateRiderSalary, type RevenueBreakdown, type ExpenseBreakdown } from "@/lib/financial-utils";
 import { getTodayJakarta } from "@/lib/date";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
@@ -85,7 +85,7 @@ export default function ProfitLoss() {
       console.log("📊 Date range:", { startDate, endDate, selectedRider });
 
       // Use centralized financial calculation functions for consistency
-      const [revenueData, expensesData, rawMaterial] = await Promise.all([
+      const [revenueData, expensesData, rawMaterial, riderSalary] = await Promise.all([
         calculateRevenue(
           startDate,
           endDate,
@@ -100,6 +100,11 @@ export default function ProfitLoss() {
           startDate,
           endDate,
           selectedRider === "all" ? undefined : selectedRider
+        ),
+        calculateRiderSalary(
+          startDate,
+          endDate,
+          selectedRider === "all" ? undefined : selectedRider
         )
       ]);
 
@@ -110,7 +115,8 @@ export default function ProfitLoss() {
       });
 
       setRevenue(revenueData);
-      setExpenses(expensesData);
+      // Override salary with rider income calculation for consistency
+      setExpenses({ ...expensesData, salary: riderSalary });
       setRawMaterialCost(rawMaterial);
 
     } catch (error) {
