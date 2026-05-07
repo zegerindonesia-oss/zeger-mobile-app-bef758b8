@@ -253,6 +253,167 @@ export const calculateOperationalExpenses = async (
   return breakdown;
 };
 
+// === Rider salary calculation (sync with RiderIncome page) ===
+// Daily attendance commission + tiered weekly sales commission - waste
+// Excludes kasbon (manual input, not persisted).
+const RIDER_DAILY_COMMISSION = 30000;
+const RIDER_COMMISSION_TIERS = [
+  { min: 6000000, rate: 0.175 },
+  { min: 5500000, rate: 0.17 },
+  { min: 5000000, rate: 0.165 },
+  { min: 4500000, rate: 0.16 },
+  { min: 4000000, rate: 0.155 },
+  { min: 3500000, rate: 0.15 },
+  { min: 3000000, rate: 0.14 },
+  { min: 2500000, rate: 0.13 },
+  { min: 2000000, rate: 0.11 },
+  { min: 1500000, rate: 0.08 },
+  { min: 1000000, rate: 0.05 },
+];
+const getRiderCommissionRate = (weeklyRevenue: number): number => {
+  for (const t of RIDER_COMMISSION_TIERS) if (weeklyRevenue >= t.min) return t.rate;
+  return 0;
+};
+const getMondayLocal = (d: Date): Date => {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+const getSundayLocal = (monday: Date): Date => {
+  const sun = new Date(monday);
+  sun.setDate(sun.getDate() + 6);
+  return sun;
+};
+
+export const calculateRiderSalary = async (
+  startDate: Date,
+  endDate: Date,
+  selectedRider?: string,
+  branchId?: string
+): Promise<number> => {
+  const filterStart = new Date(startDate);
+  filterStart.setHours(0, 0, 0, 0);
+  const filterEnd = new Date(endDate);
+  filterEnd.setHours(0, 0, 0, 0);
+
+  // Expand to full weeks (Mon-Sun) covering filter so weekly tier is correct
+  const weekStart = getMondayLocal(filterStart);
+  const lastMon = getMondayLocal(filterEnd);
+  const weekEnd = getSundayLocal(lastMon);
+
+  const txStartStr = formatDate(weekStart);
+  const txEndStr = formatDate(weekEnd);
+
+  // Fetch transactions (paginated)
+  const fetchAll = async (q: any) => {
+    const all: any[] = [];
+    let from = 0;
+    while (true) {
+      const { data } = await q.range(from, from + 999);
+      if (!data || data.length === 0) break;
+      all.push(...data);
+      if (data.length < 1000) break;
+      from += 1000;
+    }
+    return all;
+  };
+
+  let txQ = supabase
+    .from('transactions')
+    .select('rider_id, final_amount, transaction_date')
+    .eq('status', 'completed')
+    .eq('is_voided', false)
+    .gte('transaction_date', `${txStartStr}T00:00:00+07:00`)
+    .lte('transaction_date', `${txEndStr}T23:59:59+07:00`);
+  if (branchId) txQ = txQ.eq('branch_id', branchId);
+  if (selectedRider && selectedRider !== 'all') txQ = txQ.eq('rider_id', selectedRider);
+
+  const startStr = formatDate(filterStart);
+  const endStr = formatDate(filterEnd);
+
+  let wasteQ = supabase
+    .from('product_waste')
+    .select('rider_id, total_waste, created_at')
+    .gte('created_at', `${startStr}T00:00:00+07:00`)
+    .lte('created_at', `${endStr}T23:59:59+07:00`);
+  if (branchId) wasteQ = wasteQ.eq('branch_id', branchId);
+  if (selectedRider && selectedRider !== 'all') wasteQ = wasteQ.eq('rider_id', selectedRider);
+
+  const [tx, waste] = await Promise.all([fetchAll(txQ), fetchAll(wasteQ)]);
+
+  // Build daily sales per rider, weekly revenue per rider
+  const dailySales = new Map<string, Map<string, number>>();
+  const weeklyRevenue = new Map<string, Map<string, number>>();
+  tx.forEach((t: any) => {
+    if (!t.rider_id) return;
+    const dateStr = String(t.transaction_date).split('T')[0];
+    const amt = Number(t.final_amount || 0);
+    if (!dailySales.has(t.rider_id)) dailySales.set(t.rider_id, new Map());
+    const ds = dailySales.get(t.rider_id)!;
+    ds.set(dateStr, (ds.get(dateStr) || 0) + amt);
+    const monday = getMondayLocal(new Date(dateStr + 'T00:00:00'));
+    const wk = formatDate(monday);
+    if (!weeklyRevenue.has(t.rider_id)) weeklyRevenue.set(t.rider_id, new Map());
+    const wr = weeklyRevenue.get(t.rider_id)!;
+    wr.set(wk, (wr.get(wk) || 0) + amt);
+  });
+
+  // Waste per rider in filter range
+  const wasteByRider = new Map<string, number>();
+  waste.forEach((w: any) => {
+    if (!w.rider_id) return;
+    wasteByRider.set(w.rider_id, (wasteByRider.get(w.rider_id) || 0) + Number(w.total_waste || 0));
+  });
+
+  // Sales-commission lump sum credited to last working day in range (per week)
+  const salesCommissionByRider = new Map<string, number>();
+  weeklyRevenue.forEach((weeks, riderId) => {
+    weeks.forEach((revenue, weekMonday) => {
+      const rate = getRiderCommissionRate(revenue);
+      const totalComm = revenue * rate;
+      if (!totalComm) return;
+      const monday = new Date(weekMonday + 'T00:00:00');
+      let lastInRange: string | null = null;
+      for (let i = 6; i >= 0; i--) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + i);
+        const ds = formatDate(day);
+        if (ds >= startStr && ds <= endStr) { lastInRange = ds; break; }
+      }
+      if (!lastInRange) return;
+      salesCommissionByRider.set(riderId, (salesCommissionByRider.get(riderId) || 0) + totalComm);
+    });
+  });
+
+  // Daily attendance commission (only for days in filter range with sales > 0)
+  const dailyCommissionByRider = new Map<string, number>();
+  dailySales.forEach((days, riderId) => {
+    let total = 0;
+    days.forEach((amt, ds) => {
+      if (ds >= startStr && ds <= endStr && amt > 0) total += RIDER_DAILY_COMMISSION;
+    });
+    if (total) dailyCommissionByRider.set(riderId, total);
+  });
+
+  // Aggregate
+  const allRiderIds = new Set<string>([
+    ...dailyCommissionByRider.keys(),
+    ...salesCommissionByRider.keys(),
+    ...wasteByRider.keys(),
+  ]);
+  let total = 0;
+  allRiderIds.forEach((rid) => {
+    const dc = dailyCommissionByRider.get(rid) || 0;
+    const sc = salesCommissionByRider.get(rid) || 0;
+    const w = wasteByRider.get(rid) || 0;
+    total += dc + sc - w;
+  });
+  return Math.max(0, total);
+};
+
 export interface SalesData {
   grossSales: number;
   netSales: number;  
