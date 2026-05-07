@@ -567,7 +567,68 @@ export default function OperationalExpenses() {
         </CardContent>
       </Card>
 
-      {/* Total Summary */}
+      {/* Tambah Beban (moved to top) */}
+      {canEdit && (
+        <Card>
+          <CardHeader><CardTitle>Tambah Beban Operasional</CardTitle></CardHeader>
+          <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Kategori</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beban_operasional_harian">Beban Operasional Harian</SelectItem>
+                  <SelectItem value="beban_gaji_karyawan">Beban Gaji Karyawan</SelectItem>
+                  <SelectItem value="beban_sewa">Beban Sewa</SelectItem>
+                  <SelectItem value="beban_rumah_tangga">Beban Rumah Tangga</SelectItem>
+                  <SelectItem value="beban_lingkungan">Beban Lingkungan</SelectItem>
+                  <SelectItem value="beban_lainnya">Beban Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Jumlah</Label>
+              <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="cth: 1500000" />
+            </div>
+            <div>
+              <Label>Tanggal Beban</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !expenseDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {expenseDate ? format(expenseDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={expenseDate} onSelect={(date) => date && setExpenseDate(date)} initialFocus className="pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Label>Beban ini menjadi beban siapa?</Label>
+              <Select value={assignedUser} onValueChange={setAssignedUser}>
+                <SelectTrigger><SelectValue placeholder="Pilih user" /></SelectTrigger>
+                <SelectContent>
+                  {allUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>{user.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Catatan (Opsional)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan untuk beban ini..." rows={3} />
+            </div>
+            <div className="md:col-span-2">
+              <Button onClick={onAdd} className="w-full md:w-auto">Simpan</Button>
+            </div>
+          </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Total Summary with per-category breakdown */}
       <Card>
         <CardHeader>
           <CardTitle>Resume Total Beban</CardTitle>
@@ -576,9 +637,30 @@ export default function OperationalExpenses() {
           <div className="text-2xl font-bold text-red-600">
             {currency.format(totalExpenses)}
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mb-3">
             Periode {format(startDate, "dd/MM/yyyy")} - {format(endDate, "dd/MM/yyyy")}
           </p>
+          {(() => {
+            const catMap = new Map<string, number>();
+            items.forEach((it) => {
+              const key = (it.expense_category || 'lainnya').toString();
+              catMap.set(key, (catMap.get(key) || 0) + Number(it.amount || 0));
+            });
+            const rows = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1]);
+            if (rows.length === 0) return null;
+            const labelize = (k: string) => k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+            return (
+              <div className="mt-2 border-t pt-3 space-y-1.5">
+                <div className="text-sm font-medium text-muted-foreground mb-1">Rincian per Kategori:</div>
+                {rows.map(([cat, amt]) => (
+                  <div key={cat} className="flex justify-between text-sm pl-2">
+                    <span className="capitalize">- {labelize(cat)}</span>
+                    <span className="font-medium text-red-600">{currency.format(amt)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -677,92 +759,8 @@ export default function OperationalExpenses() {
         </Card>
       )}
 
-      {canEdit && (
-        <Card>
-          <CardHeader><CardTitle>Tambah Beban</CardTitle></CardHeader>
-          <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Kategori</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beban_operasional_harian">Beban Operasional Harian</SelectItem>
-                  <SelectItem value="beban_gaji_karyawan">Beban Gaji Karyawan</SelectItem>
-                  <SelectItem value="beban_sewa">Beban Sewa</SelectItem>
-                  <SelectItem value="beban_rumah_tangga">Beban Rumah Tangga</SelectItem>
-                  <SelectItem value="beban_lingkungan">Beban Lingkungan</SelectItem>
-                  <SelectItem value="beban_lainnya">Beban Lainnya</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label>Jumlah</Label>
-              <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="cth: 1500000" />
-            </div>
-            
-            <div>
-              <Label>Tanggal Beban</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !expenseDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expenseDate ? format(expenseDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={expenseDate}
-                    onSelect={(date) => date && setExpenseDate(date)}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div>
-              <Label>Beban ini menjadi beban siapa?</Label>
-              <Select value={assignedUser} onValueChange={setAssignedUser}>
-                <SelectTrigger><SelectValue placeholder="Pilih user" /></SelectTrigger>
-                <SelectContent>
-                  {allUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="md:col-span-2">
-              <Label>Catatan (Opsional)</Label>
-              <Textarea 
-                value={notes} 
-                onChange={(e) => setNotes(e.target.value)} 
-                placeholder="Tambahkan catatan untuk beban ini..."
-                rows={3}
-              />
-            </div>
-            
-            <div className="md:col-span-2">
-              <Button onClick={onAdd} className="w-full md:w-auto">Simpan</Button>
-            </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
-        <CardHeader><CardTitle>Riwayat (Termasuk Beban Rider)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Rincian Transaksi Beban Operasional</CardTitle></CardHeader>
         <CardContent>
           <div className="divide-y">
             {items.map(it => (
