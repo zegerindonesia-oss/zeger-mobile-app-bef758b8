@@ -759,7 +759,6 @@ export default function OperationalExpenses() {
         </Card>
       )}
 
-      {canEdit && (
       <Card>
         <CardHeader><CardTitle>Rincian Transaksi Beban Operasional</CardTitle></CardHeader>
         <CardContent>
