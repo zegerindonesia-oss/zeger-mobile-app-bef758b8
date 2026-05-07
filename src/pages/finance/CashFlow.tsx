@@ -13,6 +13,7 @@ import {
   calculateRevenue, 
   calculateRawMaterialCost, 
   calculateOperationalExpenses,
+  calculateRiderSalary,
   type RevenueBreakdown,
   type ExpenseBreakdown
 } from "@/lib/financial-utils";
@@ -77,15 +78,16 @@ export default function CashFlow() {
     
     try {
       // Use utility functions for consistent calculations
-      const [revenueData, rawMaterialData, expenseData] = await Promise.all([
+      const [revenueData, rawMaterialData, expenseData, riderSalary] = await Promise.all([
         calculateRevenue(startDate, endDate, selectedRider),
         calculateRawMaterialCost(startDate, endDate, selectedRider),
-        calculateOperationalExpenses(startDate, endDate, selectedRider)
+        calculateOperationalExpenses(startDate, endDate, selectedRider),
+        calculateRiderSalary(startDate, endDate, selectedRider)
       ]);
 
       setRevenue(revenueData);
       setRawMaterialCost(rawMaterialData);
-      setExpenses(expenseData);
+      setExpenses({ ...expenseData, salary: riderSalary });
     } catch (error) {
       console.error("Error loading cash flow data:", error);
     } finally {
