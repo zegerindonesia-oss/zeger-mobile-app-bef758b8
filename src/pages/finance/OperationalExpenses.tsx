@@ -440,6 +440,67 @@ export default function OperationalExpenses() {
         <p className="text-muted-foreground">Catat beban biaya: sewa, listrik, gaji, dll</p>
       </header>
 
+      {/* Tambah Beban - paling atas */}
+      {canEdit && (
+        <Card>
+          <CardHeader><CardTitle>Tambah Beban Operasional</CardTitle></CardHeader>
+          <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Kategori</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beban_operasional_harian">Beban Operasional Harian</SelectItem>
+                  <SelectItem value="beban_gaji_karyawan">Beban Gaji Karyawan</SelectItem>
+                  <SelectItem value="beban_sewa">Beban Sewa</SelectItem>
+                  <SelectItem value="beban_rumah_tangga">Beban Rumah Tangga</SelectItem>
+                  <SelectItem value="beban_lingkungan">Beban Lingkungan</SelectItem>
+                  <SelectItem value="beban_lainnya">Beban Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Jumlah</Label>
+              <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="cth: 1500000" />
+            </div>
+            <div>
+              <Label>Tanggal Beban</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !expenseDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {expenseDate ? format(expenseDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={expenseDate} onSelect={(date) => date && setExpenseDate(date)} initialFocus className="pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Label>Beban ini menjadi beban siapa?</Label>
+              <Select value={assignedUser} onValueChange={setAssignedUser}>
+                <SelectTrigger><SelectValue placeholder="Pilih user" /></SelectTrigger>
+                <SelectContent>
+                  {allUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>{user.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Catatan (Opsional)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan untuk beban ini..." rows={3} />
+            </div>
+            <div className="md:col-span-2">
+              <Button onClick={onAdd} className="w-full md:w-auto">Simpan</Button>
+            </div>
+          </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -566,67 +627,6 @@ export default function OperationalExpenses() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Tambah Beban (moved to top) */}
-      {canEdit && (
-        <Card>
-          <CardHeader><CardTitle>Tambah Beban Operasional</CardTitle></CardHeader>
-          <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Kategori</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beban_operasional_harian">Beban Operasional Harian</SelectItem>
-                  <SelectItem value="beban_gaji_karyawan">Beban Gaji Karyawan</SelectItem>
-                  <SelectItem value="beban_sewa">Beban Sewa</SelectItem>
-                  <SelectItem value="beban_rumah_tangga">Beban Rumah Tangga</SelectItem>
-                  <SelectItem value="beban_lingkungan">Beban Lingkungan</SelectItem>
-                  <SelectItem value="beban_lainnya">Beban Lainnya</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Jumlah</Label>
-              <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="cth: 1500000" />
-            </div>
-            <div>
-              <Label>Tanggal Beban</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !expenseDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expenseDate ? format(expenseDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={expenseDate} onSelect={(date) => date && setExpenseDate(date)} initialFocus className="pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label>Beban ini menjadi beban siapa?</Label>
-              <Select value={assignedUser} onValueChange={setAssignedUser}>
-                <SelectTrigger><SelectValue placeholder="Pilih user" /></SelectTrigger>
-                <SelectContent>
-                  {allUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>{user.full_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:col-span-2">
-              <Label>Catatan (Opsional)</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Tambahkan catatan untuk beban ini..." rows={3} />
-            </div>
-            <div className="md:col-span-2">
-              <Button onClick={onAdd} className="w-full md:w-auto">Simpan</Button>
-            </div>
-          </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Total Summary with per-category breakdown */}
       <Card>
