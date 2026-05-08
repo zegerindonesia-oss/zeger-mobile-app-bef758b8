@@ -117,6 +117,35 @@ const MobileSellerEnhanced = () => {
     };
   }, [userProfile?.id]);
 
+  // Subscribe to real-time stock movement updates (so the block screen reacts immediately)
+  useEffect(() => {
+    if (!userProfile?.id) return;
+
+    const movementSubscription = supabase
+      .channel('rider_stock_movements_seller')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stock_movements',
+          filter: `rider_id=eq.${userProfile.id}`
+        },
+        (payload: any) => {
+          console.log('📨 Stock movement changed (seller):', payload);
+          checkPreConditions();
+          if (payload.eventType === 'INSERT' && payload.new?.movement_type === 'transfer' && payload.new?.status === 'sent') {
+            toast.warning('Ada pengiriman stok baru. Konfirmasi semua stok dulu sebelum berjualan.', { duration: 5000 });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      movementSubscription.unsubscribe();
+    };
+  }, [userProfile?.id]);
+
   const checkPreConditions = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -521,6 +550,17 @@ const MobileSellerEnhanced = () => {
             </p>
             <Button onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'stock' }))}>
               Ke Kelola Stok
+            </Button>
+          </div>
+        ) : hasPendingStock ? (
+          <div className="text-center py-12">
+            <Package className="w-16 h-16 mx-auto mb-4 text-orange-500" />
+            <h3 className="text-lg font-semibold mb-2">Stok Belum Dikonfirmasi Semua</h3>
+            <p className="text-muted-foreground mb-4">
+              Anda belum bisa berjualan. Silakan terima &amp; konfirmasi <strong>semua</strong> pengiriman stok dari branch hub terlebih dahulu di halaman "Kelola Stok".
+            </p>
+            <Button onClick={() => window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'stock' }))}>
+              Konfirmasi Stok Sekarang
             </Button>
           </div>
         ) : stockItems.length === 0 ? (
