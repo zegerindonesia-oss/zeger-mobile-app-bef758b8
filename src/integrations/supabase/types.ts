@@ -1253,6 +1253,104 @@ export type Database = {
           },
         ]
       }
+      pos_kds_ticket_items: {
+        Row: {
+          created_at: string
+          done_at: string | null
+          id: string
+          is_done: boolean
+          notes: string | null
+          product_id: string | null
+          product_name: string
+          qty: number
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          is_done?: boolean
+          notes?: string | null
+          product_id?: string | null
+          product_name: string
+          qty?: number
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          is_done?: boolean
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string
+          qty?: number
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_kds_ticket_items_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "pos_kds_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_kds_tickets: {
+        Row: {
+          branch_id: string
+          created_at: string
+          customer_name: string | null
+          external_order_id: string | null
+          id: string
+          notes: string | null
+          order_type: string | null
+          ready_at: string | null
+          served_at: string | null
+          started_at: string | null
+          status: string
+          table_number: string | null
+          transaction_id: string
+          transaction_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          customer_name?: string | null
+          external_order_id?: string | null
+          id?: string
+          notes?: string | null
+          order_type?: string | null
+          ready_at?: string | null
+          served_at?: string | null
+          started_at?: string | null
+          status?: string
+          table_number?: string | null
+          transaction_id: string
+          transaction_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          customer_name?: string | null
+          external_order_id?: string | null
+          id?: string
+          notes?: string | null
+          order_type?: string | null
+          ready_at?: string | null
+          served_at?: string | null
+          started_at?: string | null
+          status?: string
+          table_number?: string | null
+          transaction_id?: string
+          transaction_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pos_promotions: {
         Row: {
           applicable_branch_ids: string[] | null
@@ -1447,6 +1545,7 @@ export type Database = {
           external_order_id: string | null
           id: string
           kasir_id: string
+          kitchen_status: string | null
           notes: string | null
           order_type: string
           paid_at: string | null
@@ -1481,6 +1580,7 @@ export type Database = {
           external_order_id?: string | null
           id?: string
           kasir_id: string
+          kitchen_status?: string | null
           notes?: string | null
           order_type?: string
           paid_at?: string | null
@@ -1515,6 +1615,7 @@ export type Database = {
           external_order_id?: string | null
           id?: string
           kasir_id?: string
+          kitchen_status?: string | null
           notes?: string | null
           order_type?: string
           paid_at?: string | null
