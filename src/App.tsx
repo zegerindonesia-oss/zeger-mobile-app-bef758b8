@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import POS from "./pages/POS";
 import POSMain from "./pages/pos/POSMain";
+import POSKitchen from "./pages/pos/POSKitchen";
 import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
 import NotFound from "./pages/NotFound";
@@ -108,6 +109,11 @@ const App = () => (
             <Route path="/pos" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}>
                 <POSMain />
+              </RoleBasedRoute>
+            } />
+            <Route path="/pos/kds" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}>
+                <POSKitchen />
               </RoleBasedRoute>
             } />
             <Route path="/pos-legacy" element={
