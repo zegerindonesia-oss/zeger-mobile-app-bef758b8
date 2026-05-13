@@ -13,6 +13,7 @@ import { POSPayment } from '@/components/pos/POSPayment';
 import { POSReceipt, ReceiptData } from '@/components/pos/POSReceipt';
 import { OpenShiftModal, CloseShiftModal, CashMovementModal } from '@/components/pos/POSShiftModal';
 import { POSSplitBillDialog, SplitResult } from '@/components/pos/POSSplitBillDialog';
+import { POSOnlineOrderPanel } from '@/components/pos/POSOnlineOrderPanel';
 
 const POSMain = () => {
   const { userProfile, signOut } = useAuth();
@@ -278,6 +279,12 @@ const POSMain = () => {
         onCloseShift={() => setCloseOpen(true)}
         onCashMovement={() => setCashOpen(true)}
         onLogout={signOut}
+        rightExtra={
+          <POSOnlineOrderPanel
+            branchId={userProfile?.branch_id || null}
+            shiftId={activeShift?.id || null}
+          />
+        }
       />
 
       <div className="flex-1 flex min-h-0">
