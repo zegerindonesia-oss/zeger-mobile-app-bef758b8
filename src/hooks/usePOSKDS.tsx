@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { playNotificationSound } from '@/lib/audio';
+import { playAlertBeep } from '@/lib/audio';
 
 export type KDSStatus = 'queued' | 'cooking' | 'ready' | 'served' | 'cancelled';
 
@@ -61,7 +61,7 @@ export const usePOSKDS = (branchId: string | null) => {
     }));
     setTickets(merged);
     if (merged.length > lastCountRef.current && lastCountRef.current > 0) {
-      try { playNotificationSound(); } catch {}
+      try { playAlertBeep({ times: 2, freq: 900, durationMs: 250, intervalMs: 350 }); } catch {}
     }
     lastCountRef.current = merged.length;
     setLoading(false);
