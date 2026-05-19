@@ -179,7 +179,7 @@ export default function StockCardRider() {
         // Stock terjual
         supabase
           .from('transaction_items')
-          .select('quantity, product_id, transactions!inner(rider_id, created_at, is_voided)')
+          .select('quantity, product_id, total_price, products(cost_price), transactions!inner(rider_id, created_at, is_voided)')
           .in('transactions.rider_id', riderIds)
           .eq('transactions.is_voided', false)
           .gte('transactions.created_at', `${start}T00:00:00+07:00`)
