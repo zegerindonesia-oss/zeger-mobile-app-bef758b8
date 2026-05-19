@@ -301,12 +301,26 @@ export default function StockCardRider() {
 
     setLoading(true);
     const { start, end } = getDateRange();
+    const isAll = selectedRider === 'all';
+    const riderIds = riders.map(r => r.id);
+    const makeItem = (name: string): StockCardItem => ({
+      product_name: name,
+      stock_in: 0,
+      stock_sold: 0,
+      remaining_stock: 0,
+      stock_returned: 0,
+      stock_value: 0,
+      total_sales: 0,
+      hpp_cost: 0,
+      hpp_pct: 0,
+      gp_pct: 0,
+    });
 
     try {
       // Fetch stock movements (stock in) - only CONFIRMED/received stock
       // Stock is only valid after rider confirms ("Terima Stok")
       // selling_date = DATE(actual_delivery_date) = date rider confirmed
-      const { data: stockIn, error: stockInError } = await supabase
+      let stockInQuery = supabase
         .from('stock_movements')
         .select(`
           actual_delivery_date,
@@ -316,42 +330,46 @@ export default function StockCardRider() {
           status,
           products(name, cost_price)
         `)
-        .eq('rider_id', selectedRider)
         .in('movement_type', ['transfer', 'in', 'adjustment'])
         .eq('status', 'received')
         .not('actual_delivery_date', 'is', null)
         .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
         .lte('actual_delivery_date', `${end}T23:59:59+07:00`)
         .order('actual_delivery_date', { ascending: true });
+      stockInQuery = isAll ? stockInQuery.in('rider_id', riderIds) : stockInQuery.eq('rider_id', selectedRider);
+      const { data: stockIn, error: stockInError } = await stockInQuery;
 
       if (stockInError) throw stockInError;
 
       // Fetch transactions (stock sold)
-      const { data: transactions, error: transError } = await supabase
+      let txQuery = supabase
         .from('transaction_items')
         .select(`
           transactions!inner(created_at, rider_id, is_voided),
           quantity,
           product_id,
+          total_price,
           products(name, cost_price)
         `)
-        .eq('transactions.rider_id', selectedRider)
         .eq('transactions.is_voided', false)
         .gte('transactions.created_at', `${start}T00:00:00+07:00`)
         .lte('transactions.created_at', `${end}T23:59:59+07:00`);
+      txQuery = isAll ? txQuery.in('transactions.rider_id', riderIds) : txQuery.eq('transactions.rider_id', selectedRider);
+      const { data: transactions, error: transError } = await txQuery;
 
       if (transError) throw transError;
 
       // Fetch current inventory
-      const { data: inventory, error: invError } = await supabase
+      let invQuery = supabase
         .from('inventory')
-        .select('product_id, stock_quantity, products(name, cost_price)')
-        .eq('rider_id', selectedRider);
+        .select('product_id, stock_quantity, products(name, cost_price)');
+      invQuery = isAll ? invQuery.in('rider_id', riderIds) : invQuery.eq('rider_id', selectedRider);
+      const { data: inventory, error: invError } = await invQuery;
 
       if (invError) throw invError;
 
       // Fetch stock returns - use actual_delivery_date as the anchor date
-      const { data: stockReturns, error: returnError } = await supabase
+      let returnQuery = supabase
         .from('stock_movements')
         .select(`
           quantity,
@@ -359,90 +377,60 @@ export default function StockCardRider() {
           actual_delivery_date,
           products(name, cost_price)
         `)
-        .eq('rider_id', selectedRider)
         .in('movement_type', ['return', 'out'])
         .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
         .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
+      returnQuery = isAll ? returnQuery.in('rider_id', riderIds) : returnQuery.eq('rider_id', selectedRider);
+      const { data: stockReturns, error: returnError } = await returnQuery;
 
       if (returnError) throw returnError;
 
       // Process data by product
       const productMap = new Map<string, StockCardItem>();
+      const productCost = new Map<string, number>();
 
       // Process stock in
       stockIn?.forEach((item: any) => {
         const productId = item.product_id;
         const productName = item.products?.name || 'Unknown';
-
-        if (!productMap.has(productId)) {
-          productMap.set(productId, {
-            product_name: productName,
-            stock_in: 0,
-            stock_sold: 0,
-            remaining_stock: 0,
-            stock_returned: 0,
-            stock_value: 0
-          });
-        }
-
-        const existing = productMap.get(productId)!;
-        existing.stock_in += item.quantity;
-        productMap.set(productId, existing);
+        if (!productMap.has(productId)) productMap.set(productId, makeItem(productName));
+        if (item.products?.cost_price && !productCost.has(productId)) productCost.set(productId, item.products.cost_price);
+        productMap.get(productId)!.stock_in += item.quantity;
       });
 
       // Process stock sold
       transactions?.forEach((item: any) => {
         const productId = item.product_id;
         const productName = item.products?.name || 'Unknown';
-
-        if (!productMap.has(productId)) {
-          productMap.set(productId, {
-            product_name: productName,
-            stock_in: 0,
-            stock_sold: 0,
-            remaining_stock: 0,
-            stock_returned: 0,
-            stock_value: 0
-          });
-        }
-
-        const existing = productMap.get(productId)!;
-        existing.stock_sold += item.quantity;
-        productMap.set(productId, existing);
+        if (!productMap.has(productId)) productMap.set(productId, makeItem(productName));
+        if (item.products?.cost_price && !productCost.has(productId)) productCost.set(productId, item.products.cost_price);
+        const ex = productMap.get(productId)!;
+        ex.stock_sold += item.quantity;
+        ex.total_sales += Number(item.total_price) || 0;
       });
 
       // Process stock returned
       stockReturns?.forEach((item: any) => {
         const productId = item.product_id;
         const productName = item.products?.name || 'Unknown';
-
-        if (!productMap.has(productId)) {
-          productMap.set(productId, {
-            product_name: productName,
-            stock_in: 0,
-            stock_sold: 0,
-            remaining_stock: 0,
-            stock_returned: 0,
-            stock_value: 0
-          });
-        }
-
-        const existing = productMap.get(productId)!;
-        existing.stock_returned += item.quantity;
-        productMap.set(productId, existing);
+        if (!productMap.has(productId)) productMap.set(productId, makeItem(productName));
+        productMap.get(productId)!.stock_returned += item.quantity;
       });
 
       // Calculate remaining stock and value
       productMap.forEach((item, productId) => {
         // Get cost price from inventory
         const invItem = inventory?.find((inv: any) => inv.product_id === productId);
-        const costPrice = invItem?.products?.cost_price || 0;
+        const costPrice = invItem?.products?.cost_price || productCost.get(productId) || 0;
 
         // Calculate remaining stock = stock_in - stock_sold
         item.remaining_stock = item.stock_in - item.stock_sold;
         
         // Calculate stock value = remaining_stock * cost_price
         item.stock_value = item.remaining_stock * costPrice;
+        item.hpp_cost = item.stock_sold * costPrice;
+        item.hpp_pct = item.total_sales > 0 ? (item.hpp_cost / item.total_sales) * 100 : 0;
+        item.gp_pct = item.total_sales > 0 ? 100 - item.hpp_pct : 0;
       });
 
       const stockCardArray = Array.from(productMap.values())
