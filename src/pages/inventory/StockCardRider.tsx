@@ -748,18 +748,21 @@ export default function StockCardRider() {
                 <TableHead className="text-right">Sisa Stock</TableHead>
                 <TableHead className="text-right">Stock Kembali</TableHead>
                 <TableHead className="text-right">Nilai Stock</TableHead>
+                <TableHead className="text-right">Total Sales</TableHead>
+                <TableHead className="text-right">%HPP</TableHead>
+                <TableHead className="text-right">%Gross Profit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={10} className="text-center py-8">
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : stockCardData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     Tidak ada data untuk periode yang dipilih
                   </TableCell>
                 </TableRow>
@@ -779,42 +782,35 @@ export default function StockCardRider() {
                           currency: 'IDR'
                         }).format(item.stock_value)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(item.total_sales)}
+                      </TableCell>
+                      <TableCell className="text-right">{item.hpp_pct.toFixed(1)}%</TableCell>
+                      <TableCell className="text-right">{item.gp_pct.toFixed(1)}%</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell colSpan={2}>Total</TableCell>
-                    <TableCell className="text-right">{summaryData.totalStockIn}</TableCell>
-                    <TableCell className="text-right">{summaryData.totalStockSold}</TableCell>
-                    <TableCell className="text-right">{summaryData.totalRemainingStock}</TableCell>
-                    <TableCell className="text-right">{summaryData.totalStockReturned}</TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR'
-                      }).format(totalStockValue)}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow className="bg-muted/30">
-                    <TableCell colSpan={2}>Rata-rata</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalStockIn / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalStockSold / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalRemainingStock / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalStockReturned / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR'
-                      }).format(avgStockValue)}
-                    </TableCell>
-                  </TableRow>
+                  {(() => {
+                    const totSales = stockCardData.reduce((a, i) => a + i.total_sales, 0);
+                    const totHpp = stockCardData.reduce((a, i) => a + i.hpp_cost, 0);
+                    const hppPct = totSales > 0 ? (totHpp / totSales) * 100 : 0;
+                    return (
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell colSpan={2}>Total</TableCell>
+                        <TableCell className="text-right">{summaryData.totalStockIn}</TableCell>
+                        <TableCell className="text-right">{summaryData.totalStockSold}</TableCell>
+                        <TableCell className="text-right">{summaryData.totalRemainingStock}</TableCell>
+                        <TableCell className="text-right">{summaryData.totalStockReturned}</TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalStockValue)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totSales)}
+                        </TableCell>
+                        <TableCell className="text-right">{hppPct.toFixed(1)}%</TableCell>
+                        <TableCell className="text-right">{(totSales > 0 ? 100 - hppPct : 0).toFixed(1)}%</TableCell>
+                      </TableRow>
+                    );
+                  })()}
                 </>
               )}
             </TableBody>
