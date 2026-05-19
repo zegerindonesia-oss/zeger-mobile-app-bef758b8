@@ -29,6 +29,17 @@ interface StockCardItem {
   stock_value: number;
 }
 
+interface RiderSummary {
+  rider_id: string;
+  rider_name: string;
+  stock_sent: number;
+  stock_received: number;
+  stock_sold: number;
+  remaining_stock: number;
+  stock_returned: number;
+  stock_value: number;
+}
+
 export default function StockCardRider() {
   const { userProfile } = useAuth();
   const [riders, setRiders] = useState<Rider[]>([]);
@@ -38,6 +49,8 @@ export default function StockCardRider() {
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
   const [stockCardData, setStockCardData] = useState<StockCardItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [riderSummaries, setRiderSummaries] = useState<RiderSummary[]>([]);
+  const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryData, setSummaryData] = useState({
     totalStockIn: 0,
     totalStockSold: 0,
