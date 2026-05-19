@@ -659,22 +659,25 @@ export default function StockCardRider() {
                 <TableHead className="text-right">Sisa Stock</TableHead>
                 <TableHead className="text-right">Stock Kembali</TableHead>
                 <TableHead className="text-right">Nilai Stock</TableHead>
+                <TableHead className="text-right">Total Sales</TableHead>
+                <TableHead className="text-right">%HPP</TableHead>
+                <TableHead className="text-right">%Gross Profit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingSummary ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">Memuat data...</TableCell>
+                  <TableCell colSpan={11} className="text-center py-8">Memuat data...</TableCell>
                 </TableRow>
-              ) : riderSummaries.length === 0 ? (
+              ) : (selectedRider === 'all' ? riderSummaries : riderSummaries.filter(s => s.rider_id === selectedRider)).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     Tidak ada data untuk periode yang dipilih
                   </TableCell>
                 </TableRow>
               ) : (
                 <>
-                  {riderSummaries.map((s, idx) => (
+                  {(selectedRider === 'all' ? riderSummaries : riderSummaries.filter(s => s.rider_id === selectedRider)).map((s, idx) => (
                     <TableRow key={s.rider_id}>
                       <TableCell>{idx + 1}</TableCell>
                       <TableCell className="font-medium">{s.rider_name}</TableCell>
@@ -686,19 +689,37 @@ export default function StockCardRider() {
                       <TableCell className="text-right">
                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(s.stock_value)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(s.total_sales)}
+                      </TableCell>
+                      <TableCell className="text-right">{s.hpp_pct.toFixed(1)}%</TableCell>
+                      <TableCell className="text-right">{s.gp_pct.toFixed(1)}%</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell colSpan={2}>Total</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_sent, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_received, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_sold, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.remaining_stock, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_returned, 0)}</TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(riderSummaries.reduce((a, s) => a + s.stock_value, 0))}
-                    </TableCell>
-                  </TableRow>
+                  {(() => {
+                    const list = selectedRider === 'all' ? riderSummaries : riderSummaries.filter(s => s.rider_id === selectedRider);
+                    const totSales = list.reduce((a, s) => a + s.total_sales, 0);
+                    const totHpp = list.reduce((a, s) => a + s.hpp_cost, 0);
+                    const hppPct = totSales > 0 ? (totHpp / totSales) * 100 : 0;
+                    return (
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell colSpan={2}>Total</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_sent, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_received, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_sold, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.remaining_stock, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_returned, 0)}</TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(list.reduce((a, s) => a + s.stock_value, 0))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totSales)}
+                        </TableCell>
+                        <TableCell className="text-right">{hppPct.toFixed(1)}%</TableCell>
+                        <TableCell className="text-right">{(totSales > 0 ? 100 - hppPct : 0).toFixed(1)}%</TableCell>
+                      </TableRow>
+                    );
+                  })()}
                 </>
               )}
             </TableBody>
