@@ -27,6 +27,10 @@ interface StockCardItem {
   remaining_stock: number;
   stock_returned: number;
   stock_value: number;
+  total_sales: number;
+  hpp_cost: number;
+  hpp_pct: number;
+  gp_pct: number;
 }
 
 interface RiderSummary {
@@ -38,6 +42,10 @@ interface RiderSummary {
   remaining_stock: number;
   stock_returned: number;
   stock_value: number;
+  total_sales: number;
+  hpp_cost: number;
+  hpp_pct: number;
+  gp_pct: number;
 }
 
 export default function StockCardRider() {
@@ -86,9 +94,7 @@ export default function StockCardRider() {
     }
 
     setRiders(data || []);
-    if (data && data.length > 0) {
-      setSelectedRider(data[0].id);
-    }
+    setSelectedRider('all');
   };
 
   // Get date range based on filter - use Jakarta timezone
@@ -171,7 +177,7 @@ export default function StockCardRider() {
         // Stock terjual
         supabase
           .from('transaction_items')
-          .select('quantity, product_id, transactions!inner(rider_id, created_at, is_voided)')
+          .select('quantity, product_id, total_price, products(cost_price), transactions!inner(rider_id, created_at, is_voided)')
           .in('transactions.rider_id', riderIds)
           .eq('transactions.is_voided', false)
           .gte('transactions.created_at', `${start}T00:00:00+07:00`)
@@ -216,6 +222,10 @@ export default function StockCardRider() {
           remaining_stock: 0,
           stock_returned: 0,
           stock_value: 0,
+          total_sales: 0,
+          hpp_cost: 0,
+          hpp_pct: 0,
+          gp_pct: 0,
         });
       });
 
@@ -240,6 +250,11 @@ export default function StockCardRider() {
         if (s) s.stock_sold += it.quantity || 0;
         const key = `${riderId}::${it.product_id}`;
         soldPerProduct.set(key, (soldPerProduct.get(key) || 0) + (it.quantity || 0));
+        if (s) {
+          s.total_sales += Number(it.total_price) || 0;
+          const cost = costMap.get(key) ?? (it.products?.cost_price || 0);
+          s.hpp_cost += (it.quantity || 0) * cost;
+        }
       });
 
       (returnRes.data || []).forEach((it: any) => {
@@ -263,6 +278,8 @@ export default function StockCardRider() {
         });
         s.remaining_stock = remaining;
         s.stock_value = value;
+        s.hpp_pct = s.total_sales > 0 ? (s.hpp_cost / s.total_sales) * 100 : 0;
+        s.gp_pct = s.total_sales > 0 ? 100 - s.hpp_pct : 0;
       });
 
       const arr = Array.from(summaryMap.values())
@@ -282,12 +299,26 @@ export default function StockCardRider() {
 
     setLoading(true);
     const { start, end } = getDateRange();
+    const isAll = selectedRider === 'all';
+    const riderIds = riders.map(r => r.id);
+    const makeItem = (name: string): StockCardItem => ({
+      product_name: name,
+      stock_in: 0,
+      stock_sold: 0,
+      remaining_stock: 0,
+      stock_returned: 0,
+      stock_value: 0,
+      total_sales: 0,
+      hpp_cost: 0,
+      hpp_pct: 0,
+      gp_pct: 0,
+    });
 
     try {
       // Fetch stock movements (stock in) - only CONFIRMED/received stock
       // Stock is only valid after rider confirms ("Terima Stok")
       // selling_date = DATE(actual_delivery_date) = date rider confirmed
-      const { data: stockIn, error: stockInError } = await supabase
+      let stockInQuery = supabase
         .from('stock_movements')
         .select(`
           actual_delivery_date,
@@ -297,42 +328,46 @@ export default function StockCardRider() {
           status,
           products(name, cost_price)
         `)
-        .eq('rider_id', selectedRider)
         .in('movement_type', ['transfer', 'in', 'adjustment'])
         .eq('status', 'received')
         .not('actual_delivery_date', 'is', null)
         .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
         .lte('actual_delivery_date', `${end}T23:59:59+07:00`)
         .order('actual_delivery_date', { ascending: true });
+      stockInQuery = isAll ? stockInQuery.in('rider_id', riderIds) : stockInQuery.eq('rider_id', selectedRider);
+      const { data: stockIn, error: stockInError } = await stockInQuery;
 
       if (stockInError) throw stockInError;
 
       // Fetch transactions (stock sold)
-      const { data: transactions, error: transError } = await supabase
+      let txQuery = supabase
         .from('transaction_items')
         .select(`
           transactions!inner(created_at, rider_id, is_voided),
           quantity,
           product_id,
+          total_price,
           products(name, cost_price)
         `)
-        .eq('transactions.rider_id', selectedRider)
         .eq('transactions.is_voided', false)
         .gte('transactions.created_at', `${start}T00:00:00+07:00`)
         .lte('transactions.created_at', `${end}T23:59:59+07:00`);
+      txQuery = isAll ? txQuery.in('transactions.rider_id', riderIds) : txQuery.eq('transactions.rider_id', selectedRider);
+      const { data: transactions, error: transError } = await txQuery;
 
       if (transError) throw transError;
 
       // Fetch current inventory
-      const { data: inventory, error: invError } = await supabase
+      let invQuery = supabase
         .from('inventory')
-        .select('product_id, stock_quantity, products(name, cost_price)')
-        .eq('rider_id', selectedRider);
+        .select('product_id, stock_quantity, products(name, cost_price)');
+      invQuery = isAll ? invQuery.in('rider_id', riderIds) : invQuery.eq('rider_id', selectedRider);
+      const { data: inventory, error: invError } = await invQuery;
 
       if (invError) throw invError;
 
       // Fetch stock returns - use actual_delivery_date as the anchor date
-      const { data: stockReturns, error: returnError } = await supabase
+      let returnQuery = supabase
         .from('stock_movements')
         .select(`
           quantity,
@@ -340,90 +375,60 @@ export default function StockCardRider() {
           actual_delivery_date,
           products(name, cost_price)
         `)
-        .eq('rider_id', selectedRider)
         .in('movement_type', ['return', 'out'])
         .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
         .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
+      returnQuery = isAll ? returnQuery.in('rider_id', riderIds) : returnQuery.eq('rider_id', selectedRider);
+      const { data: stockReturns, error: returnError } = await returnQuery;
 
       if (returnError) throw returnError;
 
       // Process data by product
       const productMap = new Map<string, StockCardItem>();
+      const productCost = new Map<string, number>();
 
       // Process stock in
       stockIn?.forEach((item: any) => {
         const productId = item.product_id;
         const productName = item.products?.name || 'Unknown';
-
-        if (!productMap.has(productId)) {
-          productMap.set(productId, {
-            product_name: productName,
-            stock_in: 0,
-            stock_sold: 0,
-            remaining_stock: 0,
-            stock_returned: 0,
-            stock_value: 0
-          });
-        }
-
-        const existing = productMap.get(productId)!;
-        existing.stock_in += item.quantity;
-        productMap.set(productId, existing);
+        if (!productMap.has(productId)) productMap.set(productId, makeItem(productName));
+        if (item.products?.cost_price && !productCost.has(productId)) productCost.set(productId, item.products.cost_price);
+        productMap.get(productId)!.stock_in += item.quantity;
       });
 
       // Process stock sold
       transactions?.forEach((item: any) => {
         const productId = item.product_id;
         const productName = item.products?.name || 'Unknown';
-
-        if (!productMap.has(productId)) {
-          productMap.set(productId, {
-            product_name: productName,
-            stock_in: 0,
-            stock_sold: 0,
-            remaining_stock: 0,
-            stock_returned: 0,
-            stock_value: 0
-          });
-        }
-
-        const existing = productMap.get(productId)!;
-        existing.stock_sold += item.quantity;
-        productMap.set(productId, existing);
+        if (!productMap.has(productId)) productMap.set(productId, makeItem(productName));
+        if (item.products?.cost_price && !productCost.has(productId)) productCost.set(productId, item.products.cost_price);
+        const ex = productMap.get(productId)!;
+        ex.stock_sold += item.quantity;
+        ex.total_sales += Number(item.total_price) || 0;
       });
 
       // Process stock returned
       stockReturns?.forEach((item: any) => {
         const productId = item.product_id;
         const productName = item.products?.name || 'Unknown';
-
-        if (!productMap.has(productId)) {
-          productMap.set(productId, {
-            product_name: productName,
-            stock_in: 0,
-            stock_sold: 0,
-            remaining_stock: 0,
-            stock_returned: 0,
-            stock_value: 0
-          });
-        }
-
-        const existing = productMap.get(productId)!;
-        existing.stock_returned += item.quantity;
-        productMap.set(productId, existing);
+        if (!productMap.has(productId)) productMap.set(productId, makeItem(productName));
+        productMap.get(productId)!.stock_returned += item.quantity;
       });
 
       // Calculate remaining stock and value
       productMap.forEach((item, productId) => {
         // Get cost price from inventory
         const invItem = inventory?.find((inv: any) => inv.product_id === productId);
-        const costPrice = invItem?.products?.cost_price || 0;
+        const costPrice = invItem?.products?.cost_price || productCost.get(productId) || 0;
 
         // Calculate remaining stock = stock_in - stock_sold
         item.remaining_stock = item.stock_in - item.stock_sold;
         
         // Calculate stock value = remaining_stock * cost_price
         item.stock_value = item.remaining_stock * costPrice;
+        item.hpp_cost = item.stock_sold * costPrice;
+        item.hpp_pct = item.total_sales > 0 ? (item.hpp_cost / item.total_sales) * 100 : 0;
+        item.gp_pct = item.total_sales > 0 ? 100 - item.hpp_pct : 0;
       });
 
       const stockCardArray = Array.from(productMap.values())
@@ -502,6 +507,7 @@ export default function StockCardRider() {
                 <SelectValue placeholder="Pilih rider" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Semua Rider</SelectItem>
                 {riders.map((rider) => (
                   <SelectItem key={rider.id} value={rider.id}>
                     {rider.full_name}
@@ -653,22 +659,25 @@ export default function StockCardRider() {
                 <TableHead className="text-right">Sisa Stock</TableHead>
                 <TableHead className="text-right">Stock Kembali</TableHead>
                 <TableHead className="text-right">Nilai Stock</TableHead>
+                <TableHead className="text-right">Total Sales</TableHead>
+                <TableHead className="text-right">%HPP</TableHead>
+                <TableHead className="text-right">%Gross Profit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingSummary ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">Memuat data...</TableCell>
+                  <TableCell colSpan={11} className="text-center py-8">Memuat data...</TableCell>
                 </TableRow>
-              ) : riderSummaries.length === 0 ? (
+              ) : (selectedRider === 'all' ? riderSummaries : riderSummaries.filter(s => s.rider_id === selectedRider)).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     Tidak ada data untuk periode yang dipilih
                   </TableCell>
                 </TableRow>
               ) : (
                 <>
-                  {riderSummaries.map((s, idx) => (
+                  {(selectedRider === 'all' ? riderSummaries : riderSummaries.filter(s => s.rider_id === selectedRider)).map((s, idx) => (
                     <TableRow key={s.rider_id}>
                       <TableCell>{idx + 1}</TableCell>
                       <TableCell className="font-medium">{s.rider_name}</TableCell>
@@ -680,19 +689,37 @@ export default function StockCardRider() {
                       <TableCell className="text-right">
                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(s.stock_value)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(s.total_sales)}
+                      </TableCell>
+                      <TableCell className="text-right">{s.hpp_pct.toFixed(1)}%</TableCell>
+                      <TableCell className="text-right">{s.gp_pct.toFixed(1)}%</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell colSpan={2}>Total</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_sent, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_received, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_sold, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.remaining_stock, 0)}</TableCell>
-                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_returned, 0)}</TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(riderSummaries.reduce((a, s) => a + s.stock_value, 0))}
-                    </TableCell>
-                  </TableRow>
+                  {(() => {
+                    const list = selectedRider === 'all' ? riderSummaries : riderSummaries.filter(s => s.rider_id === selectedRider);
+                    const totSales = list.reduce((a, s) => a + s.total_sales, 0);
+                    const totHpp = list.reduce((a, s) => a + s.hpp_cost, 0);
+                    const hppPct = totSales > 0 ? (totHpp / totSales) * 100 : 0;
+                    return (
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell colSpan={2}>Total</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_sent, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_received, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_sold, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.remaining_stock, 0)}</TableCell>
+                        <TableCell className="text-right">{list.reduce((a, s) => a + s.stock_returned, 0)}</TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(list.reduce((a, s) => a + s.stock_value, 0))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totSales)}
+                        </TableCell>
+                        <TableCell className="text-right">{hppPct.toFixed(1)}%</TableCell>
+                        <TableCell className="text-right">{(totSales > 0 ? 100 - hppPct : 0).toFixed(1)}%</TableCell>
+                      </TableRow>
+                    );
+                  })()}
                 </>
               )}
             </TableBody>
@@ -721,18 +748,21 @@ export default function StockCardRider() {
                 <TableHead className="text-right">Sisa Stock</TableHead>
                 <TableHead className="text-right">Stock Kembali</TableHead>
                 <TableHead className="text-right">Nilai Stock</TableHead>
+                <TableHead className="text-right">Total Sales</TableHead>
+                <TableHead className="text-right">%HPP</TableHead>
+                <TableHead className="text-right">%Gross Profit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={10} className="text-center py-8">
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : stockCardData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     Tidak ada data untuk periode yang dipilih
                   </TableCell>
                 </TableRow>
@@ -752,42 +782,35 @@ export default function StockCardRider() {
                           currency: 'IDR'
                         }).format(item.stock_value)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(item.total_sales)}
+                      </TableCell>
+                      <TableCell className="text-right">{item.hpp_pct.toFixed(1)}%</TableCell>
+                      <TableCell className="text-right">{item.gp_pct.toFixed(1)}%</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell colSpan={2}>Total</TableCell>
-                    <TableCell className="text-right">{summaryData.totalStockIn}</TableCell>
-                    <TableCell className="text-right">{summaryData.totalStockSold}</TableCell>
-                    <TableCell className="text-right">{summaryData.totalRemainingStock}</TableCell>
-                    <TableCell className="text-right">{summaryData.totalStockReturned}</TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR'
-                      }).format(totalStockValue)}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow className="bg-muted/30">
-                    <TableCell colSpan={2}>Rata-rata</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalStockIn / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalStockSold / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalRemainingStock / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {stockCardData.length > 0 ? (summaryData.totalStockReturned / stockCardData.length).toFixed(1) : 0}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR'
-                      }).format(avgStockValue)}
-                    </TableCell>
-                  </TableRow>
+                  {(() => {
+                    const totSales = stockCardData.reduce((a, i) => a + i.total_sales, 0);
+                    const totHpp = stockCardData.reduce((a, i) => a + i.hpp_cost, 0);
+                    const hppPct = totSales > 0 ? (totHpp / totSales) * 100 : 0;
+                    return (
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell colSpan={2}>Total</TableCell>
+                        <TableCell className="text-right">{summaryData.totalStockIn}</TableCell>
+                        <TableCell className="text-right">{summaryData.totalStockSold}</TableCell>
+                        <TableCell className="text-right">{summaryData.totalRemainingStock}</TableCell>
+                        <TableCell className="text-right">{summaryData.totalStockReturned}</TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalStockValue)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totSales)}
+                        </TableCell>
+                        <TableCell className="text-right">{hppPct.toFixed(1)}%</TableCell>
+                        <TableCell className="text-right">{(totSales > 0 ? 100 - hppPct : 0).toFixed(1)}%</TableCell>
+                      </TableRow>
+                    );
+                  })()}
                 </>
               )}
             </TableBody>
