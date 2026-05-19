@@ -224,6 +224,10 @@ export default function StockCardRider() {
           remaining_stock: 0,
           stock_returned: 0,
           stock_value: 0,
+          total_sales: 0,
+          hpp_cost: 0,
+          hpp_pct: 0,
+          gp_pct: 0,
         });
       });
 
@@ -248,6 +252,11 @@ export default function StockCardRider() {
         if (s) s.stock_sold += it.quantity || 0;
         const key = `${riderId}::${it.product_id}`;
         soldPerProduct.set(key, (soldPerProduct.get(key) || 0) + (it.quantity || 0));
+        if (s) {
+          s.total_sales += Number(it.total_price) || 0;
+          const cost = costMap.get(key) ?? (it.products?.cost_price || 0);
+          s.hpp_cost += (it.quantity || 0) * cost;
+        }
       });
 
       (returnRes.data || []).forEach((it: any) => {
@@ -271,6 +280,8 @@ export default function StockCardRider() {
         });
         s.remaining_stock = remaining;
         s.stock_value = value;
+        s.hpp_pct = s.total_sales > 0 ? (s.hpp_cost / s.total_sales) * 100 : 0;
+        s.gp_pct = s.total_sales > 0 ? 100 - s.hpp_pct : 0;
       });
 
       const arr = Array.from(summaryMap.values())
