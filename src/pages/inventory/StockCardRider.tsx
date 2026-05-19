@@ -135,6 +135,148 @@ export default function StockCardRider() {
     }
   }, [selectedRider, dateFilter, customDateFrom, customDateTo]);
 
+  // Fetch all-rider summary
+  useEffect(() => {
+    if (riders.length > 0) {
+      fetchRiderSummaries();
+    }
+  }, [riders, dateFilter, customDateFrom, customDateTo]);
+
+  const fetchRiderSummaries = async () => {
+    if (riders.length === 0) return;
+    setLoadingSummary(true);
+    const { start, end } = getDateRange();
+    const riderIds = riders.map(r => r.id);
+
+    try {
+      const [sentRes, receivedRes, txRes, invRes, returnRes] = await Promise.all([
+        // Stock dikirim CK -> rider (semua transfer, anchor created_at)
+        supabase
+          .from('stock_movements')
+          .select('rider_id, quantity, product_id, products(cost_price)')
+          .in('rider_id', riderIds)
+          .in('movement_type', ['transfer', 'in', 'adjustment'])
+          .gte('created_at', `${start}T00:00:00+07:00`)
+          .lte('created_at', `${end}T23:59:59+07:00`),
+        // Stock diterima rider (status received, anchor actual_delivery_date)
+        supabase
+          .from('stock_movements')
+          .select('rider_id, quantity, product_id, products(cost_price)')
+          .in('rider_id', riderIds)
+          .in('movement_type', ['transfer', 'in', 'adjustment'])
+          .eq('status', 'received')
+          .not('actual_delivery_date', 'is', null)
+          .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
+          .lte('actual_delivery_date', `${end}T23:59:59+07:00`),
+        // Stock terjual
+        supabase
+          .from('transaction_items')
+          .select('quantity, product_id, transactions!inner(rider_id, created_at, is_voided)')
+          .in('transactions.rider_id', riderIds)
+          .eq('transactions.is_voided', false)
+          .gte('transactions.created_at', `${start}T00:00:00+07:00`)
+          .lte('transactions.created_at', `${end}T23:59:59+07:00`),
+        // Inventory utk harga pokok
+        supabase
+          .from('inventory')
+          .select('rider_id, product_id, products(cost_price)')
+          .in('rider_id', riderIds),
+        // Stock kembali
+        supabase
+          .from('stock_movements')
+          .select('rider_id, quantity, product_id, products(cost_price)')
+          .in('rider_id', riderIds)
+          .in('movement_type', ['return', 'out'])
+          .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
+          .lte('actual_delivery_date', `${end}T23:59:59+07:00`),
+      ]);
+
+      if (sentRes.error) throw sentRes.error;
+      if (receivedRes.error) throw receivedRes.error;
+      if (txRes.error) throw txRes.error;
+      if (invRes.error) throw invRes.error;
+      if (returnRes.error) throw returnRes.error;
+
+      // Cost price map per (rider, product)
+      const costMap = new Map<string, number>();
+      (invRes.data || []).forEach((it: any) => {
+        costMap.set(`${it.rider_id}::${it.product_id}`, it.products?.cost_price || 0);
+      });
+      const getCost = (riderId: string, productId: string, fallback: any) =>
+        costMap.get(`${riderId}::${productId}`) ?? (fallback?.cost_price || 0);
+
+      const summaryMap = new Map<string, RiderSummary>();
+      riders.forEach(r => {
+        summaryMap.set(r.id, {
+          rider_id: r.id,
+          rider_name: r.full_name,
+          stock_sent: 0,
+          stock_received: 0,
+          stock_sold: 0,
+          remaining_stock: 0,
+          stock_returned: 0,
+          stock_value: 0,
+        });
+      });
+
+      (sentRes.data || []).forEach((it: any) => {
+        const s = summaryMap.get(it.rider_id);
+        if (s) s.stock_sent += it.quantity || 0;
+      });
+
+      // Track received per product for valuation
+      const receivedPerProduct = new Map<string, number>(); // riderId::productId -> qty received
+      (receivedRes.data || []).forEach((it: any) => {
+        const s = summaryMap.get(it.rider_id);
+        if (s) s.stock_received += it.quantity || 0;
+        const key = `${it.rider_id}::${it.product_id}`;
+        receivedPerProduct.set(key, (receivedPerProduct.get(key) || 0) + (it.quantity || 0));
+      });
+
+      const soldPerProduct = new Map<string, number>();
+      (txRes.data || []).forEach((it: any) => {
+        const riderId = it.transactions?.rider_id;
+        const s = summaryMap.get(riderId);
+        if (s) s.stock_sold += it.quantity || 0;
+        const key = `${riderId}::${it.product_id}`;
+        soldPerProduct.set(key, (soldPerProduct.get(key) || 0) + (it.quantity || 0));
+      });
+
+      (returnRes.data || []).forEach((it: any) => {
+        const s = summaryMap.get(it.rider_id);
+        if (s) s.stock_returned += it.quantity || 0;
+      });
+
+      // Sisa stock & nilai stock = sum per product (received - sold) * cost
+      summaryMap.forEach((s) => {
+        let remaining = 0;
+        let value = 0;
+        const productIds = new Set<string>();
+        receivedPerProduct.forEach((_, k) => { if (k.startsWith(`${s.rider_id}::`)) productIds.add(k.split('::')[1]); });
+        soldPerProduct.forEach((_, k) => { if (k.startsWith(`${s.rider_id}::`)) productIds.add(k.split('::')[1]); });
+        productIds.forEach((pid) => {
+          const recv = receivedPerProduct.get(`${s.rider_id}::${pid}`) || 0;
+          const sold = soldPerProduct.get(`${s.rider_id}::${pid}`) || 0;
+          const rem = recv - sold;
+          remaining += rem;
+          value += rem * (costMap.get(`${s.rider_id}::${pid}`) || 0);
+        });
+        s.remaining_stock = remaining;
+        s.stock_value = value;
+      });
+
+      const arr = Array.from(summaryMap.values())
+        .filter(s => s.stock_sent > 0 || s.stock_received > 0 || s.stock_sold > 0 || s.stock_returned > 0 || s.remaining_stock !== 0)
+        .sort((a, b) => a.rider_name.localeCompare(b.rider_name));
+      setRiderSummaries(arr);
+    } catch (error: any) {
+      console.error('Error fetching rider summaries:', error);
+      toast.error(`Gagal memuat resume rider: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
   const fetchStockCardData = async () => {
     if (!selectedRider) return;
 
