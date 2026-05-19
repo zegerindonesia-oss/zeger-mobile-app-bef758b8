@@ -94,9 +94,7 @@ export default function StockCardRider() {
     }
 
     setRiders(data || []);
-    if (data && data.length > 0) {
-      setSelectedRider(data[0].id);
-    }
+    setSelectedRider('all');
   };
 
   // Get date range based on filter - use Jakarta timezone
@@ -509,6 +507,7 @@ export default function StockCardRider() {
                 <SelectValue placeholder="Pilih rider" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Semua Rider</SelectItem>
                 {riders.map((rider) => (
                   <SelectItem key={rider.id} value={rider.id}>
                     {rider.full_name}
