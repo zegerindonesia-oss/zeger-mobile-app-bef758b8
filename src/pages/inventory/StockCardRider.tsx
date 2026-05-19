@@ -27,6 +27,10 @@ interface StockCardItem {
   remaining_stock: number;
   stock_returned: number;
   stock_value: number;
+  total_sales: number;
+  hpp_cost: number;
+  hpp_pct: number;
+  gp_pct: number;
 }
 
 interface RiderSummary {
@@ -38,6 +42,10 @@ interface RiderSummary {
   remaining_stock: number;
   stock_returned: number;
   stock_value: number;
+  total_sales: number;
+  hpp_cost: number;
+  hpp_pct: number;
+  gp_pct: number;
 }
 
 export default function StockCardRider() {
