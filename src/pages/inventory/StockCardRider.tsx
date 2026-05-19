@@ -636,6 +636,70 @@ export default function StockCardRider() {
         </Card>
       </div>
 
+      {/* Resume All Riders */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Resume Stok Rider</h2>
+        </div>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>No</TableHead>
+                <TableHead>Nama Rider</TableHead>
+                <TableHead className="text-right">Stock dikirim (CK)</TableHead>
+                <TableHead className="text-right">Stock diterima Rider</TableHead>
+                <TableHead className="text-right">Stock Terjual</TableHead>
+                <TableHead className="text-right">Sisa Stock</TableHead>
+                <TableHead className="text-right">Stock Kembali</TableHead>
+                <TableHead className="text-right">Nilai Stock</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingSummary ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">Memuat data...</TableCell>
+                </TableRow>
+              ) : riderSummaries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    Tidak ada data untuk periode yang dipilih
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <>
+                  {riderSummaries.map((s, idx) => (
+                    <TableRow key={s.rider_id}>
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell className="font-medium">{s.rider_name}</TableCell>
+                      <TableCell className="text-right">{s.stock_sent}</TableCell>
+                      <TableCell className="text-right">{s.stock_received}</TableCell>
+                      <TableCell className="text-right">{s.stock_sold}</TableCell>
+                      <TableCell className="text-right">{s.remaining_stock}</TableCell>
+                      <TableCell className="text-right">{s.stock_returned}</TableCell>
+                      <TableCell className="text-right">
+                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(s.stock_value)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell colSpan={2}>Total</TableCell>
+                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_sent, 0)}</TableCell>
+                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_received, 0)}</TableCell>
+                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_sold, 0)}</TableCell>
+                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.remaining_stock, 0)}</TableCell>
+                    <TableCell className="text-right">{riderSummaries.reduce((a, s) => a + s.stock_returned, 0)}</TableCell>
+                    <TableCell className="text-right">
+                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(riderSummaries.reduce((a, s) => a + s.stock_value, 0))}
+                    </TableCell>
+                  </TableRow>
+                </>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
       {/* Stock Card Table */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
