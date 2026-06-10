@@ -209,19 +209,28 @@ export const CashDepositHistory = () => {
         from += PAGE_SIZE;
       }
 
-      // Fetch operational expenses
-      let expenseQuery = supabase
-        .from('daily_operational_expenses')
-        .select('rider_id, expense_date, amount')
-        .gte('expense_date', startYMD)
-        .lte('expense_date', endYMD);
+      // Fetch operational expenses (paginated)
+      let expenses: any[] = [];
+      let expFrom = 0;
+      while (true) {
+        let pageQuery = supabase
+          .from('daily_operational_expenses')
+          .select('rider_id, expense_date, amount')
+          .gte('expense_date', startYMD)
+          .lte('expense_date', endYMD)
+          .range(expFrom, expFrom + PAGE_SIZE - 1);
 
-      if (selectedRider !== 'all') {
-        expenseQuery = expenseQuery.eq('rider_id', selectedRider);
+        if (selectedRider !== 'all') {
+          pageQuery = pageQuery.eq('rider_id', selectedRider);
+        }
+
+        const { data: page, error: expError } = await pageQuery;
+        if (expError) throw expError;
+        if (!page || page.length === 0) break;
+        expenses = expenses.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        expFrom += PAGE_SIZE;
       }
-
-      const { data: expenses, error: expError } = await expenseQuery;
-      if (expError) throw expError;
 
       // Process data by rider and date
       const depositMap = new Map<string, CashDepositData>();
