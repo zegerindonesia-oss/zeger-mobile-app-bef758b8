@@ -175,42 +175,62 @@ export const CashDepositHistory = () => {
       const startYMD = formatYMD(startDate);
       const endYMD = formatYMD(endDate);
 
-      // Fetch transactions (exclude voided transactions)
-      let transactionQuery = supabase
-        .from('transactions')
-        .select(`
-          id,
-          transaction_date,
-          final_amount,
-          payment_method,
-          rider_id,
-          profiles!transactions_rider_id_fkey(full_name)
-        `)
-        .eq('status', 'completed')
-        .eq('is_voided', false)
-        .gte('transaction_date', `${startYMD}T00:00:00+07:00`)
-        .lte('transaction_date', `${endYMD}T23:59:59+07:00`);
+      // Fetch transactions (exclude voided transactions) — paginate to bypass 1000-row limit
+      const PAGE_SIZE = 1000;
+      let transactions: any[] = [];
+      let from = 0;
+      while (true) {
+        let pageQuery = supabase
+          .from('transactions')
+          .select(`
+            id,
+            transaction_date,
+            final_amount,
+            payment_method,
+            rider_id,
+            profiles!transactions_rider_id_fkey(full_name)
+          `)
+          .eq('status', 'completed')
+          .eq('is_voided', false)
+          .gte('transaction_date', `${startYMD}T00:00:00+07:00`)
+          .lte('transaction_date', `${endYMD}T23:59:59+07:00`)
+          .order('transaction_date', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
 
-      if (selectedRider !== 'all') {
-        transactionQuery = transactionQuery.eq('rider_id', selectedRider);
+        if (selectedRider !== 'all') {
+          pageQuery = pageQuery.eq('rider_id', selectedRider);
+        }
+
+        const { data: page, error: transError } = await pageQuery;
+        if (transError) throw transError;
+        if (!page || page.length === 0) break;
+        transactions = transactions.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      const { data: transactions, error: transError } = await transactionQuery;
-      if (transError) throw transError;
+      // Fetch operational expenses (paginated)
+      let expenses: any[] = [];
+      let expFrom = 0;
+      while (true) {
+        let pageQuery = supabase
+          .from('daily_operational_expenses')
+          .select('rider_id, expense_date, amount')
+          .gte('expense_date', startYMD)
+          .lte('expense_date', endYMD)
+          .range(expFrom, expFrom + PAGE_SIZE - 1);
 
-      // Fetch operational expenses
-      let expenseQuery = supabase
-        .from('daily_operational_expenses')
-        .select('rider_id, expense_date, amount')
-        .gte('expense_date', startYMD)
-        .lte('expense_date', endYMD);
+        if (selectedRider !== 'all') {
+          pageQuery = pageQuery.eq('rider_id', selectedRider);
+        }
 
-      if (selectedRider !== 'all') {
-        expenseQuery = expenseQuery.eq('rider_id', selectedRider);
+        const { data: page, error: expError } = await pageQuery;
+        if (expError) throw expError;
+        if (!page || page.length === 0) break;
+        expenses = expenses.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        expFrom += PAGE_SIZE;
       }
-
-      const { data: expenses, error: expError } = await expenseQuery;
-      if (expError) throw expError;
 
       // Process data by rider and date
       const depositMap = new Map<string, CashDepositData>();
