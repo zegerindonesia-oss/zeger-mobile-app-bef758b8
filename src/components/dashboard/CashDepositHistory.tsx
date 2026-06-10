@@ -560,33 +560,84 @@ export const CashDepositHistory = () => {
                   <TableHead>No</TableHead>
                   <TableHead>Nama Rider</TableHead>
                   <TableHead className="text-right">Total Sales</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Penjualan Tunai</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">QRIS</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Transfer Bank</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Beban Operasional</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Total Setoran Tunai</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {resumeData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={14} className="text-center text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
                 ) : (
-                  resumeData.map((item, idx) => (
-                    <TableRow key={item.rider_id}>
-                      <TableCell>{idx + 1}</TableCell>
-                      <TableCell className="font-medium">{item.rider_name}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.total_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.cash_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.qris_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.transfer_sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.operational_expenses)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(item.cash_deposit)}</TableCell>
-                    </TableRow>
-                  ))
+                  <>
+                    {resumeData.map((item, idx) => {
+                      const ts = item.total_sales;
+                      const pct = (v: number) => ts > 0 ? `${((v / ts) * 100).toFixed(1)}%` : '0%';
+                      const income = "text-right text-green-600";
+                      const incomePct = "text-right text-green-600 text-xs";
+                      const expense = "text-right text-red-600";
+                      const expensePct = "text-right text-red-600 text-xs";
+                      return (
+                        <TableRow key={item.rider_id}>
+                          <TableCell>{idx + 1}</TableCell>
+                          <TableCell className="font-medium">{item.rider_name}</TableCell>
+                          <TableCell className={income}>{formatCurrency(item.total_sales)}</TableCell>
+                          <TableCell className={incomePct}>100%</TableCell>
+                          <TableCell className={income}>{formatCurrency(item.cash_sales)}</TableCell>
+                          <TableCell className={incomePct}>{pct(item.cash_sales)}</TableCell>
+                          <TableCell className={income}>{formatCurrency(item.qris_sales)}</TableCell>
+                          <TableCell className={incomePct}>{pct(item.qris_sales)}</TableCell>
+                          <TableCell className={income}>{formatCurrency(item.transfer_sales)}</TableCell>
+                          <TableCell className={incomePct}>{pct(item.transfer_sales)}</TableCell>
+                          <TableCell className={expense}>{formatCurrency(item.operational_expenses)}</TableCell>
+                          <TableCell className={expensePct}>{pct(item.operational_expenses)}</TableCell>
+                          <TableCell className="text-right font-semibold text-green-600">{formatCurrency(item.cash_deposit)}</TableCell>
+                          <TableCell className={incomePct}>{pct(item.cash_deposit)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {(() => {
+                      const sum = resumeData.reduce((acc, c) => ({
+                        total_sales: acc.total_sales + c.total_sales,
+                        cash_sales: acc.cash_sales + c.cash_sales,
+                        qris_sales: acc.qris_sales + c.qris_sales,
+                        transfer_sales: acc.transfer_sales + c.transfer_sales,
+                        operational_expenses: acc.operational_expenses + c.operational_expenses,
+                        cash_deposit: acc.cash_deposit + c.cash_deposit,
+                      }), { total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0, operational_expenses: 0, cash_deposit: 0 });
+                      const ts = sum.total_sales;
+                      const pct = (v: number) => ts > 0 ? `${((v / ts) * 100).toFixed(1)}%` : '0%';
+                      return (
+                        <TableRow className="bg-muted/50 font-bold">
+                          <TableCell colSpan={2}>TOTAL</TableCell>
+                          <TableCell className="text-right text-green-600">{formatCurrency(sum.total_sales)}</TableCell>
+                          <TableCell className="text-right text-green-600 text-xs">100%</TableCell>
+                          <TableCell className="text-right text-green-600">{formatCurrency(sum.cash_sales)}</TableCell>
+                          <TableCell className="text-right text-green-600 text-xs">{pct(sum.cash_sales)}</TableCell>
+                          <TableCell className="text-right text-green-600">{formatCurrency(sum.qris_sales)}</TableCell>
+                          <TableCell className="text-right text-green-600 text-xs">{pct(sum.qris_sales)}</TableCell>
+                          <TableCell className="text-right text-green-600">{formatCurrency(sum.transfer_sales)}</TableCell>
+                          <TableCell className="text-right text-green-600 text-xs">{pct(sum.transfer_sales)}</TableCell>
+                          <TableCell className="text-right text-red-600">{formatCurrency(sum.operational_expenses)}</TableCell>
+                          <TableCell className="text-right text-red-600 text-xs">{pct(sum.operational_expenses)}</TableCell>
+                          <TableCell className="text-right text-green-600">{formatCurrency(sum.cash_deposit)}</TableCell>
+                          <TableCell className="text-right text-green-600 text-xs">{pct(sum.cash_deposit)}</TableCell>
+                        </TableRow>
+                      );
+                    })()}
+                  </>
                 )}
               </TableBody>
             </Table>
