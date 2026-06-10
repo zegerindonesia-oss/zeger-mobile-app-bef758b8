@@ -175,28 +175,39 @@ export const CashDepositHistory = () => {
       const startYMD = formatYMD(startDate);
       const endYMD = formatYMD(endDate);
 
-      // Fetch transactions (exclude voided transactions)
-      let transactionQuery = supabase
-        .from('transactions')
-        .select(`
-          id,
-          transaction_date,
-          final_amount,
-          payment_method,
-          rider_id,
-          profiles!transactions_rider_id_fkey(full_name)
-        `)
-        .eq('status', 'completed')
-        .eq('is_voided', false)
-        .gte('transaction_date', `${startYMD}T00:00:00+07:00`)
-        .lte('transaction_date', `${endYMD}T23:59:59+07:00`);
+      // Fetch transactions (exclude voided transactions) — paginate to bypass 1000-row limit
+      const PAGE_SIZE = 1000;
+      let transactions: any[] = [];
+      let from = 0;
+      while (true) {
+        let pageQuery = supabase
+          .from('transactions')
+          .select(`
+            id,
+            transaction_date,
+            final_amount,
+            payment_method,
+            rider_id,
+            profiles!transactions_rider_id_fkey(full_name)
+          `)
+          .eq('status', 'completed')
+          .eq('is_voided', false)
+          .gte('transaction_date', `${startYMD}T00:00:00+07:00`)
+          .lte('transaction_date', `${endYMD}T23:59:59+07:00`)
+          .order('transaction_date', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
 
-      if (selectedRider !== 'all') {
-        transactionQuery = transactionQuery.eq('rider_id', selectedRider);
+        if (selectedRider !== 'all') {
+          pageQuery = pageQuery.eq('rider_id', selectedRider);
+        }
+
+        const { data: page, error: transError } = await pageQuery;
+        if (transError) throw transError;
+        if (!page || page.length === 0) break;
+        transactions = transactions.concat(page);
+        if (page.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
-
-      const { data: transactions, error: transError } = await transactionQuery;
-      if (transError) throw transError;
 
       // Fetch operational expenses
       let expenseQuery = supabase
