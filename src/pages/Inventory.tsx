@@ -960,12 +960,14 @@ export default function Inventory() {
 
               {/* Tabel 3: Riwayat Detail per Item */}
               {(() => {
-                type DetailRow = { date: string; rider: string; qty: number; product: string; status: string; value: number };
+                type DetailRow = { date: string; dateTime: string; rider: string; qty: number; product: string; status: string; value: number };
                 const detailRows: DetailRow[] = [];
                 transferHistory.forEach((g) => {
                   g.items.forEach((it) => {
+                    const d = new Date(it.created_at);
                     detailRows.push({
-                      date: new Date(it.created_at).toLocaleDateString('id-ID'),
+                      date: d.toLocaleDateString('id-ID'),
+                      dateTime: `${d.toLocaleDateString('id-ID')} ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
                       rider: g.rider_name || '-',
                       qty: it.quantity,
                       product: it.product?.name || '-',
@@ -989,6 +991,7 @@ export default function Inventory() {
                             <TableHead className="text-right">Jumlah Stok</TableHead>
                             <TableHead>Nama Menu</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Tanggal & Jam</TableHead>
                             <TableHead className="text-right">Total Nilai Stok</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1004,11 +1007,12 @@ export default function Inventory() {
                                   {r.status}
                                 </Badge>
                               </TableCell>
+                              <TableCell>{r.dateTime}</TableCell>
                               <TableCell className="text-right">Rp {r.value.toLocaleString('id-ID')}</TableCell>
                             </TableRow>
                           ))}
                           {detailRows.length === 0 && (
-                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Tidak ada data</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Tidak ada data</TableCell></TableRow>
                           )}
                         </TableBody>
                         {detailRows.length > 0 && (
@@ -1016,7 +1020,7 @@ export default function Inventory() {
                             <TableRow>
                               <TableCell colSpan={2} className="font-bold">TOTAL</TableCell>
                               <TableCell className="text-right font-bold">{totalQty}</TableCell>
-                              <TableCell colSpan={2}></TableCell>
+                              <TableCell colSpan={3}></TableCell>
                               <TableCell className="text-right font-bold">Rp {totalValue.toLocaleString('id-ID')}</TableCell>
                             </TableRow>
                           </TableFooter>
