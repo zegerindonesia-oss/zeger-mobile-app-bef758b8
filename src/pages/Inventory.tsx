@@ -813,10 +813,49 @@ export default function Inventory() {
                   </Select>
                 </div>
                 <div>
+                  <Label>Tipe:</Label>
+                  <Select value={movementTypeFilter} onValueChange={(v: any) => setMovementTypeFilter(v)}>
+                    <SelectTrigger className="w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua</SelectItem>
+                      <SelectItem value="transfer">Pengiriman Stok</SelectItem>
+                      <SelectItem value="return">Pengembalian Stok</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Periode:</Label>
+                  <Select
+                    value={periodPreset}
+                    onValueChange={(v: any) => {
+                      setPeriodPreset(v);
+                      const now = new Date();
+                      if (v === 'today') {
+                        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        setStartDate(d); setEndDate(d);
+                      } else if (v === 'yesterday') {
+                        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                        setStartDate(d); setEndDate(d);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">Hari Ini</SelectItem>
+                      <SelectItem value="yesterday">Kemarin</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>Tanggal Awal:</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-40">
+                      <Button variant="outline" className="w-40" disabled={periodPreset !== 'custom'}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {format(startDate, "dd/MM/yyyy")}
                       </Button>
@@ -830,7 +869,7 @@ export default function Inventory() {
                   <Label>Tanggal Akhir:</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-40">
+                      <Button variant="outline" className="w-40" disabled={periodPreset !== 'custom'}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {format(endDate, "dd/MM/yyyy")}
                       </Button>
@@ -846,6 +885,140 @@ export default function Inventory() {
                   </Button>
                 </div>
               </div>
+
+              {/* Tabel 2: Resume per Rider */}
+              {(() => {
+                type ResumeRow = { rider_name: string; status_label: string; qty: number; value: number };
+                const resumeMap: Record<string, ResumeRow> = {};
+                transferHistory.forEach((g) => {
+                  g.items.forEach((it) => {
+                    const statusLabel = it.movement_type === 'return' ? 'Diterima' : 'Dikirim';
+                    const key = `${g.rider_name}__${statusLabel}`;
+                    if (!resumeMap[key]) {
+                      resumeMap[key] = { rider_name: g.rider_name || '-', status_label: statusLabel, qty: 0, value: 0 };
+                    }
+                    resumeMap[key].qty += it.quantity;
+                    resumeMap[key].value += it.item_value || 0;
+                  });
+                });
+                const resumeRows = Object.values(resumeMap).sort((a, b) =>
+                  a.rider_name.localeCompare(b.rider_name) || a.status_label.localeCompare(b.status_label)
+                );
+                const totalQty = resumeRows.reduce((s, r) => s + r.qty, 0);
+                const totalValue = resumeRows.reduce((s, r) => s + r.value, 0);
+                return (
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-base">Resume Transfer Stok</CardTitle></CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nama Rider</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Jumlah Stok</TableHead>
+                            <TableHead className="text-right">Total Nilai</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {resumeRows.map((r, i) => (
+                            <TableRow key={i}>
+                              <TableCell>{r.rider_name}</TableCell>
+                              <TableCell>
+                                <Badge className={r.status_label === 'Diterima' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'} variant="outline">
+                                  {r.status_label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">{r.qty}</TableCell>
+                              <TableCell className="text-right">Rp {r.value.toLocaleString('id-ID')}</TableCell>
+                            </TableRow>
+                          ))}
+                          {resumeRows.length === 0 && (
+                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Tidak ada data</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                        {resumeRows.length > 0 && (
+                          <TableFooter>
+                            <TableRow>
+                              <TableCell colSpan={2} className="font-bold">TOTAL</TableCell>
+                              <TableCell className="text-right font-bold">{totalQty}</TableCell>
+                              <TableCell className="text-right font-bold">Rp {totalValue.toLocaleString('id-ID')}</TableCell>
+                            </TableRow>
+                          </TableFooter>
+                        )}
+                      </Table>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+              {/* Tabel 3: Riwayat Detail per Item */}
+              {(() => {
+                type DetailRow = { date: string; rider: string; qty: number; product: string; status: string; value: number };
+                const detailRows: DetailRow[] = [];
+                transferHistory.forEach((g) => {
+                  g.items.forEach((it) => {
+                    detailRows.push({
+                      date: new Date(it.created_at).toLocaleDateString('id-ID'),
+                      rider: g.rider_name || '-',
+                      qty: it.quantity,
+                      product: it.product?.name || '-',
+                      status: it.movement_type === 'return' ? 'Diterima' : 'Dikirim',
+                      value: it.item_value || 0,
+                    });
+                  });
+                });
+                detailRows.sort((a, b) => a.date.localeCompare(b.date));
+                const totalQty = detailRows.reduce((s, r) => s + r.qty, 0);
+                const totalValue = detailRows.reduce((s, r) => s + r.value, 0);
+                return (
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-base">Riwayat Transfer Stok</CardTitle></CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Tanggal</TableHead>
+                            <TableHead>Nama Rider</TableHead>
+                            <TableHead className="text-right">Jumlah Stok</TableHead>
+                            <TableHead>Nama Menu</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Total Nilai Stok</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {detailRows.map((r, i) => (
+                            <TableRow key={i}>
+                              <TableCell>{r.date}</TableCell>
+                              <TableCell>{r.rider}</TableCell>
+                              <TableCell className="text-right">{r.qty}</TableCell>
+                              <TableCell>{r.product}</TableCell>
+                              <TableCell>
+                                <Badge className={r.status === 'Diterima' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'} variant="outline">
+                                  {r.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">Rp {r.value.toLocaleString('id-ID')}</TableCell>
+                            </TableRow>
+                          ))}
+                          {detailRows.length === 0 && (
+                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Tidak ada data</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                        {detailRows.length > 0 && (
+                          <TableFooter>
+                            <TableRow>
+                              <TableCell colSpan={2} className="font-bold">TOTAL</TableCell>
+                              <TableCell className="text-right font-bold">{totalQty}</TableCell>
+                              <TableCell colSpan={2}></TableCell>
+                              <TableCell className="text-right font-bold">Rp {totalValue.toLocaleString('id-ID')}</TableCell>
+                            </TableRow>
+                          </TableFooter>
+                        )}
+                      </Table>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               <div className="space-y-4">
                 {transferHistory.map((transferGroup) => (
