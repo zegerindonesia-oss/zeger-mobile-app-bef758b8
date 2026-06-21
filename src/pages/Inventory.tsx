@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { EnhancedShiftReport } from "@/components/inventory/EnhancedShiftReport";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,8 @@ export default function Inventory() {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [transferHistory, setTransferHistory] = useState<TransferHistoryGroup[]>([]);
+  const [movementTypeFilter, setMovementTypeFilter] = useState<'all' | 'transfer' | 'return'>('all');
+  const [periodPreset, setPeriodPreset] = useState<'today' | 'yesterday' | 'custom'>('custom');
   
   // Inventory adjustment states
   const [stockAdjustmentItems, setStockAdjustmentItems] = useState<StockAdjustmentItem[]>([]);
