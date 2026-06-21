@@ -358,6 +358,9 @@ export default function Inventory() {
       if (selectedUser !== "all") {
         query = query.eq('rider_id', selectedUser);
       }
+      if (movementTypeFilter !== 'all') {
+        query = query.eq('movement_type', movementTypeFilter);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
