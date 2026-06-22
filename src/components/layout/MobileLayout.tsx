@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { MobileSidebar } from "./MobileSidebar";
+import { Outlet } from "react-router-dom";
 import { MobileHeader } from "./MobileHeader";
+import { MobileBottomDock } from "./MobileBottomDock";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { ShoppingCart, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { SyncButton } from "@/components/common/SyncButton";
@@ -32,9 +30,7 @@ export const MobileLayout = ({ children }: MobileLayoutProps) => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [branch, setBranch] = useState<Branch | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -70,10 +66,6 @@ export const MobileLayout = ({ children }: MobileLayoutProps) => {
     }
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white">
@@ -85,35 +77,25 @@ export const MobileLayout = ({ children }: MobileLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-white via-red-50/30 to-white overflow-x-hidden">
-        <MobileSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        
         <div className="flex-1 flex flex-col max-w-full">
           <MobileHeader 
-            onToggleSidebar={toggleSidebar}
             profile={profile}
             branch={branch}
           />
           
-          <main className="flex-1 overflow-auto pb-28 mt-16 px-safe">
+          <main className="flex-1 overflow-auto pb-24 mt-16 px-safe">
             <div className="max-w-full overflow-x-hidden">
               {children || <Outlet />}
             </div>
           </main>
-          
-          {/* Fixed Bottom Action Buttons */}
-          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-            {/* Sync Button */}
-            <SyncButton variant="outline" size="icon" className="rounded-full w-12 h-12 bg-white border-2 border-blue-200 shadow-lg hover:bg-blue-50" />
-            
-            {/* Shopping Cart Button */}
-            <Button
-              size="lg"
-              className="rounded-full w-14 h-14 bg-red-600 hover:bg-red-700 shadow-lg"
-              onClick={() => navigate('/mobile-seller?tab=selling')}
-            >
-              <ShoppingCart className="h-6 w-6 text-white" />
-            </Button>
+
+          {/* Sync floating button (kept, smaller, above dock) */}
+          <div className="fixed bottom-20 right-3 z-40">
+            <SyncButton variant="outline" size="icon" className="rounded-full w-10 h-10 bg-white border-2 border-blue-200 shadow-lg hover:bg-blue-50" />
           </div>
+
+          {/* Bottom dock navigation */}
+          <MobileBottomDock />
         </div>
       </div>
     </SidebarProvider>
