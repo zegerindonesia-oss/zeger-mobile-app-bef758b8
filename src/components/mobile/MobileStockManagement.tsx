@@ -1472,110 +1472,25 @@ const MobileStockManagement = () => {
 
                      {!activeShift?.report_submitted ? (
                       <div className="space-y-4">
-                        {/* Operational Expenses Input */}
-                        <Card>
+                        {/* Operational Expenses - FROZEN for riders */}
+                        <Card className="border-amber-300 bg-amber-50">
                           <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-amber-800 text-base">
                               <FileText className="h-5 w-5" />
                               Beban Operasional
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="space-y-4">
-                             {operationalExpenses.map((expense, index) => (
-                               <div key={index} className="border rounded-lg p-3 space-y-3">
-                                 <div className="grid grid-cols-2 gap-3">
-                                    <Input
-                                      placeholder="Jenis beban"
-                                      value={expense.type}
-                                      onChange={(e) => updateExpense(index, 'type', e.target.value)}
-                                      disabled={activeShift?.report_submitted}
-                                    />
-                                    <Input
-                                      type="number"
-                                      placeholder="Jumlah"
-                                      value={expense.amount}
-                                      onChange={(e) => updateExpense(index, 'amount', e.target.value)}
-                                      disabled={activeShift?.report_submitted}
-                                    />
-                                 </div>
-                                 <div className="flex gap-3">
-                                    <Input
-                                      placeholder="Deskripsi (opsional)"
-                                      value={expense.description}
-                                      onChange={(e) => updateExpense(index, 'description', e.target.value)}
-                                      className="flex-1"
-                                      disabled={activeShift?.report_submitted}
-                                    />
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      capture="environment"
-                                      style={{ display: 'none' }}
-                                      id={`receipt-${index}`}
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          const newExpensePhotos = [...expensePhotos];
-                                          newExpensePhotos[index] = file;
-                                          setExpensePhotos(newExpensePhotos);
-                                          toast.success("Foto struk berhasil diupload!");
-                                        }
-                                      }}
-                                    />
-                                     <Button
-                                       variant="outline"
-                                       size="sm"
-                                       onClick={() => document.getElementById(`receipt-${index}`)?.click()}
-                                       title="Upload foto struk/nota"
-                                       className={expensePhotos[index] ? "bg-green-50 border-green-300 text-green-700" : ""}
-                                       disabled={activeShift?.report_submitted}
-                                     >
-                                       <Camera className="h-4 w-4" />
-                                       {expensePhotos[index] && <span className="ml-1 text-xs">✓</span>}
-                                     </Button>
-                                    {operationalExpenses.length > 1 && (
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => removeExpense(index)}
-                                        disabled={activeShift?.report_submitted}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    )}
-                                 </div>
-                                  {expensePhotos[index] && (
-                                    <div className="col-span-2 mt-2">
-                                      <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded">
-                                        <CheckCircle className="h-3 w-3" />
-                                        <span>Foto struk: {expensePhotos[index]?.name}</span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => {
-                                            const newExpensePhotos = [...expensePhotos];
-                                            newExpensePhotos[index] = undefined;
-                                            setExpensePhotos(newExpensePhotos);
-                                          }}
-                                          className="ml-auto h-6 w-6 p-0"
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                             
-                              <Button
-                                variant="outline"
-                                onClick={addExpense}
-                                className="w-full"
-                                disabled={activeShift?.report_submitted}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Tambah Beban
-                              </Button>
+                          <CardContent className="space-y-2 text-sm text-amber-900">
+                            <p className="font-medium">
+                              Input beban operasional dinonaktifkan untuk rider.
+                            </p>
+                            <p className="text-xs leading-relaxed">
+                              Beban operasional hanya bisa diinput oleh pihak Outlet / Branch Hub
+                              melalui halaman <strong>Stock Management → Laporan Shift</strong>.
+                              Silakan koordinasi dengan outlet untuk pencatatan beban Anda.
+                            </p>
+                          </CardContent>
+                        </Card>
 
                             {/* Auto-calculated cash deposit */}
                             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -1585,14 +1500,10 @@ const MobileStockManagement = () => {
                                   <span>Penjualan Tunai:</span>
                                   <span>{formatCurrency(shiftSummary.cashSales)}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span>Beban Operasional:</span>
-                                  <span>-{formatCurrency(operationalExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || '0'), 0))}</span>
-                                </div>
                                 <div className="flex justify-between border-t pt-1 font-bold text-green-700">
                                   <span>Yang Harus Disetor:</span>
                                   <span className="text-lg">
-                                    {formatCurrency(Math.max(0, shiftSummary.cashSales - operationalExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || '0'), 0)))}
+                                    {formatCurrency(Math.max(0, shiftSummary.cashSales))}
                                   </span>
                                 </div>
                               </div>
@@ -1667,8 +1578,6 @@ const MobileStockManagement = () => {
                               >
                                 {activeShift?.report_submitted ? "Laporan Sudah Dikirim" : (isSubmitting || loading) ? "Mengirim..." : "Kirim Laporan Shift"}
                               </Button>
-                          </CardContent>
-                        </Card>
                       </div>
                     ) : (
                       <Card className="bg-gray-50 border-gray-200">
