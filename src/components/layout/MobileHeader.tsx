@@ -1,11 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
-import { 
-  Menu,
-  Bell,
-  Search,
-  User
-} from "lucide-react";
+import { Bell, Search, User } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -23,13 +18,13 @@ interface Branch {
 }
 
 interface MobileHeaderProps {
-  onToggleSidebar: () => void;
+  onToggleSidebar?: () => void;
   profile: Profile | null;
   branch: Branch | null;
   pendingOrdersCount?: number;
 }
 
-export const MobileHeader = ({ onToggleSidebar, profile, branch, pendingOrdersCount = 0 }: MobileHeaderProps) => {
+export const MobileHeader = ({ profile, branch, pendingOrdersCount = 0 }: MobileHeaderProps) => {
   const handleProfileClick = () => {
     window.location.href = '/mobile-seller?tab=profile';
   };
@@ -39,21 +34,12 @@ export const MobileHeader = ({ onToggleSidebar, profile, branch, pendingOrdersCo
       <div className="flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleSidebar}
-            className="lg:hidden"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          
-          <div className="hidden lg:flex items-center gap-3">
-            <ZegerLogo className="w-8 h-8 text-primary" />
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Zeger Mobile</h1>
+          <div className="flex items-center gap-2">
+            <ZegerLogo className="w-7 h-7 text-primary" />
+            <div className="leading-tight">
+              <h1 className="text-sm font-bold text-gray-900">Zeger</h1>
               {branch && (
-                <p className="text-xs text-gray-500">{branch.name}</p>
+                <p className="text-[10px] text-gray-500 truncate max-w-[140px]">{branch.name}</p>
               )}
             </div>
           </div>
