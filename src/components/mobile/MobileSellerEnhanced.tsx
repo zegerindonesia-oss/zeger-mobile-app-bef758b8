@@ -659,7 +659,7 @@ const MobileSellerEnhanced = () => {
                 i => (i.product.category || 'Lainnya') === activeCat
               );
               return (
-                <div className="flex gap-2 h-[460px] border rounded-lg overflow-hidden bg-white">
+                <div className="flex gap-2 h-[70vh] min-h-[520px] border rounded-lg overflow-hidden bg-white">
                   {/* Category sidebar */}
                   <ScrollArea className="w-24 shrink-0 border-r bg-muted/30">
                     <div className="flex flex-col">
@@ -695,9 +695,12 @@ const MobileSellerEnhanced = () => {
                           return (
                             <div
                               key={item.id}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => !outOfStock && addToCart(item.product_id)}
                               className={cn(
-                                "relative rounded-xl border bg-white shadow-sm overflow-hidden flex flex-col",
-                                outOfStock && "opacity-60"
+                                "relative rounded-xl border bg-white shadow-sm overflow-hidden flex flex-col cursor-pointer active:scale-[0.98] transition-transform",
+                                outOfStock && "opacity-60 cursor-not-allowed"
                               )}
                             >
                               <div className="flex-1 p-2 pb-1">
@@ -709,7 +712,10 @@ const MobileSellerEnhanced = () => {
                                   {inCartQuantity > 0 && ` · Cart: ${inCartQuantity}`}
                                 </p>
                               </div>
-                              <div className="flex items-center justify-between px-2 py-2 bg-gray-50">
+                              <div
+                                className="flex items-center justify-between px-2 py-2 bg-gray-50"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <span className="text-xs font-bold text-gray-900">
                                   Rp{item.product.price.toLocaleString('id-ID')}
                                 </span>
@@ -718,8 +724,8 @@ const MobileSellerEnhanced = () => {
                                     <Button
                                       size="icon"
                                       variant="outline"
-                                      className="h-6 w-6 rounded-full"
-                                      onClick={() => removeFromCart(item.product_id)}
+                                      className="h-7 w-7 rounded-full"
+                                      onClick={(e) => { e.stopPropagation(); removeFromCart(item.product_id); }}
                                     >
                                       -
                                     </Button>
@@ -728,9 +734,9 @@ const MobileSellerEnhanced = () => {
                                     </span>
                                     <Button
                                       size="icon"
-                                      className="h-6 w-6 rounded-full bg-red-600 hover:bg-red-700"
+                                      className="h-7 w-7 rounded-full bg-red-600 hover:bg-red-700"
                                       disabled={inCartQuantity >= item.rider_stock}
-                                      onClick={() => addToCart(item.product_id)}
+                                      onClick={(e) => { e.stopPropagation(); addToCart(item.product_id); }}
                                     >
                                       +
                                     </Button>
@@ -740,7 +746,7 @@ const MobileSellerEnhanced = () => {
                                     size="icon"
                                     className="h-7 w-7 rounded-full bg-red-600 hover:bg-red-700 shadow"
                                     disabled={outOfStock}
-                                    onClick={() => addToCart(item.product_id)}
+                                    onClick={(e) => { e.stopPropagation(); addToCart(item.product_id); }}
                                   >
                                     +
                                   </Button>
