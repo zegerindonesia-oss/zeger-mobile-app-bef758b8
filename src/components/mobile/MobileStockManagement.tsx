@@ -1500,14 +1500,10 @@ const MobileStockManagement = () => {
                                   <span>Penjualan Tunai:</span>
                                   <span>{formatCurrency(shiftSummary.cashSales)}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span>Beban Operasional:</span>
-                                  <span>-{formatCurrency(operationalExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || '0'), 0))}</span>
-                                </div>
                                 <div className="flex justify-between border-t pt-1 font-bold text-green-700">
                                   <span>Yang Harus Disetor:</span>
                                   <span className="text-lg">
-                                    {formatCurrency(Math.max(0, shiftSummary.cashSales - operationalExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || '0'), 0)))}
+                                    {formatCurrency(Math.max(0, shiftSummary.cashSales))}
                                   </span>
                                 </div>
                               </div>
@@ -1582,8 +1578,6 @@ const MobileStockManagement = () => {
                               >
                                 {activeShift?.report_submitted ? "Laporan Sudah Dikirim" : (isSubmitting || loading) ? "Mengirim..." : "Kirim Laporan Shift"}
                               </Button>
-                          </CardContent>
-                        </Card>
                       </div>
                     ) : (
                       <Card className="bg-gray-50 border-gray-200">
