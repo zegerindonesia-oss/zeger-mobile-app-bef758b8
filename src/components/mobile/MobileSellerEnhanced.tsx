@@ -639,50 +639,121 @@ const MobileSellerEnhanced = () => {
               <Input placeholder="Cari produk..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
 
-            <ScrollArea className="h-80">
-              <div className="space-y-3">
-                {stockItems
-                  .filter(item => item.product.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .sort((a, b) => b.rider_stock - a.rider_stock)
-                  .map(item => {
-              const cartItem = cart.find(c => c.product_id === item.product_id);
-              const inCartQuantity = cartItem?.quantity || 0;
-                return <div 
-                          key={item.id} 
-                          className="flex items-center justify-between p-4 bg-card rounded-lg border cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors"
-                          onClick={() => addToCart(item.product_id)}
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium">{item.product.name}</p>
-                            <p className="text-lg font-bold text-primary">Rp {item.product.price.toLocaleString('id-ID')}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Stok: {item.rider_stock} | Di keranjang: {inCartQuantity}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              disabled={inCartQuantity <= 0}
-                              onClick={(e) => { e.stopPropagation(); removeFromCart(item.product_id); }}
+            {/* Category sidebar + product grid */}
+            {(() => {
+              const filtered = stockItems
+                .filter(item => item.product.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                .sort((a, b) => b.rider_stock - a.rider_stock);
+              const categories = Array.from(
+                new Set(filtered.map(i => i.product.category || 'Lainnya'))
+              );
+              if (selectedCategory && !categories.includes(selectedCategory)) {
+                // selected category has no matches under current search; show all
+              }
+              const activeCat =
+                selectedCategory && categories.includes(selectedCategory)
+                  ? selectedCategory
+                  : categories[0];
+              const visible = filtered.filter(
+                i => (i.product.category || 'Lainnya') === activeCat
+              );
+              return (
+                <div className="flex gap-2 h-[460px] border rounded-lg overflow-hidden bg-white">
+                  {/* Category sidebar */}
+                  <ScrollArea className="w-24 shrink-0 border-r bg-muted/30">
+                    <div className="flex flex-col">
+                      {categories.map(cat => {
+                        const isActive = cat === activeCat;
+                        return (
+                          <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={cn(
+                              "px-2 py-3 text-left text-xs font-semibold border-l-4 transition-colors",
+                              isActive
+                                ? "border-red-600 text-red-600 bg-white"
+                                : "border-transparent text-gray-600 hover:bg-white/60"
+                            )}
+                          >
+                            {cat}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+
+                  {/* Product grid */}
+                  <ScrollArea className="flex-1">
+                    <div className="p-2">
+                      <h3 className="text-sm font-bold text-gray-800 mb-2 px-1">{activeCat}</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {visible.map(item => {
+                          const cartItem = cart.find(c => c.product_id === item.product_id);
+                          const inCartQuantity = cartItem?.quantity || 0;
+                          const outOfStock = item.rider_stock <= 0;
+                          return (
+                            <div
+                              key={item.id}
+                              className={cn(
+                                "relative rounded-xl border bg-white shadow-sm overflow-hidden flex flex-col",
+                                outOfStock && "opacity-60"
+                              )}
                             >
-                                -
-                            </Button>
-                            <span className="min-w-8 text-center font-medium bg-muted px-2 py-1 rounded">
-                              {inCartQuantity}
-                            </span>
-                            <Button 
-                              disabled={inCartQuantity >= item.rider_stock || item.rider_stock <= 0} 
-                              onClick={(e) => { e.stopPropagation(); addToCart(item.product_id); }} 
-                              size="sm"
-                            >
-                              +
-                            </Button>
-                          </div>
-                        </div>;
-            })}
-              </div>
-            </ScrollArea>
+                              <div className="flex-1 p-2 pb-1">
+                                <p className="text-xs font-semibold leading-tight line-clamp-3 min-h-[2.5rem]">
+                                  {item.product.name}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  Stok: {item.rider_stock}
+                                  {inCartQuantity > 0 && ` · Cart: ${inCartQuantity}`}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between px-2 py-2 bg-gray-50">
+                                <span className="text-xs font-bold text-gray-900">
+                                  Rp{item.product.price.toLocaleString('id-ID')}
+                                </span>
+                                {inCartQuantity > 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      className="h-6 w-6 rounded-full"
+                                      onClick={() => removeFromCart(item.product_id)}
+                                    >
+                                      -
+                                    </Button>
+                                    <span className="text-xs font-bold w-5 text-center">
+                                      {inCartQuantity}
+                                    </span>
+                                    <Button
+                                      size="icon"
+                                      className="h-6 w-6 rounded-full bg-red-600 hover:bg-red-700"
+                                      disabled={inCartQuantity >= item.rider_stock}
+                                      onClick={() => addToCart(item.product_id)}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full bg-red-600 hover:bg-red-700 shadow"
+                                    disabled={outOfStock}
+                                    onClick={() => addToCart(item.product_id)}
+                                  >
+                                    +
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </div>
+              );
+            })()}
 
             {/* Cart Summary */}
             {cart.length > 0 && <Card>
