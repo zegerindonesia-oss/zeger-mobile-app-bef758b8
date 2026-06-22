@@ -62,6 +62,7 @@ const MobileSellerEnhanced = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [discountValue, setDiscountValue] = useState<number>(0);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   
   useEffect(() => {
     checkPreConditions();
