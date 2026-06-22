@@ -455,6 +455,9 @@ const MobileStockManagement = () => {
   
   // New state for cash deposit notes
   const [cashDepositNotes, setCashDepositNotes] = useState<string>('');
+
+  // Expanded receive groups (collapsible)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   
   // State for success modal
   const [showShiftSuccessModal, setShowShiftSuccessModal] = useState(false);
