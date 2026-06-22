@@ -19,7 +19,8 @@ import {
   Trash2,
   FileText,
   Tag,
-  X
+  X,
+  ChevronDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
