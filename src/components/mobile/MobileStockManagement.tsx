@@ -19,7 +19,8 @@ import {
   Trash2,
   FileText,
   Tag,
-  X
+  X,
+  ChevronDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -454,6 +455,9 @@ const MobileStockManagement = () => {
   
   // New state for cash deposit notes
   const [cashDepositNotes, setCashDepositNotes] = useState<string>('');
+
+  // Expanded receive groups (collapsible)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   
   // State for success modal
   const [showShiftSuccessModal, setShowShiftSuccessModal] = useState(false);
@@ -1106,8 +1110,8 @@ const MobileStockManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-red-50/30 to-white overflow-x-hidden">
       <div className="w-full max-w-md mx-auto space-y-6 px-4 py-4">
-        {/* Header - not sticky */}
-        <div className="bg-white border-b shadow-md p-4 -mx-4 mb-2 rounded-b-2xl">
+        {/* Header - sticky */}
+        <div className="sticky top-0 z-30 bg-white border-b shadow-md p-4 -mx-4 mb-2 rounded-b-2xl">
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-5 w-5" />
             <h1 className="text-lg font-semibold">Kelola Stok & Shift</h1>
@@ -1204,36 +1208,61 @@ const MobileStockManagement = () => {
                           hour: '2-digit', minute: '2-digit'
                         });
                         const hasCustomNote = group.notes && group.notes !== 'Stok dikirim dari branch ke rider';
+                        const isExpanded = expandedGroups.has(group.reference_id);
+                        const toggleExpanded = () => {
+                          setExpandedGroups(prev => {
+                            const next = new Set(prev);
+                            if (next.has(group.reference_id)) next.delete(group.reference_id);
+                            else next.add(group.reference_id);
+                            return next;
+                          });
+                        };
 
                         return (
-                          <Card key={group.reference_id} className="border-l-4 border-l-orange-500">
-                            <CardContent className="p-4 space-y-3">
-                              {/* Group Header */}
-                              <div className="bg-orange-50 p-3 rounded-lg space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-bold text-orange-900">
-                                    Pengiriman Stok ke-{groupIndex + 1}
-                                  </span>
-                                  <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    Menunggu
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-orange-700">
-                                  Kode: TRF-{shortId} • {dateStr}
-                                </p>
-                                <p className="text-xs text-orange-700">
-                                  {group.items.length} item(s) • Total: {group.total_quantity} unit • Nilai: Rp {group.total_value.toLocaleString('id-ID')}
-                                </p>
-                                {hasCustomNote && (
-                                  <div className="mt-1 p-2 bg-white rounded border border-orange-200">
-                                    <p className="text-xs font-medium text-orange-800">📝 Note: {group.notes}</p>
-                                  </div>
-                                )}
+                          <Card key={group.reference_id} className="border rounded-2xl shadow-sm overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={toggleExpanded}
+                              className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-muted/40 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 text-left">
+                                <span className="text-base font-bold text-foreground">
+                                  Pengiriman {groupIndex + 1}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {dateStr} WIB
+                                </span>
                               </div>
+                              <ChevronDown
+                                className={`h-5 w-5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                              />
+                            </button>
 
-                              {/* Items in this group */}
-                              {group.items.map((item) => (
+                            {isExpanded && (
+                              <CardContent className="p-4 pt-0 space-y-3 border-t bg-muted/20">
+                                {/* Group meta */}
+                                <div className="bg-orange-50 p-3 rounded-lg space-y-1 mt-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-orange-900">
+                                      Kode: TRF-{shortId}
+                                    </span>
+                                    <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      Menunggu
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs text-orange-700">
+                                    {group.items.length} item(s) • Total: {group.total_quantity} unit • Nilai: Rp {group.total_value.toLocaleString('id-ID')}
+                                  </p>
+                                  {hasCustomNote && (
+                                    <div className="mt-1 p-2 bg-white rounded border border-orange-200">
+                                      <p className="text-xs font-medium text-orange-800">📝 Note: {group.notes}</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Items in this group */}
+                                {group.items.map((item) => (
                                 <div key={item.id} className="flex items-start gap-3 bg-muted/50 p-3 rounded-lg">
                                   <input
                                     type="checkbox"
@@ -1268,14 +1297,15 @@ const MobileStockManagement = () => {
                                     </div>
                                   </div>
                                 </div>
-                              ))}
+                                ))}
 
-                              {group.items[0]?.expected_delivery_date && (
-                                <p className="text-xs text-muted-foreground">
-                                  Target: {new Date(group.items[0].expected_delivery_date).toLocaleString('id-ID')}
-                                </p>
-                              )}
-                            </CardContent>
+                                {group.items[0]?.expected_delivery_date && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Target: {new Date(group.items[0].expected_delivery_date).toLocaleString('id-ID')}
+                                  </p>
+                                )}
+                              </CardContent>
+                            )}
                           </Card>
                         );
                       });
