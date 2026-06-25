@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Check, Package, CalendarIcon, History, DollarSign, Eye } from "lucide-react";
+import { Check, Package, CalendarIcon, History, DollarSign, Eye, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,6 +80,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
   const [combinedReports, setCombinedReports] = useState<CombinedRiderReport[]>([]);
   const [shiftHistory, setShiftHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [newExpense, setNewExpense] = useState<Record<string, { expense_type: string; description: string; amount: string }>>({});
+  const [addingExpense, setAddingExpense] = useState<string | null>(null);
   
   // History filters
   const [selectedUser, setSelectedUser] = useState<string>("all");
