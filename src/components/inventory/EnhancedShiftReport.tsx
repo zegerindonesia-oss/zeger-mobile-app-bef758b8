@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Check, Package, CalendarIcon, History, DollarSign, Eye } from "lucide-react";
+import { Check, Package, CalendarIcon, History, DollarSign, Eye, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,6 +80,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
   const [combinedReports, setCombinedReports] = useState<CombinedRiderReport[]>([]);
   const [shiftHistory, setShiftHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [newExpense, setNewExpense] = useState<Record<string, { expense_type: string; description: string; amount: string }>>({});
+  const [addingExpense, setAddingExpense] = useState<string | null>(null);
   
   // History filters
   const [selectedUser, setSelectedUser] = useState<string>("all");
@@ -133,7 +135,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         const shiftIds = shiftData.map(s => s.id);
         const { data: expensesData, error: expensesError } = await supabase
           .from('daily_operational_expenses')
-          .select('shift_id, amount, expense_type, description')
+          .select('id, shift_id, amount, expense_type, description')
           .in('shift_id', shiftIds);
         
         if (expensesError) throw expensesError;
@@ -231,6 +233,44 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           }
         : report
     ));
+  };
+
+  const handleAddExpense = async (shift: Shift) => {
+    const form = newExpense[shift.id] || { expense_type: '', description: '', amount: '' };
+    const amt = Number(form.amount);
+    if (!form.expense_type.trim()) { toast.error('Pilih kategori beban'); return; }
+    if (!amt || amt <= 0) { toast.error('Jumlah tidak valid'); return; }
+    setAddingExpense(shift.id);
+    try {
+      const { error } = await supabase.from('daily_operational_expenses').insert({
+        rider_id: shift.rider_id,
+        shift_id: shift.id,
+        expense_type: form.expense_type.trim(),
+        amount: amt,
+        description: form.description?.trim() || null,
+        expense_date: shift.shift_date,
+      });
+      if (error) throw error;
+      toast.success('Beban berhasil ditambahkan');
+      setNewExpense(prev => ({ ...prev, [shift.id]: { expense_type: '', description: '', amount: '' } }));
+      await fetchCombinedReports();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || 'Gagal menambah beban');
+    } finally {
+      setAddingExpense(null);
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      const { error } = await supabase.from('daily_operational_expenses').delete().eq('id', expenseId);
+      if (error) throw error;
+      toast.success('Beban dihapus');
+      await fetchCombinedReports();
+    } catch (e: any) {
+      toast.error(e.message || 'Gagal menghapus beban');
+    }
   };
 
   const updateBranchInventory = async (productId: string, quantity: number) => {
@@ -688,15 +728,99 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                     </div>
                                     <div className="pl-4 space-y-1 text-muted-foreground">
                                       {expenses.map((e: any, i: number) => (
-                                        <div key={i} className="flex justify-between">
-                                          <span>{e.description || e.expense_type}</span>
+                                        <div key={e.id || i} className="flex justify-between items-center gap-2">
+                                          <span className="flex-1">{e.description || e.expense_type}</span>
                                           <span>Rp {Number(e.amount || 0).toLocaleString('id-ID')}</span>
+                                          {e.id && (
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-6 w-6 text-red-600 hover:text-red-700"
+                                              onClick={() => handleDeleteExpense(e.id)}
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                          )}
                                         </div>
                                       ))}
                                     </div>
                                   </div>
                                 ) : (
                                   <div className="pl-4 text-sm text-muted-foreground">Tidak ada pengeluaran</div>
+                                )}
+
+                                {/* Inline Add Expense Form */}
+                                {report.cashDeposit && (
+                                  <div className="mt-3 pl-4 p-3 border border-dashed rounded-lg bg-muted/20">
+                                    <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+                                      <Plus className="h-4 w-4" />
+                                      <span>Tambah Beban Operasional</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                                      <div className="md:col-span-3">
+                                        <Select
+                                          value={newExpense[report.cashDeposit.id]?.expense_type || ''}
+                                          onValueChange={(v) =>
+                                            setNewExpense(prev => ({
+                                              ...prev,
+                                              [report.cashDeposit!.id]: { ...(prev[report.cashDeposit!.id] || { description: '', amount: '' }), expense_type: v }
+                                            }))
+                                          }
+                                        >
+                                          <SelectTrigger className="h-9">
+                                            <SelectValue placeholder="Kategori" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="Bensin">Bensin</SelectItem>
+                                            <SelectItem value="Makan">Makan</SelectItem>
+                                            <SelectItem value="Parkir">Parkir</SelectItem>
+                                            <SelectItem value="Pulsa">Pulsa</SelectItem>
+                                            <SelectItem value="Service">Service</SelectItem>
+                                            <SelectItem value="Lainnya">Lainnya</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="md:col-span-5">
+                                        <Input
+                                          placeholder="Keterangan (opsional)"
+                                          className="h-9"
+                                          value={newExpense[report.cashDeposit.id]?.description || ''}
+                                          onChange={(e) =>
+                                            setNewExpense(prev => ({
+                                              ...prev,
+                                              [report.cashDeposit!.id]: { ...(prev[report.cashDeposit!.id] || { expense_type: '', amount: '' }), description: e.target.value }
+                                            }))
+                                          }
+                                        />
+                                      </div>
+                                      <div className="md:col-span-2">
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          placeholder="Jumlah"
+                                          className="h-9"
+                                          value={newExpense[report.cashDeposit.id]?.amount || ''}
+                                          onChange={(e) =>
+                                            setNewExpense(prev => ({
+                                              ...prev,
+                                              [report.cashDeposit!.id]: { ...(prev[report.cashDeposit!.id] || { expense_type: '', description: '' }), amount: e.target.value }
+                                            }))
+                                          }
+                                        />
+                                      </div>
+                                      <div className="md:col-span-2">
+                                        <Button
+                                          onClick={() => handleAddExpense(report.cashDeposit!)}
+                                          disabled={addingExpense === report.cashDeposit.id}
+                                          className="h-9 w-full"
+                                          size="sm"
+                                        >
+                                          <Plus className="h-4 w-4 mr-1" />
+                                          Tambah
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
                                 )}
                               </div>
 
