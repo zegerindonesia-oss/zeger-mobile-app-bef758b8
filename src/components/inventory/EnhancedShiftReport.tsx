@@ -135,7 +135,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         const shiftIds = shiftData.map(s => s.id);
         const { data: expensesData, error: expensesError } = await supabase
           .from('daily_operational_expenses')
-          .select('shift_id, amount, expense_type, description')
+          .select('id, shift_id, amount, expense_type, description')
           .in('shift_id', shiftIds);
         
         if (expensesError) throw expensesError;
