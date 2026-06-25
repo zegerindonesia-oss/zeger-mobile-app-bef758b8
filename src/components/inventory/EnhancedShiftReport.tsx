@@ -235,6 +235,44 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
     ));
   };
 
+  const handleAddExpense = async (shift: Shift) => {
+    const form = newExpense[shift.id] || { expense_type: '', description: '', amount: '' };
+    const amt = Number(form.amount);
+    if (!form.expense_type.trim()) { toast.error('Pilih kategori beban'); return; }
+    if (!amt || amt <= 0) { toast.error('Jumlah tidak valid'); return; }
+    setAddingExpense(shift.id);
+    try {
+      const { error } = await supabase.from('daily_operational_expenses').insert({
+        rider_id: shift.rider_id,
+        shift_id: shift.id,
+        expense_type: form.expense_type.trim(),
+        amount: amt,
+        description: form.description?.trim() || null,
+        expense_date: shift.shift_date,
+      });
+      if (error) throw error;
+      toast.success('Beban berhasil ditambahkan');
+      setNewExpense(prev => ({ ...prev, [shift.id]: { expense_type: '', description: '', amount: '' } }));
+      await fetchCombinedReports();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || 'Gagal menambah beban');
+    } finally {
+      setAddingExpense(null);
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      const { error } = await supabase.from('daily_operational_expenses').delete().eq('id', expenseId);
+      if (error) throw error;
+      toast.success('Beban dihapus');
+      await fetchCombinedReports();
+    } catch (e: any) {
+      toast.error(e.message || 'Gagal menghapus beban');
+    }
+  };
+
   const updateBranchInventory = async (productId: string, quantity: number) => {
     try {
       const { data: existingInventory } = await supabase
