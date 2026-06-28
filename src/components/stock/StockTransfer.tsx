@@ -934,6 +934,22 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                 </div>
               )}
 
+              {/* Per-Rider Block (1-cycle rule) */}
+              {selectedRider && riderBlockMessage && (
+                <div className="mb-4 p-4 bg-red-50 border-2 border-red-500 rounded-lg shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-bold text-red-800">Tidak dapat mengirim stok ke rider ini</p>
+                      <p className="text-sm text-red-700 mt-1">{riderBlockMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {selectedRider && checkingRider && (
+                <p className="text-xs text-muted-foreground">Memeriksa status shift & stok rider...</p>
+              )}
+
               {/* Total Stock Summary - Highlighted */}
               {getTotalStockToSend() > 0 && (
                 <Card className="bg-red-50 border-red-200">
@@ -976,11 +992,15 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
               <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
                 <AlertDialogTrigger asChild>
                   <Button 
-                    disabled={loading || !selectedRider || getTotalStockToSend() === 0 || hasPendingShifts}
+                    disabled={loading || !selectedRider || getTotalStockToSend() === 0 || hasPendingShifts || !!riderBlockMessage || checkingRider}
                     className="w-full rounded-full hover:bg-primary/90"
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    {hasPendingShifts ? 'Selesaikan Laporan Shift Dulu' : (loading ? "Mengirim..." : "Berikan Stok ke Rider")}
+                    {hasPendingShifts
+                      ? 'Selesaikan Laporan Shift Dulu'
+                      : riderBlockMessage
+                        ? 'Rider Belum Tutup Shift'
+                        : (loading ? "Mengirim..." : "Berikan Stok ke Rider")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="bg-white">
