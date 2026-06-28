@@ -116,6 +116,8 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   const [hasPendingShifts, setHasPendingShifts] = useState(false);
   const [transferNotes, setTransferNotes] = useState("");
   const [pendingShiftsCount, setPendingShiftsCount] = useState(0);
+  const [riderBlockMessage, setRiderBlockMessage] = useState<string | null>(null);
+  const [checkingRider, setCheckingRider] = useState(false);
   
   // New filter states
   const [selectedUserFilter, setSelectedUserFilter] = useState<string>('all');
@@ -175,6 +177,90 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   useEffect(() => {
     fetchTransfers();
   }, [historyType, selectedUserFilter, dateRangeFilter, customStartDate, customEndDate]);
+
+  // Re-validate selected rider whenever it changes (1-cycle rule)
+  useEffect(() => {
+    if (!selectedRider) {
+      setRiderBlockMessage(null);
+      return;
+    }
+    checkRiderEligibility(selectedRider);
+  }, [selectedRider]);
+
+  const checkRiderEligibility = async (riderId: string) => {
+    setCheckingRider(true);
+    try {
+      const riderName = riders.find(r => r.id === riderId)?.full_name || 'Rider';
+      const jakartaToday = formatYMD(getJakartaNow());
+
+      // 1) Active shift today (not yet closed)
+      const { data: activeShifts } = await supabase
+        .from('shift_management')
+        .select('id, status, report_submitted, report_verified')
+        .eq('rider_id', riderId)
+        .eq('shift_date', jakartaToday)
+        .eq('status', 'active');
+
+      if (activeShifts && activeShifts.length > 0) {
+        setRiderBlockMessage(
+          `${riderName} masih memiliki shift AKTIF. Harap rider melakukan penyelesaian shift (pengembalian barang & laporan setoran tunai) sebelum menerima stok baru.`
+        );
+        return;
+      }
+
+      // 2) Pending (sent but not yet received) transfers
+      const { data: pendingTransfers } = await supabase
+        .from('stock_movements')
+        .select('id')
+        .eq('rider_id', riderId)
+        .eq('movement_type', 'transfer')
+        .eq('status', 'sent');
+
+      if (pendingTransfers && pendingTransfers.length > 0) {
+        setRiderBlockMessage(
+          `${riderName} masih memiliki ${pendingTransfers.length} pengiriman stok yang belum dikonfirmasi. Rider harus konfirmasi penerimaan stok terlebih dahulu.`
+        );
+        return;
+      }
+
+      // 3) Remaining inventory on rider
+      const { data: inv } = await supabase
+        .from('inventory')
+        .select('stock_quantity')
+        .eq('rider_id', riderId)
+        .gt('stock_quantity', 0);
+
+      if (inv && inv.length > 0) {
+        const totalRemaining = inv.reduce((s: number, i: any) => s + Number(i.stock_quantity || 0), 0);
+        if (totalRemaining > 0) {
+          setRiderBlockMessage(
+            `${riderName} Masih Memiliki Stok yang belum dikembalikan (${totalRemaining} unit). Harap lakukan penyelesaian shift (pengembalian barang & laporan setoran tunai) sebelum menerima transfer stok baru.`
+          );
+          return;
+        }
+      }
+
+      // 4) Submitted but not yet verified report (shift closed by rider, waiting outlet)
+      const { data: unverified } = await supabase
+        .from('shift_management')
+        .select('id')
+        .eq('rider_id', riderId)
+        .eq('shift_date', jakartaToday)
+        .eq('report_submitted', true)
+        .eq('report_verified', false);
+
+      if (unverified && unverified.length > 0) {
+        setRiderBlockMessage(
+          `${riderName} sudah submit laporan shift tapi BELUM diverifikasi outlet. Verifikasi laporan shift terlebih dahulu di menu Stock Management → Laporan Shift sebelum mengirim stok baru.`
+        );
+        return;
+      }
+
+      setRiderBlockMessage(null);
+    } finally {
+      setCheckingRider(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -553,6 +639,14 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
     setLoading(true);
     try {
+      // 1-cycle rule: re-check rider eligibility right before insert
+      await checkRiderEligibility(selectedRider);
+      if (riderBlockMessage) {
+        toast.error(riderBlockMessage);
+        setLoading(false);
+        return;
+      }
+
       // Check branch inventory before transfer using RPC function
       const branchType = role === 'sb_branch_manager' ? 'cabang' : 'branch hub';
       
@@ -840,6 +934,22 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                 </div>
               )}
 
+              {/* Per-Rider Block (1-cycle rule) */}
+              {selectedRider && riderBlockMessage && (
+                <div className="mb-4 p-4 bg-red-50 border-2 border-red-500 rounded-lg shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-bold text-red-800">Tidak dapat mengirim stok ke rider ini</p>
+                      <p className="text-sm text-red-700 mt-1">{riderBlockMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {selectedRider && checkingRider && (
+                <p className="text-xs text-muted-foreground">Memeriksa status shift & stok rider...</p>
+              )}
+
               {/* Total Stock Summary - Highlighted */}
               {getTotalStockToSend() > 0 && (
                 <Card className="bg-red-50 border-red-200">
@@ -882,11 +992,15 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
               <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
                 <AlertDialogTrigger asChild>
                   <Button 
-                    disabled={loading || !selectedRider || getTotalStockToSend() === 0 || hasPendingShifts}
+                    disabled={loading || !selectedRider || getTotalStockToSend() === 0 || hasPendingShifts || !!riderBlockMessage || checkingRider}
                     className="w-full rounded-full hover:bg-primary/90"
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    {hasPendingShifts ? 'Selesaikan Laporan Shift Dulu' : (loading ? "Mengirim..." : "Berikan Stok ke Rider")}
+                    {hasPendingShifts
+                      ? 'Selesaikan Laporan Shift Dulu'
+                      : riderBlockMessage
+                        ? 'Rider Belum Tutup Shift'
+                        : (loading ? "Mengirim..." : "Berikan Stok ke Rider")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="bg-white">
