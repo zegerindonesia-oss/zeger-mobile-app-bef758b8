@@ -576,6 +576,8 @@ export const CashDepositHistory = () => {
                   <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Beban Operasional</TableHead>
                   <TableHead className="text-right">%</TableHead>
+                  <TableHead className="text-right">Beban Op. Rider</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Total Setoran Tunai</TableHead>
                   <TableHead className="text-right">%</TableHead>
                 </TableRow>
@@ -583,7 +585,7 @@ export const CashDepositHistory = () => {
               <TableBody>
                 {resumeData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center text-muted-foreground">
+                    <TableCell colSpan={16} className="text-center text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
@@ -610,6 +612,8 @@ export const CashDepositHistory = () => {
                           <TableCell className={incomePct}>{pct(item.transfer_sales)}</TableCell>
                           <TableCell className={expense}>{formatCurrency(item.operational_expenses)}</TableCell>
                           <TableCell className={expensePct}>{pct(item.operational_expenses)}</TableCell>
+                          <TableCell className={expense}>{formatCurrency(item.rider_operational_expenses)}</TableCell>
+                          <TableCell className={expensePct}>{pct(item.rider_operational_expenses)}</TableCell>
                           <TableCell className="text-right font-semibold text-green-600">{formatCurrency(item.cash_deposit)}</TableCell>
                           <TableCell className={incomePct}>{pct(item.cash_deposit)}</TableCell>
                         </TableRow>
@@ -622,8 +626,9 @@ export const CashDepositHistory = () => {
                         qris_sales: acc.qris_sales + c.qris_sales,
                         transfer_sales: acc.transfer_sales + c.transfer_sales,
                         operational_expenses: acc.operational_expenses + c.operational_expenses,
+                        rider_operational_expenses: acc.rider_operational_expenses + c.rider_operational_expenses,
                         cash_deposit: acc.cash_deposit + c.cash_deposit,
-                      }), { total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0, operational_expenses: 0, cash_deposit: 0 });
+                      }), { total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0, operational_expenses: 0, rider_operational_expenses: 0, cash_deposit: 0 });
                       const ts = sum.total_sales;
                       const pct = (v: number) => ts > 0 ? `${((v / ts) * 100).toFixed(1)}%` : '0%';
                       return (
@@ -639,6 +644,8 @@ export const CashDepositHistory = () => {
                           <TableCell className="text-right text-green-600 text-xs">{pct(sum.transfer_sales)}</TableCell>
                           <TableCell className="text-right text-red-600">{formatCurrency(sum.operational_expenses)}</TableCell>
                           <TableCell className="text-right text-red-600 text-xs">{pct(sum.operational_expenses)}</TableCell>
+                          <TableCell className="text-right text-red-600">{formatCurrency(sum.rider_operational_expenses)}</TableCell>
+                          <TableCell className="text-right text-red-600 text-xs">{pct(sum.rider_operational_expenses)}</TableCell>
                           <TableCell className="text-right text-green-600">{formatCurrency(sum.cash_deposit)}</TableCell>
                           <TableCell className="text-right text-green-600 text-xs">{pct(sum.cash_deposit)}</TableCell>
                         </TableRow>
