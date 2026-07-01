@@ -677,6 +677,7 @@ export const CashDepositHistory = () => {
                   <TableHead className="text-right px-2">QRIS</TableHead>
                   <TableHead className="text-right px-2">Transfer</TableHead>
                   <TableHead className="text-right px-2">Beban Op.</TableHead>
+                  <TableHead className="text-right px-2">Beban Op. Rider</TableHead>
                   <TableHead className="text-right px-2">Setoran Tunai</TableHead>
                    <TableHead className="px-2 min-w-[130px]"><div>Verifikasi</div><div>Outlet</div></TableHead>
                    <TableHead className="px-2 min-w-[130px]"><div>Verifikasi</div><div>Finance</div></TableHead>
@@ -686,7 +687,7 @@ export const CashDepositHistory = () => {
               <TableBody>
                 {cashDeposits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
@@ -746,6 +747,9 @@ export const CashDepositHistory = () => {
                             />
                             <span className="text-xs">{formatCurrency(item.operational_expenses)}</span>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-right px-2">
+                          <span className="text-xs text-red-600">{formatCurrency(item.rider_operational_expenses)}</span>
                         </TableCell>
                         <TableCell className="text-right px-2">
                           <div className="flex items-center justify-end gap-1">
@@ -819,6 +823,7 @@ export const CashDepositHistory = () => {
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.qris_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.transfer_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.operational_expenses)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs text-red-600">{formatCurrency(totals.rider_operational_expenses)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.cash_deposit)}</TableCell>
                       <TableCell className="px-2 text-xs text-center">{totals.verified_outlet_count}/{cashDeposits.length} ✓ ({formatCurrency(totals.verified_outlet_deposit)})</TableCell>
                       <TableCell className="px-2 text-xs text-center">{totals.verified_finance_count}/{cashDeposits.length} ✓ ({formatCurrency(totals.verified_finance_deposit)})</TableCell>
@@ -832,6 +837,7 @@ export const CashDepositHistory = () => {
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.qris_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.transfer_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.operational_expenses)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs"></TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.cash_deposit)}</TableCell>
                       <TableCell colSpan={3}></TableCell>
                     </TableRow>
