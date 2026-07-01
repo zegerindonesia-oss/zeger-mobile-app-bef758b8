@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Trophy } from "lucide-react";
+import { PieChart3D } from "@/components/charts/PieChart3D";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -212,13 +213,24 @@ export default function OperationalExpenses() {
       const endDateTimeStr = `${endDateStr}T23:59:59+07:00`;
       
       // Fetch all transactions for the period to calculate omset per rider
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('rider_id, final_amount')
-        .eq('status', 'completed')
-        .eq('is_voided', false)
-        .gte('transaction_date', startDateTimeStr)
-        .lte('transaction_date', endDateTimeStr);
+      // Paginated to bypass 1000-row limit (matches Sales Report / other pages)
+      const transactions: any[] = [];
+      let txFrom = 0;
+      const txBatch = 1000;
+      while (true) {
+        const { data: batch } = await supabase
+          .from('transactions')
+          .select('rider_id, final_amount')
+          .eq('status', 'completed')
+          .eq('is_voided', false)
+          .gte('transaction_date', startDateTimeStr)
+          .lte('transaction_date', endDateTimeStr)
+          .range(txFrom, txFrom + txBatch - 1);
+        if (!batch || batch.length === 0) break;
+        transactions.push(...batch);
+        if (batch.length < txBatch) break;
+        txFrom += txBatch;
+      }
       
       // Calculate sales per rider
       const salesByRider: { [key: string]: number } = {};
@@ -233,11 +245,13 @@ export default function OperationalExpenses() {
       
       setTotalOmset(totalSales);
       
-      // Update summary with sales data and percentage
+      // Update summary with sales data and percentage (per-rider: beban / omset rider)
       const updatedSummary = summaryArray.map(item => ({
         ...item,
         sales: salesByRider[item.riderId] || 0,
-        percentage: totalSales > 0 ? (item.totalExpenses / totalSales) * 100 : 0
+        percentage: (salesByRider[item.riderId] || 0) > 0
+          ? (item.totalExpenses / (salesByRider[item.riderId] || 1)) * 100
+          : 0
       }));
       
       setUserSummary(updatedSummary);
@@ -628,41 +642,77 @@ export default function OperationalExpenses() {
         </CardContent>
       </Card>
 
-      {/* Total Summary with per-category breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resume Total Beban</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-red-600">
-            {currency.format(totalExpenses)}
-          </div>
-          <p className="text-sm text-muted-foreground mb-3">
-            Periode {format(startDate, "dd/MM/yyyy")} - {format(endDate, "dd/MM/yyyy")}
-          </p>
-          {(() => {
-            const catMap = new Map<string, number>();
-            items.forEach((it) => {
-              const key = (it.expense_category || 'lainnya').toString();
-              catMap.set(key, (catMap.get(key) || 0) + Number(it.amount || 0));
-            });
-            const rows = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1]);
-            if (rows.length === 0) return null;
-            const labelize = (k: string) => k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-            return (
-              <div className="mt-2 border-t pt-3 space-y-1.5">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Rincian per Kategori:</div>
-                {rows.map(([cat, amt]) => (
-                  <div key={cat} className="flex justify-between text-sm pl-2">
-                    <span className="capitalize">- {labelize(cat)}</span>
-                    <span className="font-medium text-red-600">{currency.format(amt)}</span>
+      {/* Resume Total Beban — Pie chart 3D per Rider + % beban vs omset */}
+      {selectedUser === "all" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Resume Total Beban Operasional</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Periode {format(startDate, "dd/MM/yyyy")} - {format(endDate, "dd/MM/yyyy")}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const palette = ['#ef4444','#f97316','#f59e0b','#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#84cc16','#14b8a6','#6366f1','#a855f7'];
+              const pieData = userSummary
+                .filter(u => u.totalExpenses > 0)
+                .map((u, i) => ({
+                  name: u.riderName,
+                  value: Math.round(u.totalExpenses),
+                  percentage: totalExpenses > 0 ? (u.totalExpenses / totalExpenses) * 100 : 0,
+                  color: palette[i % palette.length],
+                }));
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Pie chart 3D */}
+                  <div>
+                    {pieData.length > 0 ? (
+                      <PieChart3D data={pieData} title="Kontribusi Beban per Rider" />
+                    ) : (
+                      <div className="text-sm text-muted-foreground p-6 text-center">Belum ada data beban.</div>
+                    )}
                   </div>
-                ))}
-              </div>
-            );
-          })()}
-        </CardContent>
-      </Card>
+                  {/* % beban terhadap omset (total + per rider) */}
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-lg border bg-muted/30">
+                      <div className="text-xs text-muted-foreground">Total Beban Operasional</div>
+                      <div className="text-2xl font-bold text-red-600">{currency.format(totalExpenses)}</div>
+                      <div className="mt-2 text-xs text-muted-foreground">Total Omset</div>
+                      <div className="text-lg font-semibold text-primary">{currency.format(totalOmset)}</div>
+                      <div className="mt-2 text-xs text-muted-foreground">% Beban terhadap Omset</div>
+                      <div className="text-xl font-bold text-orange-600">
+                        {totalOmset > 0 ? ((totalExpenses / totalOmset) * 100).toFixed(1) : 0}%
+                      </div>
+                    </div>
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 bg-destructive/10 text-sm font-semibold">% Beban terhadap Omset per Rider</div>
+                      <div className="divide-y max-h-72 overflow-y-auto">
+                        {userSummary.map((u, i) => (
+                          <div key={u.riderId} className="flex items-center justify-between px-3 py-2 text-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="inline-block h-3 w-3 rounded-sm flex-shrink-0" style={{ background: palette[i % palette.length] }} />
+                              <span className="truncate">{u.riderName}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-red-600 font-medium">{currency.format(u.totalExpenses)}</span>
+                              <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs font-semibold min-w-14 text-right">
+                                {u.percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {userSummary.length === 0 && (
+                          <div className="p-3 text-sm text-muted-foreground">Belum ada data.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabel Summary per User - ditampilkan jika filter = all */}
       {selectedUser === "all" && userSummary.length > 0 && (
