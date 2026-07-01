@@ -27,6 +27,7 @@ interface CashDepositData {
   qris_sales: number;
   transfer_sales: number;
   operational_expenses: number;
+  rider_operational_expenses: number;
   cash_deposit: number;
   verified_total_sales: boolean;
   verified_cash_sales: boolean;
@@ -215,7 +216,7 @@ export const CashDepositHistory = () => {
       while (true) {
         let pageQuery = supabase
           .from('daily_operational_expenses')
-          .select('rider_id, expense_date, amount')
+          .select('rider_id, expense_date, amount, expense_type')
           .gte('expense_date', startYMD)
           .lte('expense_date', endYMD)
           .range(expFrom, expFrom + PAGE_SIZE - 1);
@@ -249,6 +250,7 @@ export const CashDepositHistory = () => {
             qris_sales: 0,
             transfer_sales: 0,
             operational_expenses: 0,
+            rider_operational_expenses: 0,
             cash_deposit: 0,
             verified_total_sales: false,
             verified_cash_sales: false,
@@ -281,6 +283,9 @@ export const CashDepositHistory = () => {
         const deposit = depositMap.get(key);
         if (deposit) {
           deposit.operational_expenses += exp.amount;
+          if ((exp.expense_type || '').toLowerCase().trim() === 'beban operasional rider') {
+            deposit.rider_operational_expenses += Number(exp.amount || 0);
+          }
         }
       });
 
@@ -437,6 +442,7 @@ export const CashDepositHistory = () => {
       existing.qris_sales += curr.qris_sales;
       existing.transfer_sales += curr.transfer_sales;
       existing.operational_expenses += curr.operational_expenses;
+      existing.rider_operational_expenses += curr.rider_operational_expenses;
       existing.cash_deposit += curr.cash_deposit;
     } else {
       acc.push({ ...curr });
@@ -451,6 +457,7 @@ export const CashDepositHistory = () => {
     qris_sales: acc.qris_sales + curr.qris_sales,
     transfer_sales: acc.transfer_sales + curr.transfer_sales,
     operational_expenses: acc.operational_expenses + curr.operational_expenses,
+    rider_operational_expenses: acc.rider_operational_expenses + curr.rider_operational_expenses,
     cash_deposit: acc.cash_deposit + curr.cash_deposit,
     verified_outlet_deposit: acc.verified_outlet_deposit + (curr.verified_outlet ? curr.cash_deposit : 0),
     verified_finance_deposit: acc.verified_finance_deposit + (curr.verified_finance ? curr.cash_deposit : 0),
@@ -458,7 +465,7 @@ export const CashDepositHistory = () => {
     verified_finance_count: acc.verified_finance_count + (curr.verified_finance ? 1 : 0),
   }), {
     total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0,
-    operational_expenses: 0, cash_deposit: 0,
+    operational_expenses: 0, rider_operational_expenses: 0, cash_deposit: 0,
     verified_outlet_deposit: 0, verified_finance_deposit: 0,
     verified_outlet_count: 0, verified_finance_count: 0,
   });
