@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Trophy } from "lucide-react";
+import { PieChart3D } from "@/components/charts/PieChart3D";
 
 const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
@@ -212,13 +213,24 @@ export default function OperationalExpenses() {
       const endDateTimeStr = `${endDateStr}T23:59:59+07:00`;
       
       // Fetch all transactions for the period to calculate omset per rider
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('rider_id, final_amount')
-        .eq('status', 'completed')
-        .eq('is_voided', false)
-        .gte('transaction_date', startDateTimeStr)
-        .lte('transaction_date', endDateTimeStr);
+      // Paginated to bypass 1000-row limit (matches Sales Report / other pages)
+      const transactions: any[] = [];
+      let txFrom = 0;
+      const txBatch = 1000;
+      while (true) {
+        const { data: batch } = await supabase
+          .from('transactions')
+          .select('rider_id, final_amount')
+          .eq('status', 'completed')
+          .eq('is_voided', false)
+          .gte('transaction_date', startDateTimeStr)
+          .lte('transaction_date', endDateTimeStr)
+          .range(txFrom, txFrom + txBatch - 1);
+        if (!batch || batch.length === 0) break;
+        transactions.push(...batch);
+        if (batch.length < txBatch) break;
+        txFrom += txBatch;
+      }
       
       // Calculate sales per rider
       const salesByRider: { [key: string]: number } = {};
@@ -233,11 +245,13 @@ export default function OperationalExpenses() {
       
       setTotalOmset(totalSales);
       
-      // Update summary with sales data and percentage
+      // Update summary with sales data and percentage (per-rider: beban / omset rider)
       const updatedSummary = summaryArray.map(item => ({
         ...item,
         sales: salesByRider[item.riderId] || 0,
-        percentage: totalSales > 0 ? (item.totalExpenses / totalSales) * 100 : 0
+        percentage: (salesByRider[item.riderId] || 0) > 0
+          ? (item.totalExpenses / (salesByRider[item.riderId] || 1)) * 100
+          : 0
       }));
       
       setUserSummary(updatedSummary);
