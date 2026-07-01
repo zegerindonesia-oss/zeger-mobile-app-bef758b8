@@ -27,6 +27,7 @@ interface CashDepositData {
   qris_sales: number;
   transfer_sales: number;
   operational_expenses: number;
+  rider_operational_expenses: number;
   cash_deposit: number;
   verified_total_sales: boolean;
   verified_cash_sales: boolean;
@@ -215,7 +216,7 @@ export const CashDepositHistory = () => {
       while (true) {
         let pageQuery = supabase
           .from('daily_operational_expenses')
-          .select('rider_id, expense_date, amount')
+          .select('rider_id, expense_date, amount, expense_type')
           .gte('expense_date', startYMD)
           .lte('expense_date', endYMD)
           .range(expFrom, expFrom + PAGE_SIZE - 1);
@@ -249,6 +250,7 @@ export const CashDepositHistory = () => {
             qris_sales: 0,
             transfer_sales: 0,
             operational_expenses: 0,
+            rider_operational_expenses: 0,
             cash_deposit: 0,
             verified_total_sales: false,
             verified_cash_sales: false,
@@ -281,6 +283,9 @@ export const CashDepositHistory = () => {
         const deposit = depositMap.get(key);
         if (deposit) {
           deposit.operational_expenses += exp.amount;
+          if ((exp.expense_type || '').toLowerCase().trim() === 'beban operasional rider') {
+            deposit.rider_operational_expenses += Number(exp.amount || 0);
+          }
         }
       });
 
@@ -437,6 +442,7 @@ export const CashDepositHistory = () => {
       existing.qris_sales += curr.qris_sales;
       existing.transfer_sales += curr.transfer_sales;
       existing.operational_expenses += curr.operational_expenses;
+      existing.rider_operational_expenses += curr.rider_operational_expenses;
       existing.cash_deposit += curr.cash_deposit;
     } else {
       acc.push({ ...curr });
@@ -451,6 +457,7 @@ export const CashDepositHistory = () => {
     qris_sales: acc.qris_sales + curr.qris_sales,
     transfer_sales: acc.transfer_sales + curr.transfer_sales,
     operational_expenses: acc.operational_expenses + curr.operational_expenses,
+    rider_operational_expenses: acc.rider_operational_expenses + curr.rider_operational_expenses,
     cash_deposit: acc.cash_deposit + curr.cash_deposit,
     verified_outlet_deposit: acc.verified_outlet_deposit + (curr.verified_outlet ? curr.cash_deposit : 0),
     verified_finance_deposit: acc.verified_finance_deposit + (curr.verified_finance ? curr.cash_deposit : 0),
@@ -458,7 +465,7 @@ export const CashDepositHistory = () => {
     verified_finance_count: acc.verified_finance_count + (curr.verified_finance ? 1 : 0),
   }), {
     total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0,
-    operational_expenses: 0, cash_deposit: 0,
+    operational_expenses: 0, rider_operational_expenses: 0, cash_deposit: 0,
     verified_outlet_deposit: 0, verified_finance_deposit: 0,
     verified_outlet_count: 0, verified_finance_count: 0,
   });
@@ -569,6 +576,8 @@ export const CashDepositHistory = () => {
                   <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Beban Operasional</TableHead>
                   <TableHead className="text-right">%</TableHead>
+                  <TableHead className="text-right">Beban Op. Rider</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                   <TableHead className="text-right">Total Setoran Tunai</TableHead>
                   <TableHead className="text-right">%</TableHead>
                 </TableRow>
@@ -576,7 +585,7 @@ export const CashDepositHistory = () => {
               <TableBody>
                 {resumeData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center text-muted-foreground">
+                    <TableCell colSpan={16} className="text-center text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
@@ -603,6 +612,8 @@ export const CashDepositHistory = () => {
                           <TableCell className={incomePct}>{pct(item.transfer_sales)}</TableCell>
                           <TableCell className={expense}>{formatCurrency(item.operational_expenses)}</TableCell>
                           <TableCell className={expensePct}>{pct(item.operational_expenses)}</TableCell>
+                          <TableCell className={expense}>{formatCurrency(item.rider_operational_expenses)}</TableCell>
+                          <TableCell className={expensePct}>{pct(item.rider_operational_expenses)}</TableCell>
                           <TableCell className="text-right font-semibold text-green-600">{formatCurrency(item.cash_deposit)}</TableCell>
                           <TableCell className={incomePct}>{pct(item.cash_deposit)}</TableCell>
                         </TableRow>
@@ -615,8 +626,9 @@ export const CashDepositHistory = () => {
                         qris_sales: acc.qris_sales + c.qris_sales,
                         transfer_sales: acc.transfer_sales + c.transfer_sales,
                         operational_expenses: acc.operational_expenses + c.operational_expenses,
+                        rider_operational_expenses: acc.rider_operational_expenses + c.rider_operational_expenses,
                         cash_deposit: acc.cash_deposit + c.cash_deposit,
-                      }), { total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0, operational_expenses: 0, cash_deposit: 0 });
+                      }), { total_sales: 0, cash_sales: 0, qris_sales: 0, transfer_sales: 0, operational_expenses: 0, rider_operational_expenses: 0, cash_deposit: 0 });
                       const ts = sum.total_sales;
                       const pct = (v: number) => ts > 0 ? `${((v / ts) * 100).toFixed(1)}%` : '0%';
                       return (
@@ -632,6 +644,8 @@ export const CashDepositHistory = () => {
                           <TableCell className="text-right text-green-600 text-xs">{pct(sum.transfer_sales)}</TableCell>
                           <TableCell className="text-right text-red-600">{formatCurrency(sum.operational_expenses)}</TableCell>
                           <TableCell className="text-right text-red-600 text-xs">{pct(sum.operational_expenses)}</TableCell>
+                          <TableCell className="text-right text-red-600">{formatCurrency(sum.rider_operational_expenses)}</TableCell>
+                          <TableCell className="text-right text-red-600 text-xs">{pct(sum.rider_operational_expenses)}</TableCell>
                           <TableCell className="text-right text-green-600">{formatCurrency(sum.cash_deposit)}</TableCell>
                           <TableCell className="text-right text-green-600 text-xs">{pct(sum.cash_deposit)}</TableCell>
                         </TableRow>
@@ -663,6 +677,7 @@ export const CashDepositHistory = () => {
                   <TableHead className="text-right px-2">QRIS</TableHead>
                   <TableHead className="text-right px-2">Transfer</TableHead>
                   <TableHead className="text-right px-2">Beban Op.</TableHead>
+                  <TableHead className="text-right px-2">Beban Op. Rider</TableHead>
                   <TableHead className="text-right px-2">Setoran Tunai</TableHead>
                    <TableHead className="px-2 min-w-[130px]"><div>Verifikasi</div><div>Outlet</div></TableHead>
                    <TableHead className="px-2 min-w-[130px]"><div>Verifikasi</div><div>Finance</div></TableHead>
@@ -672,7 +687,7 @@ export const CashDepositHistory = () => {
               <TableBody>
                 {cashDeposits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center text-muted-foreground">
                       Tidak ada data
                     </TableCell>
                   </TableRow>
@@ -732,6 +747,9 @@ export const CashDepositHistory = () => {
                             />
                             <span className="text-xs">{formatCurrency(item.operational_expenses)}</span>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-right px-2">
+                          <span className="text-xs text-red-600">{formatCurrency(item.rider_operational_expenses)}</span>
                         </TableCell>
                         <TableCell className="text-right px-2">
                           <div className="flex items-center justify-end gap-1">
@@ -805,6 +823,7 @@ export const CashDepositHistory = () => {
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.qris_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.transfer_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.operational_expenses)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs text-red-600">{formatCurrency(totals.rider_operational_expenses)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(totals.cash_deposit)}</TableCell>
                       <TableCell className="px-2 text-xs text-center">{totals.verified_outlet_count}/{cashDeposits.length} ✓ ({formatCurrency(totals.verified_outlet_deposit)})</TableCell>
                       <TableCell className="px-2 text-xs text-center">{totals.verified_finance_count}/{cashDeposits.length} ✓ ({formatCurrency(totals.verified_finance_deposit)})</TableCell>
@@ -818,6 +837,7 @@ export const CashDepositHistory = () => {
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.qris_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.transfer_sales)}</TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.operational_expenses)}</TableCell>
+                      <TableCell className="text-right px-2 text-xs"></TableCell>
                       <TableCell className="text-right px-2 text-xs">{formatCurrency(averages.cash_deposit)}</TableCell>
                       <TableCell colSpan={3}></TableCell>
                     </TableRow>

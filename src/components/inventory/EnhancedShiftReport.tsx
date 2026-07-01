@@ -85,7 +85,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
   
   // History filters
   const [selectedUser, setSelectedUser] = useState<string>("all");
-  const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  // Default to today only for faster initial load
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -776,6 +777,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                             <SelectItem value="Parkir">Parkir</SelectItem>
                                             <SelectItem value="Pulsa">Pulsa</SelectItem>
                                             <SelectItem value="Service">Service</SelectItem>
+                                            <SelectItem value="Beban Operasional Rider">Beban Operasional Rider</SelectItem>
                                             <SelectItem value="Lainnya">Lainnya</SelectItem>
                                           </SelectContent>
                                         </Select>
