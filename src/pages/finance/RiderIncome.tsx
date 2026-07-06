@@ -113,6 +113,7 @@ type DetailRow = {
   salesCommission: number;
   waste: number;
   total: number;
+  notes: string;
 };
 
 type ResumeRow = {
@@ -336,6 +337,7 @@ const RiderIncome = () => {
   const [transactionData, setTransactionData] = useState<any[]>([]);
   const [wasteData, setWasteData] = useState<any[]>([]);
   const [productSalesData, setProductSalesData] = useState<{ name: string; qty: number }[]>([]);
+  const [notesMap, setNotesMap] = useState<Map<string, string>>(new Map());
   const branchId = userProfile?.branch_id;
 
   // === Existing fetch riders ===
@@ -401,6 +403,20 @@ const RiderIncome = () => {
         const [tx, waste] = await Promise.all([fetchAll(txQ), fetchAll(wasteQ)]);
         setTransactionData(tx);
         setWasteData(waste);
+
+        // Fetch cash deposit verification notes (keterangan) for the filter range
+        let notesQ = supabase
+          .from("cash_deposit_verifications")
+          .select("rider_id, deposit_date, notes")
+          .gte("deposit_date", startDate)
+          .lte("deposit_date", endDate);
+        if (selectedRider !== "all") notesQ = notesQ.eq("rider_id", selectedRider);
+        const notesRows = await fetchAll(notesQ);
+        const nMap = new Map<string, string>();
+        notesRows.forEach((n: any) => {
+          if (n.notes) nMap.set(`${n.rider_id}_${n.deposit_date}`, n.notes);
+        });
+        setNotesMap(nMap);
 
         // Fetch product sales data for menu terjual
         let prodQ = supabase
@@ -542,6 +558,7 @@ const RiderIncome = () => {
             salesCommission: salesComm,
             waste,
             total,
+            notes: notesMap.get(`${riderId}_${date}`) || "",
           });
           agg.sales += daySales;
           agg.dailyCommission += daily;
@@ -606,7 +623,7 @@ const RiderIncome = () => {
     });
 
     return { resumeData: resume, detailData: details, riderStats: stats };
-  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider, kasbonValues]);
+  }, [transactionData, wasteData, riders, startDate, endDate, selectedRider, kasbonValues, notesMap]);
 
   const handleQuickFilter = (type: string) => {
     const now = getJakartaNow();
@@ -1173,6 +1190,7 @@ const RiderIncome = () => {
                   <TableHead className="text-right">Komisi Penjualan</TableHead>
                   <TableHead className="text-right">Waste (-)</TableHead>
                   <TableHead className="text-right">Total Pendapatan</TableHead>
+                  <TableHead>Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1186,6 +1204,9 @@ const RiderIncome = () => {
                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[240px] whitespace-pre-wrap break-words">
+                      {row.notes || <span className="text-muted-foreground/50">—</span>}
+                    </TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="bg-muted/50 font-bold">
@@ -1197,6 +1218,7 @@ const RiderIncome = () => {
                   <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.salesCommission, 0))}</TableCell>
                   <TableCell className="text-right text-destructive">{formatCurrency(detailData.reduce((s, r) => s + r.waste, 0))}</TableCell>
                   <TableCell className="text-right">{formatCurrency(detailData.reduce((s, r) => s + r.total, 0))}</TableCell>
+                  <TableCell></TableCell>
                 </TableRow>
               </TableBody>
             </Table>
