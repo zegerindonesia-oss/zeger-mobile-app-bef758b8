@@ -675,12 +675,13 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                   <TableHead className="text-right">HPP</TableHead>
                   <TableHead className="text-right">Total Waste</TableHead>
                   <TableHead>Alasan</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {wasteData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       Tidak ada data waste
                     </TableCell>
                   </TableRow>
@@ -703,6 +704,27 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                           {item.waste_reason}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Edit"
+                            onClick={() => openEditWaste(item)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            title="Hapus"
+                            onClick={() => handleDeleteWaste(item)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -721,6 +743,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                         Rp {summary.totalWaste.toLocaleString('id-ID')}
                       </TableCell>
                       <TableCell></TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                     <TableRow className="bg-gray-50 border-t">
                       <TableCell colSpan={2} className="font-bold text-right">AVG:</TableCell>
@@ -734,6 +757,7 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
                         Rp {summary.avgWaste.toLocaleString('id-ID')}
                       </TableCell>
                       <TableCell></TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                   </>
                 )}
@@ -742,6 +766,60 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Edit Waste Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Data Waste</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Tanggal *</Label>
+              <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Product *</Label>
+              <Select value={editProduct} onValueChange={setEditProduct}>
+                <SelectTrigger><SelectValue placeholder="Pilih product" /></SelectTrigger>
+                <SelectContent>
+                  {products.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} (HPP: Rp {p.cost_price?.toLocaleString('id-ID')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Jumlah *</Label>
+              <Input type="number" min="1" value={editQty} onChange={(e) => setEditQty(e.target.value)} />
+            </div>
+            <div>
+              <Label>Alasan Waste *</Label>
+              <Select value={editReason} onValueChange={setEditReason}>
+                <SelectTrigger><SelectValue placeholder="Pilih alasan" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tumpah">Tumpah</SelectItem>
+                  <SelectItem value="bocor">Bocor</SelectItem>
+                  <SelectItem value="basi">Basi</SelectItem>
+                  <SelectItem value="expired">Expired Date</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Keterangan</Label>
+              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Keterangan tambahan (optional)" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Batal</Button>
+            <Button onClick={handleUpdateWaste} disabled={editSaving}>
+              {editSaving ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
