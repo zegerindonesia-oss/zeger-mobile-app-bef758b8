@@ -188,10 +188,16 @@ const ProductManagement = () => {
   };
 
   const handleDelete = async (product: Product) => {
-    if (!confirm(`Hapus produk "${product.name}"?`)) return;
+    if (!confirm(`Hapus produk "${product.name}"?\n\nTindakan ini tidak dapat dibatalkan.`)) return;
     const { error } = await supabase.from("products").delete().eq("id", product.id);
     if (error) {
-      toast.error("Gagal hapus produk: " + error.message);
+      if (error.code === "23503" || /foreign key|violates/i.test(error.message)) {
+        toast.error(
+          `Produk "${product.name}" tidak bisa dihapus karena sudah terpakai di transaksi/stok. Nonaktifkan produk saja.`
+        );
+      } else {
+        toast.error("Gagal hapus produk: " + error.message);
+      }
     } else {
       toast.success("Produk berhasil dihapus");
       fetchProducts();
@@ -293,12 +299,19 @@ const ProductManagement = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end">
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>
-                            <Pencil className="h-4 w-4" />
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="outline" onClick={() => openEdit(p)} className="gap-1">
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(p)}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => handleDelete(p)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Hapus
                           </Button>
                         </div>
                       </TableCell>
