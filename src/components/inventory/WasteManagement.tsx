@@ -9,6 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Trash2, Plus, TrendingDown, Filter, Trophy, FileDown, Award } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, startOfMonth, subDays } from "date-fns";
@@ -37,6 +39,16 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   const [quantity, setQuantity] = useState("");
   const [wasteReason, setWasteReason] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Edit dialog state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editRow, setEditRow] = useState<any | null>(null);
+  const [editProduct, setEditProduct] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editQty, setEditQty] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     fetchRiders();
@@ -226,6 +238,61 @@ export const WasteManagement = ({ userProfile, assignedRiderId }: WasteManagemen
   };
 
   const colors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#84CC16', '#EA2831', '#EC4899', '#06B6D4'];
+
+  const openEditWaste = (item: any) => {
+    setEditRow(item);
+    const prod = products.find(p => p.name === item.product_name);
+    setEditProduct(prod?.id || "");
+    setEditDate(format(new Date(item.created_at), 'yyyy-MM-dd'));
+    setEditQty(String(item.quantity ?? ""));
+    setEditReason(item.waste_reason || "");
+    setEditNotes(item.notes || "");
+    setEditOpen(true);
+  };
+
+  const handleUpdateWaste = async () => {
+    if (!editRow) return;
+    if (!editProduct || !editQty || !editReason) {
+      toast.error("Mohon lengkapi semua field wajib");
+      return;
+    }
+    try {
+      setEditSaving(true);
+      const prod = products.find(p => p.id === editProduct);
+      const { error } = await supabase
+        .from('product_waste')
+        .update({
+          product_id: editProduct,
+          quantity: parseInt(editQty),
+          waste_reason: editReason,
+          notes: editNotes,
+          hpp: prod?.cost_price || 0,
+          created_at: `${editDate}T00:00:00`,
+        })
+        .eq('id', editRow.id);
+      if (error) throw error;
+      toast.success("Data waste berhasil diupdate");
+      setEditOpen(false);
+      setEditRow(null);
+      fetchWasteData();
+    } catch (e: any) {
+      toast.error("Gagal update: " + e.message);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleDeleteWaste = async (item: any) => {
+    if (!confirm(`Hapus data waste ${item.product_name} (${item.quantity})?`)) return;
+    try {
+      const { error } = await supabase.from('product_waste').delete().eq('id', item.id);
+      if (error) throw error;
+      toast.success("Data waste berhasil dihapus");
+      fetchWasteData();
+    } catch (e: any) {
+      toast.error("Gagal hapus: " + e.message);
+    }
+  };
 
   const calculateSummary = () => {
     if (wasteData.length === 0) {
