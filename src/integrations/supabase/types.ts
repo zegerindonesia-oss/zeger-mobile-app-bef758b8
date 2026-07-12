@@ -1697,7 +1697,7 @@ export type Database = {
       product_price_history: {
         Row: {
           changed_at: string
-          changed_by: string
+          changed_by: string | null
           field_name: string
           id: string
           new_value: number
@@ -1707,7 +1707,7 @@ export type Database = {
         }
         Insert: {
           changed_at?: string
-          changed_by: string
+          changed_by?: string | null
           field_name: string
           id?: string
           new_value: number
@@ -1717,7 +1717,7 @@ export type Database = {
         }
         Update: {
           changed_at?: string
-          changed_by?: string
+          changed_by?: string | null
           field_name?: string
           id?: string
           new_value?: number
