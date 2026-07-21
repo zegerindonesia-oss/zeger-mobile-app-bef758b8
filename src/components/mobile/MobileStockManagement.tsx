@@ -457,6 +457,7 @@ const MobileStockManagement = () => {
     transferSales: 0,
     totalTransactions: 0
   });
+  const [dailyShifts, setDailyShifts] = useState<DailyShiftBreakdown[]>([]);
   const [remainingStockCount, setRemainingStockCount] = useState<number>(0);
   const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([
     { type: '', amount: '', description: '' }
