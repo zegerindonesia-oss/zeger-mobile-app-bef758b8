@@ -639,6 +639,52 @@ const MobileStockManagement = () => {
         transferSales,
         totalTransactions: dailyTransactions?.length || 0
       });
+
+      // Fetch ALL shifts today for per-shift breakdown
+      const { data: allShiftsToday } = await supabase
+        .from('shift_management')
+        .select('id, shift_number, shift_start_time, shift_end_time, status, report_submitted')
+        .eq('rider_id', userProfile.id)
+        .eq('shift_date', today)
+        .order('shift_number', { ascending: true });
+
+      const shiftsList = allShiftsToday || [];
+      const sortedByStart = [...shiftsList].sort((a: any, b: any) => {
+        const sa = a.shift_start_time ? new Date(a.shift_start_time).getTime() : 0;
+        const sb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : 0;
+        return sa - sb;
+      });
+
+      const breakdown: DailyShiftBreakdown[] = sortedByStart.map((sh: any, idx: number) => {
+        const startMs = sh.shift_start_time ? new Date(sh.shift_start_time).getTime() : 0;
+        // End boundary: shift's own end OR next shift start OR now
+        let endMs: number;
+        if (sh.shift_end_time) endMs = new Date(sh.shift_end_time).getTime();
+        else if (sortedByStart[idx + 1]?.shift_start_time) endMs = new Date(sortedByStart[idx + 1].shift_start_time).getTime();
+        else endMs = Date.now();
+
+        const inShift = (dailyTransactions || []).filter((t: any) => {
+          const tMs = new Date(t.transaction_date).getTime();
+          return tMs >= startMs && tMs <= endMs;
+        });
+        const c = inShift.filter((t: any) => (t.payment_method || '').toLowerCase() === 'cash').reduce((s: number, t: any) => s + parseFloat(t.final_amount.toString()), 0);
+        const q = inShift.filter((t: any) => (t.payment_method || '').toLowerCase() === 'qris').reduce((s: number, t: any) => s + parseFloat(t.final_amount.toString()), 0);
+        const tr = inShift.filter((t: any) => ['transfer', 'bank_transfer', 'bank'].includes((t.payment_method || '').toLowerCase())).reduce((s: number, t: any) => s + parseFloat(t.final_amount.toString()), 0);
+        return {
+          id: sh.id,
+          shift_number: sh.shift_number || (idx + 1),
+          shift_start_time: sh.shift_start_time,
+          shift_end_time: sh.shift_end_time,
+          status: sh.status,
+          report_submitted: !!sh.report_submitted,
+          cashSales: c,
+          qrisSales: q,
+          transferSales: tr,
+          totalSales: c + q + tr,
+          totalTransactions: inShift.length,
+        };
+      });
+      setDailyShifts(breakdown);
     } catch (error: any) {
       console.error("Error fetching shift data:", error);
     }
