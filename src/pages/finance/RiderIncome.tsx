@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Filter, Trophy, TrendingUp, Users, AlertTriangle, FileDown, Target, Zap, Calendar, ArrowUpRight, Star } from "lucide-react";
+import { Filter, Trophy, TrendingUp, Users, AlertTriangle, FileDown, Target, Zap, Calendar, ArrowUpRight, Star, Save, Check } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 

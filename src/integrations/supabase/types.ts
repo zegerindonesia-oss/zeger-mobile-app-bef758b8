@@ -2148,6 +2148,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rider_kasbon: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kasbon_date: string
+          notes: string | null
+          rider_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kasbon_date: string
+          notes?: string | null
+          rider_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kasbon_date?: string
+          notes?: string | null
+          rider_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rider_locations: {
         Row: {
           accuracy: number | null
