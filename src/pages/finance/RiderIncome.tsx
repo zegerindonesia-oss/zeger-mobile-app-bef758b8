@@ -450,6 +450,64 @@ const RiderIncome = () => {
     fetchData();
   }, [startDate, endDate, selectedRider, branchId]);
 
+  // Load saved kasbon values from rider_kasbon for the selected date range
+  useEffect(() => {
+    const fetchKasbon = async () => {
+      try {
+        let q = supabase
+          .from("rider_kasbon" as any)
+          .select("rider_id, amount")
+          .gte("kasbon_date", startDate)
+          .lte("kasbon_date", endDate);
+        if (selectedRider !== "all") q = q.eq("rider_id", selectedRider);
+        const { data, error } = await q;
+        if (error) throw error;
+        const map: Record<string, number> = {};
+        (data as any[] || []).forEach((r) => {
+          map[r.rider_id] = (map[r.rider_id] || 0) + Number(r.amount || 0);
+        });
+        setKasbonValues(map);
+        setSavedKasbon(map);
+      } catch (err) {
+        console.error("Failed to load kasbon", err);
+      }
+    };
+    fetchKasbon();
+  }, [startDate, endDate, selectedRider]);
+
+  const handleSaveKasbon = async (riderId: string) => {
+    const amount = kasbonValues[riderId] || 0;
+    setSavingKasbon((p) => ({ ...p, [riderId]: true }));
+    try {
+      // Store as one aggregate row at endDate; remove other rows in range to avoid duplicates
+      const { error: delErr } = await supabase
+        .from("rider_kasbon" as any)
+        .delete()
+        .eq("rider_id", riderId)
+        .gte("kasbon_date", startDate)
+        .lte("kasbon_date", endDate);
+      if (delErr) throw delErr;
+
+      if (amount > 0) {
+        const { error: insErr } = await supabase
+          .from("rider_kasbon" as any)
+          .insert({
+            rider_id: riderId,
+            kasbon_date: endDate,
+            amount,
+            created_by: userProfile?.id || null,
+          });
+        if (insErr) throw insErr;
+      }
+      setSavedKasbon((p) => ({ ...p, [riderId]: amount }));
+      toast.success("Kasbon tersimpan");
+    } catch (err: any) {
+      toast.error("Gagal menyimpan kasbon: " + err.message);
+    } finally {
+      setSavingKasbon((p) => ({ ...p, [riderId]: false }));
+    }
+  };
+
   // === Existing data computation + new rider stats ===
   const { resumeData, detailData, riderStats } = useMemo(() => {
     const riderMap = new Map<string, string>();
