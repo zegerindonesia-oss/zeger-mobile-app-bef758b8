@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Filter, Trophy, TrendingUp, Users, AlertTriangle, FileDown, Target, Zap, Calendar, ArrowUpRight, Star } from "lucide-react";
+import { Filter, Trophy, TrendingUp, Users, AlertTriangle, FileDown, Target, Zap, Calendar, ArrowUpRight, Star, Save, Check } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 
@@ -328,6 +328,8 @@ const RiderIncome = () => {
   const [selectedRider, setSelectedRider] = useState("all");
   const [loading, setLoading] = useState(false);
   const [kasbonValues, setKasbonValues] = useState<Record<string, number>>({});
+  const [savedKasbon, setSavedKasbon] = useState<Record<string, number>>({});
+  const [savingKasbon, setSavingKasbon] = useState<Record<string, boolean>>({});
 
   const now = getJakartaNow();
   const todayStr = formatDateStr(now);
@@ -447,6 +449,64 @@ const RiderIncome = () => {
     };
     fetchData();
   }, [startDate, endDate, selectedRider, branchId]);
+
+  // Load saved kasbon values from rider_kasbon for the selected date range
+  useEffect(() => {
+    const fetchKasbon = async () => {
+      try {
+        let q = supabase
+          .from("rider_kasbon" as any)
+          .select("rider_id, amount")
+          .gte("kasbon_date", startDate)
+          .lte("kasbon_date", endDate);
+        if (selectedRider !== "all") q = q.eq("rider_id", selectedRider);
+        const { data, error } = await q;
+        if (error) throw error;
+        const map: Record<string, number> = {};
+        (data as any[] || []).forEach((r) => {
+          map[r.rider_id] = (map[r.rider_id] || 0) + Number(r.amount || 0);
+        });
+        setKasbonValues(map);
+        setSavedKasbon(map);
+      } catch (err) {
+        console.error("Failed to load kasbon", err);
+      }
+    };
+    fetchKasbon();
+  }, [startDate, endDate, selectedRider]);
+
+  const handleSaveKasbon = async (riderId: string) => {
+    const amount = kasbonValues[riderId] || 0;
+    setSavingKasbon((p) => ({ ...p, [riderId]: true }));
+    try {
+      // Store as one aggregate row at endDate; remove other rows in range to avoid duplicates
+      const { error: delErr } = await supabase
+        .from("rider_kasbon" as any)
+        .delete()
+        .eq("rider_id", riderId)
+        .gte("kasbon_date", startDate)
+        .lte("kasbon_date", endDate);
+      if (delErr) throw delErr;
+
+      if (amount > 0) {
+        const { error: insErr } = await supabase
+          .from("rider_kasbon" as any)
+          .insert({
+            rider_id: riderId,
+            kasbon_date: endDate,
+            amount,
+            created_by: userProfile?.id || null,
+          });
+        if (insErr) throw insErr;
+      }
+      setSavedKasbon((p) => ({ ...p, [riderId]: amount }));
+      toast.success("Kasbon tersimpan");
+    } catch (err: any) {
+      toast.error("Gagal menyimpan kasbon: " + err.message);
+    } finally {
+      setSavingKasbon((p) => ({ ...p, [riderId]: false }));
+    }
+  };
 
   // === Existing data computation + new rider stats ===
   const { resumeData, detailData, riderStats } = useMemo(() => {
@@ -1136,17 +1196,31 @@ const RiderIncome = () => {
                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        min={0}
-                        className="w-28 text-right ml-auto"
-                        value={kasbonValues[row.riderId] || ""}
-                        placeholder="0"
-                        onChange={(e) => {
-                          const val = Number(e.target.value) || 0;
-                          setKasbonValues((prev) => ({ ...prev, [row.riderId]: val }));
-                        }}
-                      />
+                      <div className="flex items-center gap-1 justify-end">
+                        <Input
+                          type="number"
+                          min={0}
+                          className="w-28 text-right"
+                          value={kasbonValues[row.riderId] || ""}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 0;
+                            setKasbonValues((prev) => ({ ...prev, [row.riderId]: val }));
+                          }}
+                        />
+                        <Button
+                          size="icon"
+                          variant={(kasbonValues[row.riderId] || 0) === (savedKasbon[row.riderId] || 0) ? "outline" : "default"}
+                          className="h-8 w-8 shrink-0"
+                          disabled={savingKasbon[row.riderId]}
+                          onClick={() => handleSaveKasbon(row.riderId)}
+                          title="Simpan kasbon"
+                        >
+                          {(kasbonValues[row.riderId] || 0) === (savedKasbon[row.riderId] || 0)
+                            ? <Check className="h-4 w-4" />
+                            : <Save className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
                   </TableRow>
