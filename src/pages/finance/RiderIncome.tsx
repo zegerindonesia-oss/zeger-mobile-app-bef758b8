@@ -328,6 +328,8 @@ const RiderIncome = () => {
   const [selectedRider, setSelectedRider] = useState("all");
   const [loading, setLoading] = useState(false);
   const [kasbonValues, setKasbonValues] = useState<Record<string, number>>({});
+  const [savedKasbon, setSavedKasbon] = useState<Record<string, number>>({});
+  const [savingKasbon, setSavingKasbon] = useState<Record<string, boolean>>({});
 
   const now = getJakartaNow();
   const todayStr = formatDateStr(now);
