@@ -65,6 +65,20 @@ interface ShiftSummary {
   totalTransactions: number;
 }
 
+interface DailyShiftBreakdown {
+  id: string;
+  shift_number: number;
+  shift_start_time: string | null;
+  shift_end_time: string | null;
+  status: string;
+  report_submitted: boolean;
+  totalSales: number;
+  cashSales: number;
+  qrisSales: number;
+  transferSales: number;
+  totalTransactions: number;
+}
+
 interface OperationalExpense {
   type: string;
   amount: string;
