@@ -1196,17 +1196,31 @@ const RiderIncome = () => {
                     <TableCell className="text-right">{formatCurrency(row.salesCommission)}</TableCell>
                     <TableCell className="text-right text-destructive">{formatCurrency(row.waste)}</TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        min={0}
-                        className="w-28 text-right ml-auto"
-                        value={kasbonValues[row.riderId] || ""}
-                        placeholder="0"
-                        onChange={(e) => {
-                          const val = Number(e.target.value) || 0;
-                          setKasbonValues((prev) => ({ ...prev, [row.riderId]: val }));
-                        }}
-                      />
+                      <div className="flex items-center gap-1 justify-end">
+                        <Input
+                          type="number"
+                          min={0}
+                          className="w-28 text-right"
+                          value={kasbonValues[row.riderId] || ""}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 0;
+                            setKasbonValues((prev) => ({ ...prev, [row.riderId]: val }));
+                          }}
+                        />
+                        <Button
+                          size="icon"
+                          variant={(kasbonValues[row.riderId] || 0) === (savedKasbon[row.riderId] || 0) ? "outline" : "default"}
+                          className="h-8 w-8 shrink-0"
+                          disabled={savingKasbon[row.riderId]}
+                          onClick={() => handleSaveKasbon(row.riderId)}
+                          title="Simpan kasbon"
+                        >
+                          {(kasbonValues[row.riderId] || 0) === (savedKasbon[row.riderId] || 0)
+                            ? <Check className="h-4 w-4" />
+                            : <Save className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-bold">{formatCurrency(row.total)}</TableCell>
                   </TableRow>
