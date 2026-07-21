@@ -1561,6 +1561,47 @@ const MobileStockManagement = () => {
                       </div>
                     </div>
 
+                    {/* Per-shift breakdown */}
+                    {dailyShifts.length > 0 && (
+                      <div className="bg-white border rounded-lg p-3 space-y-2">
+                        <p className="text-sm font-semibold text-gray-800">Rincian per Shift Hari Ini</p>
+                        <Accordion type="multiple" className="w-full">
+                          {dailyShifts.map((sh) => {
+                            const startLabel = sh.shift_start_time
+                              ? new Date(sh.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
+                              : '-';
+                            const endLabel = sh.shift_end_time
+                              ? new Date(sh.shift_end_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
+                              : 'aktif';
+                            return (
+                              <AccordionItem key={sh.id} value={sh.id}>
+                                <AccordionTrigger className="hover:no-underline text-sm py-2">
+                                  <div className="flex-1 flex items-center justify-between pr-2">
+                                    <span className="font-medium">Shift #{sh.shift_number} <span className="text-xs text-muted-foreground">({startLabel} - {endLabel})</span></span>
+                                    <span className="font-semibold text-blue-600">{formatCurrency(sh.totalSales)}</span>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-1 text-xs bg-blue-50/60 rounded p-2">
+                                    <div className="flex justify-between"><span>Tunai</span><span className="font-semibold">{formatCurrency(sh.cashSales)}</span></div>
+                                    <div className="flex justify-between"><span>QRIS</span><span className="font-semibold">{formatCurrency(sh.qrisSales)}</span></div>
+                                    <div className="flex justify-between"><span>Transfer</span><span className="font-semibold">{formatCurrency(sh.transferSales)}</span></div>
+                                    <div className="flex justify-between border-t pt-1"><span className="font-medium">Total</span><span className="font-bold text-blue-700">{formatCurrency(sh.totalSales)}</span></div>
+                                    <div className="flex justify-between"><span>Transaksi</span><span className="font-semibold">{sh.totalTransactions}</span></div>
+                                    <div className="flex justify-between text-muted-foreground"><span>Status</span><span>{sh.report_submitted ? 'Ditutup' : 'Aktif'}</span></div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
+                        <div className="border-t pt-2 flex justify-between text-sm font-bold">
+                          <span>Total Hari Ini</span>
+                          <span className="text-blue-700">{formatCurrency(shiftSummary.totalSales)}</span>
+                        </div>
+                      </div>
+                    )}
+
                      {!activeShift?.report_submitted ? (
                       <div className="space-y-4">
                         {/* Operational Expenses - FROZEN for riders */}
