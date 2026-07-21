@@ -947,10 +947,48 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             <div>Setoran Tunai</div>
             <div>Status</div>
           </div>
-          <Accordion type="multiple" className="w-full">
-            {shiftHistory.map((shift: any) => (
-              <AccordionItem key={shift.id} value={shift.id}>
-                <AccordionTrigger className="hover:no-underline">
+          {(() => {
+            // Group shifts by (rider_id + shift_date)
+            const groups: Record<string, { rider_id: string; rider_name: string; shift_date: string; shifts: any[] }> = {};
+            shiftHistory.forEach((s: any) => {
+              const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s.shift_date));
+              const key = `${s.rider_id}__${dateKey}`;
+              if (!groups[key]) groups[key] = { rider_id: s.rider_id, rider_name: s.rider_name, shift_date: dateKey, shifts: [] };
+              groups[key].shifts.push(s);
+            });
+            const groupsArr = Object.values(groups).sort((a, b) => (a.shift_date < b.shift_date ? 1 : -1));
+            return (
+          <Accordion type="multiple" className="w-full space-y-3">
+            {groupsArr.map((grp) => {
+              const sorted = [...grp.shifts].sort((a, b) => (a.shift_number || 0) - (b.shift_number || 0));
+              const dayTotals = sorted.reduce((acc, s: any) => {
+                acc.deposit += Number(s.calculated_cash_deposit || 0);
+                acc.sales += Number(s.sales_breakdown?.total || 0);
+                acc.cash += Number(s.sales_breakdown?.cash || 0);
+                acc.qris += Number(s.sales_breakdown?.qris || 0);
+                acc.transfer += Number(s.sales_breakdown?.transfer || 0);
+                acc.ops += Number(s.operational_daily || 0);
+                acc.unsold += Number(s.products_unsold || 0);
+                acc.returned += Number(s.products_returned || 0);
+                return acc;
+              }, { deposit: 0, sales: 0, cash: 0, qris: 0, transfer: 0, ops: 0, unsold: 0, returned: 0 });
+              const groupKey = `${grp.rider_id}-${grp.shift_date}`;
+              return (
+                <div key={groupKey} className="border rounded-lg overflow-hidden">
+                  <div className="bg-primary/10 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-semibold">
+                      {grp.rider_name} — {format(new Date(grp.shift_date), 'dd/MM/yyyy')}
+                      <span className="ml-2 text-xs text-muted-foreground">({sorted.length} shift)</span>
+                    </div>
+                    <div className="text-sm">
+                      Total Hari Ini: <span className="font-bold text-green-700">Rp {dayTotals.deposit.toLocaleString('id-ID')}</span>
+                      <span className="ml-2 text-muted-foreground">(Sales Rp {dayTotals.sales.toLocaleString('id-ID')} • Beban Rp {dayTotals.ops.toLocaleString('id-ID')})</span>
+                    </div>
+                  </div>
+                  <div className="p-2 space-y-1">
+                    {sorted.map((shift: any) => (
+              <AccordionItem key={shift.id} value={shift.id} className="border rounded">
+                <AccordionTrigger className="hover:no-underline px-2">
                   <div className="grid grid-cols-8 gap-2 w-full text-left items-center">
                     <span className="font-mono text-xs md:text-sm">{shift.id}</span>
                     <span>{shift.rider_name}</span>
@@ -962,7 +1000,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                     <Badge variant="default">Telah diterima</Badge>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent className="px-2">
                   <div className="space-y-4">
                     {shift.return_items?.length > 0 && (
                       <div>
@@ -1027,8 +1065,14 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                   </div>
                 </AccordionContent>
               </AccordionItem>
-            ))}
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </Accordion>
+            );
+          })()}
 
           {shiftHistory.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">

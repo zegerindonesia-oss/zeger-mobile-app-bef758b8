@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { 
@@ -58,6 +59,20 @@ interface StockGroup {
 }
 
 interface ShiftSummary {
+  totalSales: number;
+  cashSales: number;
+  qrisSales: number;
+  transferSales: number;
+  totalTransactions: number;
+}
+
+interface DailyShiftBreakdown {
+  id: string;
+  shift_number: number;
+  shift_start_time: string | null;
+  shift_end_time: string | null;
+  status: string;
+  report_submitted: boolean;
   totalSales: number;
   cashSales: number;
   qrisSales: number;
@@ -443,6 +458,7 @@ const MobileStockManagement = () => {
     transferSales: 0,
     totalTransactions: 0
   });
+  const [dailyShifts, setDailyShifts] = useState<DailyShiftBreakdown[]>([]);
   const [remainingStockCount, setRemainingStockCount] = useState<number>(0);
   const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([
     { type: '', amount: '', description: '' }
@@ -624,6 +640,52 @@ const MobileStockManagement = () => {
         transferSales,
         totalTransactions: dailyTransactions?.length || 0
       });
+
+      // Fetch ALL shifts today for per-shift breakdown
+      const { data: allShiftsToday } = await supabase
+        .from('shift_management')
+        .select('id, shift_number, shift_start_time, shift_end_time, status, report_submitted')
+        .eq('rider_id', userProfile.id)
+        .eq('shift_date', today)
+        .order('shift_number', { ascending: true });
+
+      const shiftsList = allShiftsToday || [];
+      const sortedByStart = [...shiftsList].sort((a: any, b: any) => {
+        const sa = a.shift_start_time ? new Date(a.shift_start_time).getTime() : 0;
+        const sb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : 0;
+        return sa - sb;
+      });
+
+      const breakdown: DailyShiftBreakdown[] = sortedByStart.map((sh: any, idx: number) => {
+        const startMs = sh.shift_start_time ? new Date(sh.shift_start_time).getTime() : 0;
+        // End boundary: shift's own end OR next shift start OR now
+        let endMs: number;
+        if (sh.shift_end_time) endMs = new Date(sh.shift_end_time).getTime();
+        else if (sortedByStart[idx + 1]?.shift_start_time) endMs = new Date(sortedByStart[idx + 1].shift_start_time).getTime();
+        else endMs = Date.now();
+
+        const inShift = (dailyTransactions || []).filter((t: any) => {
+          const tMs = new Date(t.transaction_date).getTime();
+          return tMs >= startMs && tMs <= endMs;
+        });
+        const c = inShift.filter((t: any) => (t.payment_method || '').toLowerCase() === 'cash').reduce((s: number, t: any) => s + parseFloat(t.final_amount.toString()), 0);
+        const q = inShift.filter((t: any) => (t.payment_method || '').toLowerCase() === 'qris').reduce((s: number, t: any) => s + parseFloat(t.final_amount.toString()), 0);
+        const tr = inShift.filter((t: any) => ['transfer', 'bank_transfer', 'bank'].includes((t.payment_method || '').toLowerCase())).reduce((s: number, t: any) => s + parseFloat(t.final_amount.toString()), 0);
+        return {
+          id: sh.id,
+          shift_number: sh.shift_number || (idx + 1),
+          shift_start_time: sh.shift_start_time,
+          shift_end_time: sh.shift_end_time,
+          status: sh.status,
+          report_submitted: !!sh.report_submitted,
+          cashSales: c,
+          qrisSales: q,
+          transferSales: tr,
+          totalSales: c + q + tr,
+          totalTransactions: inShift.length,
+        };
+      });
+      setDailyShifts(breakdown);
     } catch (error: any) {
       console.error("Error fetching shift data:", error);
     }
@@ -1499,6 +1561,47 @@ const MobileStockManagement = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Per-shift breakdown */}
+                    {dailyShifts.length > 0 && (
+                      <div className="bg-white border rounded-lg p-3 space-y-2">
+                        <p className="text-sm font-semibold text-gray-800">Rincian per Shift Hari Ini</p>
+                        <Accordion type="multiple" className="w-full">
+                          {dailyShifts.map((sh) => {
+                            const startLabel = sh.shift_start_time
+                              ? new Date(sh.shift_start_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
+                              : '-';
+                            const endLabel = sh.shift_end_time
+                              ? new Date(sh.shift_end_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
+                              : 'aktif';
+                            return (
+                              <AccordionItem key={sh.id} value={sh.id}>
+                                <AccordionTrigger className="hover:no-underline text-sm py-2">
+                                  <div className="flex-1 flex items-center justify-between pr-2">
+                                    <span className="font-medium">Shift #{sh.shift_number} <span className="text-xs text-muted-foreground">({startLabel} - {endLabel})</span></span>
+                                    <span className="font-semibold text-blue-600">{formatCurrency(sh.totalSales)}</span>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-1 text-xs bg-blue-50/60 rounded p-2">
+                                    <div className="flex justify-between"><span>Tunai</span><span className="font-semibold">{formatCurrency(sh.cashSales)}</span></div>
+                                    <div className="flex justify-between"><span>QRIS</span><span className="font-semibold">{formatCurrency(sh.qrisSales)}</span></div>
+                                    <div className="flex justify-between"><span>Transfer</span><span className="font-semibold">{formatCurrency(sh.transferSales)}</span></div>
+                                    <div className="flex justify-between border-t pt-1"><span className="font-medium">Total</span><span className="font-bold text-blue-700">{formatCurrency(sh.totalSales)}</span></div>
+                                    <div className="flex justify-between"><span>Transaksi</span><span className="font-semibold">{sh.totalTransactions}</span></div>
+                                    <div className="flex justify-between text-muted-foreground"><span>Status</span><span>{sh.report_submitted ? 'Ditutup' : 'Aktif'}</span></div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
+                        <div className="border-t pt-2 flex justify-between text-sm font-bold">
+                          <span>Total Hari Ini</span>
+                          <span className="text-blue-700">{formatCurrency(shiftSummary.totalSales)}</span>
+                        </div>
+                      </div>
+                    )}
 
                      {!activeShift?.report_submitted ? (
                       <div className="space-y-4">
