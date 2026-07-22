@@ -431,18 +431,31 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           photosByShift[rep.shift_id] = photos as string[];
         });
 
-        // Calculate payment breakdown per rider per date from transactions using centralized functions
-        console.log('Fetching payment breakdown for date range:', { startDate, endDate });
+        // Calculate payment breakdown PER SHIFT (partitioned by shift time windows)
         const startStr = format(startDate, 'yyyy-MM-dd');
         const endStr = format(endDate, 'yyyy-MM-dd');
-        
-        // Use centralized calculation for consistent results
-        const salesByRiderDate: Record<string, { cash: number; qris: number; transfer: number; total: number }> = {};
-        
-        // Get all unique rider IDs from shifts
+
+        const salesByShift: Record<string, { cash: number; qris: number; transfer: number; total: number }> = {};
+        shiftIds.forEach((sid) => { salesByShift[sid] = { cash: 0, qris: 0, transfer: 0, total: 0 }; });
+
+        // Group shifts by rider+date, sorted by start time (fallback: shift_number)
+        const shiftsByRiderDate: Record<string, any[]> = {};
+        (shiftsData || []).forEach((s: any) => {
+          const dateKey = s.shift_date;
+          const k = `${s.rider_id}-${dateKey}`;
+          if (!shiftsByRiderDate[k]) shiftsByRiderDate[k] = [];
+          shiftsByRiderDate[k].push(s);
+        });
+        Object.values(shiftsByRiderDate).forEach((arr) => {
+          arr.sort((a: any, b: any) => {
+            const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
+            const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
+            return ta - tb;
+          });
+        });
+
         const riderIds = [...new Set(shiftsData.map((s: any) => s.rider_id))];
-        
-        // Calculate sales data for each rider
+
         for (const riderId of riderIds) {
           try {
             const { data: transData, error: transError } = await supabase
@@ -452,48 +465,37 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
               .eq('rider_id', riderId)
               .gte('transaction_date', `${startStr}T00:00:00+07:00`)
               .lte('transaction_date', `${endStr}T23:59:59+07:00`);
-            
             if (transError) throw transError;
-            
-            console.log(`Rider ${riderId} transaction data:`, transData?.length || 0, 'transactions');
-            
-            // Group by date using Jakarta timezone
-            const dateGroups: Record<string, any[]> = {};
+
             (transData || []).forEach((t: any) => {
-              const transDate = new Date(t.transaction_date);
-              const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(transDate);
-              if (!dateGroups[dateKey]) dateGroups[dateKey] = [];
-              dateGroups[dateKey].push(t);
-            });
-            
-            // Calculate sales breakdown for each date
-            Object.entries(dateGroups).forEach(([date, transactions]) => {
-              const key = `${riderId}-${date}`;
-              if (!salesByRiderDate[key]) {
-                salesByRiderDate[key] = { cash: 0, qris: 0, transfer: 0, total: 0 };
+              const txTime = new Date(t.transaction_date).getTime();
+              const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t.transaction_date));
+              const dayShifts = shiftsByRiderDate[`${riderId}-${dateKey}`];
+              if (!dayShifts || dayShifts.length === 0) return;
+
+              // Assign tx to the shift with the largest start_time <= txTime.
+              // If none (tx before first shift), assign to first shift.
+              let chosen: any = dayShifts[0];
+              for (const s of dayShifts) {
+                const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0;
+                if (st <= txTime) chosen = s;
               }
-              
-              transactions.forEach((t: any) => {
-                const amt = Number(t.final_amount || 0);
-                const method = (t.payment_method || '').toLowerCase().trim();
-                
-                // Use consistent payment method normalization
-                if (method === 'cash' || method === 'tunai') {
-                  salesByRiderDate[key].cash += amt;
-                } else if (method === 'qris') {
-                  salesByRiderDate[key].qris += amt;
-                } else if (method === 'transfer' || method === 'bank_transfer') {
-                  salesByRiderDate[key].transfer += amt;
-                }
-                salesByRiderDate[key].total += amt;
-              });
+              // If chosen shift has an end_time and tx is after it AND there is a later shift, prefer the later one
+              // (loop above already handles this via monotonic order.)
+
+              const bucket = salesByShift[chosen.id];
+              if (!bucket) return;
+              const amt = Number(t.final_amount || 0);
+              const method = (t.payment_method || '').toLowerCase().trim();
+              if (method === 'cash' || method === 'tunai') bucket.cash += amt;
+              else if (method === 'qris') bucket.qris += amt;
+              else if (method === 'transfer' || method === 'bank_transfer') bucket.transfer += amt;
+              bucket.total += amt;
             });
           } catch (error) {
             console.error(`Error fetching data for rider ${riderId}:`, error);
           }
         }
-        
-        console.log('Sales breakdown by rider-date:', salesByRiderDate);
 
         // Get daily operational expenses (exclude food) per shift
         const { data: opsData, error: opsError } = await supabase
@@ -509,7 +511,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         });
 
         // Attach aggregates to each shift record below via closure
-        (window as any).__salesByRiderDate = salesByRiderDate;
+        (window as any).__salesByShift = salesByShift;
         (window as any).__opsByShift = opsByShift;
       }
 
@@ -527,13 +529,9 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             timeZone: 'Asia/Jakarta'
           }) : '';
         
-        const salesMap = (window as any).__salesByRiderDate || {};
+        const salesMap = (window as any).__salesByShift || {};
         const opsMap = (window as any).__opsByShift || {};
-        const shiftDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(shift.shift_date));
-        const key = `${shift.rider_id}-${shiftDate}`;
-        const sales = salesMap[key] || { cash: 0, qris: 0, transfer: 0, total: 0 };
-        
-        console.log(`Shift ${shift.id} - Key: ${key}, Sales:`, sales);
+        const sales = salesMap[shift.id] || { cash: 0, qris: 0, transfer: 0, total: 0 };
         const ops = opsMap[shift.id] || 0;
         return {
           ...shift,
