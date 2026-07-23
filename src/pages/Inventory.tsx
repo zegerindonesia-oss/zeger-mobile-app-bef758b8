@@ -87,7 +87,7 @@ interface TransferHistoryGroup {
 
 export default function Inventory() {
   const { user, userProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState("stock");
+  const [activeTab, setActiveTab] = useState("adjustment");
   const [hubInventory, setHubInventory] = useState<HubInventory[]>([]);
   const [riderInventory, setRiderInventory] = useState<RiderInventory[]>([]);
   const [riders, setRiders] = useState<Record<string, Rider>>({});
@@ -425,8 +425,7 @@ export default function Inventory() {
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="stock">Stok Management</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="adjustment">Inventory Adjustment</TabsTrigger>
           <TabsTrigger value="laporan">Laporan Shift</TabsTrigger>
           <TabsTrigger value="transfer-history">Riwayat Transfer Stock</TabsTrigger>
