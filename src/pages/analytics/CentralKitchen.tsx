@@ -462,7 +462,7 @@ export default function CentralKitchenAnalytics() {
 
       {/* Transaction Detail Table */}
       <Card className="p-6 bg-white">
-        <h2 className="text-xl font-semibold mb-4">Transaction Central Kitchen</h2>
+        <h2 className="text-xl font-semibold mb-4">Transaction Branch Hub</h2>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -472,9 +472,9 @@ export default function CentralKitchenAnalytics() {
                 <TableHead>Nama Produk</TableHead>
                 <TableHead className="text-right">Produk Terjual</TableHead>
                 <TableHead className="text-right">Total Sales</TableHead>
-                <TableHead className="text-right">Harga CK</TableHead>
+                <TableHead className="text-right">Harga BH</TableHead>
                 <TableHead className="text-right">HPP</TableHead>
-                <TableHead className="text-right">Profit CK</TableHead>
+                <TableHead className="text-right">Profit BH</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
