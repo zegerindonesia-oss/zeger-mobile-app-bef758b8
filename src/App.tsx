@@ -354,13 +354,6 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
-            <Route path="/inventory/production" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
-                <ModernLayout>
-                  <InventoryProductionPage />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
             <Route path="/inventory/branch-transfer" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
                 <ModernLayout>
