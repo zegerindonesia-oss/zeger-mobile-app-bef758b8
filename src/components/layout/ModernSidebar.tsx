@@ -80,7 +80,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     icon: BarChart3,
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "bh_report"],
     children: [
-      { id: "central-kitchen", label: "Central Kitchen", icon: Coffee, path: "/analytics/central-kitchen", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] },
+      { id: "central-kitchen", label: "Branch Hub", icon: Coffee, path: "/analytics/central-kitchen", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] },
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
       { id: "cash-deposit", label: "Cash Deposit", icon: Banknote, path: "/analytics/cash-deposit", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
@@ -96,7 +96,6 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     icon: Package,
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"],
     children: [
-      { id: "production", label: "Production", icon: Factory, path: "/inventory/production", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] },
       { id: "purchasing", label: "Purchasing", icon: ShoppingCart, path: "/inventory/purchasing", roles: ["3_SB_Branch_Manager", "sb_branch_manager"] },
       { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
       { id: "waste-management", label: "Waste Management", icon: Trash2, path: "/inventory/waste-management", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },

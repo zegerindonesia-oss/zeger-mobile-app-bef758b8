@@ -53,7 +53,7 @@ export default function CentralKitchenAnalytics() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = "Central Kitchen Analytics | Zeger ERP";
+    document.title = "Branch Hub Analytics | Zeger ERP";
     fetchRiders();
   }, []);
 
@@ -307,8 +307,8 @@ export default function CentralKitchenAnalytics() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Central Kitchen Analytics</h1>
-        <p className="text-muted-foreground">Analisis transaksi dan profit central kitchen</p>
+        <h1 className="text-3xl font-bold">Branch Hub Analytics</h1>
+        <p className="text-muted-foreground">Analisis transaksi dan profit branch hub</p>
       </div>
 
       {/* Filters */}
@@ -384,10 +384,10 @@ export default function CentralKitchenAnalytics() {
       {/* Chart */}
       <Card className="p-6 bg-white">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Grafik Sales vs HPP vs Food Cost vs Profit CK</h2>
+          <h2 className="text-xl font-semibold">Grafik Sales vs HPP vs Food Cost vs Profit BH</h2>
           {resumeData && (
             <div className="text-right">
-              <div className="text-sm text-muted-foreground">Profit CK</div>
+              <div className="text-sm text-muted-foreground">Profit BH</div>
               <div className="text-2xl font-bold text-green-600">
                 {((resumeData.totalProfitCK / resumeData.totalSales) * 100).toFixed(2)}%
               </div>
@@ -415,7 +415,7 @@ export default function CentralKitchenAnalytics() {
               <Line type="monotone" dataKey="sales" stroke="#22c55e" strokeWidth={2} name="Sales" />
               <Line type="monotone" dataKey="hpp" stroke="#ef4444" strokeWidth={2} name="HPP" />
               <Line type="monotone" dataKey="foodCost" stroke="#f97316" strokeWidth={2} name="Food Cost" />
-              <Line type="monotone" dataKey="profitCK" stroke="#3b82f6" strokeWidth={2} name="Profit CK" />
+              <Line type="monotone" dataKey="profitCK" stroke="#3b82f6" strokeWidth={2} name="Profit BH" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -428,7 +428,7 @@ export default function CentralKitchenAnalytics() {
       {/* Resume Analytics Table */}
       {resumeData && (
         <Card className="p-6 bg-white">
-          <h2 className="text-xl font-semibold mb-4">Resume Analytic Central Kitchen</h2>
+          <h2 className="text-xl font-semibold mb-4">Resume Analytic Branch Hub</h2>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -437,9 +437,9 @@ export default function CentralKitchenAnalytics() {
                   <TableHead>Nama Rider</TableHead>
                   <TableHead className="text-right">Produk Terjual</TableHead>
                   <TableHead className="text-right">Total Sales</TableHead>
-                  <TableHead className="text-right">Harga CK</TableHead>
+                  <TableHead className="text-right">Harga BH</TableHead>
                   <TableHead className="text-right">HPP</TableHead>
-                  <TableHead className="text-right">Profit CK</TableHead>
+                  <TableHead className="text-right">Profit BH</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -462,7 +462,7 @@ export default function CentralKitchenAnalytics() {
 
       {/* Transaction Detail Table */}
       <Card className="p-6 bg-white">
-        <h2 className="text-xl font-semibold mb-4">Transaction Central Kitchen</h2>
+        <h2 className="text-xl font-semibold mb-4">Transaction Branch Hub</h2>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -472,9 +472,9 @@ export default function CentralKitchenAnalytics() {
                 <TableHead>Nama Produk</TableHead>
                 <TableHead className="text-right">Produk Terjual</TableHead>
                 <TableHead className="text-right">Total Sales</TableHead>
-                <TableHead className="text-right">Harga CK</TableHead>
+                <TableHead className="text-right">Harga BH</TableHead>
                 <TableHead className="text-right">HPP</TableHead>
-                <TableHead className="text-right">Profit CK</TableHead>
+                <TableHead className="text-right">Profit BH</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
