@@ -653,7 +653,7 @@ export default function StockCardRider() {
               <TableRow>
                 <TableHead>No</TableHead>
                 <TableHead>Nama Rider</TableHead>
-                <TableHead className="text-right">Stock dikirim (CK)</TableHead>
+                <TableHead className="text-right">Stock dikirim (BH)</TableHead>
                 <TableHead className="text-right">Stock diterima Rider</TableHead>
                 <TableHead className="text-right">Stock Terjual</TableHead>
                 <TableHead className="text-right">Sisa Stock</TableHead>

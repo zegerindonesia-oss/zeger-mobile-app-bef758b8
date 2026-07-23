@@ -87,7 +87,7 @@ interface TransferHistoryGroup {
 
 export default function Inventory() {
   const { user, userProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState("stock");
+  const [activeTab, setActiveTab] = useState("adjustment");
   const [hubInventory, setHubInventory] = useState<HubInventory[]>([]);
   const [riderInventory, setRiderInventory] = useState<RiderInventory[]>([]);
   const [riders, setRiders] = useState<Record<string, Rider>>({});
@@ -425,89 +425,11 @@ export default function Inventory() {
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="stock">Stok Management</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="adjustment">Inventory Adjustment</TabsTrigger>
           <TabsTrigger value="laporan">Laporan Shift</TabsTrigger>
           <TabsTrigger value="transfer-history">Riwayat Transfer Stock</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="stock">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Stok Branch Hub</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Total stok</p>
-                  <p className="text-2xl font-bold">{hubTotal}</p>
-                </div>
-                <Accordion type="single" collapsible className="w-full" defaultValue="hub-detail">
-                  <AccordionItem value="hub-detail">
-                    <AccordionTrigger>Detail Menu</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-2">
-                        {[...hubInventory]
-                          .sort((a, b) => b.stock_quantity - a.stock_quantity)
-                          .map((i, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
-                              <span>{i.product?.name}</span>
-                              <Badge variant="outline">{i.stock_quantity}</Badge>
-                            </div>
-                          ))}
-                        {hubInventory.length === 0 && (
-                          <p className="text-sm text-muted-foreground">Belum ada stok</p>
-                        )}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </CardContent>
-            </Card>
-
-            <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Stok Rider</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Accordion type="multiple" className="w-full">
-                  {/* Show all active riders with their stock status */}
-                  {Object.keys(riders).sort((a, b) => {
-                    const nameA = riders[a]?.full_name || '';
-                    const nameB = riders[b]?.full_name || '';
-                    return nameA.localeCompare(nameB);
-                  }).map(rid => (
-                    <AccordionItem key={rid} value={rid}>
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center justify-between w-full">
-                          <span>{riders[rid]?.full_name || `Rider ${rid}`}</span>
-                          <Badge variant="secondary">{riderTotalsByRider[rid] || 0} item</Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-2">
-                          {riderInventory.filter(i => i.rider_id === rid).map((i, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
-                              <span>{i.product?.name}</span>
-                              <Badge variant="outline">{i.stock_quantity}</Badge>
-                            </div>
-                          ))}
-                          {riderInventory.filter(i => i.rider_id === rid).length === 0 && (
-                            <p className="text-sm text-muted-foreground">Tidak ada stok</p>
-                          )}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                  {Object.keys(riders).length === 0 && (
-                    <p className="text-sm text-muted-foreground">Tidak ada rider ditemukan</p>
-                  )}
-                </Accordion>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
         <TabsContent value="adjustment">
           <Card className="dashboard-card">
