@@ -396,8 +396,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             id, product_id, quantity, status, verification_photo_url, created_at, rider_id,
             products(name, category)
           `)
-          .eq('branch_id', branchId)
-          .eq('movement_type', 'return')
+          .in('movement_type', ['return', 'out'])
           .in('rider_id', shiftsData.map((s: any) => s.rider_id));
 
         if (returnsError) throw returnsError;
