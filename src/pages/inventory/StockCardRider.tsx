@@ -920,9 +920,46 @@ export default function StockCardRider() {
 
       {/* Per-Shift Breakdown */}
       <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="text-xl font-semibold">Rincian Per Shift</h2>
-          <span className="text-xs text-muted-foreground">1 shift = 1 siklus (Terima → Jual → Kembali)</span>
+          <div className="flex items-end gap-2 flex-wrap">
+            <div>
+              <Label className="text-xs">Filter Periode</Label>
+              <Select value={breakdownFilter} onValueChange={(v: any) => setBreakdownFilter(v)}>
+                <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Hari Ini</SelectItem>
+                  <SelectItem value="yesterday">Kemarin</SelectItem>
+                  <SelectItem value="week">7 Hari Terakhir</SelectItem>
+                  <SelectItem value="month">30 Hari Terakhir</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {breakdownFilter === 'custom' && (
+              <>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('h-9', !breakdownFrom && 'text-muted-foreground')}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {breakdownFrom ? format(breakdownFrom, 'dd/MM/yy') : 'Dari'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={breakdownFrom} onSelect={setBreakdownFrom} initialFocus /></PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn('h-9', !breakdownTo && 'text-muted-foreground')}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {breakdownTo ? format(breakdownTo, 'dd/MM/yy') : 'Sampai'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={breakdownTo} onSelect={setBreakdownTo} initialFocus /></PopoverContent>
+                </Popover>
+              </>
+            )}
+            <span className="text-xs text-muted-foreground ml-2">1 shift = 1 siklus (Terima → Jual → Kembali)</span>
+          </div>
         </div>
         <div className="rounded-md border">
           <Table>
