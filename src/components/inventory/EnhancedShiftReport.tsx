@@ -1046,6 +1046,42 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                 </AccordionTrigger>
                 <AccordionContent className="px-2">
                   <div className="space-y-4">
+                    {shift.received_items?.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Stok Diterima (BH → Rider)</h4>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nama Menu</TableHead>
+                                <TableHead>Kategori</TableHead>
+                                <TableHead className="text-center">Qty Diterima</TableHead>
+                                <TableHead>Waktu</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {shift.received_items.map((it: any) => (
+                                <TableRow key={it.id}>
+                                  <TableCell className="font-medium">{it.products?.name || '-'}</TableCell>
+                                  <TableCell>{it.products?.category || '-'}</TableCell>
+                                  <TableCell className="text-center">{it.quantity}</TableCell>
+                                  <TableCell className="text-xs">
+                                    {new Date(it.actual_delivery_date).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' })}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow className="bg-muted/40 font-bold">
+                                <TableCell colSpan={2}>Total Stok Diterima</TableCell>
+                                <TableCell className="text-center">
+                                  {shift.received_items.reduce((s: number, it: any) => s + (it.quantity || 0), 0)}
+                                </TableCell>
+                                <TableCell></TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
                     {shift.return_items?.length > 0 && (
                       <div>
                         <h4 className="font-semibold mb-2">Pengembalian Barang</h4>
