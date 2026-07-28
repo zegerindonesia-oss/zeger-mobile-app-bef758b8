@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { CalendarIcon, Package, TrendingDown, TrendingUp, Download } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
@@ -60,6 +61,7 @@ interface ShiftBreakdownRow {
   stock_returned: number;
   remaining: number;
   total_sales: number;
+  products: Record<string, { product_id: string; name: string; category: string; received: number; sold: number; returned: number }>;
 }
 
 export default function StockCardRider() {
