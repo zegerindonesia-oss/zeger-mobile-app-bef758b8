@@ -657,6 +657,88 @@ const MobileStockManagement = () => {
         return sa - sb;
       });
 
+      // Fetch stock movements today (received) & returns for per-shift partitioning
+      const { data: receivedToday } = await supabase
+        .from('stock_movements')
+        .select('id, product_id, quantity, actual_delivery_date, products(name, category)')
+        .eq('rider_id', userProfile.id)
+        .in('movement_type', ['transfer', 'in', 'adjustment'])
+        .eq('status', 'received')
+        .not('actual_delivery_date', 'is', null)
+        .gte('actual_delivery_date', startRange)
+        .lte('actual_delivery_date', endRange);
+
+      const { data: returnsToday } = await supabase
+        .from('stock_movements')
+        .select('id, product_id, quantity, created_at, products(name, category)')
+        .eq('rider_id', userProfile.id)
+        .eq('movement_type', 'return')
+        .gte('created_at', startRange)
+        .lte('created_at', endRange);
+
+      // Fetch transaction items for the day's transactions
+      const txIds = (dailyTransactions || []).map((t: any) => t.id).filter(Boolean);
+      const itemsByTxId: Record<string, any[]> = {};
+      if (txIds.length > 0) {
+        const chunkSize = 200;
+        for (let i = 0; i < txIds.length; i += chunkSize) {
+          const chunk = txIds.slice(i, i + chunkSize);
+          const { data: itemsRes } = await supabase
+            .from('transaction_items')
+            .select('transaction_id, product_id, quantity, created_at, products(name, category)')
+            .in('transaction_id', chunk);
+          (itemsRes || []).forEach((it: any) => {
+            if (!itemsByTxId[it.transaction_id]) itemsByTxId[it.transaction_id] = [];
+            itemsByTxId[it.transaction_id].push(it);
+          });
+        }
+      }
+
+      const pickShiftForTime = (tMs: number): any => {
+        let chosen = sortedByStart[0];
+        for (const s of sortedByStart) {
+          const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0;
+          if (st <= tMs) chosen = s;
+        }
+        return chosen;
+      };
+
+      const itemsByShift: Record<string, Record<string, { product_id: string; name: string; category: string; received: number; sold: number; returned: number; time: string | null }>> = {};
+      sortedByStart.forEach((s: any) => { itemsByShift[s.id] = {}; });
+
+      const ensureBucket = (sid: string, pid: string, name: string, cat: string, time: string | null) => {
+        const b = itemsByShift[sid];
+        if (!b) return null;
+        if (!b[pid]) b[pid] = { product_id: pid, name, category: cat, received: 0, sold: 0, returned: 0, time };
+        else if (time && (!b[pid].time || time < b[pid].time)) b[pid].time = time;
+        return b[pid];
+      };
+
+      (receivedToday || []).forEach((r: any) => {
+        if (!r.actual_delivery_date) return;
+        const chosen = pickShiftForTime(new Date(r.actual_delivery_date).getTime());
+        if (!chosen) return;
+        const bucket = ensureBucket(chosen.id, r.product_id, r.products?.name || '-', r.products?.category || '-', r.actual_delivery_date);
+        if (bucket) bucket.received += Number(r.quantity || 0);
+      });
+
+      (returnsToday || []).forEach((r: any) => {
+        const chosen = pickShiftForTime(new Date(r.created_at).getTime());
+        if (!chosen) return;
+        const bucket = ensureBucket(chosen.id, r.product_id, r.products?.name || '-', r.products?.category || '-', r.created_at);
+        if (bucket) bucket.returned += Number(r.quantity || 0);
+      });
+
+      (dailyTransactions || []).forEach((t: any) => {
+        const chosen = pickShiftForTime(new Date(t.transaction_date).getTime());
+        if (!chosen) return;
+        (itemsByTxId[t.id] || []).forEach((it: any) => {
+          if (!it.product_id) return;
+          const bucket = ensureBucket(chosen.id, it.product_id, it.products?.name || '-', it.products?.category || '-', it.created_at || t.transaction_date);
+          if (bucket) bucket.sold += Number(it.quantity || 0);
+        });
+      });
+
       const breakdown: DailyShiftBreakdown[] = sortedByStart.map((sh: any, idx: number) => {
         const startMs = sh.shift_start_time ? new Date(sh.shift_start_time).getTime() : 0;
         // End boundary: shift's own end OR next shift start OR now
@@ -684,6 +766,7 @@ const MobileStockManagement = () => {
           transferSales: tr,
           totalSales: c + q + tr,
           totalTransactions: inShift.length,
+          items: Object.values(itemsByShift[sh.id] || {}),
         };
       });
       setDailyShifts(breakdown);
