@@ -1095,42 +1095,67 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                 </AccordionTrigger>
                 <AccordionContent className="px-2">
                   <div className="space-y-4">
-                    {shift.received_items?.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-2">Stok Diterima (BH → Rider)</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Nama Menu</TableHead>
-                                <TableHead>Kategori</TableHead>
-                                <TableHead className="text-center">Qty Diterima</TableHead>
-                                <TableHead>Waktu</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {shift.received_items.map((it: any) => (
-                                <TableRow key={it.id}>
-                                  <TableCell className="font-medium">{it.products?.name || '-'}</TableCell>
-                                  <TableCell>{it.products?.category || '-'}</TableCell>
-                                  <TableCell className="text-center">{it.quantity}</TableCell>
-                                  <TableCell className="text-xs">
-                                    {new Date(it.actual_delivery_date).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' })}
-                                  </TableCell>
+                    {(() => {
+                      // Merge received / sold / returned per product for this shift
+                      const merged: Record<string, { name: string; category: string; received: number; sold: number; returned: number; time: string }> = {};
+                      (shift.received_items || []).forEach((it: any) => {
+                        const pid = it.product_id;
+                        if (!merged[pid]) merged[pid] = { name: it.products?.name || '-', category: it.products?.category || '-', received: 0, sold: 0, returned: 0, time: it.actual_delivery_date };
+                        merged[pid].received += Number(it.quantity || 0);
+                        if (it.actual_delivery_date && (!merged[pid].time || it.actual_delivery_date < merged[pid].time)) merged[pid].time = it.actual_delivery_date;
+                      });
+                      Object.values(shift.sold_items_by_product || {}).forEach((s: any) => {
+                        const pid = s.product_id;
+                        if (!merged[pid]) merged[pid] = { name: s.product_name, category: s.category, received: 0, sold: 0, returned: 0, time: s.first_time };
+                        merged[pid].sold += Number(s.qty || 0);
+                      });
+                      (shift.return_items || []).forEach((it: any) => {
+                        const pid = it.product_id;
+                        if (!merged[pid]) merged[pid] = { name: it.products?.name || '-', category: it.products?.category || '-', received: 0, sold: 0, returned: 0, time: it.created_at };
+                        merged[pid].returned += Number(it.quantity || 0);
+                      });
+                      const rows = Object.values(merged);
+                      if (rows.length === 0) return null;
+                      const tot = rows.reduce((a, r) => ({ received: a.received + r.received, sold: a.sold + r.sold, returned: a.returned + r.returned }), { received: 0, sold: 0, returned: 0 });
+                      return (
+                        <div>
+                          <h4 className="font-semibold mb-2">Detail Stok per Menu (Shift #{shift.shift_number})</h4>
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nama Menu</TableHead>
+                                  <TableHead>Kategori</TableHead>
+                                  <TableHead className="text-center">Stok Diterima</TableHead>
+                                  <TableHead className="text-center">Stok Terjual</TableHead>
+                                  <TableHead className="text-center">Stok Kembali</TableHead>
+                                  <TableHead>Waktu</TableHead>
                                 </TableRow>
-                              ))}
-                              <TableRow className="bg-muted/40 font-bold">
-                                <TableCell colSpan={2}>Total Stok Diterima</TableCell>
-                                <TableCell className="text-center">
-                                  {shift.received_items.reduce((s: number, it: any) => s + (it.quantity || 0), 0)}
-                                </TableCell>
-                                <TableCell></TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
+                              </TableHeader>
+                              <TableBody>
+                                {rows.map((r, i) => (
+                                  <TableRow key={i}>
+                                    <TableCell className="font-medium">{r.name}</TableCell>
+                                    <TableCell>{r.category}</TableCell>
+                                    <TableCell className="text-center">{r.received}</TableCell>
+                                    <TableCell className="text-center text-blue-700 font-semibold">{r.sold}</TableCell>
+                                    <TableCell className="text-center text-amber-700 font-semibold">{r.returned}</TableCell>
+                                    <TableCell className="text-xs">{r.time ? new Date(r.time).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' }) : '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                                <TableRow className="bg-muted/40 font-bold">
+                                  <TableCell colSpan={2}>Total</TableCell>
+                                  <TableCell className="text-center">{tot.received}</TableCell>
+                                  <TableCell className="text-center">{tot.sold}</TableCell>
+                                  <TableCell className="text-center">{tot.returned}</TableCell>
+                                  <TableCell></TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     {shift.return_items?.length > 0 && (
                       <div>
                         <h4 className="font-semibold mb-2">Pengembalian Barang</h4>
