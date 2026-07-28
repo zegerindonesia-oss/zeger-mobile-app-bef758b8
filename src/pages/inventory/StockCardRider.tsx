@@ -183,7 +183,7 @@ export default function StockCardRider() {
           .order('shift_date', { ascending: false }),
         supabase
           .from('stock_movements')
-          .select('rider_id, quantity, actual_delivery_date')
+          .select('rider_id, quantity, actual_delivery_date, product_id, products(name, category)')
           .in('rider_id', riderIds)
           .in('movement_type', ['transfer', 'in', 'adjustment'])
           .eq('status', 'received')
@@ -192,14 +192,14 @@ export default function StockCardRider() {
           .lte('actual_delivery_date', `${end}T23:59:59+07:00`),
         supabase
           .from('transaction_items')
-          .select('quantity, total_price, transactions!inner(rider_id, transaction_date, created_at, is_voided, status)')
+          .select('quantity, total_price, product_id, products(name, category), transactions!inner(rider_id, transaction_date, created_at, is_voided, status)')
           .in('transactions.rider_id', riderIds)
           .eq('transactions.is_voided', false)
           .gte('transactions.transaction_date', `${start}T00:00:00+07:00`)
           .lte('transactions.transaction_date', `${end}T23:59:59+07:00`),
         supabase
           .from('stock_movements')
-          .select('rider_id, quantity, actual_delivery_date, created_at')
+          .select('rider_id, quantity, actual_delivery_date, created_at, product_id, products(name, category)')
           .in('rider_id', riderIds)
           .in('movement_type', ['return', 'out'])
           .gte('created_at', `${start}T00:00:00+07:00`)
@@ -250,13 +250,21 @@ export default function StockCardRider() {
           shift_number: s.shift_number,
           shift_start_time: s.shift_start_time,
           stock_in: 0, stock_sold: 0, stock_returned: 0, remaining: 0, total_sales: 0,
+          products: {},
         });
       });
+
+      const ensureProduct = (r: ShiftBreakdownRow, pid: string, name: string, category: string) => {
+        if (!r.products[pid]) r.products[pid] = { product_id: pid, name: name || '-', category: category || '-', received: 0, sold: 0, returned: 0 };
+        return r.products[pid];
+      };
 
       (receivedRes.data || []).forEach((it: any) => {
         const s = pick(it.rider_id, it.actual_delivery_date);
         if (!s) return;
-        const r = rows.get(s.id); if (r) r.stock_in += it.quantity || 0;
+        const r = rows.get(s.id); if (!r) return;
+        r.stock_in += it.quantity || 0;
+        if (it.product_id) ensureProduct(r, it.product_id, it.products?.name, it.products?.category).received += Number(it.quantity || 0);
       });
       (txRes.data || []).forEach((it: any) => {
         const rid = it.transactions?.rider_id;
@@ -267,12 +275,15 @@ export default function StockCardRider() {
         const r = rows.get(s.id); if (!r) return;
         r.stock_sold += it.quantity || 0;
         if ((it.transactions?.status || '') === 'completed') r.total_sales += Number(it.total_price || 0);
+        if (it.product_id) ensureProduct(r, it.product_id, it.products?.name, it.products?.category).sold += Number(it.quantity || 0);
       });
       (returnRes.data || []).forEach((it: any) => {
         const when = it.actual_delivery_date || it.created_at;
         const s = pick(it.rider_id, when);
         if (!s) return;
-        const r = rows.get(s.id); if (r) r.stock_returned += it.quantity || 0;
+        const r = rows.get(s.id); if (!r) return;
+        r.stock_returned += it.quantity || 0;
+        if (it.product_id) ensureProduct(r, it.product_id, it.products?.name, it.products?.category).returned += Number(it.quantity || 0);
       });
       rows.forEach(r => { r.remaining = r.stock_in - r.stock_sold - r.stock_returned; });
 
