@@ -48,6 +48,20 @@ interface RiderSummary {
   gp_pct: number;
 }
 
+interface ShiftBreakdownRow {
+  shift_id: string;
+  rider_id: string;
+  rider_name: string;
+  shift_date: string;
+  shift_number: number;
+  shift_start_time: string | null;
+  stock_in: number;
+  stock_sold: number;
+  stock_returned: number;
+  remaining: number;
+  total_sales: number;
+}
+
 export default function StockCardRider() {
   const { userProfile } = useAuth();
   const [riders, setRiders] = useState<Rider[]>([]);
@@ -59,6 +73,8 @@ export default function StockCardRider() {
   const [loading, setLoading] = useState(false);
   const [riderSummaries, setRiderSummaries] = useState<RiderSummary[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [shiftBreakdown, setShiftBreakdown] = useState<ShiftBreakdownRow[]>([]);
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false);
   const [summaryData, setSummaryData] = useState({
     totalStockIn: 0,
     totalStockSold: 0,
@@ -145,8 +161,126 @@ export default function StockCardRider() {
   useEffect(() => {
     if (riders.length > 0) {
       fetchRiderSummaries();
+      fetchShiftBreakdown();
     }
   }, [riders, dateFilter, customDateFrom, customDateTo]);
+
+  const fetchShiftBreakdown = async () => {
+    if (riders.length === 0) return;
+    setLoadingBreakdown(true);
+    const { start, end } = getDateRange();
+    const riderIds = riders.map(r => r.id);
+    try {
+      const [shiftsRes, receivedRes, txRes, returnRes] = await Promise.all([
+        supabase
+          .from('shift_management')
+          .select('id, rider_id, shift_date, shift_number, shift_start_time, shift_end_time')
+          .in('rider_id', riderIds)
+          .gte('shift_date', start)
+          .lte('shift_date', end)
+          .order('shift_date', { ascending: false }),
+        supabase
+          .from('stock_movements')
+          .select('rider_id, quantity, actual_delivery_date')
+          .in('rider_id', riderIds)
+          .in('movement_type', ['transfer', 'in', 'adjustment'])
+          .eq('status', 'received')
+          .not('actual_delivery_date', 'is', null)
+          .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
+          .lte('actual_delivery_date', `${end}T23:59:59+07:00`),
+        supabase
+          .from('transaction_items')
+          .select('quantity, total_price, transactions!inner(rider_id, transaction_date, created_at, is_voided, status)')
+          .in('transactions.rider_id', riderIds)
+          .eq('transactions.is_voided', false)
+          .gte('transactions.transaction_date', `${start}T00:00:00+07:00`)
+          .lte('transactions.transaction_date', `${end}T23:59:59+07:00`),
+        supabase
+          .from('stock_movements')
+          .select('rider_id, quantity, actual_delivery_date, created_at')
+          .in('rider_id', riderIds)
+          .in('movement_type', ['return', 'out'])
+          .gte('created_at', `${start}T00:00:00+07:00`)
+          .lte('created_at', `${end}T23:59:59+07:00`),
+      ]);
+
+      if (shiftsRes.error) throw shiftsRes.error;
+      if (receivedRes.error) throw receivedRes.error;
+      if (txRes.error) throw txRes.error;
+      if (returnRes.error) throw returnRes.error;
+
+      const shifts = shiftsRes.data || [];
+      const jakDate = (d: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(d));
+
+      // Group shifts by rider+date
+      const shiftsByRD: Record<string, any[]> = {};
+      shifts.forEach((s: any) => {
+        const k = `${s.rider_id}-${s.shift_date}`;
+        if (!shiftsByRD[k]) shiftsByRD[k] = [];
+        shiftsByRD[k].push(s);
+      });
+      Object.values(shiftsByRD).forEach(arr => arr.sort((a: any, b: any) => {
+        const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
+        const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
+        return ta - tb;
+      }));
+
+      const pick = (riderId: string, whenISO: string): any | null => {
+        const dk = jakDate(whenISO);
+        const arr = shiftsByRD[`${riderId}-${dk}`];
+        if (!arr || arr.length === 0) return null;
+        const t = new Date(whenISO).getTime();
+        let chosen = arr[0];
+        for (const s of arr) {
+          const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0;
+          if (st <= t) chosen = s;
+        }
+        return chosen;
+      };
+
+      const rows = new Map<string, ShiftBreakdownRow>();
+      shifts.forEach((s: any) => {
+        rows.set(s.id, {
+          shift_id: s.id,
+          rider_id: s.rider_id,
+          rider_name: riders.find(r => r.id === s.rider_id)?.full_name || 'Unknown',
+          shift_date: s.shift_date,
+          shift_number: s.shift_number,
+          shift_start_time: s.shift_start_time,
+          stock_in: 0, stock_sold: 0, stock_returned: 0, remaining: 0, total_sales: 0,
+        });
+      });
+
+      (receivedRes.data || []).forEach((it: any) => {
+        const s = pick(it.rider_id, it.actual_delivery_date);
+        if (!s) return;
+        const r = rows.get(s.id); if (r) r.stock_in += it.quantity || 0;
+      });
+      (txRes.data || []).forEach((it: any) => {
+        const rid = it.transactions?.rider_id;
+        const when = it.transactions?.transaction_date || it.transactions?.created_at;
+        if (!rid || !when) return;
+        const s = pick(rid, when);
+        if (!s) return;
+        const r = rows.get(s.id); if (!r) return;
+        r.stock_sold += it.quantity || 0;
+        if ((it.transactions?.status || '') === 'completed') r.total_sales += Number(it.total_price || 0);
+      });
+      (returnRes.data || []).forEach((it: any) => {
+        const when = it.actual_delivery_date || it.created_at;
+        const s = pick(it.rider_id, when);
+        if (!s) return;
+        const r = rows.get(s.id); if (r) r.stock_returned += it.quantity || 0;
+      });
+      rows.forEach(r => { r.remaining = r.stock_in - r.stock_sold - r.stock_returned; });
+
+      setShiftBreakdown(Array.from(rows.values()));
+    } catch (e: any) {
+      console.error('shift breakdown error', e);
+    } finally {
+      setLoadingBreakdown(false);
+    }
+  };
 
   const fetchRiderSummaries = async () => {
     if (riders.length === 0) return;
