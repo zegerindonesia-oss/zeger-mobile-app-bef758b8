@@ -396,8 +396,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             id, product_id, quantity, status, verification_photo_url, created_at, rider_id,
             products(name, category)
           `)
-          .eq('branch_id', branchId)
-          .eq('movement_type', 'return')
+          .in('movement_type', ['return', 'out'])
           .in('rider_id', shiftsData.map((s: any) => s.rider_id));
 
         if (returnsError) throw returnsError;
@@ -610,9 +609,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         const records = (shiftsData || []).map((shift: any) => {
         const items = returnsByShift[shift.id] || [];
         const unsoldTotal = items.reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
-        const returnedVerified = items
-          .filter((it: any) => ['approved', 'received'].includes((it.status || '').toLowerCase()))
-          .reduce((sum: number, it: any) => sum + (it.quantity || 0), 0);
+        // Count all return quantities regardless of verification status
+        const returnedVerified = unsoldTotal;
         
         const shiftStartTime = shift.shift_start_time ? 
           new Date(shift.shift_start_time).toLocaleTimeString('id-ID', { 
