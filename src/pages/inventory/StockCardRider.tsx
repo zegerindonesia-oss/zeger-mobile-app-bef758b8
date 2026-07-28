@@ -892,6 +892,7 @@ export default function StockCardRider() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10"></TableHead>
                 <TableHead>Rider</TableHead>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Shift</TableHead>
@@ -905,11 +906,11 @@ export default function StockCardRider() {
             </TableHeader>
             <TableBody>
               {loadingBreakdown ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8">Memuat data...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8">Memuat data...</TableCell></TableRow>
               ) : (() => {
                 const list = selectedRider === 'all' ? shiftBreakdown : shiftBreakdown.filter(s => s.rider_id === selectedRider);
                 if (list.length === 0) {
-                  return <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Tidak ada data untuk periode yang dipilih</TableCell></TableRow>;
+                  return <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Tidak ada data untuk periode yang dipilih</TableCell></TableRow>;
                 }
                 // group by rider+date
                 const groups: Record<string, ShiftBreakdownRow[]> = {};
@@ -923,8 +924,15 @@ export default function StockCardRider() {
                 keys.forEach(k => {
                   const arr = groups[k].sort((a, b) => (a.shift_number || 0) - (b.shift_number || 0));
                   arr.forEach(r => {
+                    const isOpen = expandedShifts.has(r.shift_id);
+                    const prods = Object.values(r.products || {});
                     nodes.push(
                       <TableRow key={r.shift_id}>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toggleShiftExpanded(r.shift_id)}>
+                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        </TableCell>
                         <TableCell className="font-medium">{r.rider_name}</TableCell>
                         <TableCell>{format(new Date(r.shift_date), 'dd/MM/yyyy')}</TableCell>
                         <TableCell>#{r.shift_number}</TableCell>
@@ -936,6 +944,52 @@ export default function StockCardRider() {
                         <TableCell className="text-right">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(r.total_sales)}</TableCell>
                       </TableRow>
                     );
+                    if (isOpen) {
+                      nodes.push(
+                        <TableRow key={`${r.shift_id}-details`} className="bg-muted/30">
+                          <TableCell colSpan={10} className="p-4">
+                            {prods.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Tidak ada detail produk untuk shift ini.</p>
+                            ) : (
+                              <div>
+                                <h4 className="font-semibold mb-2 text-sm">Detail Stok per Menu — Shift #{r.shift_number}</h4>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Nama Menu</TableHead>
+                                      <TableHead>Kategori</TableHead>
+                                      <TableHead className="text-center">Stok Diterima</TableHead>
+                                      <TableHead className="text-center">Stok Terjual</TableHead>
+                                      <TableHead className="text-center">Stok Kembali</TableHead>
+                                      <TableHead className="text-center">Sisa</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {prods.map((p) => (
+                                      <TableRow key={p.product_id}>
+                                        <TableCell className="font-medium">{p.name}</TableCell>
+                                        <TableCell>{p.category}</TableCell>
+                                        <TableCell className="text-center">{p.received}</TableCell>
+                                        <TableCell className="text-center text-blue-700 font-semibold">{p.sold}</TableCell>
+                                        <TableCell className="text-center text-amber-700 font-semibold">{p.returned}</TableCell>
+                                        <TableCell className="text-center">{p.received - p.sold - p.returned}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                    <TableRow className="bg-muted/50 font-bold">
+                                      <TableCell colSpan={2}>Total</TableCell>
+                                      <TableCell className="text-center">{prods.reduce((s, p) => s + p.received, 0)}</TableCell>
+                                      <TableCell className="text-center">{prods.reduce((s, p) => s + p.sold, 0)}</TableCell>
+                                      <TableCell className="text-center">{prods.reduce((s, p) => s + p.returned, 0)}</TableCell>
+                                      <TableCell className="text-center">{prods.reduce((s, p) => s + (p.received - p.sold - p.returned), 0)}</TableCell>
+                                    </TableRow>
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
                   });
                   const t = arr.reduce((acc, r) => ({
                     in: acc.in + r.stock_in,
@@ -946,7 +1000,7 @@ export default function StockCardRider() {
                   }), { in: 0, sold: 0, ret: 0, rem: 0, sales: 0 });
                   nodes.push(
                     <TableRow key={`${k}-total`} className="bg-primary/10 font-semibold">
-                      <TableCell colSpan={4}>Total Harian — {arr[0].rider_name} — {format(new Date(arr[0].shift_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell colSpan={5}>Total Harian — {arr[0].rider_name} — {format(new Date(arr[0].shift_date), 'dd/MM/yyyy')}</TableCell>
                       <TableCell className="text-right">{t.in}</TableCell>
                       <TableCell className="text-right">{t.sold}</TableCell>
                       <TableCell className="text-right">{t.ret}</TableCell>
