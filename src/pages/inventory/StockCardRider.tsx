@@ -865,6 +865,7 @@ export default function StockCardRider() {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Riwayat Stock Card</h2>
+          {/* moved: shift breakdown rendered above via separate Card */}
           <Button onClick={handleExportToExcel} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export Excel
