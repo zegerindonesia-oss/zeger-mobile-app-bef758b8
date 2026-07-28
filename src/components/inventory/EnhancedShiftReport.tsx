@@ -501,11 +501,15 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
         const riderIds = [...new Set(shiftsData.map((s: any) => s.rider_id))];
 
+        // Collect transaction ids per shift so we can fetch item-level sold qty
+        const txIdsByShift: Record<string, string[]> = {};
+        shiftIds.forEach((sid) => { txIdsByShift[sid] = []; });
+
         for (const riderId of riderIds) {
           try {
             const { data: transData, error: transError } = await supabase
               .from('transactions')
-              .select('final_amount, payment_method, rider_id, transaction_date')
+              .select('id, final_amount, payment_method, rider_id, transaction_date')
               .eq('status', 'completed')
               .eq('rider_id', riderId)
               .gte('transaction_date', `${startStr}T00:00:00+07:00`)
@@ -536,11 +540,54 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
               else if (method === 'qris') bucket.qris += amt;
               else if (method === 'transfer' || method === 'bank_transfer') bucket.transfer += amt;
               bucket.total += amt;
+              if (t.id && txIdsByShift[chosen.id]) txIdsByShift[chosen.id].push(t.id);
             });
           } catch (error) {
             console.error(`Error fetching data for rider ${riderId}:`, error);
           }
         }
+
+        // Fetch transaction items per shift (aggregated by product)
+        const soldByShift: Record<string, Record<string, { product_id: string; product_name: string; category: string; qty: number; first_time: string }>> = {};
+        shiftIds.forEach((sid) => { soldByShift[sid] = {}; });
+        const allTxIds = Object.values(txIdsByShift).flat();
+        if (allTxIds.length > 0) {
+          // Chunk to avoid URL length limits
+          const chunkSize = 200;
+          const itemsByTxId: Record<string, any[]> = {};
+          for (let i = 0; i < allTxIds.length; i += chunkSize) {
+            const chunk = allTxIds.slice(i, i + chunkSize);
+            const { data: itemsRes } = await supabase
+              .from('transaction_items')
+              .select('transaction_id, product_id, quantity, created_at, products(name, category)')
+              .in('transaction_id', chunk);
+            (itemsRes || []).forEach((it: any) => {
+              if (!itemsByTxId[it.transaction_id]) itemsByTxId[it.transaction_id] = [];
+              itemsByTxId[it.transaction_id].push(it);
+            });
+          }
+          Object.entries(txIdsByShift).forEach(([sid, txIds]) => {
+            txIds.forEach((txid) => {
+              (itemsByTxId[txid] || []).forEach((it: any) => {
+                const pid = it.product_id;
+                if (!pid) return;
+                const bucket = soldByShift[sid];
+                if (!bucket[pid]) {
+                  bucket[pid] = {
+                    product_id: pid,
+                    product_name: it.products?.name || '-',
+                    category: it.products?.category || '-',
+                    qty: 0,
+                    first_time: it.created_at,
+                  };
+                }
+                bucket[pid].qty += Number(it.quantity || 0);
+                if (it.created_at && it.created_at < bucket[pid].first_time) bucket[pid].first_time = it.created_at;
+              });
+            });
+          });
+        }
+        (window as any).__soldByShift = soldByShift;
 
         // Get daily operational expenses (exclude food) per shift
         const { data: opsData, error: opsError } = await supabase
@@ -576,6 +623,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         
         const salesMap = (window as any).__salesByShift || {};
         const opsMap = (window as any).__opsByShift || {};
+        const soldMap = (window as any).__soldByShift || {};
         const sales = salesMap[shift.id] || { cash: 0, qris: 0, transfer: 0, total: 0 };
         const ops = opsMap[shift.id] || 0;
         return {
@@ -583,6 +631,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           rider_name: riders[shift.rider_id]?.full_name || 'Unknown Rider',
           return_items: items,
           received_items: receivedByShift[shift.id] || [],
+          sold_items_by_product: soldMap[shift.id] || {},
           products_unsold: unsoldTotal,
           products_returned: returnedVerified,
           shift_date_time: `${format(new Date(shift.shift_date), 'dd/MM/yyyy')} ${shiftStartTime}`.trim(),
