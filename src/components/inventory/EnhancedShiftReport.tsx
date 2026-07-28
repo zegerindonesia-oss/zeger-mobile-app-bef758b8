@@ -385,6 +385,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
       const shiftIds = (shiftsData || []).map((s: any) => s.id);
       let returnsByShift: Record<string, any[]> = {};
+      let receivedByShift: Record<string, any[]> = {};
       let photosByShift: Record<string, string[]> = {};
 
       if (shiftIds.length > 0) {
@@ -416,6 +417,50 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
             return ret.rider_id === shift.rider_id && returnDateJakarta === shiftDateStr;
           });
           returnsByShift[shift.id] = matchingReturns;
+        });
+
+        // Fetch received stock (BH -> rider) partitioned per shift by time window
+        const startStrRcv = format(startDate, 'yyyy-MM-dd');
+        const endStrRcv = format(endDate, 'yyyy-MM-dd');
+        const { data: receivedRes, error: receivedErr } = await supabase
+          .from('stock_movements')
+          .select(`
+            id, product_id, quantity, status, actual_delivery_date, created_at, rider_id,
+            products(name, category)
+          `)
+          .eq('branch_id', branchId)
+          .in('movement_type', ['transfer', 'in', 'adjustment'])
+          .eq('status', 'received')
+          .not('actual_delivery_date', 'is', null)
+          .in('rider_id', shiftsData.map((s: any) => s.rider_id))
+          .gte('actual_delivery_date', `${startStrRcv}T00:00:00+07:00`)
+          .lte('actual_delivery_date', `${endStrRcv}T23:59:59+07:00`);
+        if (receivedErr) throw receivedErr;
+
+        // Group shifts by rider+date for partitioning
+        const shiftsByRD: Record<string, any[]> = {};
+        (shiftsData || []).forEach((s: any) => {
+          const k = `${s.rider_id}-${s.shift_date}`;
+          if (!shiftsByRD[k]) shiftsByRD[k] = [];
+          shiftsByRD[k].push(s);
+        });
+        Object.values(shiftsByRD).forEach((arr) => arr.sort((a: any, b: any) => {
+          const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
+          const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
+          return ta - tb;
+        }));
+        shiftIds.forEach((sid) => { receivedByShift[sid] = []; });
+        (receivedRes || []).forEach((rec: any) => {
+          const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(rec.actual_delivery_date));
+          const dayShifts = shiftsByRD[`${rec.rider_id}-${dateKey}`];
+          if (!dayShifts || dayShifts.length === 0) return;
+          const t = new Date(rec.actual_delivery_date).getTime();
+          let chosen: any = dayShifts[0];
+          for (const s of dayShifts) {
+            const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0;
+            if (st <= t) chosen = s;
+          }
+          if (receivedByShift[chosen.id]) receivedByShift[chosen.id].push(rec);
         });
 
         // Get photos from daily_reports
@@ -537,6 +582,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           ...shift,
           rider_name: riders[shift.rider_id]?.full_name || 'Unknown Rider',
           return_items: items,
+          received_items: receivedByShift[shift.id] || [],
           products_unsold: unsoldTotal,
           products_returned: returnedVerified,
           shift_date_time: `${format(new Date(shift.shift_date), 'dd/MM/yyyy')} ${shiftStartTime}`.trim(),
