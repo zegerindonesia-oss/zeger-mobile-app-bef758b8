@@ -78,9 +78,6 @@ export default function StockCardRider() {
   const [shiftBreakdown, setShiftBreakdown] = useState<ShiftBreakdownRow[]>([]);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
   const [expandedShifts, setExpandedShifts] = useState<Set<string>>(new Set());
-  const [breakdownFilter, setBreakdownFilter] = useState<'today' | 'yesterday' | 'week' | 'month' | 'custom'>('today');
-  const [breakdownFrom, setBreakdownFrom] = useState<Date | undefined>(undefined);
-  const [breakdownTo, setBreakdownTo] = useState<Date | undefined>(undefined);
   const toggleShiftExpanded = (id: string) => {
     setExpandedShifts(prev => {
       const next = new Set(prev);
@@ -170,51 +167,18 @@ export default function StockCardRider() {
     }
   }, [selectedRider, dateFilter, customDateFrom, customDateTo]);
 
-  // Fetch all-rider summary
+  // Fetch all-rider summary + shift breakdown (both follow main filter)
   useEffect(() => {
     if (riders.length > 0) {
       fetchRiderSummaries();
-    }
-  }, [riders, dateFilter, customDateFrom, customDateTo]);
-
-  // Fetch shift breakdown with its own independent filter
-  useEffect(() => {
-    if (riders.length > 0) {
       fetchShiftBreakdown();
     }
-  }, [riders, breakdownFilter, breakdownFrom, breakdownTo]);
-
-  const getBreakdownRange = () => {
-    const getJakartaDate = (date: Date) => new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).format(date);
-    const today = new Date();
-    const jakartaToday = getJakartaDate(today);
-    switch (breakdownFilter) {
-      case 'today': return { start: jakartaToday, end: jakartaToday };
-      case 'yesterday': {
-        const y = new Date(today); y.setDate(y.getDate() - 1);
-        const d = getJakartaDate(y); return { start: d, end: d };
-      }
-      case 'week': {
-        const w = new Date(today); w.setDate(w.getDate() - 7);
-        return { start: getJakartaDate(w), end: jakartaToday };
-      }
-      case 'month': {
-        const m = new Date(today); m.setDate(m.getDate() - 30);
-        return { start: getJakartaDate(m), end: jakartaToday };
-      }
-      case 'custom':
-        if (breakdownFrom && breakdownTo) return { start: getJakartaDate(breakdownFrom), end: getJakartaDate(breakdownTo) };
-        return { start: jakartaToday, end: jakartaToday };
-      default: return { start: jakartaToday, end: jakartaToday };
-    }
-  };
+  }, [riders, dateFilter, customDateFrom, customDateTo]);
 
   const fetchShiftBreakdown = async () => {
     if (riders.length === 0) return;
     setLoadingBreakdown(true);
-    const { start, end } = getBreakdownRange();
+    const { start, end } = getDateRange();
     const riderIds = riders.map(r => r.id);
     try {
       const [shiftsRes, receivedRes, txRes, returnRes] = await Promise.all([
