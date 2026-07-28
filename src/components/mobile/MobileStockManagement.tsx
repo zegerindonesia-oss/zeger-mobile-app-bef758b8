@@ -1675,6 +1675,47 @@ const MobileStockManagement = () => {
                                     <div className="flex justify-between"><span>Transaksi</span><span className="font-semibold">{sh.totalTransactions}</span></div>
                                     <div className="flex justify-between text-muted-foreground"><span>Status</span><span>{sh.report_submitted ? 'Ditutup' : 'Aktif'}</span></div>
                                   </div>
+                                  {sh.items && sh.items.length > 0 && (
+                                    <div className="mt-2 border rounded overflow-x-auto">
+                                      <p className="text-xs font-semibold p-2 bg-gray-50">Detail Stok per Menu</p>
+                                      <table className="w-full text-[11px]">
+                                        <thead className="bg-gray-100">
+                                          <tr>
+                                            <th className="text-left p-1.5">Menu</th>
+                                            <th className="text-left p-1.5">Kategori</th>
+                                            <th className="text-center p-1.5">Diterima</th>
+                                            <th className="text-center p-1.5">Terjual</th>
+                                            <th className="text-center p-1.5">Kembali</th>
+                                            <th className="text-left p-1.5">Waktu</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {sh.items.map((r) => (
+                                            <tr key={r.product_id} className="border-t">
+                                              <td className="p-1.5 font-medium">{r.name}</td>
+                                              <td className="p-1.5">{r.category}</td>
+                                              <td className="p-1.5 text-center">{r.received}</td>
+                                              <td className="p-1.5 text-center text-blue-700 font-semibold">{r.sold}</td>
+                                              <td className="p-1.5 text-center text-amber-700 font-semibold">{r.returned}</td>
+                                              <td className="p-1.5">{r.time ? new Date(r.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) : '-'}</td>
+                                            </tr>
+                                          ))}
+                                          {(() => {
+                                            const tot = sh.items!.reduce((a, r) => ({ received: a.received + r.received, sold: a.sold + r.sold, returned: a.returned + r.returned }), { received: 0, sold: 0, returned: 0 });
+                                            return (
+                                              <tr className="border-t bg-gray-50 font-bold">
+                                                <td colSpan={2} className="p-1.5">Total</td>
+                                                <td className="p-1.5 text-center">{tot.received}</td>
+                                                <td className="p-1.5 text-center">{tot.sold}</td>
+                                                <td className="p-1.5 text-center">{tot.returned}</td>
+                                                <td></td>
+                                              </tr>
+                                            );
+                                          })()}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
                                 </AccordionContent>
                               </AccordionItem>
                             );
