@@ -501,11 +501,15 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
         const riderIds = [...new Set(shiftsData.map((s: any) => s.rider_id))];
 
+        // Collect transaction ids per shift so we can fetch item-level sold qty
+        const txIdsByShift: Record<string, string[]> = {};
+        shiftIds.forEach((sid) => { txIdsByShift[sid] = []; });
+
         for (const riderId of riderIds) {
           try {
             const { data: transData, error: transError } = await supabase
               .from('transactions')
-              .select('final_amount, payment_method, rider_id, transaction_date')
+              .select('id, final_amount, payment_method, rider_id, transaction_date')
               .eq('status', 'completed')
               .eq('rider_id', riderId)
               .gte('transaction_date', `${startStr}T00:00:00+07:00`)
@@ -536,11 +540,54 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
               else if (method === 'qris') bucket.qris += amt;
               else if (method === 'transfer' || method === 'bank_transfer') bucket.transfer += amt;
               bucket.total += amt;
+              if (t.id && txIdsByShift[chosen.id]) txIdsByShift[chosen.id].push(t.id);
             });
           } catch (error) {
             console.error(`Error fetching data for rider ${riderId}:`, error);
           }
         }
+
+        // Fetch transaction items per shift (aggregated by product)
+        const soldByShift: Record<string, Record<string, { product_id: string; product_name: string; category: string; qty: number; first_time: string }>> = {};
+        shiftIds.forEach((sid) => { soldByShift[sid] = {}; });
+        const allTxIds = Object.values(txIdsByShift).flat();
+        if (allTxIds.length > 0) {
+          // Chunk to avoid URL length limits
+          const chunkSize = 200;
+          const itemsByTxId: Record<string, any[]> = {};
+          for (let i = 0; i < allTxIds.length; i += chunkSize) {
+            const chunk = allTxIds.slice(i, i + chunkSize);
+            const { data: itemsRes } = await supabase
+              .from('transaction_items')
+              .select('transaction_id, product_id, quantity, created_at, products(name, category)')
+              .in('transaction_id', chunk);
+            (itemsRes || []).forEach((it: any) => {
+              if (!itemsByTxId[it.transaction_id]) itemsByTxId[it.transaction_id] = [];
+              itemsByTxId[it.transaction_id].push(it);
+            });
+          }
+          Object.entries(txIdsByShift).forEach(([sid, txIds]) => {
+            txIds.forEach((txid) => {
+              (itemsByTxId[txid] || []).forEach((it: any) => {
+                const pid = it.product_id;
+                if (!pid) return;
+                const bucket = soldByShift[sid];
+                if (!bucket[pid]) {
+                  bucket[pid] = {
+                    product_id: pid,
+                    product_name: it.products?.name || '-',
+                    category: it.products?.category || '-',
+                    qty: 0,
+                    first_time: it.created_at,
+                  };
+                }
+                bucket[pid].qty += Number(it.quantity || 0);
+                if (it.created_at && it.created_at < bucket[pid].first_time) bucket[pid].first_time = it.created_at;
+              });
+            });
+          });
+        }
+        (window as any).__soldByShift = soldByShift;
 
         // Get daily operational expenses (exclude food) per shift
         const { data: opsData, error: opsError } = await supabase
@@ -576,6 +623,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
         
         const salesMap = (window as any).__salesByShift || {};
         const opsMap = (window as any).__opsByShift || {};
+        const soldMap = (window as any).__soldByShift || {};
         const sales = salesMap[shift.id] || { cash: 0, qris: 0, transfer: 0, total: 0 };
         const ops = opsMap[shift.id] || 0;
         return {
@@ -583,6 +631,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           rider_name: riders[shift.rider_id]?.full_name || 'Unknown Rider',
           return_items: items,
           received_items: receivedByShift[shift.id] || [],
+          sold_items_by_product: soldMap[shift.id] || {},
           products_unsold: unsoldTotal,
           products_returned: returnedVerified,
           shift_date_time: `${format(new Date(shift.shift_date), 'dd/MM/yyyy')} ${shiftStartTime}`.trim(),
@@ -1046,42 +1095,67 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                 </AccordionTrigger>
                 <AccordionContent className="px-2">
                   <div className="space-y-4">
-                    {shift.received_items?.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-2">Stok Diterima (BH → Rider)</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Nama Menu</TableHead>
-                                <TableHead>Kategori</TableHead>
-                                <TableHead className="text-center">Qty Diterima</TableHead>
-                                <TableHead>Waktu</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {shift.received_items.map((it: any) => (
-                                <TableRow key={it.id}>
-                                  <TableCell className="font-medium">{it.products?.name || '-'}</TableCell>
-                                  <TableCell>{it.products?.category || '-'}</TableCell>
-                                  <TableCell className="text-center">{it.quantity}</TableCell>
-                                  <TableCell className="text-xs">
-                                    {new Date(it.actual_delivery_date).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' })}
-                                  </TableCell>
+                    {(() => {
+                      // Merge received / sold / returned per product for this shift
+                      const merged: Record<string, { name: string; category: string; received: number; sold: number; returned: number; time: string }> = {};
+                      (shift.received_items || []).forEach((it: any) => {
+                        const pid = it.product_id;
+                        if (!merged[pid]) merged[pid] = { name: it.products?.name || '-', category: it.products?.category || '-', received: 0, sold: 0, returned: 0, time: it.actual_delivery_date };
+                        merged[pid].received += Number(it.quantity || 0);
+                        if (it.actual_delivery_date && (!merged[pid].time || it.actual_delivery_date < merged[pid].time)) merged[pid].time = it.actual_delivery_date;
+                      });
+                      Object.values(shift.sold_items_by_product || {}).forEach((s: any) => {
+                        const pid = s.product_id;
+                        if (!merged[pid]) merged[pid] = { name: s.product_name, category: s.category, received: 0, sold: 0, returned: 0, time: s.first_time };
+                        merged[pid].sold += Number(s.qty || 0);
+                      });
+                      (shift.return_items || []).forEach((it: any) => {
+                        const pid = it.product_id;
+                        if (!merged[pid]) merged[pid] = { name: it.products?.name || '-', category: it.products?.category || '-', received: 0, sold: 0, returned: 0, time: it.created_at };
+                        merged[pid].returned += Number(it.quantity || 0);
+                      });
+                      const rows = Object.values(merged);
+                      if (rows.length === 0) return null;
+                      const tot = rows.reduce((a, r) => ({ received: a.received + r.received, sold: a.sold + r.sold, returned: a.returned + r.returned }), { received: 0, sold: 0, returned: 0 });
+                      return (
+                        <div>
+                          <h4 className="font-semibold mb-2">Detail Stok per Menu (Shift #{shift.shift_number})</h4>
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nama Menu</TableHead>
+                                  <TableHead>Kategori</TableHead>
+                                  <TableHead className="text-center">Stok Diterima</TableHead>
+                                  <TableHead className="text-center">Stok Terjual</TableHead>
+                                  <TableHead className="text-center">Stok Kembali</TableHead>
+                                  <TableHead>Waktu</TableHead>
                                 </TableRow>
-                              ))}
-                              <TableRow className="bg-muted/40 font-bold">
-                                <TableCell colSpan={2}>Total Stok Diterima</TableCell>
-                                <TableCell className="text-center">
-                                  {shift.received_items.reduce((s: number, it: any) => s + (it.quantity || 0), 0)}
-                                </TableCell>
-                                <TableCell></TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
+                              </TableHeader>
+                              <TableBody>
+                                {rows.map((r, i) => (
+                                  <TableRow key={i}>
+                                    <TableCell className="font-medium">{r.name}</TableCell>
+                                    <TableCell>{r.category}</TableCell>
+                                    <TableCell className="text-center">{r.received}</TableCell>
+                                    <TableCell className="text-center text-blue-700 font-semibold">{r.sold}</TableCell>
+                                    <TableCell className="text-center text-amber-700 font-semibold">{r.returned}</TableCell>
+                                    <TableCell className="text-xs">{r.time ? new Date(r.time).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' }) : '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                                <TableRow className="bg-muted/40 font-bold">
+                                  <TableCell colSpan={2}>Total</TableCell>
+                                  <TableCell className="text-center">{tot.received}</TableCell>
+                                  <TableCell className="text-center">{tot.sold}</TableCell>
+                                  <TableCell className="text-center">{tot.returned}</TableCell>
+                                  <TableCell></TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     {shift.return_items?.length > 0 && (
                       <div>
                         <h4 className="font-semibold mb-2">Pengembalian Barang</h4>
