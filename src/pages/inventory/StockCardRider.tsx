@@ -77,6 +77,14 @@ export default function StockCardRider() {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [shiftBreakdown, setShiftBreakdown] = useState<ShiftBreakdownRow[]>([]);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
+  const [expandedShifts, setExpandedShifts] = useState<Set<string>>(new Set());
+  const toggleShiftExpanded = (id: string) => {
+    setExpandedShifts(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
   const [summaryData, setSummaryData] = useState({
     totalStockIn: 0,
     totalStockSold: 0,
