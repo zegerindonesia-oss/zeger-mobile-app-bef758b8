@@ -78,6 +78,7 @@ interface DailyShiftBreakdown {
   qrisSales: number;
   transferSales: number;
   totalTransactions: number;
+  items?: Array<{ product_id: string; name: string; category: string; received: number; sold: number; returned: number; time: string | null }>;
 }
 
 interface OperationalExpense {
