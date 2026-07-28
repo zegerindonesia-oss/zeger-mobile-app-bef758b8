@@ -78,9 +78,6 @@ export default function StockCardRider() {
   const [shiftBreakdown, setShiftBreakdown] = useState<ShiftBreakdownRow[]>([]);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
   const [expandedShifts, setExpandedShifts] = useState<Set<string>>(new Set());
-  const [breakdownFilter, setBreakdownFilter] = useState<'today' | 'yesterday' | 'week' | 'month' | 'custom'>('today');
-  const [breakdownFrom, setBreakdownFrom] = useState<Date | undefined>(undefined);
-  const [breakdownTo, setBreakdownTo] = useState<Date | undefined>(undefined);
   const toggleShiftExpanded = (id: string) => {
     setExpandedShifts(prev => {
       const next = new Set(prev);
@@ -170,51 +167,18 @@ export default function StockCardRider() {
     }
   }, [selectedRider, dateFilter, customDateFrom, customDateTo]);
 
-  // Fetch all-rider summary
+  // Fetch all-rider summary + shift breakdown (both follow main filter)
   useEffect(() => {
     if (riders.length > 0) {
       fetchRiderSummaries();
-    }
-  }, [riders, dateFilter, customDateFrom, customDateTo]);
-
-  // Fetch shift breakdown with its own independent filter
-  useEffect(() => {
-    if (riders.length > 0) {
       fetchShiftBreakdown();
     }
-  }, [riders, breakdownFilter, breakdownFrom, breakdownTo]);
-
-  const getBreakdownRange = () => {
-    const getJakartaDate = (date: Date) => new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).format(date);
-    const today = new Date();
-    const jakartaToday = getJakartaDate(today);
-    switch (breakdownFilter) {
-      case 'today': return { start: jakartaToday, end: jakartaToday };
-      case 'yesterday': {
-        const y = new Date(today); y.setDate(y.getDate() - 1);
-        const d = getJakartaDate(y); return { start: d, end: d };
-      }
-      case 'week': {
-        const w = new Date(today); w.setDate(w.getDate() - 7);
-        return { start: getJakartaDate(w), end: jakartaToday };
-      }
-      case 'month': {
-        const m = new Date(today); m.setDate(m.getDate() - 30);
-        return { start: getJakartaDate(m), end: jakartaToday };
-      }
-      case 'custom':
-        if (breakdownFrom && breakdownTo) return { start: getJakartaDate(breakdownFrom), end: getJakartaDate(breakdownTo) };
-        return { start: jakartaToday, end: jakartaToday };
-      default: return { start: jakartaToday, end: jakartaToday };
-    }
-  };
+  }, [riders, dateFilter, customDateFrom, customDateTo]);
 
   const fetchShiftBreakdown = async () => {
     if (riders.length === 0) return;
     setLoadingBreakdown(true);
-    const { start, end } = getBreakdownRange();
+    const { start, end } = getDateRange();
     const riderIds = riders.map(r => r.id);
     try {
       const [shiftsRes, receivedRes, txRes, returnRes] = await Promise.all([
@@ -920,46 +884,9 @@ export default function StockCardRider() {
 
       {/* Per-Shift Breakdown */}
       <Card className="p-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Rincian Per Shift</h2>
-          <div className="flex items-end gap-2 flex-wrap">
-            <div>
-              <Label className="text-xs">Filter Periode</Label>
-              <Select value={breakdownFilter} onValueChange={(v: any) => setBreakdownFilter(v)}>
-                <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Hari Ini</SelectItem>
-                  <SelectItem value="yesterday">Kemarin</SelectItem>
-                  <SelectItem value="week">7 Hari Terakhir</SelectItem>
-                  <SelectItem value="month">30 Hari Terakhir</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {breakdownFilter === 'custom' && (
-              <>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className={cn('h-9', !breakdownFrom && 'text-muted-foreground')}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {breakdownFrom ? format(breakdownFrom, 'dd/MM/yy') : 'Dari'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={breakdownFrom} onSelect={setBreakdownFrom} initialFocus /></PopoverContent>
-                </Popover>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className={cn('h-9', !breakdownTo && 'text-muted-foreground')}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {breakdownTo ? format(breakdownTo, 'dd/MM/yy') : 'Sampai'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={breakdownTo} onSelect={setBreakdownTo} initialFocus /></PopoverContent>
-                </Popover>
-              </>
-            )}
-            <span className="text-xs text-muted-foreground ml-2">1 shift = 1 siklus (Terima → Jual → Kembali)</span>
-          </div>
+          <span className="text-xs text-muted-foreground">1 shift = 1 siklus (Terima → Jual → Kembali)</span>
         </div>
         <div className="rounded-md border">
           <Table>
