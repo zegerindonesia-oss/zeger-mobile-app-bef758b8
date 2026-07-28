@@ -861,6 +861,86 @@ export default function StockCardRider() {
         </div>
       </Card>
 
+      {/* Per-Shift Breakdown */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Rincian Per Shift</h2>
+          <span className="text-xs text-muted-foreground">1 shift = 1 siklus (Terima → Jual → Kembali)</span>
+        </div>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Rider</TableHead>
+                <TableHead>Tanggal</TableHead>
+                <TableHead>Shift</TableHead>
+                <TableHead>Jam Mulai</TableHead>
+                <TableHead className="text-right">Stock Masuk</TableHead>
+                <TableHead className="text-right">Stock Terjual</TableHead>
+                <TableHead className="text-right">Stock Kembali</TableHead>
+                <TableHead className="text-right">Sisa</TableHead>
+                <TableHead className="text-right">Total Sales</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingBreakdown ? (
+                <TableRow><TableCell colSpan={9} className="text-center py-8">Memuat data...</TableCell></TableRow>
+              ) : (() => {
+                const list = selectedRider === 'all' ? shiftBreakdown : shiftBreakdown.filter(s => s.rider_id === selectedRider);
+                if (list.length === 0) {
+                  return <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Tidak ada data untuk periode yang dipilih</TableCell></TableRow>;
+                }
+                // group by rider+date
+                const groups: Record<string, ShiftBreakdownRow[]> = {};
+                list.forEach(r => {
+                  const k = `${r.rider_id}__${r.shift_date}`;
+                  if (!groups[k]) groups[k] = [];
+                  groups[k].push(r);
+                });
+                const keys = Object.keys(groups).sort((a, b) => (a.split('__')[1] < b.split('__')[1] ? 1 : -1));
+                const nodes: any[] = [];
+                keys.forEach(k => {
+                  const arr = groups[k].sort((a, b) => (a.shift_number || 0) - (b.shift_number || 0));
+                  arr.forEach(r => {
+                    nodes.push(
+                      <TableRow key={r.shift_id}>
+                        <TableCell className="font-medium">{r.rider_name}</TableCell>
+                        <TableCell>{format(new Date(r.shift_date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>#{r.shift_number}</TableCell>
+                        <TableCell className="text-xs">{r.shift_start_time ? new Date(r.shift_start_time).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                        <TableCell className="text-right">{r.stock_in}</TableCell>
+                        <TableCell className="text-right">{r.stock_sold}</TableCell>
+                        <TableCell className="text-right">{r.stock_returned}</TableCell>
+                        <TableCell className="text-right">{r.remaining}</TableCell>
+                        <TableCell className="text-right">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(r.total_sales)}</TableCell>
+                      </TableRow>
+                    );
+                  });
+                  const t = arr.reduce((acc, r) => ({
+                    in: acc.in + r.stock_in,
+                    sold: acc.sold + r.stock_sold,
+                    ret: acc.ret + r.stock_returned,
+                    rem: acc.rem + r.remaining,
+                    sales: acc.sales + r.total_sales,
+                  }), { in: 0, sold: 0, ret: 0, rem: 0, sales: 0 });
+                  nodes.push(
+                    <TableRow key={`${k}-total`} className="bg-primary/10 font-semibold">
+                      <TableCell colSpan={4}>Total Harian — {arr[0].rider_name} — {format(new Date(arr[0].shift_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell className="text-right">{t.in}</TableCell>
+                      <TableCell className="text-right">{t.sold}</TableCell>
+                      <TableCell className="text-right">{t.ret}</TableCell>
+                      <TableCell className="text-right">{t.rem}</TableCell>
+                      <TableCell className="text-right">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(t.sales)}</TableCell>
+                    </TableRow>
+                  );
+                });
+                return nodes;
+              })()}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
       {/* Stock Card Table */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
