@@ -322,7 +322,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
               >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
-                  <div className="w-16 h-16 rounded-full border-2 border-[#0F1B3D] overflow-hidden bg-[#EA2831]/10 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-white ring-1 ring-black/5 shadow-md flex items-center justify-center">
                     {rider.photo_url ? (
                       <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
                     ) : (
@@ -417,7 +417,7 @@ function RiderDetailSheet({
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header with back */}
-      <div className="relative bg-gray-100 h-40 flex-shrink-0">
+      <div className="relative bg-white h-40 flex-shrink-0">
         <button
           onClick={onClose}
           className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-[#EA2831] text-white flex items-center justify-center shadow-lg"
@@ -433,7 +433,7 @@ function RiderDetailSheet({
       {/* Rider info card */}
       <div className="mx-4 -mt-14 relative z-10 bg-white rounded-2xl border-2 border-[#EA2831]/30 p-4 shadow-lg">
         <div className="flex items-start gap-3">
-          <div className="w-20 h-20 rounded-full border-2 border-[#0F1B3D] overflow-hidden bg-[#EA2831]/10 flex-shrink-0">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-black/5 shadow-lg flex-shrink-0">
             {rider.photo_url ? (
               <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
             ) : (
@@ -493,9 +493,9 @@ function RiderDetailSheet({
                 <button
                   key={item.product_id}
                   onClick={() => setSelectedProduct(item)}
-                  className={`w-full text-left flex gap-3 p-3 rounded-2xl border transition-transform active:scale-[0.99] ${outOfStock ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}
+                  className={`w-full text-left flex gap-3 p-3 rounded-2xl border transition-transform active:scale-[0.99] ${outOfStock ? 'bg-white border-gray-100 opacity-70' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}
                 >
-                  <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+                  <div className="w-20 h-20 rounded-xl bg-white overflow-hidden flex-shrink-0 flex items-center justify-center">
                     {item.image_url ? (
                       <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                     ) : null}
