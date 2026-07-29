@@ -25,6 +25,7 @@ export function PromoBannerCarousel() {
         .from('promo_banners')
         .select('id, title, image_url, link_url')
         .eq('is_active', true)
+        .eq('placement', 'carousel')
         .gte('valid_until', new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()))
         .order('display_order');
       
