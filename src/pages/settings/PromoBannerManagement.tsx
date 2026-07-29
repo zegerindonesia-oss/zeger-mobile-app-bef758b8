@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ImageUpload } from "@/components/shared/ImageUpload";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Banner {
   id: string;
@@ -21,6 +22,7 @@ interface Banner {
   display_order: number;
   valid_from: string | null;
   valid_until: string | null;
+  placement?: string;
 }
 
 export default function PromoBannerManagement() {
@@ -37,7 +39,8 @@ export default function PromoBannerManagement() {
     is_active: true,
     display_order: 0,
     valid_from: '',
-    valid_until: ''
+    valid_until: '',
+    placement: 'carousel'
   });
 
   useEffect(() => {
@@ -136,7 +139,8 @@ export default function PromoBannerManagement() {
       is_active: banner.is_active,
       display_order: banner.display_order,
       valid_from: banner.valid_from || '',
-      valid_until: banner.valid_until || ''
+      valid_until: banner.valid_until || '',
+      placement: (banner as any).placement || 'carousel'
     });
     setDialogOpen(true);
   };
@@ -150,7 +154,8 @@ export default function PromoBannerManagement() {
       is_active: true,
       display_order: 0,
       valid_from: '',
-      valid_until: ''
+      valid_until: '',
+      placement: 'carousel'
     });
     setEditingBanner(null);
   };
@@ -228,6 +233,25 @@ export default function PromoBannerManagement() {
                   label="Gambar Banner"
                   aspect="banner"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Rekomendasi ukuran: Carousel Home 1200×675 (16:9) · Big Order & Zeger Care 1200×525 (16:7)
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Lokasi Tampil (Placement)</Label>
+                <Select
+                  value={formData.placement}
+                  onValueChange={(v) => setFormData({ ...formData, placement: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="carousel">Home Carousel (Hero Atas)</SelectItem>
+                    <SelectItem value="big_order">Big Order (Section Home)</SelectItem>
+                    <SelectItem value="zeger_care">Zeger Care (Section Home)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Link URL (Optional)</Label>

@@ -23,13 +23,14 @@ interface Voucher {
 
 export function CustomerHome({ customerUser, onNavigate, recentProducts = [], onAddToCart }: CustomerHomeProps) {
   const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [bigOrderBanner, setBigOrderBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
+  const [zegerCareBanner, setZegerCareBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
 
   useEffect(() => {
     if (customerUser) {
       fetchActiveVouchers();
-      fetchRecentOrders();
     }
+    fetchSectionBanners();
   }, [customerUser]);
 
   const fetchActiveVouchers = async () => {
@@ -48,21 +49,23 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
     }
   };
 
-  const fetchRecentOrders = async () => {
-    if (!customerUser) return;
-
+  const fetchSectionBanners = async () => {
     try {
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       const { data, error } = await supabase
-        .from('customer_orders')
-        .select('*')
-        .eq('user_id', customerUser.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
+        .from('promo_banners')
+        .select('image_url, link_url, placement, display_order')
+        .eq('is_active', true)
+        .in('placement', ['big_order', 'zeger_care'])
+        .or(`valid_until.is.null,valid_until.gte.${today}`)
+        .order('display_order');
       if (error) throw error;
-      setRecentOrders(data as any || []);
+      const big = (data || []).find((b: any) => b.placement === 'big_order');
+      const care = (data || []).find((b: any) => b.placement === 'zeger_care');
+      if (big) setBigOrderBanner({ image_url: big.image_url, link_url: big.link_url });
+      if (care) setZegerCareBanner({ image_url: care.image_url, link_url: care.link_url });
     } catch (error: any) {
-      console.error('Error fetching recent orders:', error);
+      console.error('Error fetching section banners:', error);
     }
   };
 
@@ -76,7 +79,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   const membershipInfo = getMembershipBadge();
 
   return (
-    <div className="min-h-screen bg-[#f8f6f6]">
+    <div className="min-h-screen bg-white">
       {/* Hero Banner - Clean without overlay */}
       <div className="relative h-64 overflow-hidden">
         <PromoBannerCarousel />
@@ -274,44 +277,53 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         </div>
       )}
 
-      {/* Recent Orders */}
-      {recentOrders.length > 0 && (
-        <div className="px-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-gray-900">Pesanan Terakhir</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-red-500 hover:text-red-600"
-              onClick={() => onNavigate('orders')}
-            >
-              Lihat Semua
-            </Button>
-          </div>
-          <div className="space-y-3">
-            {recentOrders.map((order) => (
-              <Card 
-                key={order.id} 
-                className="p-4 rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <Badge variant={
-                    order.status === 'completed' ? 'default' :
-                    order.status === 'pending' ? 'secondary' : 'outline'
-                  }>
-                    {order.status}
-                  </Badge>
-                  <p className="text-xs text-gray-500">
-                    {new Date(order.created_at).toLocaleDateString('id-ID')}
-                  </p>
-                </div>
-                <p className="font-bold text-gray-900">Order #{order.id.slice(0, 8)}</p>
-                <p className="text-sm text-gray-600">Rp {order.total_price.toLocaleString('id-ID')}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Big Order Section */}
+      <div className="bg-white px-4 pt-6 pb-4">
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">Big Order</h3>
+        <button
+          onClick={() => bigOrderBanner?.link_url && window.open(bigOrderBanner.link_url, '_blank')}
+          className="block w-full rounded-2xl overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.25)] hover:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99] bg-gradient-to-br from-red-500 to-red-600"
+          style={{ aspectRatio: '16 / 7' }}
+        >
+          {bigOrderBanner ? (
+            <img
+              src={bigOrderBanner.image_url}
+              alt="Big Order"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-white p-4">
+              <ShoppingBag className="h-10 w-10 mb-2 opacity-80" />
+              <p className="font-bold text-lg">Big Order Banner</p>
+              <p className="text-xs opacity-80">Upload dari backoffice (rasio 16:7)</p>
+            </div>
+          )}
+        </button>
+      </div>
+
+      {/* Zeger Care Section */}
+      <div className="bg-white px-4 pt-4 pb-8">
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">Zeger Care</h3>
+        <button
+          onClick={() => zegerCareBanner?.link_url && window.open(zegerCareBanner.link_url, '_blank')}
+          className="block w-full rounded-2xl overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.25)] hover:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99] bg-gradient-to-br from-amber-100 to-amber-200"
+          style={{ aspectRatio: '16 / 7' }}
+        >
+          {zegerCareBanner ? (
+            <img
+              src={zegerCareBanner.image_url}
+              alt="Zeger Care"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-red-600 p-4">
+              <Bell className="h-10 w-10 mb-2" />
+              <p className="font-bold text-lg">Zeger Care Banner</p>
+              <p className="text-xs opacity-80">Upload dari backoffice (rasio 16:7)</p>
+            </div>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
