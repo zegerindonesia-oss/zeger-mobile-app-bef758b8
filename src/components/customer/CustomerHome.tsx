@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Bike, Gift, Star, Bell, Users, CreditCard, ChevronRight, ShoppingBag, Flame, Coins } from 'lucide-react';
+import { Store, Bike, Truck, Gift, Star, Bell, Users, CreditCard, ChevronRight, ShoppingBag, Flame, Coins, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import PromoBannerCarousel from './PromoBannerCarousel';
 
@@ -184,29 +184,57 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         </div>
 
         {/* Order Type Buttons - Material Design Style */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => onNavigate('outlets')}
-            className="bg-[#EA2831] text-white rounded-lg p-6 text-center shadow-2xl relative overflow-hidden hover:shadow-3xl transition-all"
+            className="bg-[#EA2831] text-white rounded-2xl p-4 text-center shadow-xl relative overflow-hidden hover:shadow-2xl active:scale-95 transition-all"
           >
-            <div className="absolute inset-0 bg-white/5"></div>
-            <div className="relative flex flex-col items-center justify-center">
-              <Store className="h-10 w-10 mb-2" strokeWidth={1.5} />
-              <p className="font-bold">Zeger Branch</p>
+            <div className="absolute inset-0 bg-white/5" />
+            <div className="relative flex flex-col items-center justify-center gap-2">
+              <Store className="h-8 w-8" strokeWidth={1.5} />
+              <p className="font-bold text-xs leading-tight">Zeger<br/>Branch</p>
             </div>
           </button>
-          
+
+          <button
+            onClick={() => onNavigate('street')}
+            className="bg-[#EA2831] text-white rounded-2xl p-4 text-center shadow-xl relative overflow-hidden hover:shadow-2xl active:scale-95 transition-all"
+          >
+            <div className="absolute inset-0 bg-white/5" />
+            <div className="relative flex flex-col items-center justify-center gap-2">
+              <Truck className="h-8 w-8" strokeWidth={1.5} />
+              <p className="font-bold text-xs leading-tight">On The<br/>Street</p>
+            </div>
+          </button>
+
           <button
             onClick={() => onNavigate('map')}
-            className="bg-[#EA2831] text-white rounded-lg p-6 text-center shadow-2xl relative overflow-hidden hover:shadow-3xl transition-all"
+            className="bg-[#EA2831] text-white rounded-2xl p-4 text-center shadow-xl relative overflow-hidden hover:shadow-2xl active:scale-95 transition-all"
           >
-            <div className="absolute inset-0 bg-white/5"></div>
-            <div className="relative flex flex-col items-center justify-center">
-              <Bike className="h-10 w-10 mb-2" strokeWidth={1.5} />
-              <p className="font-bold">Zeger On The Wheels</p>
+            <div className="absolute inset-0 bg-white/5" />
+            <div className="relative flex flex-col items-center justify-center gap-2">
+              <Bike className="h-8 w-8" strokeWidth={1.5} />
+              <p className="font-bold text-xs leading-tight">On The<br/>Wheels</p>
             </div>
           </button>
         </div>
+
+        {/* Nearby Rider shortcut */}
+        <button
+          onClick={() => onNavigate('map')}
+          className="mt-4 w-full bg-white rounded-2xl p-4 flex items-center justify-between shadow-md hover:shadow-lg transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-[#EA2831]/10 flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-[#EA2831]" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-gray-900 text-sm">Rider di Sekitarmu</p>
+              <p className="text-xs text-gray-500">Temukan rider Zeger terdekat</p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-gray-400" />
+        </button>
       </div>
 
       {/* Active Promotions */}
