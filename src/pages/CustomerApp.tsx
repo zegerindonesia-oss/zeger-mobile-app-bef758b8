@@ -700,6 +700,11 @@ export default function CustomerApp() {
                 }}
               />
             )}
+            {activeView === 'street' && (
+              <CustomerStreetComingSoon
+                onNavigate={(view: string) => setActiveView(view as View)}
+              />
+            )}
             {activeView === 'menu' && (
               <CustomerMenu 
                 products={products}
