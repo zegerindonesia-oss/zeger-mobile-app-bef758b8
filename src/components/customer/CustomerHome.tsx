@@ -79,7 +79,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   const membershipInfo = getMembershipBadge();
 
   return (
-    <div className="min-h-screen bg-[#f8f6f6]">
+    <div className="min-h-screen bg-white">
       {/* Hero Banner - Clean without overlay */}
       <div className="relative h-64 overflow-hidden">
         <PromoBannerCarousel />
