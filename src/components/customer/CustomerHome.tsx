@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Store, Bike, Truck, Gift, Star, Bell, Users, CreditCard, ChevronRight, ShoppingBag, Flame, Coins, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import PromoBannerCarousel from './PromoBannerCarousel';
+import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
 
 interface CustomerHomeProps {
   customerUser: any;
@@ -22,13 +23,25 @@ interface Voucher {
 }
 
 export function CustomerHome({ customerUser, onNavigate, recentProducts = [], onAddToCart }: CustomerHomeProps) {
+  const cfg = useCustomerAppConfig();
   const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
+  const [myVoucherCount, setMyVoucherCount] = useState(0);
+  const [subActive, setSubActive] = useState(false);
+  const [unreadNotif, setUnreadNotif] = useState(0);
   const [bigOrderBanner, setBigOrderBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
   const [zegerCareBanner, setZegerCareBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
 
   useEffect(() => {
     if (customerUser) {
       fetchActiveVouchers();
+      (async () => {
+        const { count: vc } = await supabase.from('customer_user_vouchers').select('*', { count: 'exact', head: true }).eq('user_id', customerUser.id).eq('is_used', false);
+        setMyVoucherCount(vc || 0);
+        const { data: sub } = await supabase.from('customer_subscriptions').select('id').eq('user_id', customerUser.id).eq('status', 'active').gte('ends_at', new Date().toISOString()).limit(1);
+        setSubActive(!!(sub && sub.length));
+        const { count: nc } = await supabase.from('customer_notifications').select('*', { count: 'exact', head: true }).or(`user_id.is.null,user_id.eq.${customerUser.id}`).is('read_at', null);
+        setUnreadNotif(nc || 0);
+      })();
     }
     fetchSectionBanners();
   }, [customerUser]);
