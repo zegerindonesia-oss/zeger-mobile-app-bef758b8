@@ -382,6 +382,7 @@ function RiderDetailSheet({
 }) {
   const subtitle = rider.checkpoint_name || rider.branch_address || rider.branch_name || '';
   const stock = rider.stock_items || [];
+  const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
 
   return (
     <div className="flex flex-col h-full bg-white">
