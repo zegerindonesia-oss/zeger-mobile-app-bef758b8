@@ -7,6 +7,8 @@ export const GOOGLE_MAPS_API_KEY =
 export const GOOGLE_MAPS_TRACKING_ID =
   (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string) || '';
 
+export const isGoogleMapsConfigured = Boolean(GOOGLE_MAPS_API_KEY);
+
 export const buildMapsScriptUrl = (extraParams: Record<string, string> = {}): string => {
   const params = new URLSearchParams({
     key: GOOGLE_MAPS_API_KEY,

@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone, MessageCircle } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { GOOGLE_MAPS_API_KEY, buildMapsScriptUrl } from '@/config/maps';
+import { GOOGLE_MAPS_API_KEY, buildMapsScriptUrl, isGoogleMapsConfigured } from '@/config/maps';
 
 interface StockItem {
   product_id: string;
@@ -92,7 +92,8 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     if (!userLocation || !mapContainer.current || map.current) return;
     loadGoogleMaps().then(initializeMap).catch(err => {
       console.error(err);
-      setMapError('Gagal memuat peta');
+      const message = err instanceof Error ? err.message : 'Gagal memuat peta';
+      setMapError(message.includes('API key') ? message : 'Gagal memuat peta');
     });
   }, [userLocation]);
 
@@ -319,8 +320,17 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
       {/* Map */}
       <div className="px-4 mb-4">
-        <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+        <div className="relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
           <div ref={mapContainer} className="h-64 w-full bg-gray-100" />
+          {(!isGoogleMapsConfigured || mapError) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
+              <MapPin className="mb-3 h-10 w-10 text-[#EA2831]" />
+              <p className="font-bold text-gray-900">Peta belum aktif</p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                Google Maps key belum tersedia di browser. Rider tetap bisa dipilih dari daftar di bawah.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
