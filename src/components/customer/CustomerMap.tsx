@@ -139,10 +139,19 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     if (!GOOGLE_MAPS_API_KEY) {
       throw new Error('Google Maps browser key belum aktif. Reconnect Google Maps Platform connector atau refresh environment project.');
     }
+    if ((window as any).google?.maps?.Map) return;
     const existingScript = document.querySelector<HTMLScriptElement>('script[data-zeger-google-maps="true"]');
     if (!existingScript) {
+      const callbackName = 'zegerGoogleMapsReady';
+      const callbackReady = new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('Google Maps timeout. Coba refresh halaman atau reconnect Google Maps connector.')), 15000);
+        (window as any)[callbackName] = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+      });
       const script = document.createElement('script');
-      script.src = buildMapsScriptUrl({ libraries: 'places' });
+      script.src = buildMapsScriptUrl({ libraries: 'places', callback: callbackName });
       script.async = true;
       script.defer = true;
       script.dataset.zegerGoogleMaps = 'true';
@@ -150,6 +159,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
         setMapError('Google Maps gagal load. Pastikan Maps JavaScript API aktif dan domain preview diizinkan.');
       };
       document.head.appendChild(script);
+      await callbackReady;
     }
     // With loading=async, google.maps.Map is not available at script load time.
     // Use importLibrary which resolves when the maps library is ready.
