@@ -1,47 +1,21 @@
-## Fix Map Rider di App Customer
+## Perbaikan rider aktif di Customer Map
 
-**Keputusan:**
-- Strategi lokasi: **checkpoint-based** — lokasi & status rider hanya update saat rider check-in di app rider.
-- Google Maps: pakai **connector Lovable managed** (key otomatis provisioned untuk `*.lovable.app`).
+**Aturan status rider**
+- Rider dianggap **aktif dan siap menerima order** ketika profilnya aktif dan memiliki stok rider `> 0` yang sudah diterima.
+- Rider tidak wajib checkpoint agar muncul di Customer App.
+- Shift tidak dijadikan syarat utama karena penerimaan stok adalah indikator operasional yang dipilih.
 
----
+**Aturan lokasi**
+- Jika ada checkpoint hari ini: gunakan koordinat dan status checkpoint terbaru.
+- Jika belum checkpoint: gunakan koordinat branch rider sebagai lokasi sementara.
+- Jika branch juga tidak memiliki koordinat: rider tetap dapat ditampilkan di daftar tanpa pin/direction.
 
-### Langkah
-
-**1. Connect Google Maps Platform connector**
-- Panggil `standard_connectors--connect` dengan `connector_id: google_maps`.
-- Setelah tersambung, `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` tersedia otomatis di frontend.
-
-**2. Ganti hardcoded key**
-- Hapus key hardcoded di `src/config/maps.ts`.
-- Ganti dengan `import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY`.
-- Tambah fallback error message yang jelas kalau env var kosong (belum di-connect).
-
-**3. Pastikan semua loader Maps pakai parameter yang benar**
-- Update loader script di `CustomerMap.tsx` (dan komponen lain yang load Maps JS) supaya:
-  - Pakai `loading=async`
-  - Pakai `callback=initMap` (window global callback)
-  - Tambah `channel=${VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID}` untuk tracking
-- Pastikan pakai `google.maps.Marker` (bukan `AdvancedMarkerElement` yang butuh `mapId`).
-- Jangan set `mapId` di constructor `Map`.
-
-**4. Konfirmasi strategi checkpoint sudah aktif**
-- Verifikasi `get-nearby-riders` edge function sudah return lokasi dari **checkpoint terakhir hari ini** (bukan `profiles.last_known_lat/lng` live).
-- Kalau masih pakai `last_known_lat/lng`, ubah sumber ke tabel checkpoint (`rider_checkpoints` atau sejenis) dengan filter tanggal hari ini (Asia/Jakarta) + ambil row `created_at` terbaru per rider.
-- Rider tanpa checkpoint hari ini → tidak muncul di map.
-
-**5. Tidak menyentuh live tracking**
-- `update-rider-location-live` dibiarkan (tidak dipakai untuk map customer, tapi tetap ada untuk fitur lain kalau perlu).
-- Kalau kamu mau saya matikan sekalian di app rider (hemat baterai), bilang setelah plan disetujui.
-
-### Technical Details
-
-**File yang diubah:**
-- `src/config/maps.ts` — swap ke env var
-- `src/components/customer/CustomerMap.tsx` — update loader Maps JS + pastikan `google.maps.Marker`
-- `supabase/functions/get-nearby-riders/index.ts` — verify/ubah sumber lokasi ke checkpoint terakhir hari ini
-
-**Verifikasi:**
-- Buka `/customer-app` di preview, cek map render (tidak ada dialog "Halaman ini tidak dapat memuat Google Maps").
-- Cek console: tidak ada error `RefererNotAllowedMapError` / `InvalidKeyMapError`.
-- Cek rider dengan checkpoint hari ini muncul; rider tanpa checkpoint tidak muncul.
+**Implementasi**
+1. Perbarui Edge Function `get-nearby-riders` agar tidak membuang rider tanpa checkpoint, memfilter rider berdasarkan stok aktual, dan menerapkan fallback lokasi branch.
+2. Kembalikan sumber lokasi yang jelas: `checkpoint` atau `branch`, beserta stok menu aktual milik masing-masing rider.
+3. Perbarui Customer Map:
+   - Status checkpoint: tampilkan nama/status checkpoint.
+   - Belum checkpoint: tampilkan **“Siap menerima order • Lokasi sementara: [nama branch]”**.
+   - Direction memakai koordinat checkpoint jika tersedia, jika tidak memakai lokasi branch.
+4. Verifikasi dengan data saat ini: 7 rider aktif yang memiliki stok harus kembali muncul; rider tanpa stok tidak ditampilkan.
+5. Uji Edge Function dan tampilan `/customer-app` pada viewport mobile, termasuk filter radius dan pin/list rider.
