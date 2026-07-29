@@ -372,7 +372,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
                       <button
                         onClick={(e) => { e.stopPropagation(); openDirection(rider); }}
                         disabled={rider.lat === null || rider.lng === null}
-                        className="w-7 h-7 rounded-full bg-[#EA2831] flex items-center justify-center shadow-sm active:scale-95"
+                        className="w-7 h-7 rounded-full bg-[#EA2831] flex items-center justify-center shadow-sm active:scale-95 disabled:opacity-40 disabled:active:scale-100"
                         aria-label="Direction"
                       >
                         <Navigation className="h-4 w-4 text-white" />
@@ -419,7 +419,11 @@ function RiderDetailSheet({
   onWhatsApp: () => void;
   onDirection: () => void;
 }) {
-  const subtitle = rider.checkpoint_name || rider.branch_address || rider.branch_name || '';
+  const subtitle = rider.location_source === 'checkpoint'
+    ? (rider.checkpoint_name || 'On Location')
+    : rider.location_source === 'branch'
+      ? `Siap menerima order • Lokasi sementara: ${rider.branch_name || 'Branch'}`
+      : 'Siap menerima order • Lokasi belum tersedia';
   const stock = rider.stock_items || [];
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
 

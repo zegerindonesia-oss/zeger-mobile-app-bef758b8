@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
         id, full_name, phone, photo_url, last_known_lat, last_known_lng, location_updated_at, branch_id,
         branches(id, name, address, latitude, longitude)
       `)
-      .or('role.eq.rider,role.eq.sb_rider,role.eq.bh_rider')
+      .in('role', ['rider', 'sb_rider', 'bh_rider', '2_Hub_Rider', '3_SB_Rider'])
       .eq('is_active', true);
 
     if (ridersError) {
@@ -116,16 +116,16 @@ Deno.serve(async (req) => {
         }
 
         // Check if rider has active shift TODAY
-        const { data: activeShift } = await supabase
+        const { data: activeShifts } = await supabase
           .from('shift_management')
           .select('id')
           .eq('rider_id', rider.id)
           .eq('shift_date', todayJkt)
           .eq('status', 'active')
           .is('shift_end_time', null)
-          .maybeSingle();
+          .limit(1);
 
-        const is_shift_active = !!activeShift;
+        const is_shift_active = (activeShifts?.length || 0) > 0;
 
         // Check if rider is online (shift active AND location updated within last 10 minutes)
         let is_online = false;
