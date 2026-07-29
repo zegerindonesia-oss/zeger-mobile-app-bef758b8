@@ -465,9 +465,11 @@ function RiderDetailSheet({
                 <Heart className={`h-6 w-6 ${isFav ? 'fill-[#EA2831] text-[#EA2831]' : 'text-gray-400'}`} />
               </button>
             </div>
-            <span className="inline-block mt-1 px-3 py-1 bg-green-50 text-green-700 text-sm font-semibold rounded">
-              {rider.distance_km.toFixed(2)} km
-            </span>
+            {rider.lat !== null && rider.lng !== null && (
+              <span className="inline-block mt-1 px-3 py-1 bg-green-50 text-green-700 text-sm font-semibold rounded">
+                {rider.distance_km.toFixed(2)} km
+              </span>
+            )}
           </div>
         </div>
 
@@ -481,6 +483,7 @@ function RiderDetailSheet({
           </Button>
           <Button
             onClick={onDirection}
+            disabled={rider.lat === null || rider.lng === null}
             className="flex-1 rounded-full bg-[#EA2831] hover:bg-[#c92028] h-12 font-bold"
           >
             <Navigation className="h-4 w-4 mr-2" />
