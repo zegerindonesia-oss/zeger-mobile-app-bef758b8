@@ -1,9 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createClient } from 'npm:@supabase/supabase-js@2.55.0';
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { z } from 'npm:zod@3.25.76';
 
 interface NearbyRiderRequest {
   customer_lat: number;
@@ -11,17 +8,33 @@ interface NearbyRiderRequest {
   radius_km?: number;
 }
 
+const NearbyRiderRequestSchema = z.object({
+  customer_lat: z.number().min(-90).max(90),
+  customer_lng: z.number().min(-180).max(180),
+  radius_km: z.number().positive().max(100).optional(),
+});
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase environment is not configured');
+    }
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { customer_lat, customer_lng, radius_km = 10 }: NearbyRiderRequest = await req.json();
+    const parsedRequest = NearbyRiderRequestSchema.safeParse(await req.json());
+    if (!parsedRequest.success) {
+      return new Response(
+        JSON.stringify({ error: parsedRequest.error.flatten().fieldErrors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    const { customer_lat, customer_lng, radius_km = 10 }: NearbyRiderRequest = parsedRequest.data;
 
     console.log('Finding nearby riders for location:', { customer_lat, customer_lng, radius_km });
 
@@ -53,7 +66,9 @@ Deno.serve(async (req) => {
         let checkpointTime: string | null = null;
         let locationSource: 'checkpoint' | 'gps' | 'branch' | 'none' = 'none';
 
-        // Latest checkpoint today (Asia/Jakarta) is the ONLY source used for the customer map.
+        const branch = rider.branches as any;
+
+        // Prefer the latest checkpoint today (Asia/Jakarta).
         const todayJkt = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0];
         const { data: latestCheckpoint } = await supabase
           .from('checkpoints')
@@ -72,35 +87,40 @@ Deno.serve(async (req) => {
           locationSource = 'checkpoint';
           checkpointName = latestCheckpoint.checkpoint_name || latestCheckpoint.address_info || null;
           checkpointTime = latestCheckpoint.created_at;
-        } else {
-          // No checkpoint today → do not surface this rider on the customer map.
-          return null;
+        } else if (Number.isFinite(Number(branch?.latitude)) && Number.isFinite(Number(branch?.longitude))) {
+          // A rider with accepted stock is ready for orders even before making a checkpoint.
+          // Use the branch location temporarily until their first checkpoint today.
+          riderLat = Number(branch.latitude);
+          riderLng = Number(branch.longitude);
+          locationSource = 'branch';
         }
         
         let distance_km = 9999;
         let eta_minutes = 0;
 
-        // Calculate distance using Haversine formula
-        const R = 6371; // Earth radius in km
-        const dLat = (customer_lat - riderLat) * Math.PI / 180;
-        const dLng = (customer_lng - riderLng) * Math.PI / 180;
-        const a = 
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(riderLat * Math.PI / 180) * 
-          Math.cos(customer_lat * Math.PI / 180) *
-          Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        distance_km = Math.round((R * c) * 100) / 100;
+        if (riderLat !== null && riderLng !== null) {
+          // Calculate distance using Haversine formula
+          const R = 6371; // Earth radius in km
+          const dLat = (customer_lat - riderLat) * Math.PI / 180;
+          const dLng = (customer_lng - riderLng) * Math.PI / 180;
+          const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(riderLat * Math.PI / 180) * 
+            Math.cos(customer_lat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          distance_km = Math.round((R * c) * 100) / 100;
 
-        // Calculate ETA (assuming 20 km/h average speed)
-        eta_minutes = Math.round((distance_km / 20) * 60);
+          // Calculate ETA (assuming 20 km/h average speed)
+          eta_minutes = Math.round((distance_km / 20) * 60);
+        }
 
         // Check if rider has active shift TODAY
         const { data: activeShift } = await supabase
           .from('shift_management')
           .select('id')
           .eq('rider_id', rider.id)
-          .eq('shift_date', new Date().toISOString().split('T')[0])
+          .eq('shift_date', todayJkt)
           .eq('status', 'active')
           .is('shift_end_time', null)
           .maybeSingle();
@@ -137,7 +157,8 @@ Deno.serve(async (req) => {
             stock_quantity: it.stock_quantity || 0,
           }));
 
-        const branch = rider.branches as any;
+        // Accepted rider inventory is the operational source of truth for availability.
+        if (total_stock <= 0) return null;
 
         return {
           id: rider.id,
@@ -152,7 +173,7 @@ Deno.serve(async (req) => {
           lat: riderLat,
           lng: riderLng,
           last_updated: rider.location_updated_at,
-          is_online,
+          is_online: true,
           is_shift_active,
           has_gps: hasGPS,
           location_source: locationSource,
@@ -164,7 +185,7 @@ Deno.serve(async (req) => {
       })
     );
 
-    // Filter out riders without a checkpoint today
+    // Filter out riders without accepted/current stock.
     const validRiders = ridersWithDistance.filter((r): r is NonNullable<typeof r> => r !== null)
 
     // Sort: shift active first, then online by distance, then offline
@@ -190,7 +211,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in get-nearby-riders:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

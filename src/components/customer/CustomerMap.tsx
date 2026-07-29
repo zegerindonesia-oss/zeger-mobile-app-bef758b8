@@ -194,7 +194,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   };
 
   const filteredRiders = useMemo(
-    () => nearbyRiders.filter(r => r.distance_km <= radiusKm),
+    () => nearbyRiders.filter(r => r.lat === null || r.lng === null || r.distance_km <= radiusKm),
     [nearbyRiders, radiusKm]
   );
 
@@ -233,10 +233,9 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   };
 
   const statusLabel = (r: Rider) => {
-    if (!r.is_shift_active) return { text: 'Offline', color: 'bg-gray-400' };
     if (r.location_source === 'checkpoint') return { text: 'On Location', color: 'bg-green-500' };
-    if (r.is_online) return { text: 'Online', color: 'bg-green-500' };
-    return { text: 'Shift Aktif', color: 'bg-amber-500' };
+    if (r.total_stock > 0) return { text: 'Siap menerima order', color: 'bg-green-500' };
+    return { text: 'Tidak tersedia', color: 'bg-gray-400' };
   };
 
   return (
@@ -316,7 +315,11 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
           {filteredRiders.map(rider => {
             const status = statusLabel(rider);
             const isFav = favorites.has(rider.id);
-            const subtitle = rider.checkpoint_name || rider.branch_address || rider.branch_name || 'Lokasi tidak tersedia';
+            const subtitle = rider.location_source === 'checkpoint'
+              ? (rider.checkpoint_name || 'On Location')
+              : rider.location_source === 'branch'
+                ? `Siap menerima order • Lokasi sementara: ${rider.branch_name || 'Branch'}`
+                : 'Siap menerima order • Lokasi belum tersedia';
             return (
               <div
                 key={rider.id}
@@ -354,9 +357,11 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-2">
-                      <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
-                        {rider.distance_km.toFixed(2)} km
-                      </span>
+                      {rider.lat !== null && rider.lng !== null && (
+                        <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
+                          {rider.distance_km.toFixed(2)} km
+                        </span>
+                      )}
                       <button
                         onClick={(e) => { e.stopPropagation(); openWhatsApp(rider.phone, rider.full_name); }}
                         className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm active:scale-95"
@@ -366,6 +371,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); openDirection(rider); }}
+                        disabled={rider.lat === null || rider.lng === null}
                         className="w-7 h-7 rounded-full bg-[#EA2831] flex items-center justify-center shadow-sm active:scale-95"
                         aria-label="Direction"
                       >
