@@ -14,6 +14,7 @@ interface StockItem {
   image_url: string | null;
   category: string | null;
   stock_quantity: number;
+  custom_options?: any;
 }
 
 interface Rider {
@@ -381,6 +382,7 @@ function RiderDetailSheet({
 }) {
   const subtitle = rider.checkpoint_name || rider.branch_address || rider.branch_name || '';
   const stock = rider.stock_items || [];
+  const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -458,9 +460,10 @@ function RiderDetailSheet({
               const outOfStock = qty <= 0;
               const low = qty > 0 && qty < 5;
               return (
-                <div
+                <button
                   key={item.product_id}
-                  className={`flex gap-3 p-3 rounded-2xl border ${outOfStock ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-white border-gray-100 shadow-sm'}`}
+                  onClick={() => setSelectedProduct(item)}
+                  className={`w-full text-left flex gap-3 p-3 rounded-2xl border transition-transform active:scale-[0.99] ${outOfStock ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}
                 >
                   <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
                     {item.image_url ? (
@@ -494,11 +497,119 @@ function RiderDetailSheet({
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         )}
+      </div>
+
+      {/* Product Detail Sheet */}
+      <Sheet open={!!selectedProduct} onOpenChange={(o) => !o && setSelectedProduct(null)}>
+        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden bg-white">
+          {selectedProduct && (
+            <ProductDetailView product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+function FlavorDots({ label, level }: { label: string; level: number }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-sm text-gray-700">{label}</span>
+      <div className="flex gap-1.5">
+        {[1, 2, 3, 4, 5].map(i => (
+          <span
+            key={i}
+            className={`w-3.5 h-3.5 rounded-full border-2 ${i <= level ? 'bg-[#EA2831] border-[#EA2831]' : 'bg-white border-gray-300'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function deriveFlavor(product: StockItem): { coffee: number; creaminess: number; sweetness: number } {
+  // Priority: custom_options.flavor { coffee, creaminess, sweetness }
+  const opts = (product.custom_options || {}) as any;
+  const f = opts.flavor || opts.flavor_profile || {};
+  if (typeof f.coffee === 'number' || typeof f.creaminess === 'number' || typeof f.sweetness === 'number') {
+    return {
+      coffee: Math.max(0, Math.min(5, Number(f.coffee ?? 3))),
+      creaminess: Math.max(0, Math.min(5, Number(f.creaminess ?? 3))),
+      sweetness: Math.max(0, Math.min(5, Number(f.sweetness ?? 3))),
+    };
+  }
+  // Heuristic based on product name
+  const n = product.name.toLowerCase();
+  let coffee = 3, creaminess = 3, sweetness = 3;
+  if (n.includes('americano') || n.includes('espresso')) { coffee = 5; creaminess = 1; sweetness = 1; }
+  else if (n.includes('classic latte')) { coffee = 4; creaminess = 3; sweetness = 2; }
+  else if (n.includes('aren')) { coffee = 3; creaminess = 3; sweetness = 5; }
+  else if (n.includes('caramel mocha')) { coffee = 4; creaminess = 3; sweetness = 4; }
+  else if (n.includes('creamy latte') || n.includes('butterschoot') || n.includes('baileys') || n.includes('dolce')) { coffee = 3; creaminess = 5; sweetness = 4; }
+  else if (n.includes('matcha')) { coffee = 0; creaminess = 4; sweetness = 3; }
+  else if (n.includes('chocomalt') || n.includes('choco')) { coffee = 1; creaminess = 4; sweetness = 4; }
+  else if (n.includes('honey')) { coffee = 3; creaminess = 3; sweetness = 4; }
+  return { coffee, creaminess, sweetness };
+}
+
+function ProductDetailView({ product, onClose }: { product: StockItem; onClose: () => void }) {
+  const flavor = deriveFlavor(product);
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Dark navy header with image */}
+      <div className="relative bg-[#0F1B3D] pt-4 pb-16 rounded-b-[40%_15%]">
+        <div className="flex items-center justify-between px-4">
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white"
+            aria-label="Kembali"
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+          <h2 className="text-white text-lg font-bold">Detail Menu</h2>
+          <button className="w-10 h-10 rounded-full flex items-center justify-center text-white" aria-label="Favorit">
+            <Heart className="h-6 w-6" />
+          </button>
+        </div>
+        <div className="flex justify-center mt-4 relative">
+          <div className="w-56 h-64 flex items-center justify-center">
+            {product.image_url ? (
+              <img src={product.image_url} alt={product.name} className="max-h-64 object-contain drop-shadow-2xl" />
+            ) : (
+              <div className="w-40 h-56 bg-white/10 rounded-2xl" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-8 -mt-6">
+        <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-4">{product.name}</h1>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-gray-200 p-4 flex items-center justify-center">
+            <p className="text-xl font-extrabold text-gray-900">Rp {product.price.toLocaleString('id-ID')}</p>
+          </div>
+          <div className="rounded-2xl border border-gray-200 p-4 space-y-2">
+            <FlavorDots label="Coffee" level={flavor.coffee} />
+            <FlavorDots label="Creaminess" level={flavor.creaminess} />
+            <FlavorDots label="Sweetness" level={flavor.sweetness} />
+          </div>
+        </div>
+
+        {product.description && (
+          <p className="text-center text-gray-500 mt-4 leading-relaxed">{product.description}</p>
+        )}
+
+        <div className="mt-4 flex items-center justify-center">
+          <span className="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
+            Tersedia {product.stock_quantity} cup
+          </span>
+        </div>
       </div>
     </div>
   );
