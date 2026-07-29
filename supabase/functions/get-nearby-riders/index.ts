@@ -42,17 +42,18 @@ Deno.serve(async (req) => {
 
     console.log('Total riders found:', riders?.length);
 
-    // Calculate distances for all riders with fallback
+    // Calculate distances for all riders — checkpoint-based only.
+    // Riders without a checkpoint today are excluded (per product decision).
     const ridersWithDistance = await Promise.all(
       (riders || []).map(async (rider) => {
-        let riderLat = rider.last_known_lat;
-        let riderLng = rider.last_known_lng;
-        let hasGPS = riderLat !== null && riderLng !== null;
+        let riderLat: number | null = null;
+        let riderLng: number | null = null;
+        let hasGPS = false;
         let checkpointName: string | null = null;
         let checkpointTime: string | null = null;
-        let locationSource: 'checkpoint' | 'gps' | 'branch' | 'none' = hasGPS ? 'gps' : 'none';
+        let locationSource: 'checkpoint' | 'gps' | 'branch' | 'none' = 'none';
 
-        // PRIORITY 1: Latest checkpoint today (most accurate — rider physically confirmed spot)
+        // Latest checkpoint today (Asia/Jakarta) is the ONLY source used for the customer map.
         const todayJkt = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0];
         const { data: latestCheckpoint } = await supabase
           .from('checkpoints')
@@ -71,42 +72,9 @@ Deno.serve(async (req) => {
           locationSource = 'checkpoint';
           checkpointName = latestCheckpoint.checkpoint_name || latestCheckpoint.address_info || null;
           checkpointTime = latestCheckpoint.created_at;
-        }
-
-        // Fallback 1: try to get latest location from rider_locations table
-        if (!hasGPS) {
-          const { data: recentLocation } = await supabase
-            .from('rider_locations')
-            .select('latitude, longitude, updated_at')
-            .eq('rider_id', rider.id)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (recentLocation) {
-            riderLat = recentLocation.latitude;
-            riderLng = recentLocation.longitude;
-            hasGPS = true;
-            locationSource = 'gps';
-          }
-        }
-
-        // Fallback 2: use branch location if rider has no GPS
-        if (!hasGPS && rider.branches) {
-          const branch = rider.branches as any;
-          if (branch.latitude && branch.longitude) {
-            riderLat = branch.latitude;
-            riderLng = branch.longitude;
-            hasGPS = false;
-            locationSource = 'branch';
-          }
-        }
-
-        // Don't skip riders without location - show them with high distance
-        if (riderLat == null || riderLng == null) {
-          console.log(`Rider ${rider.full_name} has no location data - setting distance to 9999`);
-          riderLat = 0;
-          riderLng = 0;
+        } else {
+          // No checkpoint today → do not surface this rider on the customer map.
+          return null;
         }
         
         let distance_km = 9999;
@@ -196,7 +164,7 @@ Deno.serve(async (req) => {
       })
     );
 
-    // Filter out null entries (show ALL riders)
+    // Filter out riders without a checkpoint today
     const validRiders = ridersWithDistance.filter((r): r is NonNullable<typeof r> => r !== null)
 
     // Sort: shift active first, then online by distance, then offline
