@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone, MessageCircle } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
@@ -336,9 +336,25 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
                     </button>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
-                      {rider.distance_km.toFixed(2)} km
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
+                        {rider.distance_km.toFixed(2)} km
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openWhatsApp(rider.phone, rider.full_name); }}
+                        className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm active:scale-95"
+                        aria-label="WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4 text-white" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openDirection(rider); }}
+                        className="w-7 h-7 rounded-full bg-[#EA2831] flex items-center justify-center shadow-sm active:scale-95"
+                        aria-label="Direction"
+                      >
+                        <Navigation className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedRider(rider); }}
                       className="px-4 py-1.5 rounded-full bg-[#EA2831] text-white text-xs font-bold shadow"
@@ -563,18 +579,18 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
   const flavor = deriveFlavor(product);
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Dark navy header with image */}
-      <div className="relative bg-[#0F1B3D] pt-4 pb-16 rounded-b-[40%_15%]">
+      {/* Header with image */}
+      <div className="relative bg-white pt-4 pb-16 border-b border-gray-100">
         <div className="flex items-center justify-between px-4">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900"
             aria-label="Kembali"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
-          <h2 className="text-white text-lg font-bold">Detail Menu</h2>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center text-white" aria-label="Favorit">
+          <h2 className="text-gray-900 text-lg font-bold">Detail Menu</h2>
+          <button className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900" aria-label="Favorit">
             <Heart className="h-6 w-6" />
           </button>
         </div>
@@ -593,7 +609,7 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
                 className="relative max-h-64 object-contain drop-shadow-2xl"
               />
             ) : (
-              <div className="relative w-40 h-56 bg-white/10 rounded-2xl" />
+              <div className="relative w-40 h-56 bg-gray-100 rounded-2xl" />
             )}
           </div>
         </div>
