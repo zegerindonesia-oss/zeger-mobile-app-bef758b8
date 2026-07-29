@@ -518,17 +518,19 @@ function RiderDetailSheet({
 
 function FlavorDots({ label, level }: { label: string; level: number }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-sm text-gray-700">{label}</span>
-      <div className="flex gap-1.5">
-        {[1, 2, 3, 4, 5].map(i => (
-          <span
-            key={i}
-            className={`w-3.5 h-3.5 rounded-full border-2 ${i <= level ? 'bg-[#EA2831] border-[#EA2831]' : 'bg-white border-gray-300'}`}
-          />
-        ))}
-      </div>
-    </div>
+    <tr>
+      <td className="py-1 pr-2 text-[11px] text-gray-700 whitespace-nowrap">{label}</td>
+      <td className="py-1">
+        <div className="flex gap-1 justify-end">
+          {[1, 2, 3, 4, 5].map(i => (
+            <span
+              key={i}
+              className={`w-2 h-2 rounded-full border ${i <= level ? 'bg-[#EA2831] border-[#EA2831]' : 'bg-white border-gray-300'}`}
+            />
+          ))}
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -577,11 +579,22 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
           </button>
         </div>
         <div className="flex justify-center mt-4 relative">
-          <div className="w-56 h-64 flex items-center justify-center">
+          <div className="relative w-64 h-64 flex items-end justify-center">
+            {/* Red half-circle backdrop */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 bottom-8 w-56 h-56 rounded-full bg-[#EA2831]"
+              style={{ boxShadow: '0 25px 40px -15px rgba(234,40,49,0.55)' }}
+            />
+            {/* Soft ground shadow under the cup */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-40 h-4 rounded-full bg-black/30 blur-md" />
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="max-h-64 object-contain drop-shadow-2xl" />
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="relative max-h-64 object-contain drop-shadow-2xl"
+              />
             ) : (
-              <div className="w-40 h-56 bg-white/10 rounded-2xl" />
+              <div className="relative w-40 h-56 bg-white/10 rounded-2xl" />
             )}
           </div>
         </div>
@@ -594,10 +607,14 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
           <div className="rounded-2xl border border-gray-200 p-4 flex items-center justify-center">
             <p className="text-xl font-extrabold text-gray-900">Rp {product.price.toLocaleString('id-ID')}</p>
           </div>
-          <div className="rounded-2xl border border-gray-200 p-4 space-y-2">
-            <FlavorDots label="Coffee" level={flavor.coffee} />
-            <FlavorDots label="Creaminess" level={flavor.creaminess} />
-            <FlavorDots label="Sweetness" level={flavor.sweetness} />
+          <div className="rounded-2xl border border-gray-200 px-3 py-2">
+            <table className="w-full">
+              <tbody>
+                <FlavorDots label="Coffee" level={flavor.coffee} />
+                <FlavorDots label="Creaminess" level={flavor.creaminess} />
+                <FlavorDots label="Sweetness" level={flavor.sweetness} />
+              </tbody>
+            </table>
           </div>
         </div>
 
