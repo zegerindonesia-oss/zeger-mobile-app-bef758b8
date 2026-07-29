@@ -579,14 +579,13 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
           </button>
         </div>
         <div className="flex justify-center mt-4 relative">
+          <img
+            src="/__l5e/assets-v1/fae4c1de-2361-4c9e-8f55-4976866ad7f6/zeger-logo.png"
+            alt="Zeger"
+            className="absolute top-0 right-4 w-10 h-10 object-contain opacity-90"
+          />
           <div className="relative w-64 h-64 flex items-end justify-center">
-            {/* Red half-circle backdrop */}
-            <div
-              className="absolute left-1/2 -translate-x-1/2 bottom-8 w-56 h-56 rounded-full bg-[#EA2831]"
-              style={{ boxShadow: '0 25px 40px -15px rgba(234,40,49,0.55)' }}
-            />
-            {/* Soft ground shadow under the cup */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-40 h-4 rounded-full bg-black/30 blur-md" />
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-40 h-3 rounded-full bg-black/25 blur-md" />
             {product.image_url ? (
               <img
                 src={product.image_url}
