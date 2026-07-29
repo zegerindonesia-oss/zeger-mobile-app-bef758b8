@@ -277,44 +277,53 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         </div>
       )}
 
-      {/* Recent Orders */}
-      {recentOrders.length > 0 && (
-        <div className="px-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-gray-900">Pesanan Terakhir</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-red-500 hover:text-red-600"
-              onClick={() => onNavigate('orders')}
-            >
-              Lihat Semua
-            </Button>
-          </div>
-          <div className="space-y-3">
-            {recentOrders.map((order) => (
-              <Card 
-                key={order.id} 
-                className="p-4 rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <Badge variant={
-                    order.status === 'completed' ? 'default' :
-                    order.status === 'pending' ? 'secondary' : 'outline'
-                  }>
-                    {order.status}
-                  </Badge>
-                  <p className="text-xs text-gray-500">
-                    {new Date(order.created_at).toLocaleDateString('id-ID')}
-                  </p>
-                </div>
-                <p className="font-bold text-gray-900">Order #{order.id.slice(0, 8)}</p>
-                <p className="text-sm text-gray-600">Rp {order.total_price.toLocaleString('id-ID')}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Big Order Section */}
+      <div className="bg-white px-4 pt-6 pb-4">
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">Big Order</h3>
+        <button
+          onClick={() => bigOrderBanner?.link_url && window.open(bigOrderBanner.link_url, '_blank')}
+          className="block w-full rounded-2xl overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.25)] hover:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99] bg-gradient-to-br from-red-500 to-red-600"
+          style={{ aspectRatio: '16 / 7' }}
+        >
+          {bigOrderBanner ? (
+            <img
+              src={bigOrderBanner.image_url}
+              alt="Big Order"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-white p-4">
+              <ShoppingBag className="h-10 w-10 mb-2 opacity-80" />
+              <p className="font-bold text-lg">Big Order Banner</p>
+              <p className="text-xs opacity-80">Upload dari backoffice (rasio 16:7)</p>
+            </div>
+          )}
+        </button>
+      </div>
+
+      {/* Zeger Care Section */}
+      <div className="bg-white px-4 pt-4 pb-8">
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">Zeger Care</h3>
+        <button
+          onClick={() => zegerCareBanner?.link_url && window.open(zegerCareBanner.link_url, '_blank')}
+          className="block w-full rounded-2xl overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.25)] hover:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99] bg-gradient-to-br from-amber-100 to-amber-200"
+          style={{ aspectRatio: '16 / 7' }}
+        >
+          {zegerCareBanner ? (
+            <img
+              src={zegerCareBanner.image_url}
+              alt="Zeger Care"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-red-600 p-4">
+              <Bell className="h-10 w-10 mb-2" />
+              <p className="font-bold text-lg">Zeger Care Banner</p>
+              <p className="text-xs opacity-80">Upload dari backoffice (rasio 16:7)</p>
+            </div>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
