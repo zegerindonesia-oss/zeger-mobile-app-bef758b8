@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Award, Plus, Pencil, ArrowLeft, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ImageUpload } from "@/components/shared/ImageUpload";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -406,10 +407,12 @@ export default function LoyaltyManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Image URL</Label>
-                    <Input
+                    <Label>Gambar Reward</Label>
+                    <ImageUpload
                       value={rewardForm.image_url}
-                      onChange={(e) => setRewardForm({ ...rewardForm, image_url: e.target.value })}
+                      onChange={(url) => setRewardForm({ ...rewardForm, image_url: url })}
+                      bucket="loyalty-images"
+                      label="Gambar Reward"
                     />
                   </div>
                   <div className="flex items-center space-x-2">

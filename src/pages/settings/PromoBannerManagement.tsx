@@ -9,6 +9,7 @@ import { Image, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { ImageUpload } from "@/components/shared/ImageUpload";
 
 interface Banner {
   id: string;
@@ -219,16 +220,14 @@ export default function PromoBannerManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>URL Gambar</Label>
-                <Input
+                <Label>Gambar Banner</Label>
+                <ImageUpload
                   value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="/promo-banners/banner1.png"
-                  required
+                  onChange={(url) => setFormData({ ...formData, image_url: url })}
+                  bucket="banner-images"
+                  label="Gambar Banner"
+                  aspect="banner"
                 />
-                {formData.image_url && (
-                  <img src={formData.image_url} alt="Preview" className="w-full h-32 object-cover rounded" />
-                )}
               </div>
               <div className="space-y-2">
                 <Label>Link URL (Optional)</Label>
