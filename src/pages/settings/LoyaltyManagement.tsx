@@ -406,10 +406,12 @@ export default function LoyaltyManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Image URL</Label>
-                    <Input
+                    <Label>Gambar Reward</Label>
+                    <ImageUpload
                       value={rewardForm.image_url}
-                      onChange={(e) => setRewardForm({ ...rewardForm, image_url: e.target.value })}
+                      onChange={(url) => setRewardForm({ ...rewardForm, image_url: url })}
+                      bucket="loyalty-images"
+                      label="Gambar Reward"
                     />
                   </div>
                   <div className="flex items-center space-x-2">
