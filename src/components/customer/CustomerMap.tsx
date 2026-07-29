@@ -14,6 +14,7 @@ interface StockItem {
   image_url: string | null;
   category: string | null;
   stock_quantity: number;
+  custom_options?: any;
 }
 
 interface Rider {
