@@ -47,6 +47,20 @@ interface CustomerMapProps {
 
 const DISTANCE_OPTIONS = [5, 3, 1.5] as const;
 
+const buildPinIcon = (selected: boolean) => {
+  const size = selected ? 56 : 42;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 40 52">
+  <defs><filter id="s" x="-20%" y="-10%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity="0.35"/></filter></defs>
+  <path filter="url(#s)" d="M20 1C10 1 2 9 2 19c0 13.5 18 31 18 31s18-17.5 18-31C38 9 30 1 20 1z" fill="#EA2831" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="20" cy="19" r="7" fill="#ffffff"/>
+</svg>`;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: { width: size, height: size * 1.3 },
+    anchor: { x: size / 2, y: size * 1.3 },
+  };
+};
+
 const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const [nearbyRiders, setNearbyRiders] = useState<Rider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +69,12 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const [radiusKm, setRadiusKm] = useState<number>(5);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
+  const [focusedRiderId, setFocusedRiderId] = useState<string | null>(null);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
-  const markers = useRef<any[]>([]);
+  const markers = useRef<Record<string, any>>({});
+  const riderCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     getUserLocation();
@@ -67,8 +83,8 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       setFavorites(new Set(stored));
     } catch {}
     return () => {
-      markers.current.forEach(m => m.setMap && m.setMap(null));
-      markers.current = [];
+      Object.values(markers.current).forEach((m: any) => m.setMap && m.setMap(null));
+      markers.current = {};
     };
   }, []);
 
@@ -82,30 +98,40 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   useEffect(() => {
     if (!map.current || !(window as any).google?.maps || !userLocation) return;
-    // clear existing markers
-    markers.current.forEach(m => m.setMap(null));
-    markers.current = [];
+    Object.values(markers.current).forEach((m: any) => m.setMap(null));
+    markers.current = {};
     const google = (window as any).google;
     filteredRiders.forEach(rider => {
       if (!rider.lat || !rider.lng) return;
+      const isSelected = focusedRiderId === rider.id;
+      const icon = buildPinIcon(isSelected);
       const marker = new google.maps.Marker({
         position: { lat: rider.lat, lng: rider.lng },
         map: map.current,
         title: rider.full_name,
         icon: {
-          path: 'M12 2C7.6 2 4 5.6 4 10c0 5.5 8 12 8 12s8-6.5 8-12c0-4.4-3.6-8-8-8z',
-          fillColor: '#EA2831',
-          fillOpacity: 1,
-          strokeColor: '#0F1B3D',
-          strokeWeight: 2,
-          scale: 1.8,
-          anchor: new google.maps.Point(12, 22),
+          url: icon.url,
+          scaledSize: new google.maps.Size(icon.scaledSize.width, icon.scaledSize.height),
+          anchor: new google.maps.Point(icon.anchor.x, icon.anchor.y),
         },
+        zIndex: isSelected ? 999 : 1,
       });
-      marker.addListener('click', () => setSelectedRider(rider));
-      markers.current.push(marker);
+      marker.addListener('click', () => {
+        setFocusedRiderId(rider.id);
+        const el = riderCardRefs.current[rider.id];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      markers.current[rider.id] = marker;
     });
-  }, [nearbyRiders, radiusKm, userLocation]);
+  }, [nearbyRiders, radiusKm, userLocation, focusedRiderId]);
+
+  const focusRiderOnMap = (rider: Rider) => {
+    setFocusedRiderId(rider.id);
+    if (rider.lat && rider.lng && map.current) {
+      map.current.panTo({ lat: rider.lat, lng: rider.lng });
+      map.current.setZoom(Math.max(map.current.getZoom() || 14, 15));
+    }
+  };
 
   const loadGoogleMaps = async (): Promise<void> => {
     if (!GOOGLE_MAPS_API_KEY) {
@@ -322,6 +348,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
           {filteredRiders.map(rider => {
             const status = statusLabel(rider);
             const isFav = favorites.has(rider.id);
+            const isFocused = focusedRiderId === rider.id;
             const subtitle = rider.location_source === 'checkpoint'
               ? (rider.checkpoint_name || 'On Location')
               : rider.location_source === 'branch'
@@ -330,8 +357,13 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
             return (
               <div
                 key={rider.id}
-                className="border-2 border-[#EA2831]/30 rounded-2xl p-3 bg-white flex items-center gap-3 shadow-sm active:scale-[0.99] transition-transform"
-                onClick={() => setSelectedRider(rider)}
+                ref={(el) => { riderCardRefs.current[rider.id] = el; }}
+                className={`rounded-2xl p-3 bg-white flex items-center gap-3 active:scale-[0.99] transition-all ${
+                  isFocused
+                    ? 'border-2 border-[#EA2831] shadow-lg ring-2 ring-[#EA2831]/20'
+                    : 'border-2 border-[#EA2831]/30 shadow-sm'
+                }`}
+                onClick={() => focusRiderOnMap(rider)}
               >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
