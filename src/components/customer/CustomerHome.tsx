@@ -143,13 +143,13 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           </div>
 
           {/* Subscription */}
-          <div className="p-2">
+          <button onClick={() => cfg.features.subscription && onNavigate('subscription')} className="p-2 hover:bg-gray-50 rounded-lg transition-colors active:scale-95">
             <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
               <Gift className="h-7 w-7 text-white" />
             </div>
             <p className="font-semibold text-gray-900 text-sm">Subscription</p>
-            <p className="text-xs text-gray-500 font-light">0 Subscription</p>
-          </div>
+            <p className="text-xs text-gray-500 font-light">{subActive ? 'Aktif' : '0 Subscription'}</p>
+          </button>
         </div>
 
         {/* Voucher & Referral Cards */}
@@ -160,16 +160,17 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           >
             <div>
               <p className="font-semibold text-gray-900">Voucher Kamu</p>
-              <p className="text-xs text-gray-500 font-light">
-                {activeVouchers.length} Voucher
-              </p>
+              <p className="text-xs text-gray-500 font-light">{myVoucherCount} Voucher</p>
             </div>
             <div className="bg-gray-100 p-2 rounded-full">
               <Gift className="h-5 w-5 text-[#EA2831]" />
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md hover:shadow-xl transition-shadow">
+          <div 
+            className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md hover:shadow-xl transition-shadow cursor-pointer"
+            onClick={() => cfg.features.referral && onNavigate('referral')}
+          >
             <div>
               <p className="font-semibold text-gray-900">Referral</p>
               <p className="text-xs text-gray-500 font-light">Undang Temanmu</p>
