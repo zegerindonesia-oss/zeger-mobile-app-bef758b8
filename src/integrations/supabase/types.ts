@@ -2006,6 +2006,7 @@ export type Database = {
           image_url: string
           is_active: boolean | null
           link_url: string | null
+          placement: string
           title: string
           updated_at: string | null
           valid_from: string | null
@@ -2020,6 +2021,7 @@ export type Database = {
           image_url: string
           is_active?: boolean | null
           link_url?: string | null
+          placement?: string
           title: string
           updated_at?: string | null
           valid_from?: string | null
@@ -2034,6 +2036,7 @@ export type Database = {
           image_url?: string
           is_active?: boolean | null
           link_url?: string | null
+          placement?: string
           title?: string
           updated_at?: string | null
           valid_from?: string | null

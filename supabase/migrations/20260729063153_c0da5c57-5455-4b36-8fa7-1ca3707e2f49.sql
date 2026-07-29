@@ -1,0 +1,2 @@
+ALTER TABLE public.promo_banners ADD COLUMN IF NOT EXISTS placement TEXT NOT NULL DEFAULT 'carousel';
+CREATE INDEX IF NOT EXISTS idx_promo_banners_placement ON public.promo_banners(placement, is_active);
