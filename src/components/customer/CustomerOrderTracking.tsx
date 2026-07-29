@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // Import Google Maps API key from config
-import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
+import { GOOGLE_MAPS_API_KEY, buildMapsScriptUrl } from '@/config/maps';
 
 interface Rider {
   id: string;
@@ -57,7 +57,7 @@ export default function CustomerOrderTracking({
       }
 
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.src = buildMapsScriptUrl({ libraries: 'places' });
       script.async = true;
       script.defer = true;
       script.onload = initializeMap;

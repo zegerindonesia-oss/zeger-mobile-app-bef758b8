@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone, MessageCircle } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
+import { GOOGLE_MAPS_API_KEY, buildMapsScriptUrl } from '@/config/maps';
 
 interface StockItem {
   product_id: string;
@@ -109,6 +109,9 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   const loadGoogleMaps = (): Promise<void> => new Promise((resolve, reject) => {
     if ((window as any).google?.maps) return resolve();
+    if (!GOOGLE_MAPS_API_KEY) {
+      return reject(new Error('Google Maps API key belum dikonfigurasi (connector Google Maps Platform).'));
+    }
     const existing = document.querySelector(`script[src*="maps.googleapis.com"]`);
     if (existing) {
       existing.addEventListener('load', () => resolve());
@@ -116,7 +119,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       return;
     }
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = buildMapsScriptUrl({ libraries: 'places' });
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
