@@ -1,18 +1,19 @@
-## Masalah
-Console error: "Google Maps browser key belum aktif". Artinya env `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` masih kosong di runtime — connector Google Maps belum meng-inject browser key ke project.
+## Cara reconnect Google Maps Platform connector
 
-## Solusi (1 langkah)
-**Reconnect Google Maps Platform connector.**
+Buka Project Settings → Connectors → Google Maps Platform, lalu ikuti langkah berikut:
 
-Saya akan panggil `standard_connectors--reconnect` untuk connector `google_maps`. Kamu tinggal klik **Reconnect** di kartu yang muncul di chat, pilih koneksi **Lovable-managed Google Maps Platform**, dan selesai. Setelah itu:
+1. **Klik "Reconnect"** di bagian atas halaman connector (tombol di sebelah kanan judul "Google Maps Platform").
+2. **Pilih "Lovable-managed Google Maps Platform"** (bukan BYOK/API key manual).
+3. **Klik "Connect" / "Save"** dan tunggu sampai Lovable meng-inject ulang env variable.
 
-1. Browser key (`VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY`) akan ter-inject ke build.
-2. Preview akan otomatis rebuild.
-3. Buka `/customer-app` → peta muncul dengan pin rider.
+## Setelah reconnect
 
-## Kalau setelah reconnect masih blank
-Berarti bukan masalah key. Kemungkinan:
-- Kamu buka lewat **custom domain** (bukan `*.lovable.app`) → managed key tidak berlaku, harus pakai API key Google Cloud sendiri.
-- Belum ada rider dengan checkpoint hari ini + stok > 0 → peta muncul tapi tanpa pin.
+1. **Refresh / reload preview** (`/customer-app`).
+2. Peta seharusnya langsung muncul.
 
-Kalau plan ini oke, approve dan saya langsung trigger reconnect card-nya.
+## Kalau masih error
+
+- Pastikan domain yang dibuka masih `*.lovable.app` atau `*.lovableproject.com` (managed key tidak berlaku di custom domain).
+- Kalau sudah di custom domain, solusinya bukan reconnect, tapi pakai API key Google Cloud sendiri yang referrer-nya di-allowlist untuk domain kamu.
+
+Catatan: tidak perlu kirim API key di chat. Kalau reconnect berhasil, env `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` akan otomatis terisi oleh Lovable.
