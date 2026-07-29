@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Smartphone, Image, Award, Users, Ticket, TrendingUp } from "lucide-react";
+import { Smartphone, Image, Award, Users, Ticket, TrendingUp, Settings, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -70,8 +70,24 @@ export default function AppManagement() {
       description: "Kelola voucher & kupon diskon",
       icon: Ticket,
       path: "/settings/app-management/vouchers",
-      stats: "Coming soon",
+      stats: "Kelola kode voucher",
       color: "text-orange-600 bg-orange-50"
+    },
+    {
+      title: "Subscription Plans",
+      description: "Kelola paket langganan customer",
+      icon: Package,
+      path: "/settings/app-management/subscriptions",
+      stats: "Kelola paket subscription",
+      color: "text-emerald-600 bg-emerald-50"
+    },
+    {
+      title: "Customer App Settings",
+      description: "Toggle modul, layout home, Care, Referral",
+      icon: Settings,
+      path: "/settings/app-management/customer-app",
+      stats: "Layout & feature toggle",
+      color: "text-red-600 bg-red-50"
     }
   ];
 
@@ -167,13 +183,7 @@ export default function AppManagement() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">{section.stats}</p>
-                <Button 
-                  onClick={() => navigate(section.path)}
-                  className="w-full"
-                  disabled={section.stats === "Coming soon"}
-                >
-                  {section.stats === "Coming soon" ? "Coming Soon" : "Kelola"}
-                </Button>
+                <Button onClick={() => navigate(section.path)} className="w-full">Kelola</Button>
               </CardContent>
             </Card>
           );

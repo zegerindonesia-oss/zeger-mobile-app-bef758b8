@@ -405,6 +405,39 @@ export type Database = {
           },
         ]
       }
+      customer_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       customer_order_items: {
         Row: {
           created_at: string
@@ -586,6 +619,80 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "customer_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_referrals: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          referee_id: string
+          referrer_id: string
+          reward_points: number
+          status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          referee_id: string
+          referrer_id: string
+          reward_points?: number
+          status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          referee_id?: string
+          referrer_id?: string
+          reward_points?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      customer_subscriptions: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          plan_id: string
+          remaining_quota: number
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          plan_id: string
+          remaining_quota?: number
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          plan_id?: string
+          remaining_quota?: number
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -2714,6 +2821,48 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          period_days: number
+          price: number
+          quota: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          period_days?: number
+          price?: number
+          quota?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          period_days?: number
+          price?: number
+          quota?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transaction_items: {
         Row: {
           created_at: string | null
@@ -3354,6 +3503,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      claim_voucher: { Args: { _voucher_id: string }; Returns: string }
       decrement_rider_stock: {
         Args: { p_product_id: string; p_quantity: number; p_rider_id: string }
         Returns: {
@@ -3614,6 +3764,8 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      redeem_referral: { Args: { _code: string }; Returns: string }
+      redeem_reward: { Args: { _reward_id: string }; Returns: string }
       reject_stock_adjustment: {
         Args: { movement_uuid: string; reason: string; rejector_uuid: string }
         Returns: boolean

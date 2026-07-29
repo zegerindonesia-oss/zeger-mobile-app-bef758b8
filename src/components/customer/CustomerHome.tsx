@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Store, Bike, Truck, Gift, Star, Bell, Users, CreditCard, ChevronRight, ShoppingBag, Flame, Coins, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import PromoBannerCarousel from './PromoBannerCarousel';
+import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
 
 interface CustomerHomeProps {
   customerUser: any;
@@ -22,13 +23,25 @@ interface Voucher {
 }
 
 export function CustomerHome({ customerUser, onNavigate, recentProducts = [], onAddToCart }: CustomerHomeProps) {
+  const cfg = useCustomerAppConfig();
   const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
+  const [myVoucherCount, setMyVoucherCount] = useState(0);
+  const [subActive, setSubActive] = useState(false);
+  const [unreadNotif, setUnreadNotif] = useState(0);
   const [bigOrderBanner, setBigOrderBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
   const [zegerCareBanner, setZegerCareBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
 
   useEffect(() => {
     if (customerUser) {
       fetchActiveVouchers();
+      (async () => {
+        const { count: vc } = await supabase.from('customer_user_vouchers').select('*', { count: 'exact', head: true }).eq('user_id', customerUser.id).eq('is_used', false);
+        setMyVoucherCount(vc || 0);
+        const { data: sub } = await supabase.from('customer_subscriptions').select('id').eq('user_id', customerUser.id).eq('status', 'active').gte('ends_at', new Date().toISOString()).limit(1);
+        setSubActive(!!(sub && sub.length));
+        const { count: nc } = await supabase.from('customer_notifications').select('*', { count: 'exact', head: true }).or(`user_id.is.null,user_id.eq.${customerUser.id}`).is('read_at', null);
+        setUnreadNotif(nc || 0);
+      })();
     }
     fetchSectionBanners();
   }, [customerUser]);
@@ -92,14 +105,14 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           <h2 className="text-lg font-semibold text-gray-900">
             Hi, {customerUser?.name?.toUpperCase() || 'GUEST'}
           </h2>
-          <div className="relative">
+          <button className="relative" onClick={() => cfg.features.notifications && onNavigate('notifications')}>
             <Bell className="h-7 w-7 text-gray-500" />
-            {activeVouchers.length > 0 && (
+            {unreadNotif > 0 && (
               <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
-                {activeVouchers.length}
+                {unreadNotif}
               </span>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Membership Info - Material Style */}
@@ -130,13 +143,13 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           </div>
 
           {/* Subscription */}
-          <div className="p-2">
+          <button onClick={() => cfg.features.subscription && onNavigate('subscription')} className="p-2 hover:bg-gray-50 rounded-lg transition-colors active:scale-95">
             <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
               <Gift className="h-7 w-7 text-white" />
             </div>
             <p className="font-semibold text-gray-900 text-sm">Subscription</p>
-            <p className="text-xs text-gray-500 font-light">0 Subscription</p>
-          </div>
+            <p className="text-xs text-gray-500 font-light">{subActive ? 'Aktif' : '0 Subscription'}</p>
+          </button>
         </div>
 
         {/* Voucher & Referral Cards */}
@@ -147,16 +160,17 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
           >
             <div>
               <p className="font-semibold text-gray-900">Voucher Kamu</p>
-              <p className="text-xs text-gray-500 font-light">
-                {activeVouchers.length} Voucher
-              </p>
+              <p className="text-xs text-gray-500 font-light">{myVoucherCount} Voucher</p>
             </div>
             <div className="bg-gray-100 p-2 rounded-full">
               <Gift className="h-5 w-5 text-[#EA2831]" />
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md hover:shadow-xl transition-shadow">
+          <div 
+            className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md hover:shadow-xl transition-shadow cursor-pointer"
+            onClick={() => cfg.features.referral && onNavigate('referral')}
+          >
             <div>
               <p className="font-semibold text-gray-900">Referral</p>
               <p className="text-xs text-gray-500 font-light">Undang Temanmu</p>
