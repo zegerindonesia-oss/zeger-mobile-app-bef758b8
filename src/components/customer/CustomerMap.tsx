@@ -1,11 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Phone, Star, Package, Navigation, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
+
+interface StockItem {
+  product_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  category: string | null;
+  stock_quantity: number;
+}
 
 interface Rider {
   id: string;
@@ -15,12 +24,16 @@ interface Rider {
   rating: number;
   phone: string;
   total_stock: number;
+  stock_items?: StockItem[];
   lat: number | null;
   lng: number | null;
   last_updated: string | null;
   is_online: boolean;
   is_shift_active: boolean;
   has_gps?: boolean;
+  location_source?: 'checkpoint' | 'gps' | 'branch' | 'none';
+  checkpoint_name?: string | null;
+  checkpoint_time?: string | null;
   branch_name?: string;
   branch_address?: string;
   photo_url?: string;
@@ -31,684 +44,464 @@ interface CustomerMapProps {
   onCallRider?: (orderId: string, rider: Rider) => void;
 }
 
-// Import Google Maps API key from config
-import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
+const DISTANCE_OPTIONS = [5, 3, 1.5] as const;
 
 const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const [nearbyRiders, setNearbyRiders] = useState<Rider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [requestingRider, setRequestingRider] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(5);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
   const markers = useRef<any[]>([]);
-  const riderMarkersMap = useRef<Map<string, any>>(new Map());
 
   useEffect(() => {
-    requestLocationPermission();
-    
-    // Cleanup map on unmount
+    getUserLocation();
+    try {
+      const stored = JSON.parse(localStorage.getItem('zeger-fav-riders') || '[]');
+      setFavorites(new Set(stored));
+    } catch {}
     return () => {
-      markers.current.forEach(marker => marker.setMap(null));
+      markers.current.forEach(m => m.setMap && m.setMap(null));
       markers.current = [];
-      riderMarkersMap.current.clear();
     };
   }, []);
 
-  // Phase 3: Subscribe to realtime rider location updates
   useEffect(() => {
-    if (!userLocation || nearbyRiders.length === 0) return;
-
-    console.log('🔄 Subscribing to rider location updates for', nearbyRiders.length, 'riders');
-
-    const channel = supabase
-      .channel('rider_locations_realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'rider_locations'
-        },
-        (payload) => {
-          const riderId = payload.new.rider_id;
-          const newLat = payload.new.latitude;
-          const newLng = payload.new.longitude;
-
-          console.log('📍 Rider location updated:', { riderId, newLat, newLng });
-
-          // Update rider in state
-          setNearbyRiders(prev => prev.map(rider => {
-            if (rider.id === riderId) {
-              // Calculate new distance
-              const R = 6371;
-              const dLat = (newLat - userLocation.lat) * Math.PI / 180;
-              const dLon = (newLng - userLocation.lng) * Math.PI / 180;
-              const lat1 = userLocation.lat * Math.PI / 180;
-              const lat2 = newLat * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
-              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              const distance = R * c;
-
-              return {
-                ...rider,
-                lat: newLat,
-                lng: newLng,
-                distance_km: distance,
-                eta_minutes: Math.ceil((distance / 20) * 60),
-                has_gps: true,
-                is_online: true
-              };
-            }
-            return rider;
-          }));
-
-          // Update marker on map
-          const marker = riderMarkersMap.current.get(riderId);
-          if (marker) {
-            marker.setPosition({ lat: newLat, lng: newLng });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userLocation, nearbyRiders.length]);
-
-  const requestLocationPermission = async () => {
-    console.log('📍 Requesting location permission...');
-    try {
-      const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-      
-      if (permission.state === 'denied') {
-        setMapError('Izin lokasi ditolak. Silakan aktifkan di pengaturan browser Anda.');
-        setLoading(false);
-        toast.error('Izin lokasi ditolak');
-        return;
-      }
-      
-      getUserLocation();
-    } catch (error) {
-      console.warn('Permissions API not supported, requesting directly:', error);
-      getUserLocation();
-    }
-  };
-
-  // Initialize Google Maps when location is available
-  useEffect(() => {
-    if (!userLocation || !mapContainer.current) return;
-    if (map.current) return; // Map already initialized
-
-    console.log('🗺️ Initializing Google Maps with user location:', userLocation);
-    
-    loadGoogleMaps()
-      .then(() => {
-        initializeMap();
-      })
-      .catch((error) => {
-        console.error('❌ Failed to load Google Maps:', error);
-        const errorMsg = error.message || 'Gagal memuat Google Maps';
-        setMapError(`${errorMsg}. Pastikan API Key sudah diaktifkan untuk Maps JavaScript API.`);
-        toast.error('Gagal memuat peta', {
-          description: 'Periksa koneksi internet atau coba lagi nanti'
-        });
-      });
+    if (!userLocation || !mapContainer.current || map.current) return;
+    loadGoogleMaps().then(initializeMap).catch(err => {
+      console.error(err);
+      setMapError('Gagal memuat peta');
+    });
   }, [userLocation]);
 
-  const loadGoogleMaps = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if ((window as any).google?.maps) {
-        resolve();
-        return;
-      }
-
-      // Check if script already exists
-      const existingScript = document.querySelector(`script[src*="maps.googleapis.com"]`);
-      if (existingScript) {
-        existingScript.addEventListener('load', () => resolve());
-        existingScript.addEventListener('error', () => reject(new Error('Failed to load Google Maps')));
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      const handleError = () => {
-        retryCount++;
-        if (retryCount < maxRetries) {
-          console.log(`🔄 Retrying Google Maps load (${retryCount}/${maxRetries})...`);
-          setTimeout(() => {
-            document.head.removeChild(script);
-            loadGoogleMaps().then(resolve).catch(reject);
-          }, 2000);
-        } else {
-          reject(new Error('Failed to load Google Maps after multiple attempts'));
-        }
-      };
-      
-      script.onload = () => {
-        console.log('✅ Google Maps script loaded');
-        resolve();
-      };
-      script.onerror = handleError;
-      document.head.appendChild(script);
+  useEffect(() => {
+    if (!map.current || !(window as any).google?.maps || !userLocation) return;
+    // clear existing markers
+    markers.current.forEach(m => m.setMap(null));
+    markers.current = [];
+    const google = (window as any).google;
+    filteredRiders.forEach(rider => {
+      if (!rider.lat || !rider.lng) return;
+      const marker = new google.maps.Marker({
+        position: { lat: rider.lat, lng: rider.lng },
+        map: map.current,
+        title: rider.full_name,
+        icon: {
+          path: 'M12 2C7.6 2 4 5.6 4 10c0 5.5 8 12 8 12s8-6.5 8-12c0-4.4-3.6-8-8-8z',
+          fillColor: '#EA2831',
+          fillOpacity: 1,
+          strokeColor: '#0F1B3D',
+          strokeWeight: 2,
+          scale: 1.8,
+          anchor: new google.maps.Point(12, 22),
+        },
+      });
+      marker.addListener('click', () => setSelectedRider(rider));
+      markers.current.push(marker);
     });
-  };
+  }, [nearbyRiders, radiusKm, userLocation]);
+
+  const loadGoogleMaps = (): Promise<void> => new Promise((resolve, reject) => {
+    if ((window as any).google?.maps) return resolve();
+    const existing = document.querySelector(`script[src*="maps.googleapis.com"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () => reject(new Error('load fail')));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('load fail'));
+    document.head.appendChild(script);
+  });
 
   const initializeMap = () => {
-    if (!mapContainer.current || !(window as any).google?.maps || !userLocation) return;
+    if (!mapContainer.current || !userLocation) return;
     const google = (window as any).google;
-
-    console.log('🗺️ Creating map instance...');
-    // Create map
     map.current = new google.maps.Map(mapContainer.current, {
-      center: { lat: userLocation.lat, lng: userLocation.lng },
-      zoom: 13,
+      center: userLocation,
+      zoom: 14,
       mapTypeControl: false,
-      fullscreenControl: true,
+      streetViewControl: false,
+      fullscreenControl: false,
+      zoomControl: false,
+      styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
     });
-
-    // Add customer marker (blue pin)
-    const customerMarker = new google.maps.Marker({
-      position: { lat: userLocation.lat, lng: userLocation.lng },
+    new google.maps.Marker({
+      position: userLocation,
       map: map.current,
-      title: 'Lokasi Anda',
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
+        scale: 10,
         fillColor: '#3b82f6',
         fillOpacity: 1,
-        strokeColor: '#ffffff',
+        strokeColor: '#fff',
         strokeWeight: 4,
       },
     });
-
-    const customerInfo = new google.maps.InfoWindow({
-      content: '<div style="padding: 8px;"><strong>Lokasi Anda</strong></div>',
-    });
-    customerMarker.addListener('click', () => {
-      customerInfo.open(map.current!, customerMarker);
-    });
-
-    // Add rider markers
-    console.log('📍 Adding markers for riders:', nearbyRiders.length);
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
-
-    nearbyRiders.forEach(rider => {
-      if (rider.lat && rider.lng) {
-        const riderMarker = new google.maps.Marker({
-          position: { lat: rider.lat, lng: rider.lng },
-          map: map.current!,
-          title: `${rider.full_name}${rider.has_gps ? '' : ' (Lokasi cabang)'}`,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: rider.is_shift_active ? (rider.is_online ? '#22c55e' : '#f59e0b') : '#9ca3af',
-            fillOpacity: rider.is_shift_active ? 1 : 0.5,
-            strokeColor: '#ffffff',
-            strokeWeight: 3,
-          },
-        });
-
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="padding: 12px; min-width: 200px;">
-              <strong style="font-size: 16px;">${rider.full_name}</strong><br/>
-              <span style="color: ${rider.is_online ? '#22c55e' : '#9ca3af'};">
-                ${rider.is_online ? '🟢 Online' : '⚪ Offline'}
-              </span><br/>
-              <span style="font-size: 14px;">
-                ${rider.distance_km < 999 ? `📍 ${rider.distance_km.toFixed(1)} km` : '📍 Lokasi tidak tersedia'}
-              </span>
-              ${!rider.has_gps ? '<br/><span style="font-size: 12px; color: #9ca3af;">⚠️ Lokasi GPS tidak tersedia</span>' : ''}
-            </div>
-          `,
-        });
-
-        riderMarker.addListener('click', () => {
-          infoWindow.open(map.current!, riderMarker);
-        });
-
-        markers.current.push(riderMarker);
-        riderMarkersMap.current.set(rider.id, riderMarker);
-        bounds.extend({ lat: rider.lat, lng: rider.lng });
-      }
-    });
-
-    // Fit bounds to show all markers
-    if (nearbyRiders.length > 0) {
-      map.current.fitBounds(bounds, 50);
-    }
-
-    console.log('✅ Google Maps loaded successfully');
-    setMapError(null);
   };
 
   const getUserLocation = () => {
-    console.log('📍 Requesting user location...');
     if (!navigator.geolocation) {
-      const errorMsg = "Geolocation tidak didukung di browser Anda";
-      setMapError(errorMsg);
-      toast.error(errorMsg);
-      // Use Jakarta as fallback location
-      const fallbackLocation = { lat: -6.2088, lng: 106.8456 };
-      setUserLocation(fallbackLocation);
-      fetchNearbyRiders(fallbackLocation.lat, fallbackLocation.lng);
-      setLoading(false);
+      const fallback = { lat: -7.4478, lng: 112.7183 }; // Sidoarjo fallback
+      setUserLocation(fallback);
+      fetchNearbyRiders(fallback.lat, fallback.lng);
       return;
     }
-
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        console.log('✅ Got user location:', location);
-        setUserLocation(location);
-        setMapError(null);
-        fetchNearbyRiders(location.lat, location.lng);
+      pos => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(loc);
+        fetchNearbyRiders(loc.lat, loc.lng);
       },
-      (error) => {
-        console.error('❌ Error getting location:', error);
-        let errorMessage = "Tidak dapat mengakses lokasi Anda";
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = "Izin lokasi ditolak. Silakan aktifkan di pengaturan browser.";
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = "Informasi lokasi tidak tersedia.";
-            break;
-          case error.TIMEOUT:
-            errorMessage = "Permintaan lokasi timeout.";
-            break;
-        }
-        
-        setMapError(errorMessage);
-        toast.error(errorMessage);
-        
-        // Fallback to Jakarta
-        const fallbackLocation = { lat: -6.2088, lng: 106.8456 };
-        setUserLocation(fallbackLocation);
-        fetchNearbyRiders(fallbackLocation.lat, fallbackLocation.lng);
+      () => {
+        const fallback = { lat: -7.4478, lng: 112.7183 };
+        setUserLocation(fallback);
+        fetchNearbyRiders(fallback.lat, fallback.lng);
+        toast.error('Tidak dapat mengakses lokasi Anda');
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
   const fetchNearbyRiders = async (lat: number, lng: number) => {
-    console.log('🔍 Fetching nearby riders for location:', { lat, lng });
+    setLoading(true);
     try {
-      setLoading(true);
       const { data, error } = await supabase.functions.invoke('get-nearby-riders', {
-        body: {
-          customer_lat: lat,
-          customer_lng: lng,
-          radius_km: 50
-        }
+        body: { customer_lat: lat, customer_lng: lng, radius_km: 50 }
       });
-
-      if (error) {
-        console.error('❌ Edge function error:', error);
-        const errorMsg = error.message || 'Gagal memuat data rider';
-        setMapError(`${errorMsg}. Silakan coba lagi.`);
-        setNearbyRiders([]);
-        toast.error(`Error: ${errorMsg}`);
-        setLoading(false);
-        return;
-      }
-      
-      console.log('✅ Fetched riders:', data.riders?.length || 0, 'riders found');
-      
-      if (!data.riders || data.riders.length === 0) {
-        setMapError('Tidak ada rider tersedia di area ini saat ini. Silakan coba lagi nanti.');
-        toast.info('Tidak ada rider tersedia');
-      } else {
-        setMapError(null);
-      }
-      
+      if (error) throw error;
       setNearbyRiders(data.riders || []);
-    } catch (error) {
-      console.error('❌ Error fetching nearby riders:', error);
-      setMapError('Gagal memuat rider terdekat. Pastikan Anda terhubung ke internet.');
-      toast.error('Gagal memuat rider terdekat');
+      setMapError(null);
+    } catch (e: any) {
+      setMapError('Gagal memuat rider terdekat');
+      toast.error('Gagal memuat rider');
     } finally {
       setLoading(false);
     }
   };
 
-  const callRider = (riderId: string) => {
-    const rider = nearbyRiders.find(r => r.id === riderId);
-    if (rider?.phone) {
-      window.location.href = `tel:${rider.phone}`;
-    }
-  };
+  const filteredRiders = useMemo(
+    () => nearbyRiders.filter(r => r.distance_km <= radiusKm),
+    [nearbyRiders, radiusKm]
+  );
 
-  // Phase 4: Handle "Panggil Rider" - Create order request
-  const handlePanggilRider = async (rider: Rider) => {
-    if (!customerUser?.user_id || !userLocation) {
-      toast.error('Silakan login terlebih dahulu');
-      return;
-    }
-
-    setRequestingRider(rider.id);
-
-    try {
-      console.log('📞 Calling rider:', {
-        rider: rider.full_name,
-        customer_user_id: customerUser.user_id,
-        location: userLocation
-      });
-
-      const { data, error } = await supabase.functions.invoke('send-order-request', {
-        body: {
-          customer_user_id: customerUser.user_id,
-          rider_profile_id: rider.id,
-          customer_lat: userLocation.lat,
-          customer_lng: userLocation.lng,
-          delivery_address: customerUser.address || 'Alamat pelanggan',
-          notes: 'Panggil rider via Zeger On The Wheels'
-        }
-      });
-
-      if (error) {
-        console.error('❌ Edge function error:', error);
-        throw new Error(error.message || 'Gagal mengirim permintaan');
-      }
-
-      console.log('✅ Order created:', data);
-
-      toast.success(`Permintaan berhasil dikirim ke ${rider.full_name}!`, {
-        description: `ETA: ${data.eta_minutes || 15} menit`
-      });
-
-      // Navigate to tracking page if order created
-      if (onCallRider && data?.order_id) {
-        onCallRider(data.order_id, rider);
-      }
-    } catch (error: any) {
-      console.error('❌ Error calling rider:', error);
-      toast.error('Gagal mengirim permintaan', {
-        description: error.message || 'Silakan coba lagi'
-      });
-    } finally {
-      setRequestingRider(null);
-    }
-  };
-
-  // Phase 6: Handle "Kunjungi Rider" - Open Google Maps directions
-  const handleKunjungiRider = (rider: Rider) => {
-    if (!rider.lat || !rider.lng) {
-      toast.error('Lokasi rider tidak tersedia');
-      return;
-    }
-
-    // Open Google Maps with directions
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}`;
-    window.open(mapsUrl, '_blank');
-    
-    toast.success('Membuka Google Maps', {
-      description: 'Arahkan ke lokasi rider'
+  const toggleFav = (riderId: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      next.has(riderId) ? next.delete(riderId) : next.add(riderId);
+      localStorage.setItem('zeger-fav-riders', JSON.stringify([...next]));
+      return next;
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-gray-600">Memuat peta dan mencari rider terdekat...</p>
-        </div>
-      </div>
-    );
-  }
+  const openWhatsApp = (phone: string, name: string) => {
+    if (!phone) return toast.error('Nomor rider tidak tersedia');
+    const clean = phone.replace(/[^0-9]/g, '').replace(/^0/, '62');
+    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(`Halo ${name}, saya ingin memesan.`)}`, '_blank');
+  };
 
-  if (mapError && !userLocation) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 p-4">
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2 text-gray-900">Tidak Dapat Memuat Peta</h3>
-          <p className="text-gray-600 mb-4">{mapError}</p>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-left">
-            <p className="text-sm text-gray-700 font-semibold mb-2">Tips:</p>
-            <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
-              <li>Pastikan izin lokasi diaktifkan di browser</li>
-              <li>Periksa koneksi internet Anda</li>
-              <li>Coba refresh halaman</li>
-              <li>Gunakan browser Chrome atau Safari</li>
-            </ul>
-          </div>
-          <Button onClick={requestLocationPermission} className="w-full">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Coba Lagi
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const openDirection = (rider: Rider) => {
+    if (!rider.lat || !rider.lng) return toast.error('Lokasi rider tidak tersedia');
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}`, '_blank');
+  };
+
+  const statusLabel = (r: Rider) => {
+    if (!r.is_shift_active) return { text: 'Offline', color: 'bg-gray-400' };
+    if (r.location_source === 'checkpoint') return { text: 'On Location', color: 'bg-green-500' };
+    if (r.is_online) return { text: 'Online', color: 'bg-green-500' };
+    return { text: 'Shift Aktif', color: 'bg-amber-500' };
+  };
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl">
-      <CardHeader className="px-0">
-        <CardTitle className="text-2xl font-bold">Zeger On The Wheels</CardTitle>
-        <CardDescription>Pilih rider terdekat untuk pengiriman Anda</CardDescription>
-      </CardHeader>
+    <div className="min-h-screen bg-white pb-4">
+      {/* Hero banner */}
+      <div className="relative bg-[#EA2831] px-4 pt-6 pb-24 overflow-hidden">
+        <h1 className="text-white text-2xl font-extrabold leading-tight max-w-[60%]">
+          KINI HADIR LEBIH DEKAT DENGAN KAWAN SEJIWA
+        </h1>
+        <div className="absolute right-2 top-2 w-40 h-40 rounded-full bg-white/10" />
+      </div>
 
-      {/* Interactive Map */}
+      {/* Greeting card */}
+      <div className="mx-4 -mt-16 mb-4 bg-white rounded-2xl shadow-lg p-4 relative z-10">
+        <p className="font-bold text-gray-900 text-base">
+          Hi, {(customerUser?.name || 'GUEST').toUpperCase()}
+        </p>
+      </div>
+
+      {/* Distance filter chips */}
+      <div className="px-4 mb-3 flex gap-2">
+        {DISTANCE_OPTIONS.map(km => (
+          <button
+            key={km}
+            onClick={() => setRadiusKm(km)}
+            className={`flex-1 py-3 rounded-full font-semibold text-sm transition-all ${
+              radiusKm === km
+                ? 'bg-[#EA2831] text-white shadow-md'
+                : 'bg-gray-100 text-gray-700'
+            }`}
+          >
+            {km} km
+          </button>
+        ))}
+      </div>
+
+      {/* Section title + refresh */}
+      <div className="px-4 flex items-center justify-between mb-3">
+        <h2 className="text-xl font-extrabold text-gray-900">Temukan Rider-mu</h2>
+        <button
+          onClick={() => userLocation && fetchNearbyRiders(userLocation.lat, userLocation.lng)}
+          className="w-10 h-10 rounded-lg bg-[#EA2831] text-white flex items-center justify-center shadow-md active:scale-95"
+          aria-label="Refresh"
+        >
+          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Map */}
+      <div className="px-4 mb-4">
+        <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+          <div ref={mapContainer} className="h-64 w-full bg-gray-100" />
+        </div>
+      </div>
+
       {mapError && (
-        <Card className="mb-4 border-yellow-500 bg-yellow-50">
-          <CardContent className="p-4 flex items-center justify-between">
-            <p className="text-sm text-yellow-800 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              {mapError}
-            </p>
-            <Button size="sm" variant="outline" onClick={() => {
-              setMapError(null);
-              if (userLocation) {
-                fetchNearbyRiders(userLocation.lat, userLocation.lng);
-              }
-            }}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-      <Card className="mb-6 overflow-hidden shadow-lg">
-        <CardContent className="p-0">
-          <div ref={mapContainer} className="h-80 w-full" />
-        </CardContent>
-      </Card>
-
-      {/* Riders List */}
-      {nearbyRiders.length === 0 ? (
-        <Card className="shadow-lg">
-          <CardContent className="py-12 text-center">
-            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-semibold mb-2">Tidak ada rider tersedia</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Belum ada rider yang aktif di area Anda saat ini
-            </p>
-            <Button onClick={() => userLocation && fetchNearbyRiders(userLocation.lat, userLocation.lng)}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Coba Lagi
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {nearbyRiders.map((rider) => (
-            <Card 
-              key={rider.id} 
-              className={`overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-lg ${
-                !rider.is_shift_active ? 'opacity-60 border-muted' : ''
-              }`}
-            >
-              <CardHeader className="pb-3 bg-gradient-to-br from-gray-50 to-white">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <Avatar className="h-14 w-14 ring-2 ring-primary/10">
-                        <AvatarImage 
-                          src={rider.photo_url || "/avatars/default-rider.jpg"} 
-                          alt={rider.full_name}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                          {rider.full_name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white shadow-md ${
-                        rider.is_online ? 'bg-green-500' : 'bg-gray-400'
-                      }`} />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold">{rider.full_name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs font-semibold">{rider.rating}</span>
-                        </div>
-                        <Badge 
-                          variant={rider.is_shift_active ? (rider.is_online ? "default" : "secondary") : "outline"} 
-                          className="text-xs"
-                        >
-                          {rider.is_shift_active ? (
-                            rider.is_online ? '🟢 Online' : '🟡 Shift Aktif'
-                          ) : (
-                            '⚪ Offline'
-                          )}
-                        </Badge>
-                        {!rider.has_gps && (
-                          <Badge variant="outline" className="text-xs">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            Lokasi Cabang
-                          </Badge>
-                        )}
-                        {rider.distance_km > 50 && (
-                          <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Jarak Jauh ({rider.distance_km}km)
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="flex items-center gap-1 shadow-sm">
-                    <Package className="h-3 w-3" />
-                    <span className="font-bold">{rider.total_stock}</span>
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 text-sm bg-blue-50 p-2 rounded-lg">
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                    <span className="font-semibold">
-                      {rider.distance_km < 999 ? `${rider.distance_km} km` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm bg-green-50 p-2 rounded-lg">
-                    <Navigation className="h-4 w-4 text-green-600" />
-                    <span className="font-semibold">
-                      {rider.eta_minutes > 0 ? `~${rider.eta_minutes} min` : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-                {!rider.has_gps && rider.branch_name && (
-                  <p className="text-xs text-muted-foreground bg-gray-50 p-2 rounded flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    GPS tidak aktif. Menampilkan lokasi {rider.branch_name}
-                  </p>
-                )}
-                <div className="flex gap-2 pt-2">
-                  {/* Kunjungi Rider - Open Google Maps Direction */}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 shadow-sm hover:shadow-md transition-shadow rounded-full"
-                    onClick={() => {
-                      if (rider.lat && rider.lng && userLocation) {
-                        window.open(
-                          `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${rider.lat},${rider.lng}&travelmode=driving`, 
-                          '_blank'
-                        );
-                        toast.success(`Membuka Google Maps ke ${rider.full_name}`);
-                      }
-                    }}
-                    disabled={!rider.lat || !rider.lng || !userLocation}
-                  >
-                    <Navigation className="h-4 w-4 mr-2" />
-                    Kunjungi Rider
-                  </Button>
-                  {/* Panggil Rider - Create Order Request */}
-                  <Button 
-                    size="sm" 
-                    className="flex-1 shadow-md hover:shadow-lg transition-shadow bg-red-500 hover:bg-red-600 rounded-full"
-                    onClick={async () => {
-                      if (!userLocation || !customerUser) {
-                        toast.error('Lokasi atau data customer tidak tersedia');
-                        return;
-                      }
-                      
-                      try {
-                        setRequestingRider(rider.id);
-                        const { data, error } = await supabase.functions.invoke('send-order-request', {
-                          body: {
-                            customer_user_id: customerUser.user_id,
-                            rider_profile_id: rider.id,
-                            customer_lat: userLocation.lat,
-                            customer_lng: userLocation.lng,
-                            delivery_address: customerUser.address || 'Alamat tidak tersedia',
-                            notes: 'Customer memanggil rider untuk datang'
-                          }
-                        });
-                        
-                        if (error) throw error;
-                        
-                        toast.success('Permintaan terkirim! Menunggu konfirmasi rider...');
-                        
-                        // Call callback to parent component
-                        onCallRider?.(data.order_id, rider);
-                      } catch (err: any) {
-                        console.error('Error calling rider:', err);
-                        toast.error(err.message || 'Gagal mengirim permintaan');
-                      } finally {
-                        setRequestingRider(null);
-                      }
-                    }}
-                    disabled={requestingRider === rider.id || !userLocation || !customerUser}
-                  >
-                    {requestingRider === rider.id ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Phone className="h-4 w-4 mr-2" />
-                    )}
-                    Panggil Rider
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="mx-4 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          {mapError}
         </div>
       )}
+
+      {/* Rider cards */}
+      {loading ? (
+        <div className="py-12 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[#EA2831] mx-auto mb-2" />
+          <p className="text-sm text-gray-500">Mencari rider terdekat...</p>
+        </div>
+      ) : filteredRiders.length === 0 ? (
+        <div className="mx-4 py-10 text-center bg-gray-50 rounded-2xl">
+          <MapPin className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+          <p className="font-semibold text-gray-700">Belum ada rider dalam {radiusKm} km</p>
+          <p className="text-xs text-gray-500 mt-1">Coba perluas jangkauan pencarian</p>
+        </div>
+      ) : (
+        <div className="px-4 space-y-3">
+          {filteredRiders.map(rider => {
+            const status = statusLabel(rider);
+            const isFav = favorites.has(rider.id);
+            const subtitle = rider.checkpoint_name || rider.branch_address || rider.branch_name || 'Lokasi tidak tersedia';
+            return (
+              <div
+                key={rider.id}
+                className="border-2 border-[#EA2831]/30 rounded-2xl p-3 bg-white flex items-center gap-3 shadow-sm active:scale-[0.99] transition-transform"
+                onClick={() => setSelectedRider(rider)}
+              >
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full border-2 border-[#0F1B3D] overflow-hidden bg-[#EA2831]/10 flex items-center justify-center">
+                    {rider.photo_url ? (
+                      <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#EA2831] font-bold text-xl">
+                        {rider.full_name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <span className={`absolute -bottom-0 -right-0 w-4 h-4 rounded-full border-2 border-white ${status.color}`} />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-900 uppercase truncate">{rider.full_name}</p>
+                      <p className="text-xs text-gray-500 leading-tight line-clamp-2">{subtitle}</p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFav(rider.id); }}
+                      className="flex-shrink-0"
+                      aria-label="Favorit"
+                    >
+                      <Heart className={`h-5 w-5 ${isFav ? 'fill-[#EA2831] text-[#EA2831]' : 'text-gray-400'}`} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
+                      {rider.distance_km.toFixed(2)} km
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedRider(rider); }}
+                      className="px-4 py-1.5 rounded-full bg-[#EA2831] text-white text-xs font-bold shadow"
+                    >
+                      Lihat Stok
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Rider detail bottom sheet */}
+      <Sheet open={!!selectedRider} onOpenChange={(o) => !o && setSelectedRider(null)}>
+        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden">
+          {selectedRider && <RiderDetailSheet
+            rider={selectedRider}
+            isFav={favorites.has(selectedRider.id)}
+            onToggleFav={() => toggleFav(selectedRider.id)}
+            onClose={() => setSelectedRider(null)}
+            onWhatsApp={() => openWhatsApp(selectedRider.phone, selectedRider.full_name)}
+            onDirection={() => openDirection(selectedRider)}
+          />}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
+
+function RiderDetailSheet({
+  rider, isFav, onToggleFav, onClose, onWhatsApp, onDirection,
+}: {
+  rider: Rider;
+  isFav: boolean;
+  onToggleFav: () => void;
+  onClose: () => void;
+  onWhatsApp: () => void;
+  onDirection: () => void;
+}) {
+  const subtitle = rider.checkpoint_name || rider.branch_address || rider.branch_name || '';
+  const stock = rider.stock_items || [];
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Header with back */}
+      <div className="relative bg-gray-100 h-40 flex-shrink-0">
+        <button
+          onClick={onClose}
+          className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-[#EA2831] text-white flex items-center justify-center shadow-lg"
+          aria-label="Kembali"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="w-full h-full flex items-center justify-center">
+          <MapPin className="h-16 w-16 text-[#EA2831]" />
+        </div>
+      </div>
+
+      {/* Rider info card */}
+      <div className="mx-4 -mt-14 relative z-10 bg-white rounded-2xl border-2 border-[#EA2831]/30 p-4 shadow-lg">
+        <div className="flex items-start gap-3">
+          <div className="w-20 h-20 rounded-full border-2 border-[#0F1B3D] overflow-hidden bg-[#EA2831]/10 flex-shrink-0">
+            {rider.photo_url ? (
+              <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[#EA2831] font-bold text-2xl">
+                {rider.full_name.charAt(0)}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-extrabold text-gray-900 uppercase">{rider.full_name}</p>
+                <p className="text-sm text-gray-500 leading-tight">{subtitle}</p>
+              </div>
+              <button onClick={onToggleFav} aria-label="Favorit">
+                <Heart className={`h-6 w-6 ${isFav ? 'fill-[#EA2831] text-[#EA2831]' : 'text-gray-400'}`} />
+              </button>
+            </div>
+            <span className="inline-block mt-1 px-3 py-1 bg-green-50 text-green-700 text-sm font-semibold rounded">
+              {rider.distance_km.toFixed(2)} km
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <Button
+            onClick={onWhatsApp}
+            className="rounded-full bg-green-500 hover:bg-green-600 h-12 w-12 p-0 flex-shrink-0"
+            aria-label="WhatsApp"
+          >
+            <Phone className="h-5 w-5 text-white" />
+          </Button>
+          <Button
+            onClick={onDirection}
+            className="flex-1 rounded-full bg-[#EA2831] hover:bg-[#c92028] h-12 font-bold"
+          >
+            <Navigation className="h-4 w-4 mr-2" />
+            Direction
+          </Button>
+        </div>
+      </div>
+
+      {/* Stock list */}
+      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-6">
+        <h3 className="text-xl font-extrabold text-gray-900 mb-3">Stok Rider</h3>
+        {stock.length === 0 ? (
+          <div className="py-8 text-center text-sm text-gray-500 bg-gray-50 rounded-xl">
+            Belum ada data stok dari rider ini.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {stock.map(item => {
+              const qty = item.stock_quantity;
+              const outOfStock = qty <= 0;
+              const low = qty > 0 && qty < 5;
+              return (
+                <div
+                  key={item.product_id}
+                  className={`flex gap-3 p-3 rounded-2xl border ${outOfStock ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-white border-gray-100 shadow-sm'}`}
+                >
+                  <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+                    {item.image_url ? (
+                      <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                    ) : null}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-gray-900 leading-tight">{item.name}</p>
+                      <Heart className="h-5 w-5 text-gray-300 flex-shrink-0" />
+                    </div>
+                    {item.description && (
+                      <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{item.description}</p>
+                    )}
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-sm font-semibold text-gray-700">
+                        Rp {item.price.toLocaleString('id-ID')}
+                      </p>
+                      {outOfStock ? (
+                        <span className="px-3 py-1 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">
+                          Stok Habis
+                        </span>
+                      ) : low ? (
+                        <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
+                          Stok &lt; 5
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                          Stok {qty}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default CustomerMap;

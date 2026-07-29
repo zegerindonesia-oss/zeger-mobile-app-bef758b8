@@ -48,7 +48,31 @@ Deno.serve(async (req) => {
         let riderLat = rider.last_known_lat;
         let riderLng = rider.last_known_lng;
         let hasGPS = riderLat !== null && riderLng !== null;
-        
+        let checkpointName: string | null = null;
+        let checkpointTime: string | null = null;
+        let locationSource: 'checkpoint' | 'gps' | 'branch' | 'none' = hasGPS ? 'gps' : 'none';
+
+        // PRIORITY 1: Latest checkpoint today (most accurate — rider physically confirmed spot)
+        const todayJkt = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const { data: latestCheckpoint } = await supabase
+          .from('checkpoints')
+          .select('latitude, longitude, checkpoint_name, address_info, created_at')
+          .eq('rider_id', rider.id)
+          .gte('created_at', `${todayJkt}T00:00:00+07:00`)
+          .lte('created_at', `${todayJkt}T23:59:59+07:00`)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestCheckpoint) {
+          riderLat = latestCheckpoint.latitude;
+          riderLng = latestCheckpoint.longitude;
+          hasGPS = true;
+          locationSource = 'checkpoint';
+          checkpointName = latestCheckpoint.checkpoint_name || latestCheckpoint.address_info || null;
+          checkpointTime = latestCheckpoint.created_at;
+        }
+
         // Fallback 1: try to get latest location from rider_locations table
         if (!hasGPS) {
           const { data: recentLocation } = await supabase
@@ -63,7 +87,7 @@ Deno.serve(async (req) => {
             riderLat = recentLocation.latitude;
             riderLng = recentLocation.longitude;
             hasGPS = true;
-            console.log(`Rider ${rider.full_name} using rider_locations GPS`);
+            locationSource = 'gps';
           }
         }
 
@@ -73,8 +97,8 @@ Deno.serve(async (req) => {
           if (branch.latitude && branch.longitude) {
             riderLat = branch.latitude;
             riderLng = branch.longitude;
-            hasGPS = false; // Still mark as no direct GPS
-            console.log(`Rider ${rider.full_name} using branch location fallback: ${branch.name}`);
+            hasGPS = false;
+            locationSource = 'branch';
           }
         }
 
@@ -124,13 +148,24 @@ Deno.serve(async (req) => {
           is_online = (now - lastUpdate) < tenMinutes;
         }
 
-        // Get rider inventory count
+        // Get rider inventory with product details
         const { data: inventory } = await supabase
           .from('inventory')
-          .select('stock_quantity')
+          .select('stock_quantity, products(id, name, description, price, image_url, category)')
           .eq('rider_id', rider.id);
 
         const total_stock = inventory?.reduce((sum, item) => sum + (item.stock_quantity || 0), 0) || 0;
+        const stock_items = (inventory || [])
+          .filter((it: any) => it.products)
+          .map((it: any) => ({
+            product_id: it.products.id,
+            name: it.products.name,
+            description: it.products.description,
+            price: it.products.price,
+            image_url: it.products.image_url,
+            category: it.products.category,
+            stock_quantity: it.stock_quantity || 0,
+          }));
 
         const branch = rider.branches as any;
 
@@ -142,6 +177,7 @@ Deno.serve(async (req) => {
           distance_km,
           eta_minutes,
           total_stock,
+          stock_items,
           rating: 5.0,
           lat: riderLat,
           lng: riderLng,
@@ -149,6 +185,9 @@ Deno.serve(async (req) => {
           is_online,
           is_shift_active,
           has_gps: hasGPS,
+          location_source: locationSource,
+          checkpoint_name: checkpointName,
+          checkpoint_time: checkpointTime,
           branch_name: branch?.name || '',
           branch_address: branch?.address || ''
         };
