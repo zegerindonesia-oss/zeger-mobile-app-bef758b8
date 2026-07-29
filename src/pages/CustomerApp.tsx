@@ -638,7 +638,7 @@ export default function CustomerApp() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* Main Content */}
       <div className={cn("pb-20", activeView === 'home' && "pt-0")}>
         {tab === 'order-detail' && orderId ? (
