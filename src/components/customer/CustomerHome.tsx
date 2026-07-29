@@ -86,7 +86,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
       </div>
 
       {/* Member Card */}
-      <div className="bg-white rounded-t-3xl -mt-8 p-4 shadow-lg relative z-10">
+      <div className="bg-white rounded-t-3xl -mt-8 p-4 relative z-10">
         {/* Greeting & Notification */}
         <div className="flex justify-between items-center mb-6 pt-2">
           <h2 className="text-lg font-semibold text-gray-900">
