@@ -23,13 +23,14 @@ interface Voucher {
 
 export function CustomerHome({ customerUser, onNavigate, recentProducts = [], onAddToCart }: CustomerHomeProps) {
   const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [bigOrderBanner, setBigOrderBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
+  const [zegerCareBanner, setZegerCareBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
 
   useEffect(() => {
     if (customerUser) {
       fetchActiveVouchers();
-      fetchRecentOrders();
     }
+    fetchSectionBanners();
   }, [customerUser]);
 
   const fetchActiveVouchers = async () => {
@@ -48,21 +49,23 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
     }
   };
 
-  const fetchRecentOrders = async () => {
-    if (!customerUser) return;
-
+  const fetchSectionBanners = async () => {
     try {
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
       const { data, error } = await supabase
-        .from('customer_orders')
-        .select('*')
-        .eq('user_id', customerUser.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
+        .from('promo_banners')
+        .select('image_url, link_url, placement, display_order')
+        .eq('is_active', true)
+        .in('placement', ['big_order', 'zeger_care'])
+        .or(`valid_until.is.null,valid_until.gte.${today}`)
+        .order('display_order');
       if (error) throw error;
-      setRecentOrders(data as any || []);
+      const big = (data || []).find((b: any) => b.placement === 'big_order');
+      const care = (data || []).find((b: any) => b.placement === 'zeger_care');
+      if (big) setBigOrderBanner({ image_url: big.image_url, link_url: big.link_url });
+      if (care) setZegerCareBanner({ image_url: care.image_url, link_url: care.link_url });
     } catch (error: any) {
-      console.error('Error fetching recent orders:', error);
+      console.error('Error fetching section banners:', error);
     }
   };
 
