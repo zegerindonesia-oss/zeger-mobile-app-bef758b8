@@ -594,33 +594,33 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header with image */}
-      <div className="relative bg-white pt-4 pb-16 border-b border-gray-100">
+      <div className="relative bg-white pt-4 pb-16">
         <div className="flex items-center justify-between px-4">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900 bg-white"
             aria-label="Kembali"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h2 className="text-gray-900 text-lg font-bold">Detail Menu</h2>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900" aria-label="Favorit">
+          <button className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900 bg-white" aria-label="Favorit">
             <Heart className="h-6 w-6" />
           </button>
         </div>
-        <div className="flex justify-center mt-4 relative">
+        <div className="flex justify-center mt-4 relative bg-white">
           <img
             src="/__l5e/assets-v1/fae4c1de-2361-4c9e-8f55-4976866ad7f6/zeger-logo.png"
             alt="Zeger"
             className="absolute top-0 right-4 w-10 h-10 object-contain opacity-90"
           />
-          <div className="relative w-64 h-64 flex items-end justify-center">
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-40 h-3 rounded-full bg-black/25 blur-md" />
+          <div className="relative w-64 h-64 flex items-end justify-center bg-white">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-40 h-3 rounded-full bg-black/15 blur-md" />
             {product.image_url ? (
               <img
                 src={product.image_url}
                 alt={product.name}
-                className="relative max-h-64 object-contain drop-shadow-2xl"
+                className="relative max-h-64 object-contain"
               />
             ) : (
               <div className="relative w-40 h-56 bg-white rounded-2xl" />
@@ -629,14 +629,14 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-8 -mt-6">
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-8 -mt-6 bg-white">
         <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-4">{product.name}</h1>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-gray-200 p-4 flex items-center justify-center">
+          <div className="rounded-2xl bg-white p-4 flex items-center justify-center">
             <p className="text-xl font-extrabold text-gray-900">Rp {product.price.toLocaleString('id-ID')}</p>
           </div>
-          <div className="rounded-2xl border border-gray-200 px-3 py-2">
+          <div className="rounded-2xl bg-white px-3 py-2">
             <table className="w-full">
               <tbody>
                 <FlavorDots label="Coffee" level={flavor.coffee} />
