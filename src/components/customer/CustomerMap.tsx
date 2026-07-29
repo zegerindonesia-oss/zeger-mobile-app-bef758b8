@@ -207,12 +207,26 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const openWhatsApp = (phone: string, name: string) => {
     if (!phone) return toast.error('Nomor rider tidak tersedia');
     const clean = phone.replace(/[^0-9]/g, '').replace(/^0/, '62');
-    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(`Halo ${name}, saya ingin memesan.`)}`, '_blank');
+    const text = encodeURIComponent(`Halo ${name}, saya ingin memesan.`);
+    // Try native WhatsApp scheme first (works on mobile even if wa.me is blocked)
+    const waScheme = `whatsapp://send?phone=${clean}&text=${text}`;
+    const waWeb = `https://wa.me/${clean}?text=${text}`;
+    const win = window.open(waScheme, '_blank');
+    // Fallback to web link if scheme not handled
+    setTimeout(() => {
+      try { if (!win || win.closed) window.location.href = waWeb; } catch { window.location.href = waWeb; }
+    }, 400);
   };
 
   const openDirection = (rider: Rider) => {
     if (!rider.lat || !rider.lng) return toast.error('Lokasi rider tidak tersedia');
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}`, '_blank');
+    // Use geo: on mobile, fallback to Google Maps universal link
+    const geo = `geo:${rider.lat},${rider.lng}?q=${rider.lat},${rider.lng}`;
+    const gmap = `https://maps.google.com/?q=${rider.lat},${rider.lng}`;
+    const win = window.open(geo, '_blank');
+    setTimeout(() => {
+      try { if (!win || win.closed) window.location.href = gmap; } catch { window.location.href = gmap; }
+    }, 400);
   };
 
   const statusLabel = (r: Rider) => {
