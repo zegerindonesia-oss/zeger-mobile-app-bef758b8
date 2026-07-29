@@ -623,7 +623,7 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
                 className="relative max-h-64 object-contain drop-shadow-2xl"
               />
             ) : (
-              <div className="relative w-40 h-56 bg-gray-100 rounded-2xl" />
+              <div className="relative w-40 h-56 bg-white rounded-2xl" />
             )}
           </div>
         </div>
