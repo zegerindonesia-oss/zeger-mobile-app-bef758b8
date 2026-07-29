@@ -183,13 +183,7 @@ export default function AppManagement() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">{section.stats}</p>
-                <Button 
-                  onClick={() => navigate(section.path)}
-                  className="w-full"
-                  disabled={section.stats === "Coming soon"}
-                >
-                  {section.stats === "Coming soon" ? "Coming Soon" : "Kelola"}
-                </Button>
+                <Button onClick={() => navigate(section.path)} className="w-full">Kelola</Button>
               </CardContent>
             </Card>
           );
