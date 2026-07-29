@@ -151,8 +151,9 @@ Deno.serve(async (req) => {
         // Get rider inventory with product details
         const { data: inventory } = await supabase
           .from('inventory')
-          .select('stock_quantity, products(id, name, description, price, image_url, category)')
-          .eq('rider_id', rider.id);
+          .select('stock_quantity, products(id, name, description, price, image_url, category, custom_options)')
+          .eq('rider_id', rider.id)
+          .gt('stock_quantity', 0);
 
         const total_stock = inventory?.reduce((sum, item) => sum + (item.stock_quantity || 0), 0) || 0;
         const stock_items = (inventory || [])
@@ -164,6 +165,7 @@ Deno.serve(async (req) => {
             price: it.products.price,
             image_url: it.products.image_url,
             category: it.products.category,
+            custom_options: it.products.custom_options || null,
             stock_quantity: it.stock_quantity || 0,
           }));
 
