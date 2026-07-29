@@ -336,9 +336,25 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
                     </button>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
-                      {rider.distance_km.toFixed(2)} km
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
+                        {rider.distance_km.toFixed(2)} km
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openWhatsApp(rider.phone, rider.full_name); }}
+                        className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm active:scale-95"
+                        aria-label="WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4 text-white" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openDirection(rider); }}
+                        className="w-7 h-7 rounded-full bg-[#EA2831] flex items-center justify-center shadow-sm active:scale-95"
+                        aria-label="Direction"
+                      >
+                        <Navigation className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedRider(rider); }}
                       className="px-4 py-1.5 rounded-full bg-[#EA2831] text-white text-xs font-bold shadow"
