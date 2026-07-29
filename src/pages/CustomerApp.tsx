@@ -41,6 +41,10 @@ import CustomerOrderSuccess from '@/components/customer/CustomerOrderSuccess';
 import CustomerOrderWaiting from '@/components/customer/CustomerOrderWaiting';
 import CustomerOrderTracking from '@/components/customer/CustomerOrderTracking';
 import CustomerPaymentMethod from '@/components/customer/CustomerPaymentMethod';
+import { CustomerSubscription } from '@/components/customer/CustomerSubscription';
+import { CustomerReferral } from '@/components/customer/CustomerReferral';
+import { CustomerCare } from '@/components/customer/CustomerCare';
+import { CustomerNotifications } from '@/components/customer/CustomerNotifications';
 import { useToast } from '@/hooks/use-toast';
 
 interface CustomerUser {
@@ -70,7 +74,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'street';
+type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'street' | 'subscription' | 'referral' | 'care' | 'notifications';
 
 export default function CustomerApp() {
   const { user } = useAuth();
@@ -674,6 +678,10 @@ export default function CustomerApp() {
               />
             )}
             {activeView === 'vouchers' && <CustomerVouchers customerUser={customerUser} />}
+            {activeView === 'subscription' && <CustomerSubscription customerUser={customerUser} onBack={() => setActiveView('home')} />}
+            {activeView === 'referral' && <CustomerReferral customerUser={customerUser} onBack={() => setActiveView('home')} />}
+            {activeView === 'care' && <CustomerCare onBack={() => setActiveView('home')} />}
+            {activeView === 'notifications' && <CustomerNotifications customerUser={customerUser} onBack={() => setActiveView('home')} />}
             {activeView === 'orders' && <CustomerOrders customerUser={customerUser} />}
             {activeView === 'profile' && <CustomerProfile customerUser={customerUser} onUpdateProfile={() => fetchCustomerProfile()} />}
             {activeView === 'map' && (
