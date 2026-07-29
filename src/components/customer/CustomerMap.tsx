@@ -107,25 +107,32 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     });
   }, [nearbyRiders, radiusKm, userLocation]);
 
-  const loadGoogleMaps = (): Promise<void> => new Promise((resolve, reject) => {
-    if ((window as any).google?.maps) return resolve();
+  const loadGoogleMaps = async (): Promise<void> => {
     if (!GOOGLE_MAPS_API_KEY) {
-      return reject(new Error('Google Maps API key belum dikonfigurasi (connector Google Maps Platform).'));
+      throw new Error('Google Maps API key belum dikonfigurasi (connector Google Maps Platform).');
     }
-    const existing = document.querySelector(`script[src*="maps.googleapis.com"]`);
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('load fail')));
-      return;
+    if (!document.querySelector(`script[src*="maps.googleapis.com"]`)) {
+      const script = document.createElement('script');
+      script.src = buildMapsScriptUrl({ libraries: 'places' });
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
     }
-    const script = document.createElement('script');
-    script.src = buildMapsScriptUrl({ libraries: 'places' });
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('load fail'));
-    document.head.appendChild(script);
-  });
+    // With loading=async, google.maps.Map is not available at script load time.
+    // Use importLibrary which resolves when the maps library is ready.
+    await new Promise<void>((resolve, reject) => {
+      const start = Date.now();
+      const tick = () => {
+        const g = (window as any).google;
+        if (g?.maps?.importLibrary) return resolve();
+        if (Date.now() - start > 15000) return reject(new Error('Google Maps load timeout'));
+        setTimeout(tick, 100);
+      };
+      tick();
+    });
+    await (window as any).google.maps.importLibrary('maps');
+    await (window as any).google.maps.importLibrary('marker');
+  };
 
   const initializeMap = () => {
     if (!mapContainer.current || !userLocation) return;
