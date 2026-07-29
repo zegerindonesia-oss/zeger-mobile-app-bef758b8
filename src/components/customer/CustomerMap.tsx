@@ -536,7 +536,7 @@ function RiderDetailSheet({
 
       {/* Product Detail Sheet */}
       <Sheet open={!!selectedProduct} onOpenChange={(o) => !o && setSelectedProduct(null)}>
-        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden bg-white">
+        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden !bg-white">
           {selectedProduct && (
             <ProductDetailView product={selectedProduct} onClose={() => setSelectedProduct(null)} />
           )}
