@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
 import { ProductBulkUpload } from "@/components/master/ProductBulkUpload";
+import { ImageUpload } from "@/components/shared/ImageUpload";
 
 interface Product {
   id: string;
@@ -396,11 +397,13 @@ const ProductManagement = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>URL Foto Produk</Label>
-              <Input value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="https://..." />
-              {form.image_url && (
-                <img src={form.image_url} alt="Preview" className="w-20 h-20 rounded-lg object-cover mt-1" />
-              )}
+              <Label>Foto Produk</Label>
+              <ImageUpload
+                value={form.image_url}
+                onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
+                bucket="product-images"
+                label="Foto Produk"
+              />
             </div>
 
             <div className="space-y-2">
