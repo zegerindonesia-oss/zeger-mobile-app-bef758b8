@@ -34,6 +34,7 @@ import { CustomerCartNew } from '@/components/customer/CustomerCartNew';
 import { CustomerProductDetail } from '@/components/customer/CustomerProductDetail';
 import { BottomNavigation } from '@/components/customer/BottomNavigation';
 import { CustomerOutletList } from '@/components/customer/CustomerOutletList';
+import { CustomerStreetComingSoon } from '@/components/customer/CustomerStreetComingSoon';
 import { OrderDetail } from '@/components/customer/OrderDetail';
 import CustomerCheckout from '@/components/customer/CustomerCheckout';
 import CustomerOrderSuccess from '@/components/customer/CustomerOrderSuccess';
@@ -69,7 +70,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking';
+type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'street';
 
 export default function CustomerApp() {
   const { user } = useAuth();
@@ -697,6 +698,11 @@ export default function CustomerApp() {
                   });
                   setActiveView('menu');
                 }}
+              />
+            )}
+            {activeView === 'street' && (
+              <CustomerStreetComingSoon
+                onNavigate={(view: string) => setActiveView(view as View)}
               />
             )}
             {activeView === 'menu' && (
