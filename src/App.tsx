@@ -48,6 +48,9 @@ import AppManagement from "./pages/settings/AppManagement";
 import PromoBannerManagement from "./pages/settings/PromoBannerManagement";
 import LoyaltyManagement from "./pages/settings/LoyaltyManagement";
 import CRMManagement from "./pages/settings/CRMManagement";
+import CustomerAppSettings from "./pages/settings/CustomerAppSettings";
+import SubscriptionPlans from "./pages/settings/SubscriptionPlans";
+import VoucherManagement from "./pages/settings/VoucherManagement";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
@@ -314,7 +317,21 @@ const App = () => (
             <Route path="/settings/app-management/vouchers" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager']}>
                 <ModernLayout>
-                  <AppManagement />
+                  <VoucherManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/settings/app-management/subscriptions" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager']}>
+                <ModernLayout>
+                  <SubscriptionPlans />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/settings/app-management/customer-app" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager']}>
+                <ModernLayout>
+                  <CustomerAppSettings />
                 </ModernLayout>
               </RoleBasedRoute>
             } />
