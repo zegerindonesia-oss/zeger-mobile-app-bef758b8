@@ -1,11 +1,19 @@
 // Google Maps API Configuration
-// Provisioned by the Lovable-managed Google Maps Platform connector.
+// Uses the browser-safe key provisioned by the Lovable-managed Google Maps Platform connector.
 // Restricted to *.lovable.app and *.lovableproject.com referrers.
-export const GOOGLE_MAPS_API_KEY =
-  (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string) || '';
+const browserKey =
+  (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined) ||
+  (import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY as string | undefined) ||
+  '';
 
-export const GOOGLE_MAPS_TRACKING_ID =
-  (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string) || '';
+const trackingId =
+  (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined) ||
+  (import.meta.env.VITE_GOOGLE_MAPS_TRACKING_ID as string | undefined) ||
+  '';
+
+export const GOOGLE_MAPS_API_KEY = browserKey;
+
+export const GOOGLE_MAPS_TRACKING_ID = trackingId;
 
 export const isGoogleMapsConfigured = Boolean(GOOGLE_MAPS_API_KEY);
 

@@ -90,10 +90,11 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   useEffect(() => {
     if (!userLocation || !mapContainer.current || map.current) return;
+    setMapError(null);
     loadGoogleMaps().then(initializeMap).catch(err => {
-      console.error(err);
+      console.error('Google Maps gagal dimuat:', err);
       const message = err instanceof Error ? err.message : 'Gagal memuat peta';
-      setMapError(message.includes('API key') ? message : 'Gagal memuat peta');
+      setMapError(message);
     });
   }, [userLocation]);
 
@@ -136,14 +137,29 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   const loadGoogleMaps = async (): Promise<void> => {
     if (!GOOGLE_MAPS_API_KEY) {
-      throw new Error('Google Maps API key belum dikonfigurasi (connector Google Maps Platform).');
+      throw new Error('Google Maps browser key belum aktif. Reconnect Google Maps Platform connector atau refresh environment project.');
     }
-    if (!document.querySelector(`script[src*="maps.googleapis.com"]`)) {
+    if ((window as any).google?.maps?.Map) return;
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-zeger-google-maps="true"]');
+    if (!existingScript) {
+      const callbackName = 'zegerGoogleMapsReady';
+      const callbackReady = new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('Google Maps timeout. Coba refresh halaman atau reconnect Google Maps connector.')), 15000);
+        (window as any)[callbackName] = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+      });
       const script = document.createElement('script');
-      script.src = buildMapsScriptUrl({ libraries: 'places' });
+      script.src = buildMapsScriptUrl({ libraries: 'places', callback: callbackName });
       script.async = true;
       script.defer = true;
+      script.dataset.zegerGoogleMaps = 'true';
+      script.onerror = () => {
+        setMapError('Google Maps gagal load. Pastikan Maps JavaScript API aktif dan domain preview diizinkan.');
+      };
       document.head.appendChild(script);
+      await callbackReady;
     }
     // With loading=async, google.maps.Map is not available at script load time.
     // Use importLibrary which resolves when the maps library is ready.
@@ -152,7 +168,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       const tick = () => {
         const g = (window as any).google;
         if (g?.maps?.importLibrary) return resolve();
-        if (Date.now() - start > 15000) return reject(new Error('Google Maps load timeout'));
+        if (Date.now() - start > 15000) return reject(new Error('Google Maps timeout. Coba refresh halaman atau reconnect Google Maps connector.'));
         setTimeout(tick, 100);
       };
       tick();
@@ -322,15 +338,23 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       <div className="px-4 mb-4">
         <div className="relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
           <div ref={mapContainer} className="h-64 w-full bg-gray-100" />
-          {(!isGoogleMapsConfigured || mapError) && (
+          {!isGoogleMapsConfigured ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
               <MapPin className="mb-3 h-10 w-10 text-[#EA2831]" />
               <p className="font-bold text-gray-900">Peta belum aktif</p>
               <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                Google Maps key belum tersedia di browser. Rider tetap bisa dipilih dari daftar di bawah.
+                Google Maps browser key belum tersedia. Rider tetap bisa dipilih dari daftar di bawah.
               </p>
             </div>
-          )}
+          ) : mapError ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
+              <AlertCircle className="mb-3 h-10 w-10 text-[#EA2831]" />
+              <p className="font-bold text-gray-900">Peta gagal dimuat</p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                {mapError}
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
 
