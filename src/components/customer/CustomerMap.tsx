@@ -227,7 +227,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       {/* Hero banner */}
       <div className="relative bg-[#EA2831] px-4 pt-6 pb-24 overflow-hidden">
         <h1 className="text-white text-2xl font-extrabold leading-tight max-w-[60%]">
-          KINI HADIR LEBIH DEKAT DENGAN KAWAN SEJIWA
+          KINI HADIR LEBIH DEKAT LEBIH HEMAT
         </h1>
         <div className="absolute right-2 top-2 w-40 h-40 rounded-full bg-white/10" />
       </div>
