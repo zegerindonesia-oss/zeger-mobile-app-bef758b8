@@ -579,18 +579,18 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
   const flavor = deriveFlavor(product);
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Dark navy header with image */}
-      <div className="relative bg-[#0F1B3D] pt-4 pb-16 rounded-b-[40%_15%]">
+      {/* Header with image */}
+      <div className="relative bg-white pt-4 pb-16 border-b border-gray-100">
         <div className="flex items-center justify-between px-4">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900"
             aria-label="Kembali"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
-          <h2 className="text-white text-lg font-bold">Detail Menu</h2>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center text-white" aria-label="Favorit">
+          <h2 className="text-gray-900 text-lg font-bold">Detail Menu</h2>
+          <button className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900" aria-label="Favorit">
             <Heart className="h-6 w-6" />
           </button>
         </div>
@@ -609,7 +609,7 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
                 className="relative max-h-64 object-contain drop-shadow-2xl"
               />
             ) : (
-              <div className="relative w-40 h-56 bg-white/10 rounded-2xl" />
+              <div className="relative w-40 h-56 bg-gray-100 rounded-2xl" />
             )}
           </div>
         </div>
