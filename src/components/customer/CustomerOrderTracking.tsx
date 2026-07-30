@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // Import Google Maps API key from config
-import { GOOGLE_MAPS_API_KEY, buildMapsScriptUrl } from '@/config/maps';
+import { buildMapsScriptUrl, getGoogleMapsKey } from '@/config/maps';
 
 interface Rider {
   id: string;
@@ -50,9 +50,15 @@ export default function CustomerOrderTracking({
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    const loadGoogleMaps = () => {
+    const loadGoogleMaps = async () => {
       if ((window as any).google?.maps) {
         initializeMap();
+        return;
+      }
+
+      const key = await getGoogleMapsKey();
+      if (!key) {
+        setMapLoadError(true);
         return;
       }
 
@@ -64,7 +70,6 @@ export default function CustomerOrderTracking({
       
       script.onerror = () => {
         console.error('❌ Failed to load Google Maps script');
-        console.error('API Key:', GOOGLE_MAPS_API_KEY);
         console.error('Current URL:', window.location.href);
         console.error('Check:');
         console.error('1. Maps JavaScript API enabled in Google Cloud');
