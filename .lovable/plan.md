@@ -1,19 +1,21 @@
-## Situasi
+Saya sudah cek sinyal runtime: koneksi Google Maps sekarang sudah ter-link ke project, tetapi browser masih membaca key sebagai kosong, jadi script Maps tidak pernah dipanggil.
 
-Koneksi Google Maps Platform sudah kamu hapus. Sekarang project tidak punya browser key Maps, jadi peta di app customer pasti kosong sampai koneksi dibuat ulang.
+Rencana perbaikan:
 
-## Rencana
+1. **Perbaiki sumber key frontend**
+   - Update konfigurasi map agar `GOOGLE_MAPS_API_KEY` memakai browser key yang benar dari konektor.
+   - Karena konektor saat ini menyediakan secret `$GOOGLE_MAPS_API_KEY`, frontend perlu menerima alias `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` secara eksplisit dari konfigurasi Vite.
 
-1. Saya buka kartu **Connect Google Maps Platform** langsung di chat (tool connector Lovable), jadi kamu tidak perlu cari tombol di halaman Connectors.
-2. Di kartu itu kamu klik **Create new connection**, lalu pilih opsi **Lovable-managed** (bukan bring-your-own API key).
-3. Setelah kamu selesai, saya verifikasi:
-   - koneksi terlink ke project ini,
-   - env `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` kembali tersedia di build frontend.
-4. Saya restart dev server dan cek `/customer-app` lewat Playwright untuk memastikan peta benar-benar render (bukan kotak abu-abu), lalu laporkan hasilnya.
-5. Kalau setelah reconnect peta masih gagal, saya baca error overlay/console dari halaman map dan perbaiki sisi kode loader-nya.
+2. **Perbaiki fallback konfigurasi Vite**
+   - Pastikan `vite.config.ts` memetakan `GOOGLE_MAPS_API_KEY` / `GOOGLE_MAPS_BROWSER_KEY` ke env frontend `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY`.
+   - Ini membuat app preview/published tidak lagi menampilkan pesan “Google Maps browser key belum aktif”.
 
-## Catatan teknis
+3. **Perkuat handling error map**
+   - Tetap tampilkan rider list walaupun map gagal.
+   - Ubah pesan error supaya jelas apakah masalahnya key kosong, script gagal load, atau Google menolak domain/API.
 
-- Tidak ada perubahan kode yang direncanakan kecuali langkah 5 dibutuhkan.
-- Kamu tidak perlu mengirim API key apa pun ke chat.
-- Managed key hanya valid di domain `*.lovable.app` / `*.lovableproject.com`. Untuk custom domain nanti perlu API key Google Cloud sendiri dengan allowlist domain.
+4. **Verifikasi setelah implementasi**
+   - Cek bundle/runtime bahwa key frontend tidak kosong.
+   - Buka `/customer-app` dan pastikan area peta tidak lagi menampilkan “Peta belum aktif”.
+
+Catatan penting: saya tidak akan minta API key di chat. Koneksi Google Maps sudah ada; masalahnya sekarang adalah injeksi browser key ke frontend.
