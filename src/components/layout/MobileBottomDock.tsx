@@ -194,7 +194,7 @@ export const MobileBottomDock = () => {
                   "radial-gradient(circle at 32% 28%, #4ade80 0%, #22a544 38%, #14742f 72%, #0d5121 100%)",
               }}
             >
-              <MapPin className="h-7 w-7 text-white" fill="white" strokeWidth={1.5} />
+              <MapPin className="h-7 w-7 text-white" strokeWidth={2.25} />
               <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 ring-2 ring-white" />
             </button>
           </div>
