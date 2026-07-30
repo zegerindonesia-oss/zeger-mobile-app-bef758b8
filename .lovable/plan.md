@@ -1,18 +1,35 @@
-## Temuan (sudah diverifikasi)
+## Masalah
 
-- File `.env` project **sudah berisi** `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` (nilai valid, 41 karakter) dan `..._TRACKING_ID`. Jadi konektor Google Maps sudah ter-link dengan benar.
-- Penyebab peta kosong ada di `vite.config.ts`: blok `define` menimpa `import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` dengan nilai dari `process.env`. Vite memuat `.env` ke `import.meta.env`, **bukan** ke `process.env`. Saat build published, `process.env` tidak berisi variabel tersebut, sehingga `define` meng-hardcode string kosong `''` dan menimpa nilai asli dari `.env` → frontend membaca key kosong → muncul "Peta belum aktif".
+Console preview menunjukkan: "Google Maps browser key belum aktif". Hasil pengecekan:
 
-## Perbaikan
+- Koneksi Google Maps Platform **masih terhubung** ke project (`linked: yes`).
+- File `.env` di sandbox **berisi** `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` (41 karakter) dan dev server men-inject-nya dengan benar.
+- Tapi bundle yang dipakai preview (`/assets/index-O-LYKCmG.js`) **tidak membawa key** tersebut.
 
-1. **`vite.config.ts`**
-   - Hapus blok `define` untuk variabel Google Maps (biarkan Vite meng-inject sendiri dari `.env`).
-   - Jika tetap ingin fallback (mis. `GOOGLE_MAPS_BROWSER_KEY` tanpa prefix VITE), gunakan `loadEnv(mode, process.cwd(), '')` dan hanya definisikan variabel bila hasilnya **tidak kosong**, supaya nilai `.env` tidak pernah tertimpa string kosong.
+Artinya masalahnya bukan di kode komponen peta, melainkan key hanya tersedia saat dev (dari `.env`) dan tidak selalu ikut ter-inject saat build preview/published. Itu sebabnya peta sempat muncul lalu hilang lagi setelah build ulang.
 
-2. **`src/config/maps.ts`**
-   - Tidak perlu diubah; pembacaan key sudah benar.
+## Solusi: jangan bergantung hanya pada env build
 
-3. **Verifikasi**
-   - Restart dev server, cek bundle/runtime bahwa key tidak kosong.
-   - Buka `/customer-app` di URL Lovable preview/published dan pastikan peta + pin rider muncul (bukan overlay "Peta belum aktif").
-   - Catatan: di custom domain (mis. zegercoffee.com) managed key tetap tidak akan jalan; itu butuh API key Google Cloud sendiri.
+Tambahkan lapisan fallback runtime, sehingga key selalu didapat baik di dev maupun build.
+
+1. **Edge function baru `get-maps-key`** (public, tanpa JWT)
+   - Membaca key browser dari environment connector di sisi server dan mengembalikannya sebagai JSON.
+   - Aman: key browser sudah dibatasi HTTP referrer ke domain `*.lovable.app` / `*.lovableproject.com`.
+
+2. **Update `src/config/maps.ts`**
+   - Ubah dari konstanta statis menjadi loader async: `getGoogleMapsKey()`.
+   - Urutan sumber: `import.meta.env` (dev/build jika ada) → hasil `get-maps-key` (fallback) → gagal.
+   - Cache hasilnya di memori supaya hanya sekali fetch per sesi.
+   - Tetap sediakan `buildMapsScriptUrl()` yang memakai key hasil loader.
+
+3. **Update pemakai peta**
+   - `src/components/customer/CustomerMap.tsx`: state `mapsKeyReady`; tampilkan placeholder "Peta belum aktif" hanya jika loader benar-benar gagal, bukan saat env kosong.
+   - `src/components/customer/CustomerOrderTracking.tsx`: pakai loader yang sama.
+
+4. **Verifikasi**
+   - Deploy edge function, lalu cek di browser preview bahwa script Maps ter-load dan pin rider muncul.
+
+## Catatan teknis
+
+- `vite.config.ts` tetap dibiarkan seperti sekarang (tidak merugikan; berfungsi saat env tersedia).
+- Tidak ada perubahan pada logika data rider / `get-nearby-riders`.
