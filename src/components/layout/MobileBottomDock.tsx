@@ -152,7 +152,7 @@ export const MobileBottomDock = () => {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur-md px-1 pt-1 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur-md px-1 pt-2 pb-[calc(env(safe-area-inset-bottom)+14px)] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
       >
         <div className="relative mx-auto flex max-w-md items-end justify-between">
           <DockButton
@@ -169,7 +169,7 @@ export const MobileBottomDock = () => {
           />
 
           {/* Center cart + check-in shortcut */}
-          <div className="flex flex-1 items-end justify-center gap-2">
+          <div className="flex flex-1 items-end justify-center gap-3">
             <button
               onClick={() => go("selling")}
               aria-label="Penjualan"
@@ -186,13 +186,15 @@ export const MobileBottomDock = () => {
               onClick={() => go("checkpoints")}
               aria-label="Check-in"
               className={cn(
-                "relative -mt-4 flex h-11 w-11 items-center justify-center rounded-full shadow-md ring-4 ring-white transition-transform",
-                currentTab === "checkpoints"
-                  ? "bg-green-700 scale-105"
-                  : "bg-green-600 hover:bg-green-700"
+                "relative -mt-6 flex h-14 w-14 items-center justify-center rounded-full shadow-lg ring-4 ring-white transition-transform",
+                currentTab === "checkpoints" && "scale-105"
               )}
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 32% 28%, #4ade80 0%, #22a544 38%, #14742f 72%, #0d5121 100%)",
+              }}
             >
-              <MapPin className="h-5 w-5 text-white" />
+              <MapPin className="h-7 w-7 text-white" strokeWidth={2.25} />
               <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 ring-2 ring-white" />
             </button>
           </div>
