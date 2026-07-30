@@ -280,15 +280,25 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     const destination = encodeURIComponent(`${rider.lat},${rider.lng}`);
     const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
 
-    // Use a real external link so Google Maps is never loaded inside Lovable's
-    // preview iframe (Google blocks embedded Maps pages with ERR_BLOCKED_BY_RESPONSE).
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer external';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    // A new tab opened from Lovable's preview inherits the iframe sandbox and
+    // Google rejects it. Target the top browsing context from this user click
+    // so the universal URL can be handed directly to Google Maps.
+    try {
+      if (window.top && window.top !== window) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_top';
+        link.rel = 'external';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return;
+      }
+    } catch (error) {
+      console.warn('Top-level Google Maps navigation was blocked:', error);
+    }
+
+    window.location.href = url;
   };
 
   const statusLabel = (r: Rider) => {
