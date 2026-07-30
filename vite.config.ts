@@ -7,6 +7,7 @@ const googleMapsBrowserKey =
   process.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
   process.env.VITE_GOOGLE_MAPS_BROWSER_KEY ||
   process.env.GOOGLE_MAPS_BROWSER_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY ||
   '';
 
 const googleMapsTrackingId =
