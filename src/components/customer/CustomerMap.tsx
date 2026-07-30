@@ -277,13 +277,14 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   const openDirection = (rider: Rider) => {
     if (!rider.lat || !rider.lng) return toast.error('Lokasi rider tidak tersedia');
-    // Use geo: on mobile, fallback to Google Maps universal link
-    const geo = `geo:${rider.lat},${rider.lng}?q=${rider.lat},${rider.lng}`;
-    const gmap = `https://maps.google.com/?q=${rider.lat},${rider.lng}`;
-    const win = window.open(geo, '_blank');
-    setTimeout(() => {
-      try { if (!win || win.closed) window.location.href = gmap; } catch { window.location.href = gmap; }
-    }, 400);
+    // Universal Google Maps directions link — works on iOS, Android & web
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}&travelmode=driving`;
+    try {
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!win) window.top ? (window.top.location.href = url) : (window.location.href = url);
+    } catch {
+      window.location.href = url;
+    }
   };
 
   const statusLabel = (r: Rider) => {
