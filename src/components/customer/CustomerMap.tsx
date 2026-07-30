@@ -136,9 +136,12 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   };
 
   const loadGoogleMaps = async (): Promise<void> => {
-    if (!GOOGLE_MAPS_API_KEY) {
+    const key = await getGoogleMapsKey();
+    if (!key) {
+      setMapsKeyMissing(true);
       throw new Error('Google Maps browser key belum aktif. Reconnect Google Maps Platform connector atau refresh environment project.');
     }
+    setMapsKeyMissing(false);
     if ((window as any).google?.maps?.Map) return;
     const existingScript = document.querySelector<HTMLScriptElement>('script[data-zeger-google-maps="true"]');
     if (!existingScript) {
