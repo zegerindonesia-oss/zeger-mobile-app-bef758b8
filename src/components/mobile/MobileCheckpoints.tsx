@@ -35,8 +35,18 @@ const MobileCheckpoints = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [newCheckpoint, setNewCheckpoint] = useState({
     name: "",
-    notes: ""
+    notes: "",
+    status: ""
   });
+
+  const statusPresets = [
+    "Siap menerima order",
+    "Sedang mangkal",
+    "Sedang otw / berkeliling",
+    "Istirahat sebentar",
+    "Stok menipis",
+    "Stok habis",
+  ];
 
   useEffect(() => {
     fetchCheckpoints();
@@ -94,8 +104,8 @@ const MobileCheckpoints = () => {
       return;
     }
 
-    if (!newCheckpoint.name.trim()) {
-      toast.error("Nama checkpoint harus diisi");
+    if (!newCheckpoint.status.trim()) {
+      toast.error("Status harus diisi");
       return;
     }
 
@@ -103,22 +113,23 @@ const MobileCheckpoints = () => {
     try {
       const address = await getAddressFromCoords(location.lat, location.lng);
       
+      const locationLabel = newCheckpoint.name.trim();
       const { error } = await supabase
         .from('checkpoints')
         .insert([{
           rider_id: userProfile?.id,
           branch_id: userProfile?.branch_id,
-          checkpoint_name: newCheckpoint.name,
+          checkpoint_name: newCheckpoint.status.trim(),
           latitude: location.lat,
           longitude: location.lng,
-          address_info: address,
+          address_info: locationLabel || address,
           notes: newCheckpoint.notes
         }]);
 
       if (error) throw error;
 
       toast.success("Checkpoint berhasil ditambahkan!");
-      setNewCheckpoint({ name: "", notes: "" });
+      setNewCheckpoint({ name: "", notes: "", status: "" });
       setShowAddForm(false);
       fetchCheckpoints();
     } catch (error: any) {
