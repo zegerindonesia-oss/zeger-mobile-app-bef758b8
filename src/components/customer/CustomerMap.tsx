@@ -277,14 +277,18 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
   const openDirection = (rider: Rider) => {
     if (!rider.lat || !rider.lng) return toast.error('Lokasi rider tidak tersedia');
-    // Universal Google Maps directions link — works on iOS, Android & web
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${rider.lat},${rider.lng}&travelmode=driving`;
-    try {
-      const win = window.open(url, '_blank', 'noopener,noreferrer');
-      if (!win) window.top ? (window.top.location.href = url) : (window.location.href = url);
-    } catch {
-      window.location.href = url;
-    }
+    const destination = encodeURIComponent(`${rider.lat},${rider.lng}`);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+
+    // Use a real external link so Google Maps is never loaded inside Lovable's
+    // preview iframe (Google blocks embedded Maps pages with ERR_BLOCKED_BY_RESPONSE).
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer external';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const statusLabel = (r: Rider) => {
