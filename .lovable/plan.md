@@ -1,40 +1,19 @@
-## Yang harus diklik
+## Situasi
 
-Jangan klik **Disable** dan jangan hapus koneksi.
+Koneksi Google Maps Platform sudah kamu hapus. Sekarang project tidak punya browser key Maps, jadi peta di app customer pasti kosong sampai koneksi dibuat ulang.
 
-Dari screenshot kamu, posisi sudah benar di halaman **Google Maps Platform**.
+## Rencana
 
-Ikuti ini:
+1. Saya buka kartu **Connect Google Maps Platform** langsung di chat (tool connector Lovable), jadi kamu tidak perlu cari tombol di halaman Connectors.
+2. Di kartu itu kamu klik **Create new connection**, lalu pilih opsi **Lovable-managed** (bukan bring-your-own API key).
+3. Setelah kamu selesai, saya verifikasi:
+   - koneksi terlink ke project ini,
+   - env `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` kembali tersedia di build frontend.
+4. Saya restart dev server dan cek `/customer-app` lewat Playwright untuk memastikan peta benar-benar render (bukan kotak abu-abu), lalu laporkan hasilnya.
+5. Kalau setelah reconnect peta masih gagal, saya baca error overlay/console dari halaman map dan perbaiki sisi kode loader-nya.
 
-1. Di bagian **Connections**, lihat tabel yang ada baris:
-   - Name: **Google Maps Platform**
-   - Label: **Managed**
-   - Type: **App + chat**
-   - Projects: **1**
-2. Klik langsung **baris Google Maps Platform** itu.
-3. Setelah masuk ke halaman detail koneksi, cari tombol/menu:
-   - **Reconnect**, atau
-   - ikon **titik tiga (⋮)** / dropdown di kanan atas halaman detail koneksi.
-4. Kalau ada pilihan, pilih **Reconnect**.
-5. Pilih **Lovable-managed Google Maps Platform**.
-6. Klik **Connect / Save**.
-7. Setelah selesai, reload `/customer-app`.
+## Catatan teknis
 
-## Kalau setelah klik baris tetap tidak ada Reconnect
-
-Jangan delete dulu.
-
-Alternatif aman:
-
-1. Klik tombol biru **Add connection** di kanan atas.
-2. Pilih / buat koneksi **Lovable-managed Google Maps Platform**.
-3. Hubungkan ke project yang sama.
-4. Setelah sukses, reload `/customer-app`.
-
-## Yang tidak boleh dilakukan
-
-- Jangan klik **Disable**.
-- Jangan hapus connection lama dulu.
-- Jangan masukkan API key manual di chat.
-
-Tujuannya hanya membuat Lovable meng-inject ulang Google Maps browser key ke project.
+- Tidak ada perubahan kode yang direncanakan kecuali langkah 5 dibutuhkan.
+- Kamu tidak perlu mengirim API key apa pun ke chat.
+- Managed key hanya valid di domain `*.lovable.app` / `*.lovableproject.com`. Untuk custom domain nanti perlu API key Google Cloud sendiri dengan allowlist domain.
