@@ -1,16 +1,40 @@
-## Solusi langsung
+## Yang harus diklik
 
-Tidak perlu cari tombol Reconnect di halaman connector karena di tampilan kamu memang tidak ada tombolnya.
+Jangan klik **Disable** dan jangan hapus koneksi.
 
-Langkah yang harus dilakukan:
+Dari screenshot kamu, posisi sudah benar di halaman **Google Maps Platform**.
 
-1. Tutup modal **Connectors** yang sedang terbuka dengan klik **X** di kanan atas modal.
-2. Setelah modal tertutup, lihat chat sebelah kiri.
-3. Di chat sudah ada card/action bertuliskan **Reconnect Google Maps Platform**.
-4. Klik card tersebut.
-5. Pilih/lanjutkan koneksi **Lovable-managed Google Maps Platform**.
-6. Setelah selesai, reload halaman `/customer-app`.
+Ikuti ini:
 
-## Jika card Reconnect tidak bisa diklik
+1. Di bagian **Connections**, lihat tabel yang ada baris:
+   - Name: **Google Maps Platform**
+   - Label: **Managed**
+   - Type: **App + chat**
+   - Projects: **1**
+2. Klik langsung **baris Google Maps Platform** itu.
+3. Setelah masuk ke halaman detail koneksi, cari tombol/menu:
+   - **Reconnect**, atau
+   - ikon **titik tiga (⋮)** / dropdown di kanan atas halaman detail koneksi.
+4. Kalau ada pilihan, pilih **Reconnect**.
+5. Pilih **Lovable-managed Google Maps Platform**.
+6. Klik **Connect / Save**.
+7. Setelah selesai, reload `/customer-app`.
 
-Kalau card di chat tetap tidak bisa dibuka atau sudah hilang, langkah berikutnya adalah saya buka ulang dialog reconnect dari sini, lalu kamu cukup klik approval/connect di chat.
+## Kalau setelah klik baris tetap tidak ada Reconnect
+
+Jangan delete dulu.
+
+Alternatif aman:
+
+1. Klik tombol biru **Add connection** di kanan atas.
+2. Pilih / buat koneksi **Lovable-managed Google Maps Platform**.
+3. Hubungkan ke project yang sama.
+4. Setelah sukses, reload `/customer-app`.
+
+## Yang tidak boleh dilakukan
+
+- Jangan klik **Disable**.
+- Jangan hapus connection lama dulu.
+- Jangan masukkan API key manual di chat.
+
+Tujuannya hanya membuat Lovable meng-inject ulang Google Maps browser key ke project.
