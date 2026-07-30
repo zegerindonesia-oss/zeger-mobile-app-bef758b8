@@ -152,7 +152,7 @@ export const MobileBottomDock = () => {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur-md px-1 pt-1 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur-md px-1 pt-2 pb-[calc(env(safe-area-inset-bottom)+14px)] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
       >
         <div className="relative mx-auto flex max-w-md items-end justify-between">
           <DockButton
