@@ -188,6 +188,33 @@ const MobileCheckpoints = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
+                <label className="block text-sm font-medium mb-2">Status Saat Ini <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {statusPresets.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setNewCheckpoint(prev => ({ ...prev, status: s }))}
+                      className={
+                        "rounded-full border px-3 py-1 text-xs transition-colors " +
+                        (newCheckpoint.status === s
+                          ? "border-green-600 bg-green-600 text-white"
+                          : "border-green-200 bg-white text-green-800 hover:bg-green-100")
+                      }
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <Input
+                  placeholder="Atau tulis status sendiri..."
+                  value={newCheckpoint.status}
+                  onChange={(e) => setNewCheckpoint(prev => ({ ...prev, status: e.target.value }))}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">Status ini yang tampil di aplikasi customer.</p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-2">Nama Lokasi</label>
                 <Input
                   placeholder="Contoh: Taman Kota, Mall ABC, etc"
