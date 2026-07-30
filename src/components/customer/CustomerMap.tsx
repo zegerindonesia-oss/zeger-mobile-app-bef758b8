@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone, MessageCircle } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { GOOGLE_MAPS_API_KEY, buildMapsScriptUrl, isGoogleMapsConfigured } from '@/config/maps';
+import { buildMapsScriptUrl, getGoogleMapsKey } from '@/config/maps';
 
 interface StockItem {
   product_id: string;
@@ -66,6 +66,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [mapsKeyMissing, setMapsKeyMissing] = useState(false);
   const [radiusKm, setRadiusKm] = useState<number>(5);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
@@ -341,7 +342,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       <div className="px-4 mb-4">
         <div className="relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
           <div ref={mapContainer} className="h-64 w-full bg-gray-100" />
-          {!isGoogleMapsConfigured ? (
+          {mapsKeyMissing ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
               <MapPin className="mb-3 h-10 w-10 text-[#EA2831]" />
               <p className="font-bold text-gray-900">Peta belum aktif</p>
