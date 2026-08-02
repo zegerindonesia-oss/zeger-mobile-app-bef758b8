@@ -3504,6 +3504,10 @@ export type Database = {
         Returns: boolean
       }
       claim_voucher: { Args: { _voucher_id: string }; Returns: string }
+      confirm_rider_stock_receipt: {
+        Args: { _movement_ids: string[] }
+        Returns: number
+      }
       decrement_rider_stock: {
         Args: { p_product_id: string; p_quantity: number; p_rider_id: string }
         Returns: {
