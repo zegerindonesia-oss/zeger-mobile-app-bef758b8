@@ -102,27 +102,12 @@ export const MobileStockConfirmation = ({ riderId, branchId }: MobileStockConfir
 
     setLoading(true);
     try {
-      const currentTime = new Date().toISOString();
-      
-      // Update selected items to received
-      const { error: updateError } = await supabase
-        .from('stock_movements')
-        .update({ 
-          status: 'received',
-          actual_delivery_date: currentTime,
-          notes: 'Stock diterima dan dikonfirmasi oleh rider'
-        })
-        .in('id', selectedItemIds);
+      // Atomic: mark received + add to rider inventory in one server-side transaction
+      const { error: updateError } = await supabase.rpc('confirm_rider_stock_receipt', {
+        _movement_ids: selectedItemIds,
+      });
 
       if (updateError) throw updateError;
-
-      // Update rider inventory for each confirmed item
-      for (const itemId of selectedItemIds) {
-        const item = stockItems.find(s => s.id === itemId);
-        if (item) {
-          await updateRiderInventory(item.product_id, item.quantity, 'add');
-        }
-      }
 
       // Upload verification photo if available
       if (verificationPhoto) {
