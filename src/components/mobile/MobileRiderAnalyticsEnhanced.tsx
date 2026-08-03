@@ -213,7 +213,7 @@ const MobileRiderAnalyticsEnhanced = () => {
       const endDateTime = `${endDate}T23:59:59+07:00`;
 
       // Fetch transactions with detailed data
-      const { data: transactions } = await supabase
+      const { data: allTransactions } = await supabase
         .from('transactions')
         .select(`
           id,
@@ -226,6 +226,9 @@ const MobileRiderAnalyticsEnhanced = () => {
           transaction_latitude,
           transaction_longitude,
           customer_id,
+          is_voided,
+          void_reason,
+          voided_at,
           transaction_items (
             quantity,
             unit_price,
@@ -238,8 +241,20 @@ const MobileRiderAnalyticsEnhanced = () => {
         .lte('transaction_date', endDateTime)
         .order('transaction_date', { ascending: false });
 
+      // Pisahkan transaksi aktif vs transaksi yang sudah di-void
+      const transactions = (allTransactions || []).filter((t: any) => !t.is_voided);
+      const voidedRaw = (allTransactions || []).filter((t: any) => t.is_voided);
+
+      // Ambil daftar pengajuan void yang masih pending agar tidak dobel
+      const { data: pendingReqs } = await supabase
+        .from('transaction_void_requests')
+        .select('transaction_id')
+        .eq('rider_id', profile.id)
+        .eq('status', 'pending');
+      setPendingVoidIds((pendingReqs || []).map((r: any) => r.transaction_id));
+
       // Get customer data separately
-      const customerIds = transactions?.filter(t => t.customer_id).map(t => t.customer_id) || [];
+      const customerIds = (allTransactions || []).filter(t => t.customer_id).map(t => t.customer_id);
       const { data: customers } = customerIds.length > 0 ? await supabase
         .from('customers')
         .select('id, name')
