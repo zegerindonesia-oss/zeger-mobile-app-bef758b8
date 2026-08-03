@@ -141,6 +141,7 @@ const MobileHistory = () => {
         .eq('rider_id', userProfile.id)
         .gte('transaction_date', `${dateFilter.from}T00:00:00+07:00`)
         .lte('transaction_date', `${dateFilter.to}T23:59:59+07:00`)
+        .eq('is_voided', false)
         .order('transaction_date', { ascending: false });
 
       // Fetch checkpoint history
