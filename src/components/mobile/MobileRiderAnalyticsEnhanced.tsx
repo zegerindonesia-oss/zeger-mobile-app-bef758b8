@@ -754,10 +754,14 @@ const MobileRiderAnalyticsEnhanced = () => {
                                 size="sm"
                                 onClick={() => setVoidingTransaction(transaction)}
                                 className="flex-1 text-orange-600 hover:text-orange-700 border-orange-200"
-                                disabled={transaction.is_voided}
+                                disabled={transaction.is_voided || pendingVoidIds.includes(transaction.id)}
                               >
                                 <Ban className="h-4 w-4 mr-2" />
-                                {transaction.is_voided ? 'Dibatalkan' : 'Void'}
+                                {transaction.is_voided
+                                  ? 'Dibatalkan'
+                                  : pendingVoidIds.includes(transaction.id)
+                                    ? 'Menunggu Persetujuan'
+                                    : 'Void'}
                               </Button>
                             </div>
                           </div>
@@ -775,6 +779,51 @@ const MobileRiderAnalyticsEnhanced = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Riwayat Transaksi Void */}
+        {voidedTransactions.length > 0 && (
+          <Card className="border-orange-200">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-orange-600">
+                <Ban className="h-5 w-5" />
+                Riwayat Void ({voidedTransactions.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {voidedTransactions.map((transaction) => (
+                  <div key={transaction.id} className="p-4 rounded-lg bg-orange-50 border border-orange-200">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium line-through">#{transaction.transaction_number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatTime(transaction.transaction_date)} • Shift {transaction.shift_number}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {transaction.items.map((i) => `${i.quantity}x ${i.product_name}`).join(', ')}
+                        </p>
+                        {transaction.void_reason && (
+                          <p className="text-xs text-orange-700 mt-1">Alasan: {transaction.void_reason}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-semibold text-muted-foreground line-through">
+                          {formatCurrency(transaction.final_amount)}
+                        </p>
+                        <Badge variant="outline" className="text-orange-600 border-orange-300 mt-1">
+                          Void
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Transaksi void tidak dihitung pada omzet, dan stoknya sudah dikembalikan ke stok rider.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Location-Based Sales Analysis */}
         <Card>
