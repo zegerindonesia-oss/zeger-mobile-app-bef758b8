@@ -994,6 +994,20 @@ const MobileRiderAnalyticsEnhanced = () => {
 
                   if (!profile) throw new Error('Profile not found');
 
+                  // Cegah pengajuan ganda
+                  const { data: existing } = await supabase
+                    .from('transaction_void_requests')
+                    .select('id')
+                    .eq('transaction_id', voidingTransaction.id)
+                    .eq('status', 'pending')
+                    .maybeSingle();
+                  if (existing) {
+                    toast.info('Pengajuan void untuk transaksi ini sudah ada dan menunggu persetujuan.');
+                    setVoidingTransaction(null);
+                    setVoidReason('');
+                    return;
+                  }
+
                   const { error } = await supabase
                     .from('transaction_void_requests')
                     .insert({
