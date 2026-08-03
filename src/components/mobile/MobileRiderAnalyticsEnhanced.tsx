@@ -34,6 +34,8 @@ interface TransactionDetail {
   transaction_longitude?: number;
   customer_name?: string;
   is_voided?: boolean;
+  void_reason?: string | null;
+  voided_at?: string | null;
   items: {
     product_name: string;
     quantity: number;
@@ -115,6 +117,8 @@ const MobileRiderAnalyticsEnhanced = () => {
   const [voidingTransaction, setVoidingTransaction] = useState<TransactionDetail | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [submittingVoid, setSubmittingVoid] = useState(false);
+  const [voidedTransactions, setVoidedTransactions] = useState<TransactionDetail[]>([]);
+  const [pendingVoidIds, setPendingVoidIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -209,7 +213,7 @@ const MobileRiderAnalyticsEnhanced = () => {
       const endDateTime = `${endDate}T23:59:59+07:00`;
 
       // Fetch transactions with detailed data
-      const { data: transactions } = await supabase
+      const { data: allTransactions } = await supabase
         .from('transactions')
         .select(`
           id,
@@ -222,6 +226,9 @@ const MobileRiderAnalyticsEnhanced = () => {
           transaction_latitude,
           transaction_longitude,
           customer_id,
+          is_voided,
+          void_reason,
+          voided_at,
           transaction_items (
             quantity,
             unit_price,
@@ -234,8 +241,20 @@ const MobileRiderAnalyticsEnhanced = () => {
         .lte('transaction_date', endDateTime)
         .order('transaction_date', { ascending: false });
 
+      // Pisahkan transaksi aktif vs transaksi yang sudah di-void
+      const transactions = (allTransactions || []).filter((t: any) => !t.is_voided);
+      const voidedRaw = (allTransactions || []).filter((t: any) => t.is_voided);
+
+      // Ambil daftar pengajuan void yang masih pending agar tidak dobel
+      const { data: pendingReqs } = await supabase
+        .from('transaction_void_requests')
+        .select('transaction_id')
+        .eq('rider_id', profile.id)
+        .eq('status', 'pending');
+      setPendingVoidIds((pendingReqs || []).map((r: any) => r.transaction_id));
+
       // Get customer data separately
-      const customerIds = transactions?.filter(t => t.customer_id).map(t => t.customer_id) || [];
+      const customerIds = (allTransactions || []).filter(t => t.customer_id).map(t => t.customer_id);
       const { data: customers } = customerIds.length > 0 ? await supabase
         .from('customers')
         .select('id, name')
@@ -267,7 +286,7 @@ const MobileRiderAnalyticsEnhanced = () => {
       const averageTransaction = totalTransactions > 0 ? todaySales / totalTransactions : 0;
 
       // Format transaction details
-      const transactionDetails: TransactionDetail[] = transactions?.map(transaction => ({
+      const toDetail = (transaction: any): TransactionDetail => ({
         id: transaction.id,
         transaction_number: transaction.transaction_number,
         transaction_date: transaction.transaction_date,
@@ -281,13 +300,19 @@ const MobileRiderAnalyticsEnhanced = () => {
         transaction_latitude: transaction.transaction_latitude,
         transaction_longitude: transaction.transaction_longitude,
         customer_name: customerMap.get(transaction.customer_id),
-        items: transaction.transaction_items?.map(item => ({
+        is_voided: transaction.is_voided,
+        void_reason: transaction.void_reason,
+        voided_at: transaction.voided_at,
+        items: transaction.transaction_items?.map((item: any) => ({
           product_name: item.products?.name || 'Unknown',
           quantity: item.quantity,
           unit_price: Number(item.unit_price),
           total_price: Number(item.total_price)
         })) || []
-      })) || [];
+      });
+
+      const transactionDetails: TransactionDetail[] = (transactions || []).map(toDetail);
+      setVoidedTransactions(voidedRaw.map(toDetail));
 
       // Group transactions by location for location-based analytics
       const locationSalesMap = new Map<string, LocationSales>();
@@ -729,10 +754,14 @@ const MobileRiderAnalyticsEnhanced = () => {
                                 size="sm"
                                 onClick={() => setVoidingTransaction(transaction)}
                                 className="flex-1 text-orange-600 hover:text-orange-700 border-orange-200"
-                                disabled={transaction.is_voided}
+                                disabled={transaction.is_voided || pendingVoidIds.includes(transaction.id)}
                               >
                                 <Ban className="h-4 w-4 mr-2" />
-                                {transaction.is_voided ? 'Dibatalkan' : 'Void'}
+                                {transaction.is_voided
+                                  ? 'Dibatalkan'
+                                  : pendingVoidIds.includes(transaction.id)
+                                    ? 'Menunggu Persetujuan'
+                                    : 'Void'}
                               </Button>
                             </div>
                           </div>
@@ -750,6 +779,51 @@ const MobileRiderAnalyticsEnhanced = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Riwayat Transaksi Void */}
+        {voidedTransactions.length > 0 && (
+          <Card className="border-orange-200">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-orange-600">
+                <Ban className="h-5 w-5" />
+                Riwayat Void ({voidedTransactions.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {voidedTransactions.map((transaction) => (
+                  <div key={transaction.id} className="p-4 rounded-lg bg-orange-50 border border-orange-200">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium line-through">#{transaction.transaction_number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatTime(transaction.transaction_date)} • Shift {transaction.shift_number}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {transaction.items.map((i) => `${i.quantity}x ${i.product_name}`).join(', ')}
+                        </p>
+                        {transaction.void_reason && (
+                          <p className="text-xs text-orange-700 mt-1">Alasan: {transaction.void_reason}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-semibold text-muted-foreground line-through">
+                          {formatCurrency(transaction.final_amount)}
+                        </p>
+                        <Badge variant="outline" className="text-orange-600 border-orange-300 mt-1">
+                          Void
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Transaksi void tidak dihitung pada omzet, dan stoknya sudah dikembalikan ke stok rider.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Location-Based Sales Analysis */}
         <Card>
@@ -919,6 +993,20 @@ const MobileRiderAnalyticsEnhanced = () => {
                     .single();
 
                   if (!profile) throw new Error('Profile not found');
+
+                  // Cegah pengajuan ganda
+                  const { data: existing } = await supabase
+                    .from('transaction_void_requests')
+                    .select('id')
+                    .eq('transaction_id', voidingTransaction.id)
+                    .eq('status', 'pending')
+                    .maybeSingle();
+                  if (existing) {
+                    toast.info('Pengajuan void untuk transaksi ini sudah ada dan menunggu persetujuan.');
+                    setVoidingTransaction(null);
+                    setVoidReason('');
+                    return;
+                  }
 
                   const { error } = await supabase
                     .from('transaction_void_requests')
