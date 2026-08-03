@@ -34,6 +34,8 @@ interface TransactionDetail {
   transaction_longitude?: number;
   customer_name?: string;
   is_voided?: boolean;
+  void_reason?: string | null;
+  voided_at?: string | null;
   items: {
     product_name: string;
     quantity: number;
@@ -115,6 +117,8 @@ const MobileRiderAnalyticsEnhanced = () => {
   const [voidingTransaction, setVoidingTransaction] = useState<TransactionDetail | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [submittingVoid, setSubmittingVoid] = useState(false);
+  const [voidedTransactions, setVoidedTransactions] = useState<TransactionDetail[]>([]);
+  const [pendingVoidIds, setPendingVoidIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAnalytics();
