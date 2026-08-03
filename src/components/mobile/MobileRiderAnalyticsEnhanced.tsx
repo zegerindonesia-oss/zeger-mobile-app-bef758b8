@@ -286,7 +286,7 @@ const MobileRiderAnalyticsEnhanced = () => {
       const averageTransaction = totalTransactions > 0 ? todaySales / totalTransactions : 0;
 
       // Format transaction details
-      const transactionDetails: TransactionDetail[] = transactions?.map(transaction => ({
+      const toDetail = (transaction: any): TransactionDetail => ({
         id: transaction.id,
         transaction_number: transaction.transaction_number,
         transaction_date: transaction.transaction_date,
@@ -300,13 +300,19 @@ const MobileRiderAnalyticsEnhanced = () => {
         transaction_latitude: transaction.transaction_latitude,
         transaction_longitude: transaction.transaction_longitude,
         customer_name: customerMap.get(transaction.customer_id),
-        items: transaction.transaction_items?.map(item => ({
+        is_voided: transaction.is_voided,
+        void_reason: transaction.void_reason,
+        voided_at: transaction.voided_at,
+        items: transaction.transaction_items?.map((item: any) => ({
           product_name: item.products?.name || 'Unknown',
           quantity: item.quantity,
           unit_price: Number(item.unit_price),
           total_price: Number(item.total_price)
         })) || []
-      })) || [];
+      });
+
+      const transactionDetails: TransactionDetail[] = (transactions || []).map(toDetail);
+      setVoidedTransactions(voidedRaw.map(toDetail));
 
       // Group transactions by location for location-based analytics
       const locationSalesMap = new Map<string, LocationSales>();
