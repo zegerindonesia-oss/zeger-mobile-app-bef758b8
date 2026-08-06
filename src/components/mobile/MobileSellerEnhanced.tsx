@@ -465,9 +465,25 @@ const MobileSellerEnhanced = () => {
         customer_id: selectedCustomer && selectedCustomer !== 'general' && selectedCustomer !== '' ? selectedCustomer : null,
         transaction_latitude: currentLocation?.lat || null,
         transaction_longitude: currentLocation?.lng || null,
-        location_name: currentLocation?.name || null
+        location_name: currentLocation?.name || null,
+        member_id: member?.id || null
       }]).select().single();
       if (transactionError) throw transactionError;
+
+      // Award loyalty points for scanned member
+      if (member?.id) {
+        const pts = await awardLoyaltyPoints({
+          memberId: member.id,
+          amount: finalAmount,
+          source: 'rider',
+          referenceId: transaction.id,
+          description: `Poin dari transaksi ${transactionNumber}`
+        });
+        if (pts > 0) {
+          await supabase.from('transactions').update({ points_earned: pts } as any).eq('id', transaction.id);
+          toast.success(`${member.name || 'Member'} mendapat ${pts} poin`);
+        }
+      }
 
       // Add transaction items
       const itemsWithTransactionId = transactionItems.map(item => ({
@@ -501,6 +517,7 @@ const MobileSellerEnhanced = () => {
       setCart([]);
       setPaymentMethod(''); // Reset payment method to force selection
       setSelectedCustomer('');
+      setMember(null);
       setDiscountValue(0);
       setShowSuccessModal(true);
       fetchSellingStock(); // Refresh stock
