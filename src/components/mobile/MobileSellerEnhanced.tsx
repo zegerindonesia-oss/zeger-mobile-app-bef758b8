@@ -652,6 +652,27 @@ const MobileSellerEnhanced = () => {
                       </SelectItem>)}
                   </SelectContent>
                 </Select>
+
+                {/* Member Loyalty */}
+                <div className="mt-3">
+                  {member ? (
+                    <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <div>
+                        <p className="text-sm font-semibold">{member.name || 'Member'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {member.member_code} • {member.points ?? 0} poin
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setMember(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button variant="outline" className="w-full" onClick={() => setMemberScanOpen(true)}>
+                      <QrCode className="mr-2 h-4 w-4" /> Scan QR Member
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
