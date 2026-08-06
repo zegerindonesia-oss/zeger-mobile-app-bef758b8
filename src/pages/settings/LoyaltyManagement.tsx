@@ -67,7 +67,63 @@ export default function LoyaltyManagement() {
     document.title = 'Loyalty Management | Zeger ERP';
     fetchTiers();
     fetchRewards();
+    fetchEarnSettings();
   }, []);
+
+  const fetchEarnSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'loyalty.earning')
+        .maybeSingle();
+      const v: any = data?.setting_value || {};
+      setEarnForm({
+        enabled: v.enabled ?? true,
+        rupiah_per_point: Number(v.rupiah_per_point ?? 10000),
+        min_transaction: Number(v.min_transaction ?? 0),
+      });
+    } catch {
+      /* keep defaults */
+    }
+  };
+
+  const saveEarnSettings = async () => {
+    if (!earnForm.rupiah_per_point || earnForm.rupiah_per_point <= 0) {
+      toast.error('Nilai rupiah per poin harus lebih dari 0');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data: existing } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('setting_key', 'loyalty.earning')
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from('app_settings')
+          .update({ setting_value: earnForm as any, is_active: true })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('app_settings').insert({
+          setting_key: 'loyalty.earning',
+          setting_value: earnForm as any,
+          setting_type: 'loyalty',
+          description: 'Pengaturan perolehan poin loyalty',
+          is_active: true,
+        });
+        if (error) throw error;
+      }
+      toast.success('Pengaturan poin tersimpan');
+    } catch (e: any) {
+      toast.error('Gagal menyimpan: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchTiers = async () => {
     try {
