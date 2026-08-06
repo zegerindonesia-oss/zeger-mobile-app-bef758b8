@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
+import { QRCodeSVG } from 'qrcode.react';
 interface CustomerLoyaltyProps {
   customerUser: any;
   onNavigate: (view: string) => void;
@@ -16,9 +17,20 @@ export function CustomerLoyalty({
 }: CustomerLoyaltyProps) {
   const [loyaltyData, setLoyaltyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [memberCode, setMemberCode] = useState<string | null>(null);
   useEffect(() => {
     fetchLoyaltyData();
+    fetchMemberCode();
   }, [customerUser]);
+  const fetchMemberCode = async () => {
+    if (!customerUser?.id) return;
+    const { data } = await (supabase as any)
+      .from('customer_users')
+      .select('member_code, points')
+      .eq('id', customerUser.id)
+      .maybeSingle();
+    if (data?.member_code) setMemberCode(data.member_code);
+  };
   const fetchLoyaltyData = async () => {
     try {
       const {
