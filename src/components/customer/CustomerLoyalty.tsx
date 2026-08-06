@@ -147,6 +147,23 @@ export function CustomerLoyalty({
         </Card>
       </div>
 
+      {/* Member QR Card */}
+      <div className="px-4 mb-8">
+        <Card className="bg-white rounded-2xl shadow-xl p-6 border-0 flex flex-col items-center">
+          <h3 className="text-lg font-bold text-gray-900 mb-1">Kartu Member</h3>
+          <p className="text-xs text-gray-500 mb-4 text-center">
+            Tunjukkan QR ini ke rider atau kasir outlet untuk mendapatkan poin
+          </p>
+          <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <QRCodeSVG value={memberCode || customerUser?.id || ''} size={168} level="M" />
+          </div>
+          <p className="mt-4 text-xl font-bold tracking-widest text-gray-900">
+            {memberCode || '—'}
+          </p>
+          <p className="text-xs text-gray-500">{customerUser?.name}</p>
+        </Card>
+      </div>
+
       {/* Rewards Section */}
       <div className="px-4">
         <div className="flex items-center gap-2 mb-4">
