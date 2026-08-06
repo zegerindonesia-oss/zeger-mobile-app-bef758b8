@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, DollarSign, CreditCard, Smartphone, LogOut, AlertCircle, X, MapPin, Users, Package } from "lucide-react";
+import { Search, DollarSign, CreditCard, Smartphone, LogOut, AlertCircle, X, MapPin, Users, Package, QrCode } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -959,6 +959,8 @@ const MobileSellerEnhanced = () => {
 
         {/* Customer Quick Add - shown regardless of stock status */}
         <MobileCustomerQuickAdd onCustomerAdded={fetchCustomers} />
+
+        <MemberScanDialog open={memberScanOpen} onOpenChange={setMemberScanOpen} onSelect={setMember} />
       </div>
     </div>;
 };
