@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileSuccessModal } from "./MobileSuccessModal";
 import { MobileCustomerQuickAdd } from "./MobileCustomerQuickAdd";
+import { MemberScanDialog, awardLoyaltyPoints, type LoyaltyMember } from "@/components/loyalty/MemberScanDialog";
 import { cn } from "@/lib/utils";
 import { getTodayJakarta } from "@/lib/date";
 interface Product {
@@ -54,6 +55,8 @@ const MobileSellerEnhanced = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris' | 'transfer' | ''>('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [member, setMember] = useState<LoyaltyMember | null>(null);
+  const [memberScanOpen, setMemberScanOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{
     lat: number;
     lng: number;
