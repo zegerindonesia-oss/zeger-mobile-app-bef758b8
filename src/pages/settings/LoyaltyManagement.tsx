@@ -242,9 +242,54 @@ export default function LoyaltyManagement() {
 
       <Tabs defaultValue="tiers" className="w-full">
         <TabsList>
+          <TabsTrigger value="settings">Pengaturan Poin</TabsTrigger>
           <TabsTrigger value="tiers">Loyalty Tiers</TabsTrigger>
           <TabsTrigger value="rewards">Rewards Catalog</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Perolehan Poin (semua channel)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 max-w-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Aktifkan poin loyalty</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Berlaku untuk app customer, rider (on the wheels/street), dan kasir outlet.
+                  </p>
+                </div>
+                <Switch
+                  checked={earnForm.enabled}
+                  onCheckedChange={(v) => setEarnForm({ ...earnForm, enabled: v })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Nilai Rupiah untuk 1 Poin</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={earnForm.rupiah_per_point}
+                  onChange={(e) => setEarnForm({ ...earnForm, rupiah_per_point: Number(e.target.value) })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Contoh: 10000 berarti setiap belanja Rp10.000 dapat 1 poin.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Minimal Transaksi Dapat Poin (Rp)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={earnForm.min_transaction}
+                  onChange={(e) => setEarnForm({ ...earnForm, min_transaction: Number(e.target.value) })}
+                />
+              </div>
+              <Button onClick={saveEarnSettings} disabled={loading}>Simpan Pengaturan</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="tiers" className="space-y-4">
           <div className="flex justify-end">
