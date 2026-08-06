@@ -52,6 +52,12 @@ export default function LoyaltyManagement() {
     benefits: ''
   });
 
+  const [earnForm, setEarnForm] = useState({
+    enabled: true,
+    rupiah_per_point: 10000,
+    min_transaction: 0,
+  });
+
   const [rewardForm, setRewardForm] = useState({
     reward_name: '',
     description: '',
