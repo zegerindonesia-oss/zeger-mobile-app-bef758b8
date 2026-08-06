@@ -44,6 +44,9 @@ interface Props {
   onApplyVoucher: (code: string) => Promise<{ ok: boolean; message: string }>;
   onRemovePromo: (id: string) => void;
   totalPromoDiscount: number;
+  member?: { id: string; name: string | null; member_code: string | null; points: number | null } | null;
+  onScanMember?: () => void;
+  onClearMember?: () => void;
 }
 
 export const POSCart = ({
@@ -52,6 +55,7 @@ export const POSCart = ({
   discountBill, setDiscountBill, updateQty, updateNotes, setItemDiscount,
   removeItem, onClear, onPay, onSplit, branchId,
   appliedPromos, onApplyVoucher, onRemovePromo, totalPromoDiscount,
+  member, onScanMember, onClearMember,
 }: Props) => {
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
   const showExternal = ['gofood', 'grabfood', 'shopeefood'].includes(orderType);
@@ -107,6 +111,23 @@ export const POSCart = ({
           <Input className="mt-2 h-8" placeholder="Nomor order platform" value={externalOrderId} onChange={(e) => setExternalOrderId(e.target.value)} />
         )}
         <Input className="mt-2 h-8" placeholder="Nama customer (opsional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+        {onScanMember && (
+          member ? (
+            <div className="mt-2 flex items-center justify-between rounded border border-primary/30 bg-primary/5 px-2 py-1.5">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">{member.name || 'Member'}</div>
+                <div className="text-[10px] text-muted-foreground">{member.member_code} • {member.points ?? 0} poin</div>
+              </div>
+              <Button size="sm" variant="ghost" className="h-6 px-2" onClick={onClearMember}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="outline" className="mt-2 h-8 w-full" onClick={onScanMember}>
+              Scan QR Member
+            </Button>
+          )
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">

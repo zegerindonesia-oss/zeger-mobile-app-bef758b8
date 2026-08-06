@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, DollarSign, CreditCard, Smartphone, LogOut, AlertCircle, X, MapPin, Users, Package } from "lucide-react";
+import { Search, DollarSign, CreditCard, Smartphone, LogOut, AlertCircle, X, MapPin, Users, Package, QrCode } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileSuccessModal } from "./MobileSuccessModal";
 import { MobileCustomerQuickAdd } from "./MobileCustomerQuickAdd";
+import { MemberScanDialog, awardLoyaltyPoints, type LoyaltyMember } from "@/components/loyalty/MemberScanDialog";
 import { cn } from "@/lib/utils";
 import { getTodayJakarta } from "@/lib/date";
 interface Product {
@@ -54,6 +55,8 @@ const MobileSellerEnhanced = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris' | 'transfer' | ''>('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [member, setMember] = useState<LoyaltyMember | null>(null);
+  const [memberScanOpen, setMemberScanOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{
     lat: number;
     lng: number;
@@ -462,9 +465,25 @@ const MobileSellerEnhanced = () => {
         customer_id: selectedCustomer && selectedCustomer !== 'general' && selectedCustomer !== '' ? selectedCustomer : null,
         transaction_latitude: currentLocation?.lat || null,
         transaction_longitude: currentLocation?.lng || null,
-        location_name: currentLocation?.name || null
+        location_name: currentLocation?.name || null,
+        member_id: member?.id || null
       }]).select().single();
       if (transactionError) throw transactionError;
+
+      // Award loyalty points for scanned member
+      if (member?.id) {
+        const pts = await awardLoyaltyPoints({
+          memberId: member.id,
+          amount: finalAmount,
+          source: 'rider',
+          referenceId: transaction.id,
+          description: `Poin dari transaksi ${transactionNumber}`
+        });
+        if (pts > 0) {
+          await supabase.from('transactions').update({ points_earned: pts } as any).eq('id', transaction.id);
+          toast.success(`${member.name || 'Member'} mendapat ${pts} poin`);
+        }
+      }
 
       // Add transaction items
       const itemsWithTransactionId = transactionItems.map(item => ({
@@ -498,6 +517,7 @@ const MobileSellerEnhanced = () => {
       setCart([]);
       setPaymentMethod(''); // Reset payment method to force selection
       setSelectedCustomer('');
+      setMember(null);
       setDiscountValue(0);
       setShowSuccessModal(true);
       fetchSellingStock(); // Refresh stock
@@ -632,6 +652,27 @@ const MobileSellerEnhanced = () => {
                       </SelectItem>)}
                   </SelectContent>
                 </Select>
+
+                {/* Member Loyalty */}
+                <div className="mt-3">
+                  {member ? (
+                    <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <div>
+                        <p className="text-sm font-semibold">{member.name || 'Member'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {member.member_code} • {member.points ?? 0} poin
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setMember(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button variant="outline" className="w-full" onClick={() => setMemberScanOpen(true)}>
+                      <QrCode className="mr-2 h-4 w-4" /> Scan QR Member
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -918,6 +959,8 @@ const MobileSellerEnhanced = () => {
 
         {/* Customer Quick Add - shown regardless of stock status */}
         <MobileCustomerQuickAdd onCustomerAdded={fetchCustomers} />
+
+        <MemberScanDialog open={memberScanOpen} onOpenChange={setMemberScanOpen} onSelect={setMember} />
       </div>
     </div>;
 };

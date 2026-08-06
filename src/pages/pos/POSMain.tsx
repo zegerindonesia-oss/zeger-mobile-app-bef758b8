@@ -14,6 +14,7 @@ import { POSReceipt, ReceiptData } from '@/components/pos/POSReceipt';
 import { OpenShiftModal, CloseShiftModal, CashMovementModal } from '@/components/pos/POSShiftModal';
 import { POSSplitBillDialog, SplitResult } from '@/components/pos/POSSplitBillDialog';
 import { POSOnlineOrderPanel } from '@/components/pos/POSOnlineOrderPanel';
+import { MemberScanDialog, awardLoyaltyPoints, type LoyaltyMember } from '@/components/loyalty/MemberScanDialog';
 
 const POSMain = () => {
   const { userProfile, signOut } = useAuth();
@@ -36,6 +37,8 @@ const POSMain = () => {
   const [pendingSplit, setPendingSplit] = useState<SplitResult | null>(null);
   const [splitIndex, setSplitIndex] = useState(0);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [member, setMember] = useState<LoyaltyMember | null>(null);
+  const [memberScanOpen, setMemberScanOpen] = useState(false);
 
   useEffect(() => {
     const onUp = () => setOnline(true);
@@ -150,6 +153,7 @@ const POSMain = () => {
           change_amount: payload.change,
           status: 'paid',
           paid_at: new Date().toISOString(),
+          member_id: member?.id || null,
         })
         .select()
         .single();
@@ -216,6 +220,20 @@ const POSMain = () => {
       setTableNumber('');
       setExternalOrderId('');
       setCustomerName('');
+      if (member?.id) {
+        const pts = await awardLoyaltyPoints({
+          memberId: member.id,
+          amount: finalTotal,
+          source: 'pos',
+          referenceId: tx.id,
+          description: `Poin dari transaksi ${txNum}`,
+        });
+        if (pts > 0) {
+          await supabase.from('pos_transactions').update({ point_earned: pts } as any).eq('id', tx.id);
+          toast.success(`${member.name || 'Member'} mendapat ${pts} poin`);
+        }
+        setMember(null);
+      }
       toast.success('Pembayaran berhasil');
     } catch (e: any) {
       toast.error(e.message || 'Gagal memproses pembayaran');
@@ -322,6 +340,9 @@ const POSMain = () => {
             onApplyVoucher={handleApplyVoucher}
             onRemovePromo={promo.removePromo}
             totalPromoDiscount={totalPromoDiscount}
+            member={member}
+            onScanMember={() => setMemberScanOpen(true)}
+            onClearMember={() => setMember(null)}
           />
         </div>
       </div>
@@ -354,6 +375,7 @@ const POSMain = () => {
         onConfirm={handleCloseShift}
       />
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
+      <MemberScanDialog open={memberScanOpen} onOpenChange={setMemberScanOpen} onSelect={setMember} />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
+import { QRCodeSVG } from 'qrcode.react';
 interface CustomerLoyaltyProps {
   customerUser: any;
   onNavigate: (view: string) => void;
@@ -16,9 +17,20 @@ export function CustomerLoyalty({
 }: CustomerLoyaltyProps) {
   const [loyaltyData, setLoyaltyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [memberCode, setMemberCode] = useState<string | null>(null);
   useEffect(() => {
     fetchLoyaltyData();
+    fetchMemberCode();
   }, [customerUser]);
+  const fetchMemberCode = async () => {
+    if (!customerUser?.id) return;
+    const { data } = await (supabase as any)
+      .from('customer_users')
+      .select('member_code, points')
+      .eq('id', customerUser.id)
+      .maybeSingle();
+    if (data?.member_code) setMemberCode(data.member_code);
+  };
   const fetchLoyaltyData = async () => {
     try {
       const {
@@ -132,6 +144,23 @@ export function CustomerLoyalty({
               History
             </Button>
           </div>
+        </Card>
+      </div>
+
+      {/* Member QR Card */}
+      <div className="px-4 mb-8">
+        <Card className="bg-white rounded-2xl shadow-xl p-6 border-0 flex flex-col items-center">
+          <h3 className="text-lg font-bold text-gray-900 mb-1">Kartu Member</h3>
+          <p className="text-xs text-gray-500 mb-4 text-center">
+            Tunjukkan QR ini ke rider atau kasir outlet untuk mendapatkan poin
+          </p>
+          <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <QRCodeSVG value={memberCode || customerUser?.id || ''} size={168} level="M" />
+          </div>
+          <p className="mt-4 text-xl font-bold tracking-widest text-gray-900">
+            {memberCode || '—'}
+          </p>
+          <p className="text-xs text-gray-500">{customerUser?.name}</p>
         </Card>
       </div>
 

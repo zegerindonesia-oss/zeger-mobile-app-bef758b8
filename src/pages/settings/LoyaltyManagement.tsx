@@ -52,6 +52,12 @@ export default function LoyaltyManagement() {
     benefits: ''
   });
 
+  const [earnForm, setEarnForm] = useState({
+    enabled: true,
+    rupiah_per_point: 10000,
+    min_transaction: 0,
+  });
+
   const [rewardForm, setRewardForm] = useState({
     reward_name: '',
     description: '',
@@ -67,7 +73,63 @@ export default function LoyaltyManagement() {
     document.title = 'Loyalty Management | Zeger ERP';
     fetchTiers();
     fetchRewards();
+    fetchEarnSettings();
   }, []);
+
+  const fetchEarnSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'loyalty.earning')
+        .maybeSingle();
+      const v: any = data?.setting_value || {};
+      setEarnForm({
+        enabled: v.enabled ?? true,
+        rupiah_per_point: Number(v.rupiah_per_point ?? 10000),
+        min_transaction: Number(v.min_transaction ?? 0),
+      });
+    } catch {
+      /* keep defaults */
+    }
+  };
+
+  const saveEarnSettings = async () => {
+    if (!earnForm.rupiah_per_point || earnForm.rupiah_per_point <= 0) {
+      toast.error('Nilai rupiah per poin harus lebih dari 0');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data: existing } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('setting_key', 'loyalty.earning')
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from('app_settings')
+          .update({ setting_value: earnForm as any, is_active: true })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('app_settings').insert({
+          setting_key: 'loyalty.earning',
+          setting_value: earnForm as any,
+          setting_type: 'loyalty',
+          description: 'Pengaturan perolehan poin loyalty',
+          is_active: true,
+        });
+        if (error) throw error;
+      }
+      toast.success('Pengaturan poin tersimpan');
+    } catch (e: any) {
+      toast.error('Gagal menyimpan: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchTiers = async () => {
     try {
@@ -242,9 +304,54 @@ export default function LoyaltyManagement() {
 
       <Tabs defaultValue="tiers" className="w-full">
         <TabsList>
+          <TabsTrigger value="settings">Pengaturan Poin</TabsTrigger>
           <TabsTrigger value="tiers">Loyalty Tiers</TabsTrigger>
           <TabsTrigger value="rewards">Rewards Catalog</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Perolehan Poin (semua channel)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 max-w-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Aktifkan poin loyalty</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Berlaku untuk app customer, rider (on the wheels/street), dan kasir outlet.
+                  </p>
+                </div>
+                <Switch
+                  checked={earnForm.enabled}
+                  onCheckedChange={(v) => setEarnForm({ ...earnForm, enabled: v })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Nilai Rupiah untuk 1 Poin</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={earnForm.rupiah_per_point}
+                  onChange={(e) => setEarnForm({ ...earnForm, rupiah_per_point: Number(e.target.value) })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Contoh: 10000 berarti setiap belanja Rp10.000 dapat 1 poin.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Minimal Transaksi Dapat Poin (Rp)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={earnForm.min_transaction}
+                  onChange={(e) => setEarnForm({ ...earnForm, min_transaction: Number(e.target.value) })}
+                />
+              </div>
+              <Button onClick={saveEarnSettings} disabled={loading}>Simpan Pengaturan</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="tiers" className="space-y-4">
           <div className="flex justify-end">

@@ -588,6 +588,8 @@ export type Database = {
           description: string
           id: string
           order_id: string | null
+          reference_id: string | null
+          source: string
           user_id: string
         }
         Insert: {
@@ -596,6 +598,8 @@ export type Database = {
           description: string
           id?: string
           order_id?: string | null
+          reference_id?: string | null
+          source?: string
           user_id: string
         }
         Update: {
@@ -604,6 +608,8 @@ export type Database = {
           description?: string
           id?: string
           order_id?: string | null
+          reference_id?: string | null
+          source?: string
           user_id?: string
         }
         Relationships: [
@@ -748,6 +754,7 @@ export type Database = {
           is_online: boolean | null
           latitude: number | null
           longitude: number | null
+          member_code: string | null
           name: string
           phone: string | null
           photo_url: string | null
@@ -764,6 +771,7 @@ export type Database = {
           is_online?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          member_code?: string | null
           name: string
           phone?: string | null
           photo_url?: string | null
@@ -780,6 +788,7 @@ export type Database = {
           is_online?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          member_code?: string | null
           name?: string
           phone?: string | null
           photo_url?: string | null
@@ -1653,6 +1662,7 @@ export type Database = {
           id: string
           kasir_id: string
           kitchen_status: string | null
+          member_id: string | null
           notes: string | null
           order_type: string
           paid_at: string | null
@@ -1688,6 +1698,7 @@ export type Database = {
           id?: string
           kasir_id: string
           kitchen_status?: string | null
+          member_id?: string | null
           notes?: string | null
           order_type?: string
           paid_at?: string | null
@@ -1723,6 +1734,7 @@ export type Database = {
           id?: string
           kasir_id?: string
           kitchen_status?: string | null
+          member_id?: string | null
           notes?: string | null
           order_type?: string
           paid_at?: string | null
@@ -1744,6 +1756,13 @@ export type Database = {
           void_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pos_transactions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "customer_users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pos_transactions_parent_transaction_id_fkey"
             columns: ["parent_transaction_id"]
@@ -2990,6 +3009,7 @@ export type Database = {
           id: string
           is_voided: boolean | null
           location_name: string | null
+          member_id: string | null
           metadata: Json | null
           notes: string | null
           payment_method: string | null
@@ -2998,6 +3018,7 @@ export type Database = {
           payment_verified: boolean | null
           payment_verified_at: string | null
           payment_verified_by: string | null
+          points_earned: number
           rider_id: string | null
           source_id: string | null
           source_type: string | null
@@ -3022,6 +3043,7 @@ export type Database = {
           id?: string
           is_voided?: boolean | null
           location_name?: string | null
+          member_id?: string | null
           metadata?: Json | null
           notes?: string | null
           payment_method?: string | null
@@ -3030,6 +3052,7 @@ export type Database = {
           payment_verified?: boolean | null
           payment_verified_at?: string | null
           payment_verified_by?: string | null
+          points_earned?: number
           rider_id?: string | null
           source_id?: string | null
           source_type?: string | null
@@ -3054,6 +3077,7 @@ export type Database = {
           id?: string
           is_voided?: boolean | null
           location_name?: string | null
+          member_id?: string | null
           metadata?: Json | null
           notes?: string | null
           payment_method?: string | null
@@ -3062,6 +3086,7 @@ export type Database = {
           payment_verified?: boolean | null
           payment_verified_at?: string | null
           payment_verified_by?: string | null
+          points_earned?: number
           rider_id?: string | null
           source_id?: string | null
           source_type?: string | null
@@ -3089,6 +3114,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "customer_users"
             referencedColumns: ["id"]
           },
           {
@@ -3476,6 +3508,16 @@ export type Database = {
         Args: { approver_uuid: string; opname_uuid: string }
         Returns: boolean
       }
+      award_loyalty_points: {
+        Args: {
+          _amount: number
+          _description?: string
+          _member_id: string
+          _reference_id?: string
+          _source: string
+        }
+        Returns: number
+      }
       can_manage_role: {
         Args: {
           manager_role: Database["public"]["Enums"]["user_role"]
@@ -3553,6 +3595,7 @@ export type Database = {
         Args: { order_uuid: string }
         Returns: boolean
       }
+      generate_member_code: { Args: never; Returns: string }
       generate_opname_number: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
@@ -3728,6 +3771,17 @@ export type Database = {
       }
       is_rider_role: { Args: never; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      lookup_member: {
+        Args: { _code: string }
+        Returns: {
+          email: string
+          id: string
+          member_code: string
+          name: string
+          phone: string
+          points: number
+        }[]
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
