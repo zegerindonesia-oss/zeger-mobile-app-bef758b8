@@ -683,16 +683,36 @@ const MobileSellerEnhanced = () => {
                 {/* Member Loyalty */}
                 <div className="mt-3">
                   {member ? (
-                    <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold">{member.name || 'Member'}</p>
                         <p className="text-xs text-muted-foreground">
                           {member.member_code} • {member.points ?? 0} poin
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setMember(null)}>
+                      <Button variant="ghost" size="sm" onClick={() => { setMember(null); setRedemption(null); }}>
                         <X className="h-4 w-4" />
                       </Button>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setRedeemOpen(true)}>
+                          Tukar Poin
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setPointsHistoryOpen(true)}>
+                          Riwayat Poin
+                        </Button>
+                      </div>
+                      {redemption && (
+                        <p className="mt-2 text-xs text-destructive">
+                          {redemption.reward_name} ({redemption.code}) −Rp {redemption.discount.toLocaleString('id-ID')}
+                        </p>
+                      )}
+                      {loyaltySettings.min_transaction > 0 && calculateFinalTotal() < loyaltySettings.min_transaction && (
+                        <p className="mt-2 text-xs text-destructive">
+                          Minimal transaksi member Rp{loyaltySettings.min_transaction.toLocaleString('id-ID')}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <Button variant="outline" className="w-full" onClick={() => setMemberScanOpen(true)}>
