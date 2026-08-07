@@ -590,6 +590,7 @@ export type Database = {
           order_id: string | null
           reference_id: string | null
           source: string
+          status: string
           user_id: string
         }
         Insert: {
@@ -600,6 +601,7 @@ export type Database = {
           order_id?: string | null
           reference_id?: string | null
           source?: string
+          status?: string
           user_id: string
         }
         Update: {
@@ -610,6 +612,7 @@ export type Database = {
           order_id?: string | null
           reference_id?: string | null
           source?: string
+          status?: string
           user_id?: string
         }
         Relationships: [
@@ -1116,6 +1119,77 @@ export type Database = {
             columns: ["rider_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_redemptions: {
+        Row: {
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          max_discount: number | null
+          member_id: string
+          min_transaction: number
+          points_spent: number
+          reward_id: string | null
+          reward_name: string
+          status: string
+          updated_at: string
+          used_amount: number | null
+          used_at: string | null
+          used_channel: string | null
+          used_reference: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          max_discount?: number | null
+          member_id: string
+          min_transaction?: number
+          points_spent?: number
+          reward_id?: string | null
+          reward_name: string
+          status?: string
+          updated_at?: string
+          used_amount?: number | null
+          used_at?: string | null
+          used_channel?: string | null
+          used_reference?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          max_discount?: number | null
+          member_id?: string
+          min_transaction?: number
+          points_spent?: number
+          reward_id?: string | null
+          reward_name?: string
+          status?: string
+          updated_at?: string
+          used_amount?: number | null
+          used_at?: string | null
+          used_channel?: string | null
+          used_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_redemptions_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_rewards"
             referencedColumns: ["id"]
           },
         ]
@@ -3782,6 +3856,33 @@ export type Database = {
           points: number
         }[]
       }
+      lookup_redemption: {
+        Args: { _code: string }
+        Returns: {
+          code: string
+          discount_type: string
+          discount_value: number
+          id: string
+          max_discount: number
+          member_id: string
+          member_name: string
+          min_transaction: number
+          reward_name: string
+          status: string
+        }[]
+      }
+      member_points_history: {
+        Args: { _limit?: number; _member_id: string }
+        Returns: {
+          change: number
+          created_at: string
+          description: string
+          id: string
+          reference_id: string
+          source: string
+          status: string
+        }[]
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -3822,6 +3923,16 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      redeem_loyalty_reward: {
+        Args: { _member_id: string; _reward_id: string }
+        Returns: {
+          code: string
+          discount_type: string
+          discount_value: number
+          points_spent: number
+          remaining_points: number
+        }[]
+      }
       redeem_referral: { Args: { _code: string }; Returns: string }
       redeem_reward: { Args: { _reward_id: string }; Returns: string }
       reject_stock_adjustment: {
@@ -4432,6 +4543,15 @@ export type Database = {
       upsert_bh_report_assignment: {
         Args: { _report_user_id: string; _rider_profile_id: string }
         Returns: undefined
+      }
+      use_redemption: {
+        Args: {
+          _amount: number
+          _channel: string
+          _code: string
+          _reference?: string
+        }
+        Returns: number
       }
     }
     Enums: {
