@@ -543,13 +543,14 @@ const MobileSellerEnhanced = () => {
   };
 
   const calculateDiscount = (subtotal: number) => {
+    const redemptionDiscount = redemption?.discount || 0;
     if (discountType === 'percentage') {
       const percentageDiscount = (subtotal * discountValue) / 100;
       // Cap percentage discount at 100%
-      return Math.min(percentageDiscount, subtotal);
+      return Math.min(percentageDiscount + redemptionDiscount, subtotal);
     }
     // Cap amount discount at subtotal (prevent negative final amount)
-    return Math.min(discountValue, subtotal);
+    return Math.min(discountValue + redemptionDiscount, subtotal);
   };
 
   const calculateFinalTotal = () => {
