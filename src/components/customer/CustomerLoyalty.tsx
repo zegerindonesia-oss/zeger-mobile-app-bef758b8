@@ -5,6 +5,9 @@ import { ChevronLeft, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import { QRCodeSVG } from 'qrcode.react';
+import { LoyaltyRedeemDialog } from '@/components/loyalty/LoyaltyRedeemDialog';
+import { PointsHistoryList } from '@/components/loyalty/PointsHistoryList';
+import { supabase as sb } from '@/integrations/supabase/client';
 interface CustomerLoyaltyProps {
   customerUser: any;
   onNavigate: (view: string) => void;
@@ -18,9 +21,15 @@ export function CustomerLoyalty({
   const [loyaltyData, setLoyaltyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [memberCode, setMemberCode] = useState<string | null>(null);
+  const [points, setPoints] = useState<number>(customerUser?.points || 0);
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [tab, setTab] = useState<'rewards' | 'history'>('rewards');
+  const [historyKey, setHistoryKey] = useState(0);
+  const [redemptions, setRedemptions] = useState<any[]>([]);
   useEffect(() => {
     fetchLoyaltyData();
     fetchMemberCode();
+    fetchRedemptions();
   }, [customerUser]);
   const fetchMemberCode = async () => {
     if (!customerUser?.id) return;
@@ -30,6 +39,17 @@ export function CustomerLoyalty({
       .eq('id', customerUser.id)
       .maybeSingle();
     if (data?.member_code) setMemberCode(data.member_code);
+    if (data?.points != null) setPoints(Number(data.points));
+  };
+  const fetchRedemptions = async () => {
+    if (!customerUser?.id) return;
+    const { data } = await (sb as any)
+      .from('loyalty_redemptions')
+      .select('*')
+      .eq('member_id', customerUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setRedemptions(data || []);
   };
   const fetchLoyaltyData = async () => {
     try {
@@ -136,16 +156,85 @@ export function CustomerLoyalty({
               <div className="flex items-center gap-2">
                 <span className="text-3xl">🪙</span>
                 <span className="text-3xl font-bold text-gray-900">
-                  {loyaltyData?.points_balance || customerUser?.points || 973}
+                  {points}
                 </span>
               </div>
             </div>
-            <Button className="bg-[#EA2831] hover:bg-[#D12028] text-white rounded-full px-6 shadow-lg" onClick={() => onNavigate('vouchers')}>
-              History
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button className="bg-[#EA2831] hover:bg-[#D12028] text-white rounded-full px-6 shadow-lg" onClick={() => setRedeemOpen(true)}>
+                Tukar Poin
+              </Button>
+              <Button variant="outline" className="rounded-full px-6" onClick={() => setTab('history')}>
+                Riwayat Poin
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
+
+      {/* Points history / redemptions */}
+      <div className="px-4 mb-8">
+        <div className="flex gap-2 mb-3">
+          <Button
+            size="sm"
+            variant={tab === 'rewards' ? 'default' : 'outline'}
+            className={tab === 'rewards' ? 'bg-[#EA2831] hover:bg-[#D12028] rounded-full' : 'rounded-full'}
+            onClick={() => setTab('rewards')}
+          >
+            Voucher Saya
+          </Button>
+          <Button
+            size="sm"
+            variant={tab === 'history' ? 'default' : 'outline'}
+            className={tab === 'history' ? 'bg-[#EA2831] hover:bg-[#D12028] rounded-full' : 'rounded-full'}
+            onClick={() => setTab('history')}
+          >
+            Riwayat Poin
+          </Button>
+        </div>
+        <Card className="p-4 border-0 shadow-lg rounded-2xl">
+          {tab === 'history' ? (
+            <PointsHistoryList memberId={customerUser?.id} limit={50} refreshKey={historyKey} />
+          ) : redemptions.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-500">
+              Belum ada penukaran poin. Tukar poinmu jadi voucher diskon!
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {redemptions.map((r) => (
+                <div key={r.id} className="flex items-center justify-between rounded-xl border p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{r.reward_name}</p>
+                    <p className="text-xs text-gray-500">
+                      Kode: <span className="font-mono font-bold">{r.code}</span> • {r.points_spent} poin
+                    </p>
+                  </div>
+                  <span
+                    className={`text-xs font-semibold ${
+                      r.status === 'active' ? 'text-emerald-600' : 'text-gray-400'
+                    }`}
+                  >
+                    {r.status === 'active' ? 'Aktif' : r.status === 'used' ? 'Terpakai' : 'Kedaluwarsa'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <LoyaltyRedeemDialog
+        open={redeemOpen}
+        onOpenChange={setRedeemOpen}
+        memberId={customerUser?.id}
+        memberPoints={points}
+        onRedeemed={(r) => {
+          setPoints(r.remaining_points);
+          setHistoryKey((k) => k + 1);
+          fetchRedemptions();
+          setTab('rewards');
+        }}
+      />
 
       {/* Member QR Card */}
       <div className="px-4 mb-8">
