@@ -5,6 +5,15 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Camera, Search, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { PointsHistoryList } from './PointsHistoryList';
+import {
+  awardLoyaltyPoints as awardLoyaltyPointsCore,
+  getLoyaltyEarnSettings,
+  estimatePoints,
+  type LoyaltyEarnSettings,
+  DEFAULT_EARN_SETTINGS,
+} from '@/lib/loyalty';
 
 export interface LoyaltyMember {
   id: string;
@@ -19,14 +28,18 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSelect: (member: LoyaltyMember) => void;
+  /** Current bill amount — used to show the estimated points and the minimum-transaction guard. */
+  amount?: number;
 }
 
 const SCANNER_ID = 'member-qr-reader';
 
-export function MemberScanDialog({ open, onOpenChange, onSelect }: Props) {
+export function MemberScanDialog({ open, onOpenChange, onSelect, amount = 0 }: Props) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [found, setFound] = useState<LoyaltyMember | null>(null);
+  const [settings, setSettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
   const scannerRef = useRef<any>(null);
 
   const stopScanner = async () => {
@@ -44,6 +57,10 @@ export function MemberScanDialog({ open, onOpenChange, onSelect }: Props) {
 
   useEffect(() => {
     if (!open) stopScanner();
+    if (open) {
+      setFound(null);
+      getLoyaltyEarnSettings().then(setSettings);
+    }
     return () => {
       stopScanner();
     };
@@ -63,9 +80,8 @@ export function MemberScanDialog({ open, onOpenChange, onSelect }: Props) {
         return;
       }
       await stopScanner();
-      onSelect(member as LoyaltyMember);
+      setFound(member as LoyaltyMember);
       setCode('');
-      onOpenChange(false);
     } catch (e: any) {
       toast.error('Gagal mencari member: ' + e.message);
     } finally {
@@ -95,12 +111,65 @@ export function MemberScanDialog({ open, onOpenChange, onSelect }: Props) {
     }
   };
 
+  const eligible = amount <= 0 || amount >= settings.min_transaction;
+  const estimated = estimatePoints(amount, settings);
+
+  const confirmMember = () => {
+    if (!found) return;
+    if (!eligible) {
+      toast.error(
+        `Transaksi minimal Rp${settings.min_transaction.toLocaleString('id-ID')} untuk memakai member`
+      );
+      return;
+    }
+    onSelect(found);
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Scan Member</DialogTitle>
         </DialogHeader>
+        {found ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <p className="font-semibold">{found.name || 'Member'}</p>
+              <p className="text-xs text-muted-foreground">
+                {found.member_code} {found.phone ? `• ${found.phone}` : ''}
+              </p>
+              <p className="mt-2 text-3xl font-bold text-primary">{found.points ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Saldo poin real-time</p>
+              {amount > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="text-[10px]">
+                    Estimasi +{estimated} poin
+                  </Badge>
+                  {!eligible && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      Min. transaksi Rp{settings.min_transaction.toLocaleString('id-ID')}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">Riwayat Poin Terakhir</p>
+              <PointsHistoryList memberId={found.id} limit={5} />
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setFound(null)}>
+                Cari Lagi
+              </Button>
+              <Button className="flex-1" onClick={confirmMember} disabled={!eligible}>
+                Gunakan Member
+              </Button>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-4">
           {scanning ? (
             <div id={SCANNER_ID} className="w-full overflow-hidden rounded-lg bg-muted" />
@@ -127,11 +196,16 @@ export function MemberScanDialog({ open, onOpenChange, onSelect }: Props) {
             Scan QR di app customer, atau ketik kode member (contoh ZGM123456) / nomor HP.
           </p>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
+/**
+ * Awards points, falling back to the offline queue when there is no connection.
+ * Returns the number of points awarded (0 when queued for later sync).
+ */
 export async function awardLoyaltyPoints(params: {
   memberId: string;
   amount: number;
@@ -139,18 +213,9 @@ export async function awardLoyaltyPoints(params: {
   referenceId?: string | null;
   description?: string | null;
 }): Promise<number> {
-  try {
-    const { data, error } = await (supabase as any).rpc('award_loyalty_points', {
-      _member_id: params.memberId,
-      _amount: params.amount,
-      _source: params.source,
-      _reference_id: params.referenceId ?? null,
-      _description: params.description ?? null,
-    });
-    if (error) throw error;
-    return Number(data) || 0;
-  } catch (e) {
-    console.error('awardLoyaltyPoints failed', e);
-    return 0;
+  const res = await awardLoyaltyPointsCore(params);
+  if (res.queued) {
+    toast.info('Offline: poin member akan disinkronkan otomatis saat internet kembali');
   }
+  return res.points;
 }
