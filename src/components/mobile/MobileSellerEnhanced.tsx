@@ -493,6 +493,15 @@ const MobileSellerEnhanced = () => {
         }
       }
 
+      // Consume loyalty redemption code
+      if (redemption?.code) {
+        try {
+          await useRedemption(redemption.code, totalAmount, 'rider', transaction.id);
+        } catch (err) {
+          console.error('use_redemption failed', err);
+        }
+      }
+
       // Add transaction items
       const itemsWithTransactionId = transactionItems.map(item => ({
         ...item,
@@ -526,6 +535,7 @@ const MobileSellerEnhanced = () => {
       setPaymentMethod(''); // Reset payment method to force selection
       setSelectedCustomer('');
       setMember(null);
+      setRedemption(null);
       setDiscountValue(0);
       setShowSuccessModal(true);
       fetchSellingStock(); // Refresh stock
