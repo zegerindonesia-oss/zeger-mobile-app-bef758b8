@@ -13,6 +13,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { MobileSuccessModal } from "./MobileSuccessModal";
 import { MobileCustomerQuickAdd } from "./MobileCustomerQuickAdd";
 import { MemberScanDialog, awardLoyaltyPoints, type LoyaltyMember } from "@/components/loyalty/MemberScanDialog";
+import { LoyaltyRedeemDialog, type AppliedRedemption } from "@/components/loyalty/LoyaltyRedeemDialog";
+import { PointsHistoryList } from "@/components/loyalty/PointsHistoryList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type LoyaltyEarnSettings } from "@/lib/loyalty";
 import { cn } from "@/lib/utils";
 import { getTodayJakarta } from "@/lib/date";
 interface Product {
@@ -57,6 +61,10 @@ const MobileSellerEnhanced = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [member, setMember] = useState<LoyaltyMember | null>(null);
   const [memberScanOpen, setMemberScanOpen] = useState(false);
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [pointsHistoryOpen, setPointsHistoryOpen] = useState(false);
+  const [redemption, setRedemption] = useState<AppliedRedemption | null>(null);
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
   const [currentLocation, setCurrentLocation] = useState<{
     lat: number;
     lng: number;
