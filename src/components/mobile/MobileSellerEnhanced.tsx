@@ -80,6 +80,7 @@ const MobileSellerEnhanced = () => {
     fetchSellingStock();
     fetchCustomers();
     getCurrentLocation();
+    getLoyaltyEarnSettings().then(setLoyaltySettings);
   }, []);
 
   // Listen for live updates from stock management
@@ -365,6 +366,13 @@ const MobileSellerEnhanced = () => {
 
     if (!paymentMethod) {
       toast.error("Pilih metode pembayaran terlebih dahulu");
+      return;
+    }
+
+    if (member && loyaltySettings.min_transaction > 0 && calculateFinalTotal() < loyaltySettings.min_transaction) {
+      toast.error(
+        `Minimal transaksi member Rp${loyaltySettings.min_transaction.toLocaleString('id-ID')}. Tambah item atau lepas member.`
+      );
       return;
     }
 
