@@ -15,6 +15,10 @@ import { OpenShiftModal, CloseShiftModal, CashMovementModal } from '@/components
 import { POSSplitBillDialog, SplitResult } from '@/components/pos/POSSplitBillDialog';
 import { POSOnlineOrderPanel } from '@/components/pos/POSOnlineOrderPanel';
 import { MemberScanDialog, awardLoyaltyPoints, type LoyaltyMember } from '@/components/loyalty/MemberScanDialog';
+import { LoyaltyRedeemDialog, type AppliedRedemption } from '@/components/loyalty/LoyaltyRedeemDialog';
+import { PointsHistoryList } from '@/components/loyalty/PointsHistoryList';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type LoyaltyEarnSettings } from '@/lib/loyalty';
 
 const POSMain = () => {
   const { userProfile, signOut } = useAuth();
@@ -39,6 +43,14 @@ const POSMain = () => {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [member, setMember] = useState<LoyaltyMember | null>(null);
   const [memberScanOpen, setMemberScanOpen] = useState(false);
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [redemption, setRedemption] = useState<AppliedRedemption | null>(null);
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
+
+  useEffect(() => {
+    getLoyaltyEarnSettings().then(setLoyaltySettings);
+  }, []);
 
   useEffect(() => {
     const onUp = () => setOnline(true);
@@ -126,7 +138,15 @@ const POSMain = () => {
       const txNum = generateTxNumber();
       const voucher = promo.appliedPromos.find((p) => p.source === 'voucher');
       const voucherDiscount = voucher?.computed_amount || 0;
-      const finalTotal = Math.max(0, cart.totals.total - voucherDiscount);
+      const redemptionDiscount = redemption?.discount || 0;
+      const finalTotal = Math.max(0, cart.totals.total - voucherDiscount - redemptionDiscount);
+
+      if (member && loyaltySettings.min_transaction > 0 && finalTotal < loyaltySettings.min_transaction) {
+        toast.error(
+          `Minimal transaksi member Rp${loyaltySettings.min_transaction.toLocaleString('id-ID')}`
+        );
+        return;
+      }
 
       const { data: tx, error: txErr } = await supabase
         .from('pos_transactions')
@@ -141,7 +161,7 @@ const POSMain = () => {
           customer_name: customerName || null,
           subtotal: cart.totals.subtotal,
           discount_item: cart.totals.discountItem,
-          discount_bill: cart.totals.discountBill + voucherDiscount,
+          discount_bill: cart.totals.discountBill + voucherDiscount + redemptionDiscount,
           service_charge: cart.totals.serviceCharge,
           tax: cart.totals.tax,
           total: finalTotal,
@@ -185,6 +205,15 @@ const POSMain = () => {
         await markVoucherUsed(voucher.voucher_id, tx.id);
       }
 
+      // Consume loyalty redemption code
+      if (redemption?.code) {
+        try {
+          await useRedemption(redemption.code, cart.totals.total - voucherDiscount, 'pos', tx.id);
+        } catch (err) {
+          console.error('use_redemption failed', err);
+        }
+      }
+
       // Build receipt
       setReceipt({
         transaction_number: txNum,
@@ -202,7 +231,7 @@ const POSMain = () => {
           notes: i.notes,
         })),
         subtotal: cart.totals.subtotal,
-        discount: cart.totals.discountItem + cart.totals.discountBill + voucherDiscount,
+        discount: cart.totals.discountItem + cart.totals.discountBill + voucherDiscount + redemptionDiscount,
         service_charge: cart.totals.serviceCharge,
         tax: cart.totals.tax,
         total: finalTotal,
@@ -217,6 +246,7 @@ const POSMain = () => {
       setPaymentOpen(false);
       cart.clear();
       promo.clearPromos();
+      setRedemption(null);
       setTableNumber('');
       setExternalOrderId('');
       setCustomerName('');
@@ -274,7 +304,7 @@ const POSMain = () => {
   const totalPromoDiscount = promo.totalPromoDiscount;
   const paymentTotal = pendingSplit
     ? pendingSplit.splits[splitIndex]?.amount || 0
-    : Math.max(0, cart.totals.total - totalPromoDiscount);
+    : Math.max(0, cart.totals.total - totalPromoDiscount - (redemption?.discount || 0));
 
   if (shiftLoading) {
     return (
@@ -342,7 +372,15 @@ const POSMain = () => {
             totalPromoDiscount={totalPromoDiscount}
             member={member}
             onScanMember={() => setMemberScanOpen(true)}
-            onClearMember={() => setMember(null)}
+            onClearMember={() => {
+              setMember(null);
+              setRedemption(null);
+            }}
+            onRedeemPoints={() => setRedeemOpen(true)}
+            onShowMemberHistory={() => setHistoryOpen(true)}
+            redemption={redemption}
+            onClearRedemption={() => setRedemption(null)}
+            memberMinTransaction={loyaltySettings.min_transaction}
           />
         </div>
       </div>
@@ -375,7 +413,31 @@ const POSMain = () => {
         onConfirm={handleCloseShift}
       />
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
-      <MemberScanDialog open={memberScanOpen} onOpenChange={setMemberScanOpen} onSelect={setMember} />
+      <MemberScanDialog
+        open={memberScanOpen}
+        onOpenChange={setMemberScanOpen}
+        onSelect={setMember}
+        amount={Math.max(0, cart.totals.total - totalPromoDiscount)}
+      />
+      <LoyaltyRedeemDialog
+        open={redeemOpen}
+        onOpenChange={setRedeemOpen}
+        memberId={member?.id}
+        memberPoints={member?.points ?? 0}
+        amount={Math.max(0, cart.totals.total - totalPromoDiscount)}
+        onRedeemed={(r) => {
+          setRedemption(r);
+          setMember((m) => (m ? { ...m, points: r.remaining_points } : m));
+        }}
+      />
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Riwayat Poin {member?.name || ''}</DialogTitle>
+          </DialogHeader>
+          <PointsHistoryList memberId={member?.id} limit={30} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

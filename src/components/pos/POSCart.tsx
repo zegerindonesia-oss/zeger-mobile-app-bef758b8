@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X, Gift, History } from 'lucide-react';
 import { POSCartItem } from '@/hooks/usePOSCart';
 import { AppliedPromo } from '@/hooks/usePOSPromo';
 import { POSPromoDialog } from './POSPromoDialog';
@@ -47,6 +47,11 @@ interface Props {
   member?: { id: string; name: string | null; member_code: string | null; points: number | null } | null;
   onScanMember?: () => void;
   onClearMember?: () => void;
+  onRedeemPoints?: () => void;
+  onShowMemberHistory?: () => void;
+  redemption?: { code: string; discount: number; reward_name: string } | null;
+  onClearRedemption?: () => void;
+  memberMinTransaction?: number;
 }
 
 export const POSCart = ({
@@ -55,7 +60,8 @@ export const POSCart = ({
   discountBill, setDiscountBill, updateQty, updateNotes, setItemDiscount,
   removeItem, onClear, onPay, onSplit, branchId,
   appliedPromos, onApplyVoucher, onRemovePromo, totalPromoDiscount,
-  member, onScanMember, onClearMember,
+  member, onScanMember, onClearMember, onRedeemPoints, onShowMemberHistory,
+  redemption, onClearRedemption, memberMinTransaction = 0,
 }: Props) => {
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
   const showExternal = ['gofood', 'grabfood', 'shopeefood'].includes(orderType);
@@ -65,7 +71,9 @@ export const POSCart = ({
   const [promoDialogTarget, setPromoDialogTarget] = useState<POSCartItem | null>(null);
 
   const voucher = appliedPromos.find((p) => p.source === 'voucher');
-  const finalTotal = Math.max(0, totals.total - totalPromoDiscount);
+  const redemptionDiscount = redemption?.discount || 0;
+  const finalTotal = Math.max(0, totals.total - totalPromoDiscount - redemptionDiscount);
+  const memberBlocked = !!member && memberMinTransaction > 0 && finalTotal < memberMinTransaction;
 
   const handlePromoApply = (data: { type: 'percentage' | 'fixed'; value: number; computed: number; name: string }) => {
     if (promoDialogScope === 'item' && promoDialogTarget) {
@@ -113,7 +121,8 @@ export const POSCart = ({
         <Input className="mt-2 h-8" placeholder="Nama customer (opsional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
         {onScanMember && (
           member ? (
-            <div className="mt-2 flex items-center justify-between rounded border border-primary/30 bg-primary/5 px-2 py-1.5">
+            <div className="mt-2 rounded border border-primary/30 bg-primary/5 px-2 py-1.5">
+            <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate">{member.name || 'Member'}</div>
                 <div className="text-[10px] text-muted-foreground">{member.member_code} • {member.points ?? 0} poin</div>
@@ -121,6 +130,20 @@ export const POSCart = ({
               <Button size="sm" variant="ghost" className="h-6 px-2" onClick={onClearMember}>
                 <Trash2 className="h-3 w-3" />
               </Button>
+            </div>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={onRedeemPoints}>
+                <Gift className="mr-1 h-3 w-3" /> Tukar Poin
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={onShowMemberHistory}>
+                <History className="mr-1 h-3 w-3" /> Riwayat
+              </Button>
+            </div>
+            {memberBlocked && (
+              <p className="mt-1 text-[10px] text-destructive">
+                Minimal transaksi member {fmt(memberMinTransaction)}. Tambah item atau lepas member.
+              </p>
+            )}
             </div>
           ) : (
             <Button size="sm" variant="outline" className="mt-2 h-8 w-full" onClick={onScanMember}>
@@ -243,6 +266,17 @@ export const POSCart = ({
             <span>-{fmt(voucher.computed_amount)}</span>
           </div>
         )}
+        {redemption && (
+          <div className="flex justify-between text-sm text-destructive">
+            <span className="flex items-center gap-1">
+              Tukar Poin ({redemption.code})
+              <Button size="icon" variant="ghost" className="h-4 w-4" onClick={onClearRedemption}>
+                <X className="h-3 w-3" />
+              </Button>
+            </span>
+            <span>-{fmt(redemption.discount)}</span>
+          </div>
+        )}
         {totals.serviceCharge > 0 && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Service ({Math.round((totals.serviceCharge / Math.max(1, totals.subtotal - totals.discountItem - totals.discountBill)) * 100)}%)</span>
@@ -269,7 +303,7 @@ export const POSCart = ({
             <Split className="h-4 w-4 mr-1" />
             Split
           </Button>
-          <Button className="h-12 text-lg" disabled={items.length === 0} onClick={onPay}>
+          <Button className="h-12 text-lg" disabled={items.length === 0 || memberBlocked} onClick={onPay}>
             BAYAR
           </Button>
         </div>

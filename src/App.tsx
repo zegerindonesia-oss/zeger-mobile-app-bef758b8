@@ -301,7 +301,7 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/settings/app-management/loyalty" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', '1_HO_Admin', '1_HO_Owner']}>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', '2_Hub_Branch_Manager']}>
                 <ModernLayout>
                   <LoyaltyManagement />
                 </ModernLayout>

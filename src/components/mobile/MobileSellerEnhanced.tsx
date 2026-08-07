@@ -13,6 +13,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { MobileSuccessModal } from "./MobileSuccessModal";
 import { MobileCustomerQuickAdd } from "./MobileCustomerQuickAdd";
 import { MemberScanDialog, awardLoyaltyPoints, type LoyaltyMember } from "@/components/loyalty/MemberScanDialog";
+import { LoyaltyRedeemDialog, type AppliedRedemption } from "@/components/loyalty/LoyaltyRedeemDialog";
+import { PointsHistoryList } from "@/components/loyalty/PointsHistoryList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type LoyaltyEarnSettings } from "@/lib/loyalty";
 import { cn } from "@/lib/utils";
 import { getTodayJakarta } from "@/lib/date";
 interface Product {
@@ -57,6 +61,10 @@ const MobileSellerEnhanced = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [member, setMember] = useState<LoyaltyMember | null>(null);
   const [memberScanOpen, setMemberScanOpen] = useState(false);
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const [pointsHistoryOpen, setPointsHistoryOpen] = useState(false);
+  const [redemption, setRedemption] = useState<AppliedRedemption | null>(null);
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
   const [currentLocation, setCurrentLocation] = useState<{
     lat: number;
     lng: number;
@@ -72,6 +80,7 @@ const MobileSellerEnhanced = () => {
     fetchSellingStock();
     fetchCustomers();
     getCurrentLocation();
+    getLoyaltyEarnSettings().then(setLoyaltySettings);
   }, []);
 
   // Listen for live updates from stock management
@@ -360,6 +369,13 @@ const MobileSellerEnhanced = () => {
       return;
     }
 
+    if (member && loyaltySettings.min_transaction > 0 && calculateFinalTotal() < loyaltySettings.min_transaction) {
+      toast.error(
+        `Minimal transaksi member Rp${loyaltySettings.min_transaction.toLocaleString('id-ID')}. Tambah item atau lepas member.`
+      );
+      return;
+    }
+
     // Payment proof is now optional for all payment methods
     const paymentProofInput = document.getElementById('payment-proof') as HTMLInputElement;
     setLoading(true);
@@ -485,6 +501,15 @@ const MobileSellerEnhanced = () => {
         }
       }
 
+      // Consume loyalty redemption code
+      if (redemption?.code) {
+        try {
+          await useRedemption(redemption.code, totalAmount, 'rider', transaction.id);
+        } catch (err) {
+          console.error('use_redemption failed', err);
+        }
+      }
+
       // Add transaction items
       const itemsWithTransactionId = transactionItems.map(item => ({
         ...item,
@@ -518,6 +543,7 @@ const MobileSellerEnhanced = () => {
       setPaymentMethod(''); // Reset payment method to force selection
       setSelectedCustomer('');
       setMember(null);
+      setRedemption(null);
       setDiscountValue(0);
       setShowSuccessModal(true);
       fetchSellingStock(); // Refresh stock
@@ -535,13 +561,14 @@ const MobileSellerEnhanced = () => {
   };
 
   const calculateDiscount = (subtotal: number) => {
+    const redemptionDiscount = redemption?.discount || 0;
     if (discountType === 'percentage') {
       const percentageDiscount = (subtotal * discountValue) / 100;
       // Cap percentage discount at 100%
-      return Math.min(percentageDiscount, subtotal);
+      return Math.min(percentageDiscount + redemptionDiscount, subtotal);
     }
     // Cap amount discount at subtotal (prevent negative final amount)
-    return Math.min(discountValue, subtotal);
+    return Math.min(discountValue + redemptionDiscount, subtotal);
   };
 
   const calculateFinalTotal = () => {
@@ -656,16 +683,36 @@ const MobileSellerEnhanced = () => {
                 {/* Member Loyalty */}
                 <div className="mt-3">
                   {member ? (
-                    <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold">{member.name || 'Member'}</p>
                         <p className="text-xs text-muted-foreground">
                           {member.member_code} • {member.points ?? 0} poin
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setMember(null)}>
+                      <Button variant="ghost" size="sm" onClick={() => { setMember(null); setRedemption(null); }}>
                         <X className="h-4 w-4" />
                       </Button>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setRedeemOpen(true)}>
+                          Tukar Poin
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setPointsHistoryOpen(true)}>
+                          Riwayat Poin
+                        </Button>
+                      </div>
+                      {redemption && (
+                        <p className="mt-2 text-xs text-destructive">
+                          {redemption.reward_name} ({redemption.code}) −Rp {redemption.discount.toLocaleString('id-ID')}
+                        </p>
+                      )}
+                      {loyaltySettings.min_transaction > 0 && calculateFinalTotal() < loyaltySettings.min_transaction && (
+                        <p className="mt-2 text-xs text-destructive">
+                          Minimal transaksi member Rp{loyaltySettings.min_transaction.toLocaleString('id-ID')}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <Button variant="outline" className="w-full" onClick={() => setMemberScanOpen(true)}>
@@ -943,9 +990,14 @@ const MobileSellerEnhanced = () => {
             <Button 
               className="w-full h-12 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500" 
               onClick={processTransaction} 
-              disabled={cart.length === 0 || loading || !paymentMethod}
+              disabled={
+                cart.length === 0 ||
+                loading ||
+                !paymentMethod ||
+                (!!member && loyaltySettings.min_transaction > 0 && calculateFinalTotal() < loyaltySettings.min_transaction)
+              }
             >
-              {loading ? "Memproses..." : `Proses Transaksi (Rp ${calculateCartTotal().toLocaleString('id-ID')})`}
+              {loading ? "Memproses..." : `Proses Transaksi (Rp ${calculateFinalTotal().toLocaleString('id-ID')})`}
             </Button>
 
             {/* Success Modal */}
@@ -960,7 +1012,31 @@ const MobileSellerEnhanced = () => {
         {/* Customer Quick Add - shown regardless of stock status */}
         <MobileCustomerQuickAdd onCustomerAdded={fetchCustomers} />
 
-        <MemberScanDialog open={memberScanOpen} onOpenChange={setMemberScanOpen} onSelect={setMember} />
+        <MemberScanDialog
+          open={memberScanOpen}
+          onOpenChange={setMemberScanOpen}
+          onSelect={setMember}
+          amount={calculateFinalTotal()}
+        />
+        <LoyaltyRedeemDialog
+          open={redeemOpen}
+          onOpenChange={setRedeemOpen}
+          memberId={member?.id}
+          memberPoints={member?.points ?? 0}
+          amount={calculateCartTotal()}
+          onRedeemed={(r) => {
+            setRedemption(r);
+            setMember(m => (m ? { ...m, points: r.remaining_points } : m));
+          }}
+        />
+        <Dialog open={pointsHistoryOpen} onOpenChange={setPointsHistoryOpen}>
+          <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Riwayat Poin {member?.name || ''}</DialogTitle>
+            </DialogHeader>
+            <PointsHistoryList memberId={member?.id} limit={30} />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>;
 };
