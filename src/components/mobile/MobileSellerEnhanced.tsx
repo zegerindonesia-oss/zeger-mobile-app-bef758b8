@@ -990,9 +990,14 @@ const MobileSellerEnhanced = () => {
             <Button 
               className="w-full h-12 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500" 
               onClick={processTransaction} 
-              disabled={cart.length === 0 || loading || !paymentMethod}
+              disabled={
+                cart.length === 0 ||
+                loading ||
+                !paymentMethod ||
+                (!!member && loyaltySettings.min_transaction > 0 && calculateFinalTotal() < loyaltySettings.min_transaction)
+              }
             >
-              {loading ? "Memproses..." : `Proses Transaksi (Rp ${calculateCartTotal().toLocaleString('id-ID')})`}
+              {loading ? "Memproses..." : `Proses Transaksi (Rp ${calculateFinalTotal().toLocaleString('id-ID')})`}
             </Button>
 
             {/* Success Modal */}
@@ -1007,7 +1012,31 @@ const MobileSellerEnhanced = () => {
         {/* Customer Quick Add - shown regardless of stock status */}
         <MobileCustomerQuickAdd onCustomerAdded={fetchCustomers} />
 
-        <MemberScanDialog open={memberScanOpen} onOpenChange={setMemberScanOpen} onSelect={setMember} />
+        <MemberScanDialog
+          open={memberScanOpen}
+          onOpenChange={setMemberScanOpen}
+          onSelect={setMember}
+          amount={calculateFinalTotal()}
+        />
+        <LoyaltyRedeemDialog
+          open={redeemOpen}
+          onOpenChange={setRedeemOpen}
+          memberId={member?.id}
+          memberPoints={member?.points ?? 0}
+          amount={calculateCartTotal()}
+          onRedeemed={(r) => {
+            setRedemption(r);
+            setMember(m => (m ? { ...m, points: r.remaining_points } : m));
+          }}
+        />
+        <Dialog open={pointsHistoryOpen} onOpenChange={setPointsHistoryOpen}>
+          <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Riwayat Poin {member?.name || ''}</DialogTitle>
+            </DialogHeader>
+            <PointsHistoryList memberId={member?.id} limit={30} />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>;
 };
