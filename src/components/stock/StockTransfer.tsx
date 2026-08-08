@@ -571,8 +571,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       if (hubError) throw hubError;
 
       const transferQuantity = parseInt(quantity);
-      if (!hubInventory || hubInventory.stock_quantity < transferQuantity) {
-        toast.error("Stok branch hub tidak mencukupi");
+      // NOTE: modul produksi dinonaktifkan, jadi stok Branch Hub tidak dihitung.
+      // Validasi stok hanya berlaku untuk Small Branch (stok berasal dari pembelian).
+      if (role === 'sb_branch_manager' && (!hubInventory || hubInventory.stock_quantity < transferQuantity)) {
+        toast.error("Stok cabang tidak mencukupi");
         return;
       }
 
@@ -593,11 +595,11 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       if (error) throw error;
 
       // Reduce branch hub stock when transferring to rider
-      if ((role === 'branch_manager' || role === 'sb_branch_manager') && selectedRider) {
+      if ((role === 'branch_manager' || role === 'sb_branch_manager') && selectedRider && hubInventory) {
         await supabase
           .from('inventory')
           .update({ 
-            stock_quantity: hubInventory.stock_quantity - transferQuantity,
+            stock_quantity: Math.max(0, hubInventory.stock_quantity - transferQuantity),
             last_updated: new Date().toISOString()
           })
           .eq('id', hubInventory.id);
@@ -647,10 +649,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         return;
       }
 
-      // Check branch inventory before transfer using RPC function
-      const branchType = role === 'sb_branch_manager' ? 'cabang' : 'branch hub';
-      
-      for (const row of rows) {
+      // Check branch inventory before transfer using RPC function.
+      // Modul produksi dinonaktifkan → stok Branch Hub tidak divalidasi (sementara).
+      const branchType = 'cabang';
+      for (const row of role === 'sb_branch_manager' ? rows : []) {
         const { data: availableStock, error: stockError } = await supabase
           .rpc('get_branch_stock', {
             p_branch_id: branchId,
@@ -711,7 +713,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
           await supabase
             .from('inventory')
             .update({ 
-              stock_quantity: hubInventory.stock_quantity - row.qty,
+              stock_quantity: Math.max(0, hubInventory.stock_quantity - row.qty),
               last_updated: new Date().toISOString()
             })
             .eq('id', hubInventory.id);
