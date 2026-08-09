@@ -138,6 +138,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
     "Snack"
   ]);
 
+  // Branch Hub currently has no production/inventory source, so only Small
+  // Branch transfers may validate and deduct branch-level inventory.
+  const shouldUseBranchInventory = ['sb_branch_manager', '3_SB_Branch_Manager'].includes(String(role));
+
   const getJakartaNow = () => {
     const now = new Date();
     return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
@@ -573,7 +577,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       const transferQuantity = parseInt(quantity);
       // NOTE: modul produksi dinonaktifkan, jadi stok Branch Hub tidak dihitung.
       // Validasi stok hanya berlaku untuk Small Branch (stok berasal dari pembelian).
-      if (role === 'sb_branch_manager' && (!hubInventory || hubInventory.stock_quantity < transferQuantity)) {
+      if (shouldUseBranchInventory && (!hubInventory || hubInventory.stock_quantity < transferQuantity)) {
         toast.error("Stok cabang tidak mencukupi");
         return;
       }
@@ -595,7 +599,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       if (error) throw error;
 
       // Reduce branch hub stock when transferring to rider
-      if ((role === 'branch_manager' || role === 'sb_branch_manager') && selectedRider && hubInventory) {
+      if (shouldUseBranchInventory && selectedRider && hubInventory) {
         await supabase
           .from('inventory')
           .update({ 
@@ -651,8 +655,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
       // Check branch inventory before transfer using RPC function.
       // Modul produksi dinonaktifkan → stok Branch Hub tidak divalidasi (sementara).
-      const branchType = 'cabang';
-      for (const row of role === 'sb_branch_manager' ? rows : []) {
+      for (const row of shouldUseBranchInventory ? rows : []) {
         const { data: availableStock, error: stockError } = await supabase
           .rpc('get_branch_stock', {
             p_branch_id: branchId,
@@ -668,7 +671,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
         const productName = products.find(p => p.id === row.id)?.name || 'Unknown';
         
         if ((availableStock || 0) < row.qty) {
-          toast.error(`Stok ${branchType} tidak mencukupi untuk ${productName}. Tersedia: ${availableStock || 0} unit, diminta: ${row.qty} unit`);
+          toast.error(`Stok cabang tidak mencukupi untuk ${productName}. Tersedia: ${availableStock || 0} unit, diminta: ${row.qty} unit`);
           return;
         }
       }
@@ -699,8 +702,10 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
 
       if (movementError) throw movementError;
 
-      // Reduce branch hub inventory for each product
-      for (const row of rows) {
+      // Branch Hub inventory is intentionally not calculated while production
+      // is disabled. Small Branch stock still comes from purchasing and must
+      // therefore be deducted normally.
+      for (const row of shouldUseBranchInventory ? rows : []) {
         const { data: hubInventory } = await supabase
           .from('inventory')
           .select('*')
