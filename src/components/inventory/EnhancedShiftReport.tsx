@@ -332,12 +332,26 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
       // Approve cash deposit if exists
       if (report.cashDeposit) {
+        const selisihDetail = report.stockReturns
+          .map((it) => {
+            const fisik = report.verificationQuantities[it.id] ?? it.quantity;
+            const kurang = Math.max(0, (it.quantity || 0) - fisik);
+            const price = Number((it.products as any).price || 0);
+            return kurang > 0
+              ? { product_name: it.products?.name || '-', qty: kurang, price, amount: kurang * price }
+              : null;
+          })
+          .filter(Boolean) as any[];
+        const selisihAmount = selisihDetail.reduce((s, d) => s + Number(d.amount || 0), 0);
+
         await supabase
           .from('shift_management')
           .update({
             report_verified: true,
             verified_by: userProfileId,
-            verified_at: new Date().toISOString()
+            verified_at: new Date().toISOString(),
+            selisih_stok_amount: selisihAmount,
+            selisih_stok_detail: selisihDetail
           })
           .eq('id', report.cashDeposit.id);
       }
