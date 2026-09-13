@@ -332,12 +332,26 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
       // Approve cash deposit if exists
       if (report.cashDeposit) {
+        const selisihDetail = report.stockReturns
+          .map((it) => {
+            const fisik = report.verificationQuantities[it.id] ?? it.quantity;
+            const kurang = Math.max(0, (it.quantity || 0) - fisik);
+            const price = Number((it.products as any).price || 0);
+            return kurang > 0
+              ? { product_name: it.products?.name || '-', qty: kurang, price, amount: kurang * price }
+              : null;
+          })
+          .filter(Boolean) as any[];
+        const selisihAmount = selisihDetail.reduce((s, d) => s + Number(d.amount || 0), 0);
+
         await supabase
           .from('shift_management')
           .update({
             report_verified: true,
             verified_by: userProfileId,
-            verified_at: new Date().toISOString()
+            verified_at: new Date().toISOString(),
+            selisih_stok_amount: selisihAmount,
+            selisih_stok_detail: selisihDetail
           })
           .eq('id', report.cashDeposit.id);
       }
@@ -368,7 +382,9 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           cash_collected,
           report_verified,
           verified_by,
-          verified_at
+          verified_at,
+          selisih_stok_amount,
+          selisih_stok_detail
         `)
         .eq('branch_id', branchId)
         .eq('report_verified', true)
@@ -636,7 +652,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           deposit_photos: photosByShift[shift.id] || [],
           sales_breakdown: sales,
           operational_daily: ops,
-          calculated_cash_deposit: Math.max(0, (sales.cash || 0) - (ops || 0))
+          selisih_stok: Number(shift.selisih_stok_amount || 0),
+          calculated_cash_deposit: Math.max(0, (sales.cash || 0) + Number(shift.selisih_stok_amount || 0) - (ops || 0))
         };
       });
 
@@ -787,10 +804,17 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
                         {(() => {
                           const sb = report.salesBreakdown || { cash: 0, qris: 0, transfer: 0, total: Number(report.cashDeposit.total_sales || 0) };
-                          const totalPenjualan = sb.total || (sb.cash + sb.qris + sb.transfer);
+                          const penjualan = sb.total || (sb.cash + sb.qris + sb.transfer);
+                          // Selisih stok: stok fisik kurang dari stok sistem => rider wajib mengganti (masuk komponen pendapatan)
+                          const selisihStok = report.stockReturns.reduce((s, it) => {
+                            const fisik = report.verificationQuantities[it.id] ?? it.quantity;
+                            const kurang = Math.max(0, (it.quantity || 0) - fisik);
+                            return s + kurang * Number((it.products as any).price || 0);
+                          }, 0);
+                          const totalPenjualan = penjualan + selisihStok;
                           const expenses = report.cashDeposit.operationalExpenses || [];
                           const totalPengeluaran = expenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-                          const setoran = sb.cash - totalPengeluaran;
+                          const setoran = sb.cash + selisihStok - totalPengeluaran;
                           return (
                             <div className="p-5 border rounded-lg bg-white space-y-4">
                               {/* (A) Total Penjualan */}
@@ -803,8 +827,13 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                   <div className="flex justify-between"><span>Tunai</span><span>Rp {sb.cash.toLocaleString('id-ID')}</span></div>
                                   <div className="flex justify-between"><span>QRIS</span><span>Rp {sb.qris.toLocaleString('id-ID')}</span></div>
                                   <div className="flex justify-between"><span>Bank Transfer</span><span>Rp {sb.transfer.toLocaleString('id-ID')}</span></div>
+                                  <div className={`flex justify-between ${selisihStok > 0 ? 'text-red-600 font-medium' : ''}`}>
+                                    <span>Selisih Stok</span>
+                                    <span>Rp {selisihStok.toLocaleString('id-ID')}</span>
+                                  </div>
                                 </div>
                               </div>
+
 
                               {/* (B) Total Pengeluaran Tunai */}
                               <div>
@@ -923,7 +952,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                   <span>(A-B) Total Setoran Tunai</span>
                                   <span className="text-green-600">Rp {setoran.toLocaleString('id-ID')}</span>
                                 </div>
-                                <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai - Pengeluaran Tunai</div>
+                                <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai + Selisih Stok - Pengeluaran Tunai</div>
                               </div>
 
                               {report.cashDeposit.notes && (
@@ -1179,12 +1208,26 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                           <div>
                             <div className="flex justify-between items-center font-bold border-b pb-2 mb-2">
                               <span>(A) Total Penjualan</span>
-                              <span>Rp {Number(shift.sales_breakdown.total || 0).toLocaleString('id-ID')}</span>
+                              <span>Rp {(Number(shift.sales_breakdown.total || 0) + Number(shift.selisih_stok || 0)).toLocaleString('id-ID')}</span>
                             </div>
                             <div className="pl-4 space-y-1 text-sm">
                               <div className="flex justify-between"><span>Tunai</span><span>Rp {Number(shift.sales_breakdown.cash || 0).toLocaleString('id-ID')}</span></div>
                               <div className="flex justify-between"><span>QRIS</span><span>Rp {Number(shift.sales_breakdown.qris || 0).toLocaleString('id-ID')}</span></div>
                               <div className="flex justify-between"><span>Bank Transfer</span><span>Rp {Number(shift.sales_breakdown.transfer || 0).toLocaleString('id-ID')}</span></div>
+                              <div className={`flex justify-between ${Number(shift.selisih_stok || 0) > 0 ? 'text-red-600 font-medium' : ''}`}>
+                                <span>Selisih Stok</span>
+                                <span>Rp {Number(shift.selisih_stok || 0).toLocaleString('id-ID')}</span>
+                              </div>
+                              {Array.isArray(shift.selisih_stok_detail) && shift.selisih_stok_detail.length > 0 && (
+                                <div className="pl-4 space-y-0.5 text-xs text-muted-foreground">
+                                  {shift.selisih_stok_detail.map((d: any, i: number) => (
+                                    <div key={i} className="flex justify-between">
+                                      <span>{d.product_name} (kurang {d.qty})</span>
+                                      <span>Rp {Number(d.amount || 0).toLocaleString('id-ID')}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div>
@@ -1202,7 +1245,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                               <span>(A-B) Total Setoran Tunai</span>
                               <span className="text-green-600">Rp {Number(shift.calculated_cash_deposit || 0).toLocaleString('id-ID')}</span>
                             </div>
-                            <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai - Pengeluaran Tunai</div>
+                            <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai + Selisih Stok - Pengeluaran Tunai</div>
                           </div>
                         </div>
                       )}
