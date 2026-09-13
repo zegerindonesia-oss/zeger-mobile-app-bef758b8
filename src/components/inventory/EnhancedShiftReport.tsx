@@ -1208,12 +1208,26 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                           <div>
                             <div className="flex justify-between items-center font-bold border-b pb-2 mb-2">
                               <span>(A) Total Penjualan</span>
-                              <span>Rp {Number(shift.sales_breakdown.total || 0).toLocaleString('id-ID')}</span>
+                              <span>Rp {(Number(shift.sales_breakdown.total || 0) + Number(shift.selisih_stok || 0)).toLocaleString('id-ID')}</span>
                             </div>
                             <div className="pl-4 space-y-1 text-sm">
                               <div className="flex justify-between"><span>Tunai</span><span>Rp {Number(shift.sales_breakdown.cash || 0).toLocaleString('id-ID')}</span></div>
                               <div className="flex justify-between"><span>QRIS</span><span>Rp {Number(shift.sales_breakdown.qris || 0).toLocaleString('id-ID')}</span></div>
                               <div className="flex justify-between"><span>Bank Transfer</span><span>Rp {Number(shift.sales_breakdown.transfer || 0).toLocaleString('id-ID')}</span></div>
+                              <div className={`flex justify-between ${Number(shift.selisih_stok || 0) > 0 ? 'text-red-600 font-medium' : ''}`}>
+                                <span>Selisih Stok</span>
+                                <span>Rp {Number(shift.selisih_stok || 0).toLocaleString('id-ID')}</span>
+                              </div>
+                              {Array.isArray(shift.selisih_stok_detail) && shift.selisih_stok_detail.length > 0 && (
+                                <div className="pl-4 space-y-0.5 text-xs text-muted-foreground">
+                                  {shift.selisih_stok_detail.map((d: any, i: number) => (
+                                    <div key={i} className="flex justify-between">
+                                      <span>{d.product_name} (kurang {d.qty})</span>
+                                      <span>Rp {Number(d.amount || 0).toLocaleString('id-ID')}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div>
