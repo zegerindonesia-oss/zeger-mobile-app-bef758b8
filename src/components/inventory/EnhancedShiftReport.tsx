@@ -935,7 +935,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                   <span>(A-B) Total Setoran Tunai</span>
                                   <span className="text-green-600">Rp {setoran.toLocaleString('id-ID')}</span>
                                 </div>
-                                <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai - Pengeluaran Tunai</div>
+                                <div className="pl-4 text-xs text-muted-foreground">Penjualan Tunai + Selisih Stok - Pengeluaran Tunai</div>
                               </div>
 
                               {report.cashDeposit.notes && (
