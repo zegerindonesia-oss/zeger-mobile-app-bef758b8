@@ -652,7 +652,8 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           deposit_photos: photosByShift[shift.id] || [],
           sales_breakdown: sales,
           operational_daily: ops,
-          calculated_cash_deposit: Math.max(0, (sales.cash || 0) - (ops || 0))
+          selisih_stok: Number(shift.selisih_stok_amount || 0),
+          calculated_cash_deposit: Math.max(0, (sales.cash || 0) + Number(shift.selisih_stok_amount || 0) - (ops || 0))
         };
       });
 
