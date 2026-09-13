@@ -787,10 +787,17 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
                         {(() => {
                           const sb = report.salesBreakdown || { cash: 0, qris: 0, transfer: 0, total: Number(report.cashDeposit.total_sales || 0) };
-                          const totalPenjualan = sb.total || (sb.cash + sb.qris + sb.transfer);
+                          const penjualan = sb.total || (sb.cash + sb.qris + sb.transfer);
+                          // Selisih stok: stok fisik kurang dari stok sistem => rider wajib mengganti (masuk komponen pendapatan)
+                          const selisihStok = report.stockReturns.reduce((s, it) => {
+                            const fisik = report.verificationQuantities[it.id] ?? it.quantity;
+                            const kurang = Math.max(0, (it.quantity || 0) - fisik);
+                            return s + kurang * Number((it.products as any).price || 0);
+                          }, 0);
+                          const totalPenjualan = penjualan + selisihStok;
                           const expenses = report.cashDeposit.operationalExpenses || [];
                           const totalPengeluaran = expenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-                          const setoran = sb.cash - totalPengeluaran;
+                          const setoran = sb.cash + selisihStok - totalPengeluaran;
                           return (
                             <div className="p-5 border rounded-lg bg-white space-y-4">
                               {/* (A) Total Penjualan */}
@@ -803,8 +810,13 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                   <div className="flex justify-between"><span>Tunai</span><span>Rp {sb.cash.toLocaleString('id-ID')}</span></div>
                                   <div className="flex justify-between"><span>QRIS</span><span>Rp {sb.qris.toLocaleString('id-ID')}</span></div>
                                   <div className="flex justify-between"><span>Bank Transfer</span><span>Rp {sb.transfer.toLocaleString('id-ID')}</span></div>
+                                  <div className={`flex justify-between ${selisihStok > 0 ? 'text-red-600 font-medium' : ''}`}>
+                                    <span>Selisih Stok</span>
+                                    <span>Rp {selisihStok.toLocaleString('id-ID')}</span>
+                                  </div>
                                 </div>
                               </div>
+
 
                               {/* (B) Total Pengeluaran Tunai */}
                               <div>
