@@ -382,7 +382,9 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           cash_collected,
           report_verified,
           verified_by,
-          verified_at
+          verified_at,
+          selisih_stok_amount,
+          selisih_stok_detail
         `)
         .eq('branch_id', branchId)
         .eq('report_verified', true)
