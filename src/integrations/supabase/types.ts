@@ -2435,6 +2435,8 @@ export type Database = {
           report_submitted: boolean | null
           report_verified: boolean | null
           rider_id: string
+          selisih_stok_amount: number
+          selisih_stok_detail: Json
           shift_date: string
           shift_end_time: string | null
           shift_number: number
@@ -2455,6 +2457,8 @@ export type Database = {
           report_submitted?: boolean | null
           report_verified?: boolean | null
           rider_id: string
+          selisih_stok_amount?: number
+          selisih_stok_detail?: Json
           shift_date?: string
           shift_end_time?: string | null
           shift_number?: number
@@ -2475,6 +2479,8 @@ export type Database = {
           report_submitted?: boolean | null
           report_verified?: boolean | null
           rider_id?: string
+          selisih_stok_amount?: number
+          selisih_stok_detail?: Json
           shift_date?: string
           shift_end_time?: string | null
           shift_number?: number
