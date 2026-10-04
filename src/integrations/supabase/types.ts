@@ -3798,6 +3798,14 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_staff_emails: {
+        Args: never
+        Returns: {
+          email: string
+          last_sign_in_at: string
+          user_id: string
+        }[]
+      }
       get_user_level: {
         Args: { user_role_param: Database["public"]["Enums"]["user_role"] }
         Returns: number
