@@ -35,7 +35,8 @@ import {
   Calculator,
   Bike,
   Store,
-  LinkIcon
+  LinkIcon,
+  Mail
 } from "lucide-react";
 import { UserRolePermissions } from "./UserRolePermissions";
 import { UserPermissionMatrix, ModulePermission } from "./UserPermissionMatrix";
@@ -57,6 +58,7 @@ interface User {
   branch_id?: string;
   branch_name?: string;
   user_id?: string;
+  email?: string;
   created_at?: string;
   app_access_type?: 'web_backoffice' | 'pos_app' | 'rider_app';
   assigned_rider?: string;
@@ -155,9 +157,16 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
       // Create a map for easy lookup
       const branchMap = new Map(branchesData.map(branch => [branch.id, branch]));
 
+      // Fetch emails (only returned for authorized managers)
+      const { data: emailRows } = await (supabase.rpc as any)('get_staff_emails');
+      const emailMap = new Map<string, string>(
+        ((emailRows as any[]) || []).map((r) => [r.user_id, r.email])
+      );
+
       // Manually join the data
       const enrichedUsers = usersData.map(user => ({
         ...user,
+        email: user.user_id ? emailMap.get(user.user_id) : undefined,
         branches: user.branch_id ? branchMap.get(user.branch_id) : null
       }));
       
@@ -239,6 +248,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
     if (searchTerm) {
       filtered = filtered.filter(user =>
         user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.role.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -1026,6 +1036,18 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                     <TableCell>
                       <div className="space-y-1">
                         <p className="font-medium">{user.full_name}</p>
+                        {user.email ? (
+                          <button
+                            type="button"
+                            title="Klik untuk salin email"
+                            onClick={() => { navigator.clipboard?.writeText(user.email!); toast.success('Email disalin'); }}
+                            className="flex items-center gap-1 text-sm text-primary hover:underline break-all text-left"
+                          >
+                            <Mail className="h-3 w-3 shrink-0" />{user.email}
+                          </button>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">Email tidak tersedia</p>
+                        )}
                         {user.phone && (
                           <p className="text-sm text-muted-foreground">{user.phone}</p>
                         )}
