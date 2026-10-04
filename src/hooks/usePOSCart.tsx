@@ -13,7 +13,15 @@ export interface POSCartItem {
   is_custom?: boolean;
   bundle_id?: string;
   bundle_name?: string;
+  /** Unique cart line key (product + modifiers + notes). */
+  line_id: string;
+  modifiers?: string[];
 }
+
+export interface AddItemOptions { qty?: number; modifiers?: string[]; notes?: string; extraPrice?: number }
+
+const lineKey = (pid: string, mods: string[] = [], notes = '') =>
+  `${pid}::${[...mods].sort().join('|')}::${notes.trim().toLowerCase()}`;
 
 export const usePOSCart = () => {
   const [items, setItems] = useState<POSCartItem[]>([]);
@@ -21,19 +29,22 @@ export const usePOSCart = () => {
   const [taxPercent, setTaxPercent] = useState(0);
   const [serviceChargePercent, setServiceChargePercent] = useState(0);
 
-  const addItem = useCallback((product: Omit<POSCartItem, 'qty' | 'discount_item' | 'notes'>) => {
-    setItems((prev) => {
-      const existing = prev.find(
-        (i) => i.product_id === product.product_id && !i.bundle_id && !i.is_custom
-      );
-      if (existing) {
-        return prev.map((i) =>
-          i === existing ? { ...i, qty: i.qty + 1 } : i
-        );
-      }
-      return [...prev, { ...product, qty: 1, discount_item: 0, notes: '' }];
-    });
-  }, []);
+  const addItem = useCallback(
+    (product: Omit<POSCartItem, 'qty' | 'discount_item' | 'notes' | 'line_id' | 'modifiers'>, opts: AddItemOptions = {}) => {
+      const qty = Math.max(1, opts.qty ?? 1);
+      const mods = opts.modifiers ?? [];
+      const notes = opts.notes ?? '';
+      const key = lineKey(product.product_id, mods, notes);
+      setItems((prev) => {
+        const existing = prev.find((i) => i.line_id === key && !i.bundle_id && !i.is_custom);
+        if (existing) return prev.map((i) => (i === existing ? { ...i, qty: i.qty + qty } : i));
+        return [...prev, {
+          ...product,
+          price: product.price + (opts.extraPrice ?? 0),
+          qty, discount_item: 0, notes, modifiers: mods, line_id: key,
+        }];
+      });
+    }, []);
 
   const addCustomItem = useCallback(
     (data: { name: string; price: number; qty: number; notes: string }) => {
@@ -50,6 +61,7 @@ export const usePOSCart = () => {
           discount_item: 0,
           notes: data.notes,
           is_custom: true,
+          line_id: id,
         },
       ]);
     },
@@ -81,6 +93,7 @@ export const usePOSCart = () => {
           notes: '',
           bundle_id: bundleKey,
           bundle_name: bundle.name,
+          line_id: `${bundleKey}::${idx}`,
         };
       });
       setItems((prev) => [...prev, ...newItems]);
@@ -88,31 +101,30 @@ export const usePOSCart = () => {
     []
   );
 
-  const updateQty = useCallback((product_id: string, qty: number) => {
+  // All line operations are keyed by line_id
+  const updateQty = useCallback((line_id: string, qty: number) => {
     setItems((prev) =>
       qty <= 0
-        ? prev.filter((i) => i.product_id !== product_id)
-        : prev.map((i) => (i.product_id === product_id ? { ...i, qty } : i))
+        ? prev.filter((i) => i.line_id !== line_id)
+        : prev.map((i) => (i.line_id === line_id ? { ...i, qty } : i))
     );
   }, []);
 
-  const updateNotes = useCallback((product_id: string, notes: string) => {
-    setItems((prev) => prev.map((i) => (i.product_id === product_id ? { ...i, notes } : i)));
+  const updateNotes = useCallback((line_id: string, notes: string) => {
+    setItems((prev) => prev.map((i) => (i.line_id === line_id ? { ...i, notes } : i)));
   }, []);
 
-  const setItemDiscount = useCallback((product_id: string, discountPerUnit: number) => {
+  const setItemDiscount = useCallback((line_id: string, discountPerUnit: number) => {
     setItems((prev) =>
-      prev.map((i) => (i.product_id === product_id ? { ...i, discount_item: discountPerUnit } : i))
+      prev.map((i) => (i.line_id === line_id ? { ...i, discount_item: discountPerUnit } : i))
     );
   }, []);
 
-  const removeItem = useCallback((product_id: string) => {
+  const removeItem = useCallback((line_id: string) => {
     setItems((prev) => {
-      const target = prev.find((i) => i.product_id === product_id);
-      if (target?.bundle_id) {
-        return prev.filter((i) => i.bundle_id !== target.bundle_id);
-      }
-      return prev.filter((i) => i.product_id !== product_id);
+      const target = prev.find((i) => i.line_id === line_id);
+      if (target?.bundle_id) return prev.filter((i) => i.bundle_id !== target.bundle_id);
+      return prev.filter((i) => i.line_id !== line_id);
     });
   }, []);
 

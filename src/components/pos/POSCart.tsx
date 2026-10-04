@@ -79,7 +79,7 @@ export const POSCart = ({
     if (promoDialogScope === 'item' && promoDialogTarget) {
       // discount per unit
       const perUnit = data.computed / promoDialogTarget.qty;
-      setItemDiscount(promoDialogTarget.product_id, Math.round(perUnit));
+      setItemDiscount(promoDialogTarget.line_id, Math.round(perUnit));
     } else if (promoDialogScope === 'bill') {
       setDiscountBill(data.computed);
     }
@@ -158,7 +158,7 @@ export const POSCart = ({
           <div className="text-center text-muted-foreground py-12 text-sm">Belum ada item</div>
         ) : (
           items.map((it) => (
-            <div key={it.product_id} className="border rounded p-2 space-y-1">
+            <div key={it.line_id} className="border rounded p-2 space-y-1">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium leading-tight">{it.product_name}</div>
@@ -170,7 +170,7 @@ export const POSCart = ({
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeItem(it.product_id)}>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeItem(it.line_id)}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                   {!it.bundle_id && it.price > 0 && (
@@ -191,11 +191,11 @@ export const POSCart = ({
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
-                  <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(it.product_id, it.qty - 1)}>
+                  <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(it.line_id, it.qty - 1)}>
                     <Minus className="h-3 w-3" />
                   </Button>
                   <span className="w-8 text-center text-sm">{it.qty}</span>
-                  <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(it.product_id, it.qty + 1)}>
+                  <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(it.line_id, it.qty + 1)}>
                     <Plus className="h-3 w-3" />
                   </Button>
                 </div>
@@ -205,7 +205,7 @@ export const POSCart = ({
                 className="h-7 text-xs"
                 placeholder="Catatan (less sugar, no ice...)"
                 value={it.notes}
-                onChange={(e) => updateNotes(it.product_id, e.target.value)}
+                onChange={(e) => updateNotes(it.line_id, e.target.value)}
               />
             </div>
           ))
