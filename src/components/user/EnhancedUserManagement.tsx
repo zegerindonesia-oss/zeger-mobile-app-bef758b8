@@ -899,7 +899,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cari nama, telepon, atau role..."
+                  placeholder="Cari nama, email, telepon, atau role..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="form-glass pl-10"
