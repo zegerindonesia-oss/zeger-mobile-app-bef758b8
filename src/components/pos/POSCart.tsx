@@ -162,6 +162,13 @@ export const POSCart = ({
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium leading-tight">{it.product_name}</div>
+                  {it.modifiers && it.modifiers.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {it.modifiers.map((m) => (
+                        <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{m}</span>
+                      ))}
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground">{fmt(it.price)} × {it.qty}</div>
                   {it.discount_item > 0 && (
                     <div className="text-xs text-destructive">
