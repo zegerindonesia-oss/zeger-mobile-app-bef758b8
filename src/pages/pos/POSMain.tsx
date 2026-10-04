@@ -20,6 +20,13 @@ import { PointsHistoryList } from '@/components/loyalty/PointsHistoryList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type LoyaltyEarnSettings } from '@/lib/loyalty';
 
+import { POSVoiceOrder } from '@/components/pos/POSVoiceOrder';
+import type { POSCartItem } from '@/hooks/usePOSCart';
+
+/** Modifiers + free notes combined for receipt, KDS, and reports. */
+const lineNotes = (i: POSCartItem) =>
+  [(i.modifiers || []).join(', '), i.notes].filter((x) => x && x.trim()).join(' • ');
+
 const POSMain = () => {
   const { userProfile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -189,7 +196,7 @@ const POSMain = () => {
         qty: i.qty,
         discount_item: i.discount_item,
         subtotal_item: i.price * i.qty - i.discount_item * i.qty,
-        notes: i.notes || null,
+        notes: lineNotes(i) || null,
       }));
       const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
       if (itemErr) throw itemErr;
@@ -228,7 +235,7 @@ const POSMain = () => {
           qty: i.qty,
           price: i.price,
           subtotal: i.price * i.qty - i.discount_item * i.qty,
-          notes: i.notes,
+          notes: lineNotes(i),
         })),
         subtotal: cart.totals.subtotal,
         discount: cart.totals.discountItem + cart.totals.discountBill + voucherDiscount + redemptionDiscount,
@@ -328,10 +335,13 @@ const POSMain = () => {
         onCashMovement={() => setCashOpen(true)}
         onLogout={signOut}
         rightExtra={
+          <>
+          <POSVoiceOrder onAdd={cart.addItem} />
           <POSOnlineOrderPanel
             branchId={userProfile?.branch_id || null}
             shiftId={activeShift?.id || null}
           />
+          </>
         }
       />
 

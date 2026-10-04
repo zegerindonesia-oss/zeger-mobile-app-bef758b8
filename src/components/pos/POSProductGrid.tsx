@@ -8,6 +8,9 @@ import { Search, Plus } from 'lucide-react';
 import { POSCartItem } from '@/hooks/usePOSCart';
 import { POSBundleCard, BundleData } from './POSBundleCard';
 import { POSCustomItemDialog } from './POSCustomItemDialog';
+import { POSModifierDialog } from './POSModifierDialog';
+import { getModifierGroups } from '@/lib/pos-modifiers';
+import type { AddItemOptions } from '@/hooks/usePOSCart';
 
 interface Product {
   id: string;
@@ -17,6 +20,7 @@ interface Product {
   price: number;
   image_url: string | null;
   is_active: boolean;
+  custom_options?: any;
 }
 
 interface InventoryRow {
@@ -26,10 +30,15 @@ interface InventoryRow {
 
 interface Props {
   branchId: string | null;
-  onAdd: (p: Omit<POSCartItem, 'qty' | 'discount_item' | 'notes'>) => void;
+  onAdd: (p: Omit<POSCartItem, 'qty' | 'discount_item' | 'notes' | 'line_id' | 'modifiers'>, opts?: AddItemOptions) => void;
   onAddBundle: (b: BundleData) => void;
   onAddCustom: (d: { name: string; price: number; qty: number; notes: string }) => void;
 }
+
+const toCartProduct = (p: Product) => ({
+  product_id: p.id, product_code: p.code, product_name: p.name,
+  category: p.category, price: Number(p.price), image_url: p.image_url,
+});
 
 export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Props) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -39,6 +48,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
   const [activeCat, setActiveCat] = useState<string>('Semua');
   const [loading, setLoading] = useState(true);
   const [customOpen, setCustomOpen] = useState(false);
+  const [modProduct, setModProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -46,7 +56,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
       const [prodRes, bundleRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, code, name, category, price, image_url, is_active')
+          .select('id, code, name, category, price, image_url, is_active, custom_options')
           .eq('is_active', true)
           .order('name'),
         supabase
@@ -196,16 +206,10 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
                 <Card
                   key={p.id}
                   className={`p-2 cursor-pointer hover:border-primary transition ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
-                  onClick={() =>
-                    onAdd({
-                      product_id: p.id,
-                      product_code: p.code,
-                      product_name: p.name,
-                      category: p.category,
-                      price: Number(p.price),
-                      image_url: p.image_url,
-                    })
-                  }
+                  onClick={() => {
+                    if (getModifierGroups(p).length > 0) return setModProduct(p);
+                    onAdd(toCartProduct(p));
+                  }}
                 >
                   {p.image_url ? (
                     <div className="aspect-square w-full bg-muted rounded overflow-hidden mb-2">
@@ -230,6 +234,12 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
           </div>
         )}
       </div>
+
+      <POSModifierDialog
+        product={modProduct}
+        onClose={() => setModProduct(null)}
+        onConfirm={(opts) => { if (modProduct) onAdd(toCartProduct(modProduct), opts); setModProduct(null); }}
+      />
 
       <POSCustomItemDialog
         open={customOpen}
