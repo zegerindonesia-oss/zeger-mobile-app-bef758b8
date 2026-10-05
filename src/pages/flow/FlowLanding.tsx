@@ -9,7 +9,15 @@ import { FlowShell, Reveal } from '@/components/flow/FlowChrome';
 import { MacBook, IPhone, IPad } from '@/components/flow/Devices';
 import { DashboardScreen, CustomerAppScreen, POSScreen } from '@/components/flow/Screens';
 import { PRODUCTS, SOLUTIONS } from '@/lib/flow-content';
-import ownerPhoto from '@/assets/flow/professional-fnb-owner.jpg.asset.json';
+import heroWoman from '@/assets/flow/hero-businesswoman.png';
+import featPos from '@/assets/flow/feat-pos-kasir.jpg';
+import featKds from '@/assets/flow/feat-kitchen-display.jpg';
+import featQueue from '@/assets/flow/feat-layar-antrean.jpg';
+import featBom from '@/assets/flow/feat-bahan-resep.jpg';
+import featLoyalty from '@/assets/flow/feat-loyalty-crm.jpg';
+import featApp from '@/assets/flow/feat-aplikasi-customer.jpg';
+import featVoice from '@/assets/flow/feat-voice-ai.jpg';
+import featBack from '@/assets/flow/feat-back-office.jpg';
 
 const badges = [
   { icon: ShoppingCart, t: 'POS Kasir', pos: 'top-[8%] -left-[4%]', d: 0 },
@@ -53,11 +61,9 @@ const Hero = () => {
           <div className="mt-6 flex flex-wrap gap-5 text-xs flow-muted">{['Tanpa kartu kredit', 'Setup 3 menit', 'Support WhatsApp'].map((t) => <span key={t} className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" />{t}</span>)}</div>
         </motion.div>
 
-        <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[520px] aspect-square">
-          <div className="absolute inset-[6%] rounded-full flow-bg-red" />
-          <div className="absolute inset-[6%] rounded-full overflow-hidden border-[10px] border-background/70 shadow-2xl">
-            <img src={ownerPhoto.url} alt="Pengusaha F&B profesional mengelola bisnis melalui tablet" className="h-full w-full object-cover object-[50%_28%] scale-[1.06]" />
-          </div>
+        <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[520px] h-[620px]">
+          <div className="absolute left-1/2 top-1/3 -translate-x-1/2 h-[420px] w-[420px] rounded-full flow-bg-red opacity-15 blur-3xl" />
+          <img src={heroWoman} alt="Pengusaha wanita profesional mengelola bisnis F&B lewat tablet" width={1024} height={1408} className="relative h-full w-full object-contain object-bottom drop-shadow-2xl" />
           {badges.map(({ icon: I, t, pos, d }) => (
             <motion.div key={t} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8 + d * 0.2, type: 'spring' }}
               className={`absolute ${pos} flow-glass rounded-2xl px-3 py-2.5 flex items-center gap-2 flow-float`} style={{ animationDelay: `${d}s`, transform: 'translateZ(60px)' }}>
@@ -150,11 +156,14 @@ const KitchenPreview = ({ queue = false }: { queue?: boolean }) => (
   </div>
 );
 
-const ProductPreview = ({ slug }: { slug: string }) => {
-  if (slug === 'pos-kasir') return <POSScreen />;
-  if (slug === 'kitchen-display') return <KitchenPreview />;
-  if (slug === 'layar-antrean') return <KitchenPreview queue />;
-  if (slug === 'loyalty-crm' || slug === 'aplikasi-customer') return <CustomerAppScreen />;
+const FEATURE_IMAGES: Record<string, string> = {
+  'pos-kasir': featPos, 'kitchen-display': featKds, 'layar-antrean': featQueue, 'bahan-resep': featBom,
+  'loyalty-crm': featLoyalty, 'aplikasi-customer': featApp, 'voice-ai': featVoice, 'back-office': featBack,
+};
+
+const ProductPreview = ({ slug, title }: { slug: string; title?: string }) => {
+  const img = FEATURE_IMAGES[slug];
+  if (img) return <img src={img} alt={title || slug} loading="lazy" width={1024} height={1024} className="h-full w-full object-cover" />;
   return <DashboardScreen />;
 };
 
@@ -183,7 +192,7 @@ const Coverflow = () => {
                     <I className="h-5 w-5 flow-red" /><span className="text-sm font-extrabold flow-ink">{p.title}</span>
                   </div>
                   <motion.div whileHover={{ rotateX: 0, rotateY: 0, scale: 1.03 }} className="flow-feature-screen absolute inset-x-7 bottom-7 top-20 overflow-hidden rounded-2xl bg-background">
-                    <ProductPreview slug={p.slug} />
+                    <ProductPreview slug={p.slug} title={p.title} />
                   </motion.div>
                 </div>
                 <div className="p-7 flex flex-col">
