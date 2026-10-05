@@ -51,6 +51,14 @@ const FlowSignup = () => {
     if (data.session) nav('/onboarding'); else setSent(true);
   };
 
+  const handleGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/onboarding` },
+    });
+    if (error) toast.error(error.message.includes('provider') ? 'Login Google belum aktif. Silakan hubungi admin untuk mengaktifkannya.' : error.message);
+  };
+
   if (sent) return (
     <div className="flow-site min-h-screen grid place-items-center px-5 flow-hero-glow">
       <div className="flow-card rounded-[32px] p-10 max-w-md text-center">
