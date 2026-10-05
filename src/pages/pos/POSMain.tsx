@@ -24,6 +24,9 @@ import { PointsHistoryList } from '@/components/loyalty/PointsHistoryList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type LoyaltyEarnSettings } from '@/lib/loyalty';
 
+import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
+import { POSShiftReport } from '@/components/pos/POSShiftReport';
+import { loadPrintSettings, printReceipt, printKitchen, DEFAULT_SETTINGS, type PrintSettings } from '@/lib/pos-printing';
 import { POSVoiceOrder } from '@/components/pos/POSVoiceOrder';
 import type { POSCartItem } from '@/hooks/usePOSCart';
 
@@ -62,6 +65,11 @@ const POSMain = () => {
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
   const [tableMapOpen, setTableMapOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<POSTable | null>(null);
+  const [printSettings, setPrintSettings] = useState<PrintSettings>(DEFAULT_SETTINGS);
+  const [printerOpen, setPrinterOpen] = useState(false);
+  const [report, setReport] = useState<{ kind: 'X' | 'Z'; shift: any } | null>(null);
+  useEffect(() => { loadPrintSettings(userProfile?.branch_id || null).then(setPrintSettings); }, [userProfile?.branch_id]);
+  const safePrint = (fn: () => Promise<void>) => fn().catch((e) => console.error('print failed', e));
   const sentLineIds = useRef<Set<string>>(new Set());
   const sentQty = useRef<Record<string, number>>({});
   const canManageTables = ['ho_admin','ho_owner','1_HO_Admin','1_HO_Owner','branch_manager','sb_branch_manager','2_Hub_Branch_Manager','3_SB_Branch_Manager'].includes(userProfile?.role || '');
@@ -249,7 +257,7 @@ const POSMain = () => {
       }
 
       // Build receipt
-      setReceipt({
+      const receiptData: ReceiptData = {
         transaction_number: txNum,
         branch_name: branchName,
         kasir_name: userProfile.full_name,
@@ -275,6 +283,21 @@ const POSMain = () => {
         amount_2: payload.amount2,
         cash_received: payload.cashReceived,
         change_amount: payload.change,
+      };
+      setReceipt(receiptData);
+      const printItems = cart.items.map((i) => ({
+        product_id: i.is_custom ? null : i.product_id, product_name: i.product_name, category: i.category,
+        qty: i.qty, price: i.price, subtotal: i.price * i.qty - i.discount_item * i.qty, notes: lineNotes(i),
+      }));
+      safePrint(async () => {
+        await printReceipt(printSettings, { ...receiptData, items: printItems }, true);
+        // Table orders already went to kitchen when held; others print kitchen tickets now
+        if (!tableTxnId) {
+          await printKitchen(printSettings, {
+            ref: txNum, order_type: orderType, table_number: tableNumber || null,
+            customer_name: customerName || null, created_at: new Date().toISOString(), items: printItems,
+          });
+        }
       });
 
       // Auto-release table (and merged tables) after payment
@@ -318,9 +341,10 @@ const POSMain = () => {
 
   const handleCloseShift = async (closingCash: number, notes: string) => {
     try {
-      await closeShift(closingCash, notes);
+      const closed = await closeShift(closingCash, notes);
       toast.success('Shift berhasil ditutup');
       setCloseOpen(false);
+      setReport({ kind: 'Z', shift: closed });
     } catch (e: any) {
       toast.error(e.message || 'Gagal menutup shift');
     }
@@ -369,6 +393,11 @@ const POSMain = () => {
       ticket_id: ticket.id, product_id: i.is_custom ? null : i.product_id,
       product_name: i.product_name, qty: add, notes: lineNotes(i) || null,
     })));
+    safePrint(() => printKitchen(printSettings, {
+      ref: `MEJA ${tableNo}`, order_type: 'dine_in', table_number: tableNo, customer_name: customerName || null,
+      created_at: new Date().toISOString(), addition: sentQty.current && Object.keys(sentQty.current).length > 0,
+      items: lines.map(({ i, add }) => ({ product_id: i.is_custom ? null : i.product_id, product_name: i.product_name, category: i.category, qty: add, notes: lineNotes(i) })),
+    }));
   };
 
   const handleHoldToTable = async () => {
@@ -439,6 +468,8 @@ const POSMain = () => {
         branchName={branchName}
         onCashMovement={() => setCashOpen(true)}
         onCloseShift={() => setCloseOpen(true)}
+        onPrinterSettings={() => setPrinterOpen(true)}
+        onXReport={() => activeShift ? setReport({ kind: 'X', shift: activeShift }) : toast.error('Tidak ada shift aktif')}
         onLogout={signOut}
       />
       <main className="flex-1 min-w-0 flex flex-col gap-3 p-3 overflow-hidden">
@@ -541,7 +572,12 @@ const POSMain = () => {
         onSelect={handleSelectTable}
         onRecall={handleRecallTable}
       />
-      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} />
+      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)}
+        onPrint={() => receipt && safePrint(() => printReceipt(printSettings, receipt, false))} />
+      <POSPrinterSettings open={printerOpen} onOpenChange={setPrinterOpen} branchId={userProfile?.branch_id || null}
+        userId={userProfile?.id} onSaved={setPrintSettings} />
+      <POSShiftReport open={!!report} onOpenChange={(o) => !o && setReport(null)} shift={report?.shift || null}
+        kind={report?.kind || 'X'} branchName={branchName} kasirName={userProfile?.full_name || 'Kasir'} settings={printSettings} />
       <POSSplitBillDialog
         open={splitOpen}
         items={cart.items}

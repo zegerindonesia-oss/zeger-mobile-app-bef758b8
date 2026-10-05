@@ -28,14 +28,15 @@ interface Props {
   open: boolean;
   data: ReceiptData | null;
   onClose: () => void;
+  onPrint?: () => void;
 }
 
-export const POSReceipt = ({ open, data, onClose }: Props) => {
+export const POSReceipt = ({ open, data, onClose, onPrint }: Props) => {
   if (!data) return null;
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
 
   const handlePrint = () => {
-    window.print();
+    if (onPrint) onPrint(); else window.print();
   };
 
   const handleWhatsApp = () => {
