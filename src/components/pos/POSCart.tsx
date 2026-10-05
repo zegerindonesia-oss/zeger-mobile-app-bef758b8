@@ -88,20 +88,28 @@ export const POSCart = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-card border-l">
-      <div className="p-3 border-b">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" /> Pesanan ({totals.itemCount})
+    <div className="flex flex-col h-full bg-card/80 backdrop-blur-xl">
+      <div className="p-4 border-b border-border/60">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-bold flex items-center gap-2">
+              <span className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><ShoppingCart className="h-4 w-4" /></span>
+              Pesanan Saat Ini
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5 ml-10">{totals.itemCount} item dipilih</p>
+          </div>
+          <span className="rounded-lg bg-muted px-2 py-1 text-[10px] font-bold">AKTIF</span>
+        </div>
+        <div className="flex items-center justify-end h-0 relative z-10">
           </h3>
           {items.length > 0 && (
-            <Button size="sm" variant="ghost" onClick={onClear}>
-              <Trash2 className="h-3 w-3" />
+            <Button size="sm" variant="ghost" className="absolute bottom-10 right-14 text-destructive" onClick={onClear} title="Kosongkan pesanan">
+              <Trash2 className="h-3 w-3" /> Bersihkan
             </Button>
           )}
         </div>
         <Select value={orderType} onValueChange={setOrderType}>
-          <SelectTrigger className="h-8">
+          <SelectTrigger className="h-10 rounded-xl bg-background/80 shadow-inner">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -116,11 +124,11 @@ export const POSCart = ({
         </Select>
         {showTable && (onOpenTables ? (
           <div className="mt-2 flex gap-2">
-            <Button size="sm" variant={tableNumber ? 'default' : 'outline'} className="flex-1 h-8 justify-start" onClick={onOpenTables}>
+            <Button size="sm" variant={tableNumber ? 'default' : 'outline'} className="flex-1 h-9 justify-start" onClick={onOpenTables}>
               <Armchair className="h-4 w-4 mr-1" /> {tableNumber ? `Meja ${tableNumber}` : 'Pilih Meja'}
             </Button>
             {tableNumber && onHoldToTable && items.length > 0 && (
-              <Button size="sm" variant="outline" className="h-8" onClick={onHoldToTable} title="Simpan pesanan ke meja (open bill) & kirim ke dapur">
+              <Button size="sm" variant="outline" className="h-9" onClick={onHoldToTable} title="Simpan pesanan ke meja (open bill) & kirim ke dapur">
                 <Save className="h-4 w-4 mr-1" /> Simpan
               </Button>
             )}
@@ -131,7 +139,7 @@ export const POSCart = ({
         {showExternal && (
           <Input className="mt-2 h-8" placeholder="Nomor order platform" value={externalOrderId} onChange={(e) => setExternalOrderId(e.target.value)} />
         )}
-        <Input className="mt-2 h-8" placeholder="Nama customer (opsional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+        <Input className="mt-2 h-9 rounded-xl bg-background/80 shadow-inner" placeholder="Nama customer (opsional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
         {onScanMember && (
           member ? (
             <div className="mt-2 rounded border border-primary/30 bg-primary/5 px-2 py-1.5">
@@ -166,15 +174,19 @@ export const POSCart = ({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+       <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll">
         {items.length === 0 ? (
-          <div className="text-center text-muted-foreground py-12 text-sm">Belum ada item</div>
+           <div className="h-full min-h-40 flex flex-col items-center justify-center text-center text-muted-foreground">
+             <div className="h-14 w-14 rounded-2xl bg-muted/70 shadow-inner flex items-center justify-center mb-3"><ShoppingCart className="h-6 w-6 opacity-40" /></div>
+             <div className="font-semibold text-foreground">Keranjang masih kosong</div>
+             <div className="text-xs mt-1">Pilih menu dari katalog</div>
+           </div>
         ) : (
           items.map((it) => (
-            <div key={it.line_id} className="border rounded p-2 space-y-1">
+             <div key={it.line_id} className="rounded-2xl border border-border/60 bg-background/75 p-3 space-y-2 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium leading-tight">{it.product_name}</div>
+                   <div className="text-sm font-bold leading-tight">{it.product_name}</div>
                   {it.modifiers && it.modifiers.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {it.modifiers.map((m) => (
@@ -189,7 +201,7 @@ export const POSCart = ({
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col gap-1">
+                 <div className="flex flex-col gap-1">
                   <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeItem(it.line_id)}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -210,19 +222,19 @@ export const POSCart = ({
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(it.line_id, it.qty - 1)}>
+                 <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-1">
+                   <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(it.line_id, it.qty - 1)}>
                     <Minus className="h-3 w-3" />
                   </Button>
-                  <span className="w-8 text-center text-sm">{it.qty}</span>
-                  <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQty(it.line_id, it.qty + 1)}>
+                   <span className="w-8 text-center text-sm font-bold">{it.qty}</span>
+                   <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(it.line_id, it.qty + 1)}>
                     <Plus className="h-3 w-3" />
                   </Button>
                 </div>
-                <div className="text-sm font-semibold">{fmt(it.price * it.qty - it.discount_item * it.qty)}</div>
+                 <div className="pos-number text-sm font-bold">{fmt(it.price * it.qty - it.discount_item * it.qty)}</div>
               </div>
               <Input
-                className="h-7 text-xs"
+                 className="h-8 rounded-xl bg-muted/40 border-transparent text-xs focus-visible:bg-background"
                 placeholder="Catatan (less sugar, no ice...)"
                 value={it.notes}
                 onChange={(e) => updateNotes(it.line_id, e.target.value)}
@@ -232,7 +244,7 @@ export const POSCart = ({
         )}
       </div>
 
-      <div className="border-t p-3 space-y-2 bg-muted/30">
+       <div className="border-t border-border/60 p-4 space-y-2.5 bg-muted/40 backdrop-blur-xl">
         {/* Voucher */}
         <POSVoucherInput
           branchId={branchId}
@@ -309,22 +321,22 @@ export const POSCart = ({
             <span>{fmt(totals.tax)}</span>
           </div>
         )}
-        <div className="flex justify-between items-center pt-2 border-t">
-          <span className="font-semibold">TOTAL</span>
-          <span className="text-2xl font-bold text-primary">{fmt(finalTotal)}</span>
+         <div className="flex justify-between items-center pt-3 border-t">
+           <span className="font-bold">Total Pembayaran</span>
+           <span className="pos-number text-2xl font-bold text-primary">{fmt(finalTotal)}</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
-            className="h-12"
+             className="h-12 rounded-xl"
             disabled={items.length < 2}
             onClick={onSplit}
           >
             <Split className="h-4 w-4 mr-1" />
             Split
           </Button>
-          <Button className="h-12 text-lg" disabled={items.length === 0 || memberBlocked} onClick={onPay}>
-            BAYAR
+           <Button className="h-12 text-base rounded-xl shadow-lg shadow-primary/25" disabled={items.length === 0 || memberBlocked} onClick={onPay}>
+             Bayar Sekarang
           </Button>
         </div>
       </div>
