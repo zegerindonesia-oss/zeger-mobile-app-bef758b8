@@ -30,9 +30,9 @@
     --glass-shadow: 0 84% 60% / 0.1;
 
     /* Zeger Coffee - Red Primary */
-    --primary: 0 84% 60%;        /* Merah Zeger #DC2626 */
-    --primary-dark: 0 72% 51%;   /* Merah gelap #B91C1C */
-    --primary-light: 0 84% 75%;  /* Merah terang */
+    --primary: 359 78% 52%;       /* Zeger Executive #E5252A */
+    --primary-dark: 359 73% 43%;
+    --primary-light: 359 81% 63%;
     --primary-foreground: 0 0% 100%;
     
     /* Accent Colors */
@@ -48,7 +48,7 @@
     --card-glass: 0 0% 100% / 0.6;
 
     /* Status Colors */
-    --success: 142 76% 36%;
+    --success: 154 76% 34%;       /* Zeger Executive green #159A63 */
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
@@ -86,8 +86,8 @@
     --radius: 1.5rem;
 
     /* POS Executive palette */
-    --pos-canvas: 220 17% 97%;
-    --pos-ink: 216 15% 15%;
+    --pos-canvas: 220 23% 97%;    /* #F7F8FA */
+    --pos-ink: 215 15% 15%;       /* #20242B */
     --pos-glass: 0 0% 100% / 0.72;
     --pos-glass-strong: 0 0% 100% / 0.9;
     --pos-line: 0 0% 100% / 0.78;

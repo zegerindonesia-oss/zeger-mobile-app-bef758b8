@@ -101,7 +101,6 @@ export const POSCart = ({
           <span className="rounded-lg bg-muted px-2 py-1 text-[10px] font-bold">AKTIF</span>
         </div>
         <div className="flex items-center justify-end h-0 relative z-10">
-          </h3>
           {items.length > 0 && (
             <Button size="sm" variant="ghost" className="absolute bottom-10 right-14 text-destructive" onClick={onClear} title="Kosongkan pesanan">
               <Trash2 className="h-3 w-3" /> Bersihkan
