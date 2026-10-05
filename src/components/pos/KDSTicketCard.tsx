@@ -40,7 +40,7 @@ export const KDSTicketCard = ({ ticket, station = 'all', onUpdateStatus, onToggl
               <span className="pos-kds-chip rounded-full px-2.5 py-0.5">Meja {ticket.table_number}</span>
             )}
           </div>
-          <div className="font-display font-bold text-xl mt-1.5 truncate">
+          <div className="font-bold text-xl mt-1.5 truncate">
             #{(ticket.transaction_number || ticket.id).slice(-6)}
           </div>
           {ticket.customer_name && <div className="text-sm pos-kds-muted truncate">{ticket.customer_name}</div>}

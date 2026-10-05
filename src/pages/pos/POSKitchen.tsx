@@ -34,7 +34,7 @@ const POSKitchen = () => {
   const Column = ({ title, dot, items }: { title: string; dot: string; items: KDSTicket[] }) => (
     <div className="pos-kds-column flex-1 min-w-0 flex flex-col rounded-3xl">
       <div className="px-4 py-3 flex items-center justify-between">
-        <span className="flex items-center gap-2 font-display font-bold tracking-wide">
+        <span className="flex items-center gap-2 font-bold tracking-wide">
           <span className={`h-2.5 w-2.5 rounded-full ${dot}`} /> {title}
         </span>
         <span className="pos-kds-chip rounded-full px-2.5 text-sm font-bold">{items.length}</span>
@@ -65,7 +65,7 @@ const POSKitchen = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <div className="font-display font-bold text-lg">Kitchen Display</div>
+            <div className="font-bold text-lg">Kitchen Display</div>
             <div className="text-xs pos-kds-muted">
               {filtered.length} tiket aktif{lateCount > 0 && <span className="text-primary font-semibold"> · {lateCount} terlambat</span>}
             </div>
