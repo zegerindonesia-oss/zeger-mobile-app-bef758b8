@@ -78,6 +78,7 @@ const FlowSignup = () => {
       </header>
       <main className="max-w-5xl mx-auto px-5 pb-20 grid md:grid-cols-2 gap-10 items-center">
         <div>
+          <img src={ecosystemDevices.url} alt="FlowF&B di MacBook, iPad, dan iPhone" loading="lazy" className="mb-8 w-full max-w-lg h-auto object-contain drop-shadow-xl" />
           <h1 className="text-4xl md:text-5xl font-extrabold flow-ink leading-tight">Coba gratis <span className="flow-red">{TRIAL_DAYS} hari.</span></h1>
           <p className="mt-4 flow-muted text-lg">Buat akun, setup bisnis Anda, dan langsung jualan. Tanpa kartu kredit.</p>
           <ul className="mt-6 space-y-2.5 flow-ink">
