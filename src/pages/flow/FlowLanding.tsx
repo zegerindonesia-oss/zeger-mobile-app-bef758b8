@@ -9,8 +9,7 @@ import { FlowShell, Reveal } from '@/components/flow/FlowChrome';
 import { MacBook, IPhone, IPad } from '@/components/flow/Devices';
 import { DashboardScreen, CustomerAppScreen, POSScreen } from '@/components/flow/Screens';
 import { PRODUCTS, SOLUTIONS } from '@/lib/flow-content';
-import promo from '@/assets/flow/zeger-promo.png.asset.json';
-import posImg from '@/assets/menu/Aren_Latte.webp.asset.json';
+import ownerPhoto from '@/assets/flow/professional-fnb-owner.jpg.asset.json';
 
 const badges = [
   { icon: ShoppingCart, t: 'POS Kasir', pos: 'top-[8%] -left-[4%]', d: 0 },
@@ -39,9 +38,9 @@ const Hero = () => {
         <motion.div style={{ y: yText }}>
           <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full flow-soft px-4 py-1.5 text-sm font-semibold flow-red"><Sparkles className="h-4 w-4" />AI-Integrated F&B Operating System</motion.span>
           <h1 className="mt-6 text-5xl md:text-7xl font-extrabold leading-[0.98] tracking-tight flow-ink">
-            {['Tinggal Klik,', 'Bisnis F&B', 'Jalan Sendiri.'].map((l, i) => (
+            {['Kelola Seluruh', 'Bisnis F&B dalam', 'Satu Platform.'].map((l, i) => (
               <motion.span key={l} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.12, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                className={`block ${i === 1 ? 'flow-red' : ''}`}>{l}</motion.span>
+                className={`block ${i === 2 ? 'flow-red' : ''}`}>{l}</motion.span>
             ))}
           </h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-6 text-lg flow-muted max-w-xl">
@@ -56,8 +55,8 @@ const Hero = () => {
 
         <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[520px] aspect-square">
           <div className="absolute inset-[6%] rounded-full flow-bg-red" />
-          <div className="absolute inset-[6%] rounded-full overflow-hidden">
-            <img src={promo.url} alt="Pelanggan Zeger Coffee menikmati kopi" className="h-full w-full object-cover object-[50%_42%] scale-[1.35]" />
+          <div className="absolute inset-[6%] rounded-full overflow-hidden border-[10px] border-background/70 shadow-2xl">
+            <img src={ownerPhoto.url} alt="Pengusaha F&B profesional mengelola bisnis melalui tablet" className="h-full w-full object-cover object-[50%_28%] scale-[1.06]" />
           </div>
           {badges.map(({ icon: I, t, pos, d }) => (
             <motion.div key={t} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8 + d * 0.2, type: 'spring' }}
@@ -131,6 +130,34 @@ const DeviceShowcase = () => {
   );
 };
 
+const KitchenPreview = ({ queue = false }: { queue?: boolean }) => (
+  <div className="h-full w-full bg-foreground p-4 text-background">
+    <div className="flex items-center justify-between border-b border-background/15 pb-3">
+      <div className="font-extrabold">{queue ? 'Antrean Pesanan' : 'Kitchen Display'}</div>
+      <div className="rounded-full bg-success/20 px-3 py-1 text-[10px] text-success">Live</div>
+    </div>
+    <div className="mt-4 grid grid-cols-3 gap-3">
+      {['#A-128', '#A-129', '#A-130'].map((order, index) => (
+        <div key={order} className="rounded-xl border border-background/15 bg-background/10 p-3">
+          <div className="flex items-center justify-between"><b>{order}</b><span className={index === 2 ? 'text-warning' : 'text-success'}>{index + 3}:2{index}</span></div>
+          <div className="mt-3 space-y-2 text-[10px] text-background/75">
+            <div>2× Aren Latte</div><div>1× Americano</div><div>Less sugar · no ice</div>
+          </div>
+          <div className="mt-4 rounded-lg bg-primary py-2 text-center text-[10px] font-bold">{queue ? 'Siap Diambil' : 'Selesaikan'}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const ProductPreview = ({ slug }: { slug: string }) => {
+  if (slug === 'pos-kasir') return <POSScreen />;
+  if (slug === 'kitchen-display') return <KitchenPreview />;
+  if (slug === 'layar-antrean') return <KitchenPreview queue />;
+  if (slug === 'loyalty-crm' || slug === 'aplikasi-customer') return <CustomerAppScreen />;
+  return <DashboardScreen />;
+};
+
 const Coverflow = () => {
   const [i, setI] = useState(0);
   const n = PRODUCTS.length;
@@ -151,10 +178,13 @@ const Coverflow = () => {
               transition={{ type: 'spring', stiffness: 90, damping: 20 }}
               className="absolute left-1/2 top-0 -ml-[min(44vw,330px)] w-[min(88vw,660px)] cursor-pointer" style={{ transformStyle: 'preserve-3d' }}>
               <div className="flow-card rounded-[28px] overflow-hidden grid md:grid-cols-2 h-[420px]">
-                <div className="relative flow-bg-red p-6 flex items-end overflow-hidden">
-                  <img src={posImg.url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40 mix-blend-luminosity" />
-                  <I className="absolute top-6 left-6 h-12 w-12" />
-                  <div className="relative text-3xl font-extrabold leading-tight">{p.title}</div>
+                <div className="relative flow-feature-stage p-6 overflow-hidden">
+                  <div className="absolute left-6 top-6 z-10 flex items-center gap-3 rounded-2xl bg-background/85 px-3 py-2 backdrop-blur-xl shadow-lg">
+                    <I className="h-5 w-5 flow-red" /><span className="text-sm font-extrabold flow-ink">{p.title}</span>
+                  </div>
+                  <motion.div whileHover={{ rotateX: 0, rotateY: 0, scale: 1.03 }} className="flow-feature-screen absolute inset-x-7 bottom-7 top-20 overflow-hidden rounded-2xl bg-background">
+                    <ProductPreview slug={p.slug} />
+                  </motion.div>
                 </div>
                 <div className="p-7 flex flex-col">
                   <div className="h-11 w-11 rounded-xl flow-soft grid place-items-center"><I className="h-5 w-5 flow-red" /></div>
