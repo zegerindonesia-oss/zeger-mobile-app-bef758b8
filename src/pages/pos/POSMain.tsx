@@ -278,6 +278,7 @@ const POSMain = () => {
           current_total: 0, open_bill: null, merged_into: null,
         }).or(`id.eq.${selectedTable.id},merged_into.eq.${selectedTable.id}`);
         setSelectedTable(null);
+        sentQty.current = {};
       }
 
       setPaymentOpen(false);
@@ -329,6 +330,7 @@ const POSMain = () => {
 
   const handleSelectTable = (t: POSTable) => {
     setSelectedTable(t);
+    sentQty.current = {};
     setTableNumber(t.table_number);
     setOrderType('dine_in');
     if (t.guest_name && !customerName) setCustomerName(t.guest_name);
@@ -522,6 +524,15 @@ const POSMain = () => {
           }
         }}
         onConfirm={handlePay}
+      />
+      <POSTableMap
+        open={tableMapOpen}
+        onOpenChange={setTableMapOpen}
+        branchId={userProfile?.branch_id || null}
+        canManage={canManageTables}
+        selectedTableId={selectedTable?.id || null}
+        onSelect={handleSelectTable}
+        onRecall={handleRecallTable}
       />
       <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} />
       <POSSplitBillDialog
