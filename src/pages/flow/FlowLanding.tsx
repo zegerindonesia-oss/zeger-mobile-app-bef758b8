@@ -18,7 +18,8 @@ import featLoyalty from '@/assets/flow/feat-loyalty-crm.jpg';
 import featApp from '@/assets/flow/feat-aplikasi-customer.jpg';
 import featVoice from '@/assets/flow/feat-voice-ai.jpg';
 import featBack from '@/assets/flow/feat-back-office.jpg';
-import iphoneBlue from '@/assets/flow/iphone-blue-cutout.png';
+import ecosystemDevices from '@/assets/flow/ecosystem-devices.png.asset.json';
+import customerCollage from '@/assets/flow/customer-app-collage.png.asset.json';
 import featInvoice from '@/assets/flow/feat-invoice.jpg';
 import featFinance from '@/assets/flow/feat-laporan-keuangan.jpg';
 import featMobile from '@/assets/flow/feat-mobile-selling.jpg';
@@ -131,17 +132,11 @@ const DeviceShowcase = () => {
         <div className="text-xs font-bold tracking-[0.3em] flow-red">SATU EKOSISTEM</div>
         <h2 className="mt-3 text-4xl md:text-5xl font-extrabold flow-ink">Back office, kasir, dan aplikasi pelanggan — <span className="flow-red">selalu sinkron.</span></h2>
       </Reveal>
-       <div className="relative max-w-6xl mx-auto px-5 mt-16 pb-12" style={{ perspective: 1600 }}>
-         <div className="absolute inset-x-[9%] bottom-0 h-20 rounded-[50%] bg-primary/10 blur-2xl" />
-         <motion.div style={{ rotateX, scale }} className="origin-bottom relative z-10">
-           <MacBook className="mx-auto w-[78%]"><DashboardScreen /></MacBook>
-        </motion.div>
-         <motion.div style={{ y: phoneY }} className="absolute left-[2%] bottom-2 z-20 w-[17%] min-w-[132px]"><IPhone><CustomerAppScreen /></IPhone></motion.div>
-         <motion.div style={{ x: padX }} className="absolute right-0 bottom-4 z-20 w-[34%] hidden md:block"><IPad><POSScreen /></IPad></motion.div>
-         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="absolute left-[18%] top-[14%] z-30 hidden lg:flex flow-glass rounded-2xl px-4 py-3 items-center gap-3">
-           <div className="h-9 w-9 rounded-xl flow-bg-red grid place-items-center"><TrendingUp className="h-4 w-4" /></div><div><div className="text-[10px] flow-muted">Omzet hari ini</div><div className="text-sm font-extrabold flow-ink">Rp 12.450.000</div></div>
-         </motion.div>
-      </div>
+       <div className="relative max-w-6xl mx-auto px-5 mt-14 pb-8" style={{ perspective: 1600 }}>
+         <div className="absolute inset-x-[9%] bottom-2 h-20 rounded-[50%] bg-primary/10 blur-2xl" />
+         <motion.img style={{ rotateX, scale }} src={ecosystemDevices.url} alt="FlowF&B di MacBook, iPad, dan iPhone" loading="lazy"
+           className="origin-bottom relative z-10 w-full h-auto object-contain" />
+       </div>
     </section>
   );
 };
@@ -276,30 +271,16 @@ const AISection = () => (
 
 const AppBanner = () => (
   <section className="max-w-7xl mx-auto px-5 py-24">
-    <div className="flow-customer-stage rounded-[36px] p-10 md:p-16 grid md:grid-cols-2 gap-10 items-center relative overflow-hidden">
+    <div className="grid md:grid-cols-2 gap-10 items-center">
       <Reveal>
-        <div className="text-xs font-bold tracking-[0.28em] text-primary-foreground/75">APLIKASI PELANGGAN WHITE-LABEL</div>
-        <h2 className="mt-4 text-4xl md:text-5xl font-extrabold leading-tight text-primary-foreground">Brand Anda. Aplikasi Anda. Pelanggan tetap dekat.</h2>
-        <p className="mt-4 text-primary-foreground/85 max-w-md">Seperti aplikasi brand besar: pesan langsung, temukan rider, kumpulkan poin, nikmati promo, dan tukar reward dalam satu pengalaman.</p>
-        <Link to="/produk/aplikasi-customer" className="mt-8 inline-flex items-center gap-2 bg-background flow-red rounded-full px-6 py-3.5 font-bold shadow-xl">Lihat Aplikasi <ArrowRight className="h-4 w-4" /></Link>
+        <div className="text-xs font-bold tracking-[0.28em] flow-red">APLIKASI PELANGGAN WHITE-LABEL</div>
+        <h2 className="mt-4 text-4xl md:text-5xl font-extrabold leading-tight flow-ink">Brand Anda. Aplikasi Anda. <span className="flow-red">Pelanggan tetap dekat.</span></h2>
+        <p className="mt-4 flow-muted max-w-md">Seperti aplikasi brand besar: pesan langsung, temukan rider, kumpulkan poin, nikmati promo, dan tukar reward dalam satu pengalaman.</p>
+        <Link to="/produk/aplikasi-customer" className="mt-8 inline-flex items-center gap-2 flow-btn rounded-full px-6 py-3.5 font-bold">Lihat Aplikasi <ArrowRight className="h-4 w-4" /></Link>
       </Reveal>
-      <div className="relative h-[520px]" style={{ perspective: 1200 }}>
-        <div className="absolute left-[14%] right-[8%] bottom-8 h-24 rounded-[50%] bg-primary-foreground/20 blur-2xl" />
-        <div className="absolute left-[15%] right-[9%] bottom-8 h-16 rounded-[50%] border border-primary-foreground/40 bg-primary-foreground/10" />
-        <motion.div initial={{ y: 70, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} className="absolute left-[20%] top-0 z-20 h-[470px] w-[58%]">
-          <div className="absolute left-[20%] top-[9%] h-[79%] w-[62%] -rotate-[4deg] overflow-hidden rounded-[38px]"><CustomerAppScreen /></div>
-          <img src={iphoneBlue} alt="Mockup iPhone Zeger Coffee" className="absolute inset-0 h-full w-full object-contain drop-shadow-2xl" />
-        </motion.div>
-        <motion.div initial={{ x: 80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .2 }} className="absolute right-[3%] top-20 z-30 flow-customer-glass rounded-xl px-3 py-2.5 w-[34%]">
-          <div className="flex items-center gap-1.5"><MapPin className="h-4 w-4 flow-red" /><span className="text-[10px] font-extrabold flow-ink">Rider terdekat</span></div><div className="mt-1 text-lg font-extrabold flow-red">350 m</div><div className="text-[8px] flow-muted">Siap antar pesanan</div>
-        </motion.div>
-        <motion.div initial={{ x: -80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .35 }} className="absolute left-[3%] top-44 z-30 flow-customer-glass rounded-xl px-3 py-2.5 w-[31%]">
-          <div className="flex items-center gap-1.5"><Gift className="h-4 w-4 flow-red" /><span className="text-[10px] font-extrabold flow-ink">Zeger Points</span></div><div className="mt-1 text-lg font-extrabold flow-red">1.250</div><div className="text-[8px] flow-muted">Tukar reward</div>
-        </motion.div>
-        <motion.div initial={{ x: 70, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .5 }} className="absolute right-[5%] bottom-28 z-30 flow-customer-glass rounded-xl px-3 py-2.5 w-[32%]">
-          <div className="text-[8px] font-bold flow-red">PROMO HARI INI</div><div className="mt-0.5 text-[10px] font-extrabold flow-ink">Beli 2 Lebih Hemat</div><div className="mt-1.5 h-1 rounded-full bg-primary/15 overflow-hidden"><div className="h-full w-3/4 flow-bg-red" /></div>
-        </motion.div>
-      </div>
+      <motion.img initial={{ y: 60, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1 }}
+        src={customerCollage.url} alt="Aplikasi pelanggan FlowF&B dengan fitur poin, rider, dan loyalty" loading="lazy"
+        className="w-full max-w-[560px] mx-auto h-auto object-contain" />
     </div>
   </section>
 );
