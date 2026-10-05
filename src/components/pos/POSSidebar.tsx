@@ -44,11 +44,11 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
     { label: 'Produk', icon: Package, path: '/master/products', levels: ['ho', 'manager'] },
     { label: 'Stok', icon: Boxes, path: '/inventory', levels: ['ho', 'manager'] },
     { label: 'Pelanggan', icon: Users, path: '/customers', levels: ['ho', 'manager'] },
-    { label: 'Promo', icon: Tag, path: '/settings/promos', levels: ['ho', 'manager'] },
-    { label: 'Loyalty', icon: Gift, path: '/settings/loyalty', levels: ['ho', 'manager'] },
+    { label: 'Promo', icon: Tag, path: '/settings/promo-management', levels: ['ho', 'manager'] },
+    { label: 'Loyalty', icon: Gift, path: '/settings/app-management/loyalty', levels: ['ho', 'manager'] },
     { label: 'Laporan', icon: BarChart3, path: '/finance/profit-loss', levels: ['ho', 'finance'] },
     { label: 'Pengguna', icon: UserCog, path: '/settings/users', levels: ['ho', 'manager'] },
-    { label: 'Pengaturan', icon: Settings, path: '/settings/app', levels: ['ho'] },
+    { label: 'Pengaturan', icon: Settings, path: '/settings/app-management', levels: ['ho'] },
   ].filter((i) => i.levels.includes(lvl));
 
   return (
