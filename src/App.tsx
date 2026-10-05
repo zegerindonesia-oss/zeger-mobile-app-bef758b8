@@ -40,6 +40,7 @@ import CentralKitchenAnalytics from "./pages/analytics/CentralKitchen";
 import CashDeposit from "./pages/analytics/CashDeposit";
 import WasteManagementPage from "./pages/inventory/WasteManagementPage";
 import RawMaterials from "./pages/inventory/RawMaterials";
+import POSQueueDisplay from "./pages/pos/POSQueueDisplay";
 import StockCardRider from "./pages/inventory/StockCardRider";
 import SettingsUserManagement from "./pages/settings/UserManagement";
 import SettingsRiderManagement from "./pages/settings/RiderManagement";
@@ -114,6 +115,11 @@ const App = () => (
             <Route path="/pos" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}>
                 <POSMain />
+              </RoleBasedRoute>
+            } />
+            <Route path="/pos/queue" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir', '1_HO_Admin', '2_Hub_Branch_Manager', '3_SB_Branch_Manager']}>
+                <POSQueueDisplay />
               </RoleBasedRoute>
             } />
             <Route path="/pos/kds" element={
