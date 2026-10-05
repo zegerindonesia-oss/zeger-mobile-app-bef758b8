@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import FlowLanding from "./pages/flow/FlowLanding";
 import FlowOnboarding from "./pages/flow/FlowOnboarding";
 import { HomeGate } from "./pages/flow/HomeGate";
+import { FlowDetail, FlowPricing, FlowCustomers, FlowAbout } from "./pages/flow/FlowPages";
 import AdminDashboard from "./pages/AdminDashboard";
 import OrdersManagement from "./pages/OrdersManagement";
 import ProfitLoss from "./pages/finance/ProfitLoss";
@@ -78,6 +79,11 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/landing" element={<FlowLanding />} />
             <Route path="/onboarding" element={<FlowOnboarding />} />
+            <Route path="/produk/:slug" element={<FlowDetail kind="produk" />} />
+            <Route path="/solusi/:slug" element={<FlowDetail kind="solusi" />} />
+            <Route path="/harga" element={<FlowPricing />} />
+            <Route path="/customer" element={<FlowCustomers />} />
+            <Route path="/tentang" element={<FlowAbout />} />
             <Route path="/" element={
               <HomeGate>
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
