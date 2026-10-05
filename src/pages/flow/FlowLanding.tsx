@@ -18,6 +18,7 @@ import featLoyalty from '@/assets/flow/feat-loyalty-crm.jpg';
 import featApp from '@/assets/flow/feat-aplikasi-customer.jpg';
 import featVoice from '@/assets/flow/feat-voice-ai.jpg';
 import featBack from '@/assets/flow/feat-back-office.jpg';
+import iphoneBlue from '@/assets/flow/iphone-blue-cutout.png';
 import featInvoice from '@/assets/flow/feat-invoice.jpg';
 import featFinance from '@/assets/flow/feat-laporan-keuangan.jpg';
 import featMobile from '@/assets/flow/feat-mobile-selling.jpg';
@@ -285,15 +286,18 @@ const AppBanner = () => (
       <div className="relative h-[520px]" style={{ perspective: 1200 }}>
         <div className="absolute left-[14%] right-[8%] bottom-8 h-24 rounded-[50%] bg-primary-foreground/20 blur-2xl" />
         <div className="absolute left-[15%] right-[9%] bottom-8 h-16 rounded-[50%] border border-primary-foreground/40 bg-primary-foreground/10" />
-        <motion.div initial={{ rotateY: -24, y: 70, opacity: 0 }} whileInView={{ rotateY: -9, y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} className="absolute left-[27%] top-0 z-20 w-[43%]"><IPhone><CustomerAppScreen /></IPhone></motion.div>
-        <motion.div initial={{ x: 80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .2 }} className="absolute right-0 top-14 z-30 flow-customer-glass rounded-2xl p-4 w-[44%]">
-          <div className="flex items-center gap-2"><MapPin className="h-5 w-5 flow-red" /><span className="text-xs font-extrabold flow-ink">Rider terdekat</span></div><div className="mt-2 text-2xl font-extrabold flow-red">350 m</div><div className="text-[10px] flow-muted">Siap antar pesanan Anda</div>
+        <motion.div initial={{ y: 70, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} className="absolute left-[20%] top-0 z-20 h-[470px] w-[58%]">
+          <div className="absolute left-[20%] top-[9%] h-[79%] w-[62%] -rotate-[4deg] overflow-hidden rounded-[38px]"><CustomerAppScreen /></div>
+          <img src={iphoneBlue} alt="Mockup iPhone Zeger Coffee" className="absolute inset-0 h-full w-full object-contain drop-shadow-2xl" />
         </motion.div>
-        <motion.div initial={{ x: -80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .35 }} className="absolute left-0 top-40 z-30 flow-customer-glass rounded-2xl p-4 w-[40%]">
-          <div className="flex items-center gap-2"><Gift className="h-5 w-5 flow-red" /><span className="text-xs font-extrabold flow-ink">Zeger Points</span></div><div className="mt-2 text-2xl font-extrabold flow-red">1.250</div><div className="text-[10px] flow-muted">Siap ditukar reward</div>
+        <motion.div initial={{ x: 80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .2 }} className="absolute right-[3%] top-20 z-30 flow-customer-glass rounded-xl px-3 py-2.5 w-[34%]">
+          <div className="flex items-center gap-1.5"><MapPin className="h-4 w-4 flow-red" /><span className="text-[10px] font-extrabold flow-ink">Rider terdekat</span></div><div className="mt-1 text-lg font-extrabold flow-red">350 m</div><div className="text-[8px] flow-muted">Siap antar pesanan</div>
         </motion.div>
-        <motion.div initial={{ x: 70, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .5 }} className="absolute right-[2%] bottom-24 z-30 flow-customer-glass rounded-2xl p-4 w-[42%]">
-          <div className="text-[10px] font-bold flow-red">PROMO HARI INI</div><div className="mt-1 text-sm font-extrabold flow-ink">Beli 2 Lebih Hemat</div><div className="mt-2 h-1.5 rounded-full bg-primary/15 overflow-hidden"><div className="h-full w-3/4 flow-bg-red" /></div>
+        <motion.div initial={{ x: -80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .35 }} className="absolute left-[3%] top-44 z-30 flow-customer-glass rounded-xl px-3 py-2.5 w-[31%]">
+          <div className="flex items-center gap-1.5"><Gift className="h-4 w-4 flow-red" /><span className="text-[10px] font-extrabold flow-ink">Zeger Points</span></div><div className="mt-1 text-lg font-extrabold flow-red">1.250</div><div className="text-[8px] flow-muted">Tukar reward</div>
+        </motion.div>
+        <motion.div initial={{ x: 70, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .5 }} className="absolute right-[5%] bottom-28 z-30 flow-customer-glass rounded-xl px-3 py-2.5 w-[32%]">
+          <div className="text-[8px] font-bold flow-red">PROMO HARI INI</div><div className="mt-0.5 text-[10px] font-extrabold flow-ink">Beli 2 Lebih Hemat</div><div className="mt-1.5 h-1 rounded-full bg-primary/15 overflow-hidden"><div className="h-full w-3/4 flow-bg-red" /></div>
         </motion.div>
       </div>
     </div>
