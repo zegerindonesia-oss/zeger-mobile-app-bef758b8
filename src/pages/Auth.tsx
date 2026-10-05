@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 const cleanupAuthState = () => {
   try {
     Object.keys(localStorage).forEach(key => {
@@ -36,6 +37,24 @@ const Auth = () => {
     loading
   } = useAuth();
   const [authLoading, setAuthLoading] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSending, setResetSending] = useState(false);
+  const handleSendReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setResetSending(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResetSending(false);
+    if (error) {
+      toast.error(`Gagal mengirim link reset: ${error.message}`);
+      return;
+    }
+    toast.success("Link reset password sudah dikirim. Cek inbox / folder spam email Anda.");
+    setResetOpen(false);
+  };
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -229,9 +248,9 @@ const Auth = () => {
                       <Input id="signin-password" type="password" placeholder="Password" value={formData.password} onChange={e => handleInputChange("password", e.target.value)} className="bg-gray-50/80 border-gray-200/50 focus:border-red-500 focus:ring-red-500 rounded-full py-6 px-4 text-gray-700 placeholder:text-gray-400" required />
                     </div>
                     <div className="text-right">
-                      <a href="#" className="text-sm text-red-600 hover:text-red-700">
+                      <button type="button" onClick={() => { setResetEmail(formData.email); setResetOpen(true); }} className="text-sm text-red-600 hover:text-red-700">
                         Forgot Password?
-                      </a>
+                      </button>
                     </div>
                     <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white rounded-full py-6 text-lg font-semibold" disabled={authLoading}>
                       {authLoading ? "Signing in..." : "Login"}
@@ -286,6 +305,21 @@ const Auth = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Lupa Password</DialogTitle>
+            <DialogDescription>Masukkan email akun Anda. Kami akan mengirim link untuk membuat password baru.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSendReset} className="space-y-4">
+            <Input type="email" placeholder="Email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} className="rounded-full py-6 px-4" required autoFocus />
+            <Button type="submit" disabled={resetSending} className="w-full bg-red-600 hover:bg-red-700 text-white rounded-full py-6 font-semibold">
+              {resetSending ? "Mengirim..." : "Kirim Link Reset"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <div className="absolute bottom-0 left-0 right-0 text-center py-4 bg-red-600/20 backdrop-blur-sm">
