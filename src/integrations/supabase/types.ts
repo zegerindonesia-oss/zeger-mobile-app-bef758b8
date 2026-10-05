@@ -4646,6 +4646,19 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      provision_tenant: {
+        Args: {
+          _business_type: string
+          _city: string
+          _company_name: string
+          _menu_template: string
+          _modules: string[]
+          _outlet_name: string
+          _phone: string
+          _plan: string
+        }
+        Returns: string
+      }
       record_material_movement: {
         Args: {
           _branch_id: string

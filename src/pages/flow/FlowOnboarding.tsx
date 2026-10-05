@@ -63,9 +63,14 @@ const FlowOnboarding = () => {
     const r = schema.safeParse(f);
     if (!r.success) { toast.error(r.error.issues[0].message); return; }
     setSaving(true);
-    const { error } = await supabase.from('flow_tenant_signups' as any).insert({ ...f, ...r.data, status: 'pending' });
-    if (error) { setSaving(false); toast.error('Gagal menyimpan, coba lagi.'); return; }
-    await supabase.auth.updateUser({ data: { onboarded: true, company_name: r.data.company_name } });
+    const { data: tenantId, error } = await (supabase.rpc as any)('provision_tenant', {
+      _company_name: r.data.company_name, _business_type: f.business_type, _plan: f.plan, _modules: f.modules,
+      _outlet_name: r.data.first_outlet_name, _city: r.data.city, _phone: r.data.phone, _menu_template: f.menu_template,
+    });
+    if (error || !tenantId) { setSaving(false); toast.error('Gagal menyiapkan workspace, coba lagi.'); return; }
+    // Lead record for the sales team; non-blocking.
+    await supabase.from('flow_tenant_signups' as any).insert({ ...f, ...r.data, status: 'provisioned' });
+    await supabase.auth.updateUser({ data: { onboarded: true, company_name: r.data.company_name, tenant_id: tenantId } });
     setDone(true);
   };
 
@@ -84,7 +89,7 @@ const FlowOnboarding = () => {
       <div className="flow-card rounded-[32px] p-10 max-w-lg text-center">
         <div className="mx-auto h-16 w-16 rounded-full flow-bg-red grid place-items-center"><PartyPopper className="h-8 w-8" /></div>
         <h1 className="mt-6 text-3xl font-extrabold flow-ink">Selamat datang, {f.company_name}!</h1>
-        <p className="mt-3 flow-muted">Setup selesai. Trial 14 hari Anda sudah aktif — tim kami akan membantu impor menu via WhatsApp {f.phone}.</p>
+        <p className="mt-3 flow-muted">Workspace siap! Outlet "{f.first_outlet_name}"{f.menu_template !== 'manual' ? ' dan menu awal' : ''} sudah dibuat. Trial 14 hari Anda aktif.</p>
         <button onClick={() => { window.location.href = '/'; }} className="flow-btn mt-8 inline-flex rounded-2xl px-6 py-3.5 font-bold">Masuk ke Workspace</button>
       </div>
     </div>
