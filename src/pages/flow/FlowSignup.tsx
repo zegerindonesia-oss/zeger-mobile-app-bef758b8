@@ -89,6 +89,12 @@ const FlowSignup = () => {
         </div>
         <form onSubmit={submit} className="flow-card rounded-[28px] p-8 space-y-4">
           <h2 className="text-2xl font-extrabold flow-ink">Daftar akun</h2>
+          <button type="button" onClick={handleGoogle} className="w-full flex items-center justify-center gap-3 rounded-xl border border-border bg-background px-6 py-3.5 font-bold flow-ink transition hover:bg-muted/40">
+            <GoogleIcon /> Lanjutkan dengan Google
+          </button>
+          <div className="flex items-center gap-3 text-xs flow-muted">
+            <div className="h-px flex-1 bg-border" /><span>atau daftar dengan email</span><div className="h-px flex-1 bg-border" />
+          </div>
           {([['owner_name', 'Nama Lengkap', 'text'], ['email', 'Email', 'email'], ['phone', 'No. WhatsApp', 'tel'], ['password', 'Password (min. 8 karakter)', 'password']] as const).map(([k, l, t]) => (
             <label key={k} className="block">
               <span className="text-sm font-semibold flow-ink">{l}</span>
