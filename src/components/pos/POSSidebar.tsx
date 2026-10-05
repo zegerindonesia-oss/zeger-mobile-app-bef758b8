@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ShoppingCart, Monitor, Tv, LayoutDashboard, Package, Users, BarChart3, Tag, Gift,
-  Settings, LogOut, Banknote, DoorClosed, Boxes, Headphones, UserCog, Receipt,
+  Settings, LogOut, Banknote, DoorClosed, Boxes, Headphones, UserCog, Receipt, Printer, FileBarChart,
 } from 'lucide-react';
 import { ZegerLogo } from '@/components/ui/zeger-logo';
 import { cn } from '@/lib/utils';
@@ -25,10 +25,12 @@ interface Props {
   branchName: string;
   onCashMovement: () => void;
   onCloseShift: () => void;
+  onPrinterSettings?: () => void;
+  onXReport?: () => void;
   onLogout: () => void;
 }
 
-export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMovement, onCloseShift, onLogout }: Props) => {
+export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMovement, onCloseShift, onPrinterSettings, onXReport, onLogout }: Props) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const lvl = levelOf(role);
@@ -39,7 +41,9 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
     { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all },
     { label: 'Layar Antrean TV', icon: Tv, path: '/pos/queue', levels: all },
     { label: 'Kas Masuk/Keluar', icon: Banknote, action: onCashMovement, levels: all },
-    { label: 'Tutup Shift', icon: DoorClosed, action: onCloseShift, levels: all },
+    { label: 'Laporan X (Shift)', icon: FileBarChart, action: onXReport, levels: all },
+    { label: 'Tutup Shift (Z)', icon: DoorClosed, action: onCloseShift, levels: all },
+    { label: 'Pengaturan Printer', icon: Printer, action: onPrinterSettings, levels: all },
     { label: 'Dashboard ERP', icon: LayoutDashboard, path: '/admin', levels: ['ho', 'manager', 'finance'] },
     { label: 'Transaksi', icon: Receipt, path: '/transactions', levels: ['ho', 'manager', 'finance'] },
     { label: 'Produk', icon: Package, path: '/master/products', levels: ['ho', 'manager'] },
