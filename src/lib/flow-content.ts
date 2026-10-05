@@ -1,6 +1,6 @@
 import {
   Coffee, UtensilsCrossed, Croissant, Store, CloudCog, Bike, ShoppingCart, Monitor, Tv, Package,
-  Gift, Smartphone, Mic, Receipt, Wallet, Truck, type LucideIcon,
+  Gift, Smartphone, Mic, Receipt, Wallet, Truck, FileText, BarChart3, type LucideIcon,
 } from 'lucide-react';
 
 export interface FlowPage {

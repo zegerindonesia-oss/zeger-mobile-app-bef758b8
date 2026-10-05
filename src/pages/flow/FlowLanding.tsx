@@ -18,6 +18,9 @@ import featLoyalty from '@/assets/flow/feat-loyalty-crm.jpg';
 import featApp from '@/assets/flow/feat-aplikasi-customer.jpg';
 import featVoice from '@/assets/flow/feat-voice-ai.jpg';
 import featBack from '@/assets/flow/feat-back-office.jpg';
+import featInvoice from '@/assets/flow/feat-invoice.jpg';
+import featFinance from '@/assets/flow/feat-laporan-keuangan.jpg';
+import featMobile from '@/assets/flow/feat-mobile-selling.jpg';
 
 const badges = [
   { icon: ShoppingCart, t: 'POS Kasir', pos: 'top-[8%] -left-[4%]', d: 0 },
@@ -61,9 +64,9 @@ const Hero = () => {
           <div className="mt-6 flex flex-wrap gap-5 text-xs flow-muted">{['Tanpa kartu kredit', 'Setup 3 menit', 'Support WhatsApp'].map((t) => <span key={t} className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" />{t}</span>)}</div>
         </motion.div>
 
-        <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[520px] h-[620px]">
-          <div className="absolute left-1/2 top-1/3 -translate-x-1/2 h-[420px] w-[420px] rounded-full flow-bg-red opacity-15 blur-3xl" />
-          <img src={heroWoman} alt="Pengusaha wanita profesional mengelola bisnis F&B lewat tablet" width={1024} height={1408} className="relative h-full w-full object-contain object-bottom drop-shadow-2xl" />
+        <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[540px] aspect-square">
+          <div className="absolute inset-[8%] rounded-full flow-hero-orb" />
+          <img src={heroWoman} alt="Pengusaha wanita profesional mengelola bisnis F&B lewat tablet" width={1024} height={1152} className="absolute inset-x-[6%] bottom-0 h-[96%] w-[88%] object-contain object-bottom drop-shadow-2xl" />
           {badges.map(({ icon: I, t, pos, d }) => (
             <motion.div key={t} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8 + d * 0.2, type: 'spring' }}
               className={`absolute ${pos} flow-glass rounded-2xl px-3 py-2.5 flex items-center gap-2 flow-float`} style={{ animationDelay: `${d}s`, transform: 'translateZ(60px)' }}>
@@ -159,6 +162,7 @@ const KitchenPreview = ({ queue = false }: { queue?: boolean }) => (
 const FEATURE_IMAGES: Record<string, string> = {
   'pos-kasir': featPos, 'kitchen-display': featKds, 'layar-antrean': featQueue, 'bahan-resep': featBom,
   'loyalty-crm': featLoyalty, 'aplikasi-customer': featApp, 'voice-ai': featVoice, 'back-office': featBack,
+  invoice: featInvoice, 'laporan-keuangan': featFinance, 'mobile-selling': featMobile,
 };
 
 const ProductPreview = ({ slug, title }: { slug: string; title?: string }) => {
@@ -187,11 +191,11 @@ const Coverflow = () => {
               transition={{ type: 'spring', stiffness: 90, damping: 20 }}
               className="absolute left-1/2 top-0 -ml-[min(44vw,330px)] w-[min(88vw,660px)] cursor-pointer" style={{ transformStyle: 'preserve-3d' }}>
               <div className="flow-card rounded-[28px] overflow-hidden grid md:grid-cols-2 h-[420px]">
-                <div className="relative flow-feature-stage p-6 overflow-hidden">
+                <div className="relative overflow-hidden">
                   <div className="absolute left-6 top-6 z-10 flex items-center gap-3 rounded-2xl bg-background/85 px-3 py-2 backdrop-blur-xl shadow-lg">
                     <I className="h-5 w-5 flow-red" /><span className="text-sm font-extrabold flow-ink">{p.title}</span>
                   </div>
-                  <motion.div whileHover={{ rotateX: 0, rotateY: 0, scale: 1.03 }} className="flow-feature-screen absolute inset-x-7 bottom-7 top-20 overflow-hidden rounded-2xl bg-background">
+                  <motion.div whileHover={{ scale: 1.04 }} transition={{ duration: 0.5 }} className="absolute inset-0 overflow-hidden">
                     <ProductPreview slug={p.slug} title={p.title} />
                   </motion.div>
                 </div>
