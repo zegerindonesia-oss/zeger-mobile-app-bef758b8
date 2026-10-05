@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ShoppingCart, Monitor, LayoutDashboard, Package, Users, BarChart3, Tag, Gift,
+  ShoppingCart, Monitor, Tv, LayoutDashboard, Package, Users, BarChart3, Tag, Gift,
   Settings, LogOut, Banknote, DoorClosed, Boxes, Headphones, UserCog, Receipt,
 } from 'lucide-react';
 import { ZegerLogo } from '@/components/ui/zeger-logo';
@@ -37,6 +37,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   const items = ([
     { label: 'Kasir (POS)', icon: ShoppingCart, path: '/pos', levels: all },
     { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all },
+    { label: 'Layar Antrean TV', icon: Tv, path: '/pos/queue', levels: all },
     { label: 'Kas Masuk/Keluar', icon: Banknote, action: onCashMovement, levels: all },
     { label: 'Tutup Shift', icon: DoorClosed, action: onCloseShift, levels: all },
     { label: 'Dashboard ERP', icon: LayoutDashboard, path: '/admin', levels: ['ho', 'manager', 'finance'] },
