@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { RoleBasedRoute } from "@/components/auth/RoleBasedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import POS from "./pages/POS";
 import POSMain from "./pages/pos/POSMain";
 import POSKitchen from "./pages/pos/POSKitchen";
@@ -69,6 +70,7 @@ const App = () => (
         <Sonner />
         <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>
