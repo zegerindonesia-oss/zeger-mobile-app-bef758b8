@@ -9,7 +9,7 @@ import { FlowShell, Reveal } from '@/components/flow/FlowChrome';
 import { MacBook, IPhone, IPad } from '@/components/flow/Devices';
 import { DashboardScreen, CustomerAppScreen, POSScreen } from '@/components/flow/Screens';
 import { PRODUCTS, SOLUTIONS } from '@/lib/flow-content';
-import promo from '@/assets/flow/zeger-promo.png.asset.json';
+import ownerPhoto from '@/assets/flow/professional-fnb-owner.jpg.asset.json';
 
 const badges = [
   { icon: ShoppingCart, t: 'POS Kasir', pos: 'top-[8%] -left-[4%]', d: 0 },
@@ -55,8 +55,8 @@ const Hero = () => {
 
         <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[520px] aspect-square">
           <div className="absolute inset-[6%] rounded-full flow-bg-red" />
-          <div className="absolute inset-[6%] rounded-full overflow-hidden">
-            <img src={promo.url} alt="Pelanggan Zeger Coffee menikmati kopi" className="h-full w-full object-cover object-[50%_42%] scale-[1.35]" />
+          <div className="absolute inset-[6%] rounded-full overflow-hidden border-[10px] border-background/70 shadow-2xl">
+            <img src={ownerPhoto.url} alt="Pengusaha F&B profesional mengelola bisnis melalui tablet" className="h-full w-full object-cover object-[50%_28%] scale-[1.06]" />
           </div>
           {badges.map(({ icon: I, t, pos, d }) => (
             <motion.div key={t} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8 + d * 0.2, type: 'spring' }}
