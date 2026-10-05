@@ -6,7 +6,9 @@ import { usePOSCart } from '@/hooks/usePOSCart';
 import { usePOSPromo } from '@/hooks/usePOSPromo';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { POSHeader } from '@/components/pos/POSHeader';
+import { POSSidebar } from '@/components/pos/POSSidebar';
+import { POSStatsBar } from '@/components/pos/POSStatsBar';
+import { Menu, Wifi, WifiOff, Monitor } from 'lucide-react';
 import { POSProductGrid } from '@/components/pos/POSProductGrid';
 import { POSCart } from '@/components/pos/POSCart';
 import { POSPayment } from '@/components/pos/POSPayment';
@@ -40,6 +42,8 @@ const POSMain = () => {
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
+  const [collapsed, setCollapsed] = useState(false);
+  const [statsKey, setStatsKey] = useState(0);
 
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -271,6 +275,7 @@ const POSMain = () => {
         }
         setMember(null);
       }
+      setStatsKey((k) => k + 1);
       toast.success('Pembayaran berhasil');
     } catch (e: any) {
       toast.error(e.message || 'Gagal memproses pembayaran');
@@ -325,37 +330,41 @@ const POSMain = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <POSHeader
+    <div className="h-screen flex pos-canvas">
+      <POSSidebar
+        collapsed={collapsed}
+        role={userProfile?.role}
+        userName={userProfile?.full_name || 'Kasir'}
         branchName={branchName}
-        kasirName={userProfile?.full_name || 'Kasir'}
-        shiftType={activeShift?.shift_type}
-        online={online}
-        onCloseShift={() => setCloseOpen(true)}
         onCashMovement={() => setCashOpen(true)}
+        onCloseShift={() => setCloseOpen(true)}
         onLogout={signOut}
-        rightExtra={
-          <>
-          <POSVoiceOrder onAdd={cart.addItem} />
-          <POSOnlineOrderPanel
-            branchId={userProfile?.branch_id || null}
-            shiftId={activeShift?.id || null}
-          />
-          </>
-        }
       />
+      <main className="flex-1 min-w-0 flex flex-col gap-3 p-3 overflow-hidden">
+        <header className="flex items-center gap-3">
+          <button onClick={() => setCollapsed((c) => !c)} className="glass-raised h-10 w-10 rounded-xl flex items-center justify-center" title="Sembunyikan / tampilkan menu">
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex-1 min-w-0 leading-tight">
+            <h1 className="text-lg font-bold truncate">Selamat bertugas, {(userProfile?.full_name || 'Kasir').split(' ')[0]} 👋</h1>
+            <p className="text-xs text-muted-foreground truncate">{branchName}{activeShift?.shift_type ? ` · Shift ${activeShift.shift_type}` : ''}</p>
+          </div>
+          <span className={`glass-raised rounded-full px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 ${online ? 'text-success' : 'text-destructive'}`}>
+            {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+            {online ? 'Online' : 'Offline'}
+          </span>
+          <POSVoiceOrder onAdd={cart.addItem} />
+          <POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} />
+          <button onClick={() => navigate('/pos/kds')} className="glass-raised h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-medium">
+            <Monitor className="h-4 w-4" /> KDS
+          </button>
+        </header>
 
-      <div className="flex-1 flex min-h-0">
-        <div className="flex-1 min-w-0">
-          <POSProductGrid
-            branchId={userProfile?.branch_id || null}
-            onAdd={cart.addItem}
-            onAddBundle={cart.addBundle}
-            onAddCustom={cart.addCustomItem}
-          />
-        </div>
-        <div className="w-[400px] flex-shrink-0">
-          <POSCart
+        <POSStatsBar branchId={userProfile?.branch_id || null} refreshKey={statsKey} />
+
+        <div className="flex-1 min-h-0 flex gap-3">
+          <section className="w-[400px] shrink-0 glass-raised rounded-2xl overflow-hidden">
+            <POSCart
             items={cart.items}
             totals={cart.totals}
             orderType={orderType}
@@ -392,8 +401,17 @@ const POSMain = () => {
             onClearRedemption={() => setRedemption(null)}
             memberMinTransaction={loyaltySettings.min_transaction}
           />
+          </section>
+          <section className="flex-1 min-w-0 glass-raised rounded-2xl overflow-hidden">
+            <POSProductGrid
+              branchId={userProfile?.branch_id || null}
+              onAdd={cart.addItem}
+              onAddBundle={cart.addBundle}
+              onAddCustom={cart.addCustomItem}
+            />
+          </section>
         </div>
-      </div>
+      </main>
 
       <OpenShiftModal open={!activeShift && !shiftLoading} onOpen={handleOpenShift} />
       <POSPayment
