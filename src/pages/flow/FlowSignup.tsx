@@ -54,7 +54,7 @@ const FlowSignup = () => {
   const handleGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/onboarding` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?plan=${encodeURIComponent(params.get('plan') || 'pro')}`, queryParams: { prompt: 'select_account' } },
     });
     if (error) toast.error(error.message.includes('provider') ? 'Login Google belum aktif. Silakan hubungi admin untuk mengaktifkannya.' : error.message);
   };

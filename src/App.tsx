@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import FlowLanding from "./pages/flow/FlowLanding";
 import FlowOnboarding from "./pages/flow/FlowOnboarding";
 import FlowSignup from "./pages/flow/FlowSignup";
+import FlowAuthCallback from "./pages/flow/FlowAuthCallback";
 import { HomeGate } from "./pages/flow/HomeGate";
 import { FlowDetail, FlowPricing, FlowCustomers, FlowAbout } from "./pages/flow/FlowPages";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/landing" element={<FlowLanding />} />
             <Route path="/onboarding" element={<FlowOnboarding />} />
             <Route path="/daftar" element={<FlowSignup />} />
+            <Route path="/auth/callback" element={<FlowAuthCallback />} />
             <Route path="/produk/:slug" element={<FlowDetail kind="produk" />} />
             <Route path="/solusi/:slug" element={<FlowDetail kind="solusi" />} />
             <Route path="/harga" element={<FlowPricing />} />
