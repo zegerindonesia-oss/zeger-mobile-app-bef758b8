@@ -9,7 +9,7 @@ import { FlowShell, Reveal } from '@/components/flow/FlowChrome';
 import { MacBook, IPhone, IPad } from '@/components/flow/Devices';
 import { DashboardScreen, CustomerAppScreen, POSScreen } from '@/components/flow/Screens';
 import { PRODUCTS, SOLUTIONS } from '@/lib/flow-content';
-import heroWomanAsset from '@/assets/flow/flowfnb-businesswoman-tablet.png.asset.json';
+import heroWoman from '@/assets/flow/hero-businesswoman-user.png';
 import featPos from '@/assets/flow/feat-pos-kasir.jpg';
 import featKds from '@/assets/flow/feat-kitchen-display.jpg';
 import featQueue from '@/assets/flow/feat-layar-antrean.jpg';
@@ -68,7 +68,7 @@ const Hero = () => {
 
         <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[540px] aspect-square">
           <div className="absolute inset-[8%] rounded-full flow-hero-orb" />
-           <img src={heroWomanAsset.url} alt="Pengusaha wanita profesional mengelola bisnis F&B lewat tablet" width={1024} height={1536} className="absolute inset-x-[-2%] bottom-[-4%] h-[108%] w-[104%] object-contain object-bottom drop-shadow-2xl" />
+           <img src={heroWoman} alt="Pengusaha wanita profesional mengelola bisnis F&B lewat tablet" width={1024} height={1536} className="absolute inset-x-[-2%] bottom-[-4%] h-[108%] w-[104%] object-contain object-bottom drop-shadow-2xl" />
           {badges.map(({ icon: I, t, pos, d }) => (
             <motion.div key={t} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8 + d * 0.2, type: 'spring' }}
               className={`absolute ${pos} flow-glass rounded-2xl px-3 py-2.5 flex items-center gap-2 flow-float`} style={{ animationDelay: `${d}s`, transform: 'translateZ(60px)' }}>
