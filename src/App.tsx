@@ -16,6 +16,9 @@ import POSKitchen from "./pages/pos/POSKitchen";
 import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
 import NotFound from "./pages/NotFound";
+import FlowLanding from "./pages/flow/FlowLanding";
+import FlowOnboarding from "./pages/flow/FlowOnboarding";
+import { HomeGate } from "./pages/flow/HomeGate";
 import AdminDashboard from "./pages/AdminDashboard";
 import OrdersManagement from "./pages/OrdersManagement";
 import ProfitLoss from "./pages/finance/ProfitLoss";
@@ -73,12 +76,16 @@ const App = () => (
         <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/landing" element={<FlowLanding />} />
+            <Route path="/onboarding" element={<FlowOnboarding />} />
             <Route path="/" element={
+              <HomeGate>
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>
                   <AdminDashboard />
                 </ModernLayout>
               </RoleBasedRoute>
+              </HomeGate>
             } />
             <Route path="/mobile-seller" element={
               <RoleBasedRoute allowedRoles={['rider', 'sb_rider', 'bh_rider']}>
