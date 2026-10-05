@@ -9,7 +9,15 @@ import { FlowShell, Reveal } from '@/components/flow/FlowChrome';
 import { MacBook, IPhone, IPad } from '@/components/flow/Devices';
 import { DashboardScreen, CustomerAppScreen, POSScreen } from '@/components/flow/Screens';
 import { PRODUCTS, SOLUTIONS } from '@/lib/flow-content';
-import ownerPhoto from '@/assets/flow/professional-fnb-owner.jpg.asset.json';
+import heroWoman from '@/assets/flow/hero-businesswoman.png';
+import featPos from '@/assets/flow/feat-pos-kasir.jpg';
+import featKds from '@/assets/flow/feat-kitchen-display.jpg';
+import featQueue from '@/assets/flow/feat-layar-antrean.jpg';
+import featBom from '@/assets/flow/feat-bahan-resep.jpg';
+import featLoyalty from '@/assets/flow/feat-loyalty-crm.jpg';
+import featApp from '@/assets/flow/feat-aplikasi-customer.jpg';
+import featVoice from '@/assets/flow/feat-voice-ai.jpg';
+import featBack from '@/assets/flow/feat-back-office.jpg';
 
 const badges = [
   { icon: ShoppingCart, t: 'POS Kasir', pos: 'top-[8%] -left-[4%]', d: 0 },
