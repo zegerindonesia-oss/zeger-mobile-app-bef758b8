@@ -120,17 +120,17 @@ const FlowOnboarding = () => {
                 </select>
               </label>
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field k="owner_name" label="Nama Pemilik" />
-                <Field k="phone" label="No. WhatsApp" ph="08xxxxxxxxxx" />
+                {Field({ k: "owner_name", label: "Nama Pemilik" })}
+                {Field({ k: "phone", label: "No. WhatsApp", ph: "08xxxxxxxxxx" })}
               </div>
-              <Field k="email" label="Email Bisnis" type="email" />
+              {Field({ k: "email", label: "Email Bisnis", type: "email" })}
             </div>
           )}
           {step === 1 && (
             <div className="space-y-5">
               <h1 className="text-2xl font-extrabold flow-ink">Outlet pertama Anda</h1>
-              <Field k="first_outlet_name" label="Nama Outlet" ph="cth. Cabang Kemiri" />
-              <Field k="city" label="Kota" ph="cth. Malang" />
+              {Field({ k: "first_outlet_name", label: "Nama Outlet", ph: "cth. Cabang Kemiri" })}
+              {Field({ k: "city", label: "Kota", ph: "cth. Malang" })}
             </div>
           )}
           {step === 2 && (
