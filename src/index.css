@@ -493,6 +493,8 @@
   .flow-mac-base { background: linear-gradient(180deg, hsl(220 8% 86%), hsl(220 6% 66%)); box-shadow: 0 24px 40px -18px hsl(222 47% 11% / 0.5); }
   .flow-iphone { background: linear-gradient(145deg, hsl(220 6% 28%), hsl(222 12% 8%)); box-shadow: 0 50px 90px -30px hsl(222 47% 11% / 0.6), inset 0 0 0 1.5px hsl(0 0% 100% / 0.14); }
   .flow-glass { background: hsl(0 0% 100% / 0.75); backdrop-filter: blur(18px) saturate(160%); border: 1px solid hsl(0 0% 100% / 0.8); box-shadow: 0 20px 40px -20px hsl(354 77% 30% / 0.35); }
+  .flow-feature-stage { background: linear-gradient(145deg, hsl(354 100% 97%), hsl(220 14% 96%)); perspective: 1100px; }
+  .flow-feature-screen { transform: rotateX(5deg) rotateY(8deg); transform-origin: center; box-shadow: 0 30px 55px -25px hsl(222 47% 11% / 0.5), 0 0 0 1px hsl(0 0% 100% / 0.9); transition: transform .35s ease; }
   .flow-marquee { display: flex; width: max-content; animation: flow-marquee 40s linear infinite; }
   @keyframes flow-marquee { to { transform: translateX(-50%); } }
   .flow-float { animation: flow-float 6s ease-in-out infinite; }
