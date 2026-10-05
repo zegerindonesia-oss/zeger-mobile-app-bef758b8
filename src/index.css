@@ -496,6 +496,8 @@
   .flow-glass { background: hsl(0 0% 100% / 0.75); backdrop-filter: blur(18px) saturate(160%); border: 1px solid hsl(0 0% 100% / 0.8); box-shadow: 0 20px 40px -20px hsl(354 77% 30% / 0.35); }
   .flow-feature-stage { background: linear-gradient(145deg, hsl(354 100% 97%), hsl(220 14% 96%)); perspective: 1100px; }
   .flow-feature-screen { transform: rotateX(5deg) rotateY(8deg); transform-origin: center; box-shadow: 0 30px 55px -25px hsl(222 47% 11% / 0.5), 0 0 0 1px hsl(0 0% 100% / 0.9); transition: transform .35s ease; }
+  .flow-customer-stage { background: linear-gradient(145deg, hsl(354 82% 43%), hsl(350 86% 29%)); box-shadow: 0 40px 80px -38px hsl(354 77% 30% / 0.7); }
+  .flow-customer-glass { background: hsl(0 0% 100% / 0.88); backdrop-filter: blur(20px) saturate(165%); border: 1px solid hsl(0 0% 100% / 0.88); box-shadow: 0 24px 44px -22px hsl(350 50% 10% / 0.5); }
   .flow-marquee { display: flex; width: max-content; animation: flow-marquee 40s linear infinite; }
   @keyframes flow-marquee { to { transform: translateX(-50%); } }
   .flow-float { animation: flow-float 6s ease-in-out infinite; }

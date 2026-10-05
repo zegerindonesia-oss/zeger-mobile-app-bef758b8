@@ -9,7 +9,7 @@ import { FlowShell, Reveal } from '@/components/flow/FlowChrome';
 import { MacBook, IPhone, IPad } from '@/components/flow/Devices';
 import { DashboardScreen, CustomerAppScreen, POSScreen } from '@/components/flow/Screens';
 import { PRODUCTS, SOLUTIONS } from '@/lib/flow-content';
-import heroWoman from '@/assets/flow/hero-businesswoman.png';
+import heroWomanAsset from '@/assets/flow/flowfnb-businesswoman-tablet.png.asset.json';
 import featPos from '@/assets/flow/feat-pos-kasir.jpg';
 import featKds from '@/assets/flow/feat-kitchen-display.jpg';
 import featQueue from '@/assets/flow/feat-layar-antrean.jpg';
@@ -23,11 +23,13 @@ import featFinance from '@/assets/flow/feat-laporan-keuangan.jpg';
 import featMobile from '@/assets/flow/feat-mobile-selling.jpg';
 
 const badges = [
-  { icon: ShoppingCart, t: 'POS Kasir', pos: 'top-[8%] -left-[4%]', d: 0 },
-  { icon: ChefHat, t: 'KDS Dapur', pos: 'top-[2%] right-[6%]', d: 0.6 },
-  { icon: Package, t: 'Resep & HPP', pos: 'top-[38%] -right-[6%]', d: 1.2 },
-  { icon: Gift, t: 'Loyalty Poin', pos: 'bottom-[24%] -left-[8%]', d: 1.8 },
-  { icon: Bike, t: 'Rider GPS', pos: 'bottom-[8%] right-[2%]', d: 2.4 },
+  { icon: ShoppingCart, t: 'POS Kasir', pos: 'top-[7%] -left-[5%]', d: 0 },
+  { icon: Smartphone, t: 'App Customer', pos: 'top-[1%] right-[1%]', d: 0.45 },
+  { icon: ChefHat, t: 'KDS Dapur', pos: 'top-[30%] -right-[9%]', d: 0.9 },
+  { icon: Package, t: 'Resep & HPP', pos: 'top-[43%] -left-[10%]', d: 1.35 },
+  { icon: Gift, t: 'Loyalty Poin', pos: 'bottom-[26%] -right-[7%]', d: 1.8 },
+  { icon: Truck, t: 'Invoice', pos: 'bottom-[12%] -left-[7%]', d: 2.25 },
+  { icon: TrendingUp, t: 'Laporan Keuangan', pos: 'bottom-[1%] right-[0%]', d: 2.7 },
 ];
 
 const ticker = ['POS Touch', 'Split Bill', 'Multi-Station KDS', 'Antrean Suara', 'Resep BOM', 'HPP Real-time', 'QR Member', 'Voice AI', 'GoFood · Grab · Shopee', 'Laporan X/Z', 'Transfer Stok', 'Checkpoint Rider', 'Subscription', 'Multi Outlet'];
@@ -66,7 +68,7 @@ const Hero = () => {
 
         <motion.div style={{ y: yImg, rotateX: rx, rotateY: ry, transformPerspective: 1200 }} className="relative mx-auto w-full max-w-[540px] aspect-square">
           <div className="absolute inset-[8%] rounded-full flow-hero-orb" />
-          <img src={heroWoman} alt="Pengusaha wanita profesional mengelola bisnis F&B lewat tablet" width={848} height={1264} className="absolute inset-x-[6%] bottom-0 h-[96%] w-[88%] object-contain object-bottom drop-shadow-2xl" />
+           <img src={heroWomanAsset.url} alt="Pengusaha wanita profesional mengelola bisnis F&B lewat tablet" width={1024} height={1536} className="absolute inset-x-[-2%] bottom-[-4%] h-[108%] w-[104%] object-contain object-bottom drop-shadow-2xl" />
           {badges.map(({ icon: I, t, pos, d }) => (
             <motion.div key={t} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8 + d * 0.2, type: 'spring' }}
               className={`absolute ${pos} flow-glass rounded-2xl px-3 py-2.5 flex items-center gap-2 flow-float`} style={{ animationDelay: `${d}s`, transform: 'translateZ(60px)' }}>
@@ -128,12 +130,16 @@ const DeviceShowcase = () => {
         <div className="text-xs font-bold tracking-[0.3em] flow-red">SATU EKOSISTEM</div>
         <h2 className="mt-3 text-4xl md:text-5xl font-extrabold flow-ink">Back office, kasir, dan aplikasi pelanggan — <span className="flow-red">selalu sinkron.</span></h2>
       </Reveal>
-      <div className="relative max-w-6xl mx-auto px-5 mt-16" style={{ perspective: 1600 }}>
-        <motion.div style={{ rotateX, scale }} className="origin-bottom">
-          <MacBook className="mx-auto w-[86%]"><DashboardScreen /></MacBook>
+       <div className="relative max-w-6xl mx-auto px-5 mt-16 pb-12" style={{ perspective: 1600 }}>
+         <div className="absolute inset-x-[9%] bottom-0 h-20 rounded-[50%] bg-primary/10 blur-2xl" />
+         <motion.div style={{ rotateX, scale }} className="origin-bottom relative z-10">
+           <MacBook className="mx-auto w-[78%]"><DashboardScreen /></MacBook>
         </motion.div>
-        <motion.div style={{ x: padX }} className="absolute left-0 bottom-0 w-[32%] hidden md:block"><IPad><POSScreen /></IPad></motion.div>
-        <motion.div style={{ y: phoneY }} className="absolute right-[2%] -bottom-6 w-[19%] min-w-[150px]"><IPhone><CustomerAppScreen /></IPhone></motion.div>
+         <motion.div style={{ y: phoneY }} className="absolute left-[2%] bottom-2 z-20 w-[17%] min-w-[132px]"><IPhone><CustomerAppScreen /></IPhone></motion.div>
+         <motion.div style={{ x: padX }} className="absolute right-0 bottom-4 z-20 w-[34%] hidden md:block"><IPad><POSScreen /></IPad></motion.div>
+         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="absolute left-[18%] top-[14%] z-30 hidden lg:flex flow-glass rounded-2xl px-4 py-3 items-center gap-3">
+           <div className="h-9 w-9 rounded-xl flow-bg-red grid place-items-center"><TrendingUp className="h-4 w-4" /></div><div><div className="text-[10px] flow-muted">Omzet hari ini</div><div className="text-sm font-extrabold flow-ink">Rp 12.450.000</div></div>
+         </motion.div>
       </div>
     </section>
   );
@@ -269,16 +275,26 @@ const AISection = () => (
 
 const AppBanner = () => (
   <section className="max-w-7xl mx-auto px-5 py-24">
-    <div className="flow-bg-red rounded-[36px] p-10 md:p-16 grid md:grid-cols-2 gap-10 items-center relative overflow-hidden">
+    <div className="flow-customer-stage rounded-[36px] p-10 md:p-16 grid md:grid-cols-2 gap-10 items-center relative overflow-hidden">
       <Reveal>
-        <h2 className="text-4xl md:text-5xl font-extrabold leading-tight">Aplikasi pelanggan dengan brand Anda sendiri.</h2>
-        <p className="mt-4 opacity-90 max-w-md">Seperti aplikasi kopi ternama: pesan, lacak rider terdekat, kumpulkan poin, tukar reward — semuanya diatur dari back office.</p>
+        <div className="text-xs font-bold tracking-[0.28em] text-primary-foreground/75">APLIKASI PELANGGAN WHITE-LABEL</div>
+        <h2 className="mt-4 text-4xl md:text-5xl font-extrabold leading-tight text-primary-foreground">Brand Anda. Aplikasi Anda. Pelanggan tetap dekat.</h2>
+        <p className="mt-4 text-primary-foreground/85 max-w-md">Seperti aplikasi brand besar: pesan langsung, temukan rider, kumpulkan poin, nikmati promo, dan tukar reward dalam satu pengalaman.</p>
         <Link to="/produk/aplikasi-customer" className="mt-8 inline-flex items-center gap-2 bg-background flow-red rounded-full px-6 py-3.5 font-bold shadow-xl">Lihat Aplikasi <ArrowRight className="h-4 w-4" /></Link>
       </Reveal>
-      <div className="relative h-[460px]" style={{ perspective: 1200 }}>
-        <motion.div initial={{ rotateY: -25, y: 60, opacity: 0 }} whileInView={{ rotateY: -12, y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} className="absolute left-[18%] top-0 w-[48%]"><IPhone><CustomerAppScreen /></IPhone></motion.div>
-        <motion.div initial={{ y: 120, opacity: 0 }} whileInView={{ y: 40, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1, delay: 0.2 }} className="absolute right-[6%] top-0 flow-glass rounded-2xl p-3 flex items-center gap-2"><MapPin className="h-5 w-5 flow-red" /><span className="text-xs font-bold flow-ink">Rider 350 m dari Anda</span></motion.div>
-        <motion.div initial={{ y: 120, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1, delay: 0.35 }} className="absolute left-0 bottom-16 flow-glass rounded-2xl p-3 flex items-center gap-2"><Gift className="h-5 w-5 flow-red" /><span className="text-xs font-bold flow-ink">+16 poin didapat</span></motion.div>
+      <div className="relative h-[520px]" style={{ perspective: 1200 }}>
+        <div className="absolute left-[14%] right-[8%] bottom-8 h-24 rounded-[50%] bg-primary-foreground/20 blur-2xl" />
+        <div className="absolute left-[15%] right-[9%] bottom-8 h-16 rounded-[50%] border border-primary-foreground/40 bg-primary-foreground/10" />
+        <motion.div initial={{ rotateY: -24, y: 70, opacity: 0 }} whileInView={{ rotateY: -9, y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} className="absolute left-[27%] top-0 z-20 w-[43%]"><IPhone><CustomerAppScreen /></IPhone></motion.div>
+        <motion.div initial={{ x: 80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .2 }} className="absolute right-0 top-14 z-30 flow-customer-glass rounded-2xl p-4 w-[44%]">
+          <div className="flex items-center gap-2"><MapPin className="h-5 w-5 flow-red" /><span className="text-xs font-extrabold flow-ink">Rider terdekat</span></div><div className="mt-2 text-2xl font-extrabold flow-red">350 m</div><div className="text-[10px] flow-muted">Siap antar pesanan Anda</div>
+        </motion.div>
+        <motion.div initial={{ x: -80, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .35 }} className="absolute left-0 top-40 z-30 flow-customer-glass rounded-2xl p-4 w-[40%]">
+          <div className="flex items-center gap-2"><Gift className="h-5 w-5 flow-red" /><span className="text-xs font-extrabold flow-ink">Zeger Points</span></div><div className="mt-2 text-2xl font-extrabold flow-red">1.250</div><div className="text-[10px] flow-muted">Siap ditukar reward</div>
+        </motion.div>
+        <motion.div initial={{ x: 70, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: .8, delay: .5 }} className="absolute right-[2%] bottom-24 z-30 flow-customer-glass rounded-2xl p-4 w-[42%]">
+          <div className="text-[10px] font-bold flow-red">PROMO HARI INI</div><div className="mt-1 text-sm font-extrabold flow-ink">Beli 2 Lebih Hemat</div><div className="mt-2 h-1.5 rounded-full bg-primary/15 overflow-hidden"><div className="h-full w-3/4 flow-bg-red" /></div>
+        </motion.div>
       </div>
     </div>
   </section>
