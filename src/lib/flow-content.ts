@@ -1,6 +1,6 @@
 import {
   Coffee, UtensilsCrossed, Croissant, Store, CloudCog, Bike, ShoppingCart, Monitor, Tv, Package,
-  Gift, Smartphone, Mic, Receipt, Wallet, Truck, type LucideIcon,
+  Gift, Smartphone, Mic, Receipt, Wallet, Truck, FileText, BarChart3, type LucideIcon,
 } from 'lucide-react';
 
 export interface FlowPage {
@@ -46,7 +46,7 @@ export const PRODUCTS: FlowPage[] = [
     headline: 'Pelanggan setia, omset naik.', desc: 'Satu QR member untuk outlet, rider, dan aplikasi. Poin, tier, redeem, voucher, referral, dan langganan.',
     bullets: ['QR member', 'Redeem reward', 'Voucher & referral', 'Subscription plan'], stats: [['Semua', 'channel'], ['Offline', 'sync'], ['Tier', 'member']] },
   { slug: 'aplikasi-customer', icon: Smartphone, title: 'Aplikasi Customer', short: 'White-label untuk brand Anda.',
-    headline: 'Aplikasi seperti Fore & Kopken — milik Anda.', desc: 'Menu, pesan, lacak rider terdekat, poin, promo, dan notifikasi — dengan brand Anda sendiri.',
+    headline: 'Aplikasi seperti brand besar — milik Anda.', desc: 'Menu, pesan, lacak rider terdekat, poin, promo, dan notifikasi — dengan brand Anda sendiri.',
     bullets: ['Menu & checkout', 'Peta rider', 'Promo banner', 'Pengaturan dari back office'], stats: [['Brand', 'Anda'], ['iOS', '& Android'], ['Live', 'tracking']] },
   { slug: 'voice-ai', icon: Mic, title: 'Voice AI Assistant', short: 'Kasir cukup bicara.',
     headline: 'Pesanan masuk hanya dengan suara.', desc: 'AI memahami bahasa sehari-hari: menu, jumlah, gula, es, add-on — keranjang terisi otomatis.',
@@ -54,6 +54,15 @@ export const PRODUCTS: FlowPage[] = [
   { slug: 'back-office', icon: Receipt, title: 'Back Office ERP', short: 'Invoice, pembelian, keuangan.',
     headline: 'Hulu ke hilir dalam satu ERP.', desc: 'Pembelian, invoice, beban operasional, laba rugi, arus kas, neraca, dan multi user bertingkat.',
     bullets: ['Laba rugi & neraca', 'Beban operasional', 'Pendapatan & kasbon', 'User bertingkat'], stats: [['P&L', 'otomatis'], ['Multi', 'cabang'], ['Audit', 'trail']] },
+  { slug: 'invoice', icon: FileText, title: 'Invoice & Pembelian', short: 'PO, tagihan supplier, jatuh tempo.',
+    headline: 'Tagihan rapi, tak ada yang terlewat.', desc: 'Purchase order, invoice supplier, penerimaan barang, dan pengingat jatuh tempo dalam satu alur.',
+    bullets: ['Purchase order', 'Invoice supplier', 'Status lunas/belum', 'Stok masuk otomatis'], stats: [['PO', 'digital'], ['Auto', 'stok masuk'], ['Alert', 'jatuh tempo']] },
+  { slug: 'laporan-keuangan', icon: BarChart3, title: 'Laporan Keuangan', short: 'Laba rugi, arus kas, neraca.',
+    headline: 'Laporan keuangan tanpa spreadsheet.', desc: 'Laba rugi, arus kas, dan neraca terbentuk otomatis dari setiap transaksi dan beban outlet.',
+    bullets: ['Laba rugi otomatis', 'Arus kas harian', 'Neraca', 'Per outlet & konsolidasi'], stats: [['P&L', 'real-time'], ['Multi', 'outlet'], ['Export', 'PDF/Excel']] },
+  { slug: 'mobile-selling', icon: Bike, title: 'Mobile Selling', short: 'Gerobak, motor, rider keliling.',
+    headline: 'Jualan keliling, kontrol penuh.', desc: 'Aplikasi rider untuk jual keliling: stok di motor, checkpoint GPS, setoran tunai, dan selisih stok anti-fraud.',
+    bullets: ['POS di HP rider', 'Stok & retur per shift', 'Checkpoint GPS', 'Setoran & selisih stok'], stats: [['GPS', 'checkpoint'], ['Shift', 'tertutup'], ['0', 'selisih']] },
 ];
 
 export const EXTRA_ICONS = { Wallet, Truck };

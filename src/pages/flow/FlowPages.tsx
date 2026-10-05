@@ -35,7 +35,7 @@ export const FlowDetail = ({ kind }: { kind: 'produk' | 'solusi' }) => {
             <div className="inline-flex items-center gap-2 rounded-full flow-soft px-4 py-1.5 text-sm font-bold flow-red"><I className="h-4 w-4" />{p.title}</div>
             <h1 className="mt-5 text-4xl md:text-6xl font-extrabold flow-ink leading-[1.05]">{p.headline}</h1>
             <p className="mt-5 text-lg flow-muted">{p.desc}</p>
-            <div className="mt-8 flex gap-3"><Link to="/onboarding" className="flow-btn rounded-full px-7 py-4 font-bold flex items-center gap-2">Coba Gratis <ArrowRight className="h-5 w-5" /></Link><Link to="/harga" className="flow-btn-ghost rounded-full px-7 py-4 font-bold">Lihat Harga</Link></div>
+            <div className="mt-8 flex gap-3"><Link to="/daftar" className="flow-btn rounded-full px-7 py-4 font-bold flex items-center gap-2">Coba Gratis <ArrowRight className="h-5 w-5" /></Link><Link to="/harga" className="flow-btn-ghost rounded-full px-7 py-4 font-bold">Lihat Harga</Link></div>
           </motion.div>
           <motion.div initial={{ opacity: 0, rotateY: -20, y: 40 }} animate={{ opacity: 1, rotateY: -6, y: 0 }} transition={{ duration: 1 }} style={{ transformPerspective: 1400 }} className="relative">
             <MacBook><DashboardScreen /></MacBook>
@@ -77,7 +77,7 @@ export const FlowPricing = () => {
               <div className="text-xl font-extrabold">{p.name}</div><div className={`text-sm ${p.hot ? 'text-background/70' : 'flow-muted'}`}>{p.who}</div>
               <div className="mt-5 text-4xl font-extrabold">{p.price !== 'Custom' && <span className="text-lg align-top">Rp</span>}{p.price}<span className="text-sm font-medium opacity-60">{p.price !== 'Custom' && ' /outlet/bln'}</span></div>
               <ul className="mt-6 space-y-2.5 text-sm">{p.items.map((i) => <li key={i} className="flex gap-2"><Check className="h-4 w-4 flow-red shrink-0 mt-0.5" />{i}</li>)}</ul>
-              <Link to={`/onboarding?plan=${p.name.toLowerCase()}`} className={`mt-8 block text-center rounded-full py-3.5 font-bold ${p.hot ? 'flow-btn' : 'flow-btn-ghost'}`}>Mulai {p.name}</Link>
+              <Link to={`/daftar?plan=${p.name.toLowerCase()}`} className={`mt-8 block text-center rounded-full py-3.5 font-bold ${p.hot ? 'flow-btn' : 'flow-btn-ghost'}`}>Mulai {p.name}</Link>
             </motion.div>
           </Reveal>
         ))}
