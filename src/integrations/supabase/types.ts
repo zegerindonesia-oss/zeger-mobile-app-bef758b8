@@ -2044,6 +2044,45 @@ export type Database = {
           },
         ]
       }
+      product_recipes: {
+        Row: {
+          created_at: string
+          id: string
+          material_id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          material_id: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          material_id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_recipes_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_recipes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_waste: {
         Row: {
           branch_id: string
@@ -2450,6 +2489,127 @@ export type Database = {
           token?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      raw_material_movements: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          material_id: string
+          movement_type: string
+          notes: string | null
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_id: string
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          material_id?: string
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_movements_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_material_stock: {
+        Row: {
+          branch_id: string
+          id: string
+          material_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          id?: string
+          material_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          id?: string
+          material_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_stock_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_materials: {
+        Row: {
+          category: string
+          code: string | null
+          cost_per_unit: number
+          created_at: string
+          id: string
+          is_active: boolean
+          min_stock: number
+          name: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          code?: string | null
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_stock?: number
+          name: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          code?: string | null
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_stock?: number
+          name?: string
+          unit?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -3739,6 +3899,10 @@ export type Database = {
           stock_quantity: number
         }[]
       }
+      deduct_recipe_for_transaction: {
+        Args: { _transaction_id: string }
+        Returns: number
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -3959,6 +4123,8 @@ export type Database = {
         Args: { customer_user_id: string }
         Returns: boolean
       }
+      is_ho_user: { Args: never; Returns: boolean }
+      is_material_manager: { Args: never; Returns: boolean }
       is_rider_role: { Args: never; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       lookup_member: {
@@ -4039,6 +4205,19 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      record_material_movement: {
+        Args: {
+          _branch_id: string
+          _material_id: string
+          _notes?: string
+          _qty: number
+          _ref_id?: string
+          _ref_type?: string
+          _type: string
+          _unit_cost?: number
+        }
+        Returns: number
+      }
       redeem_loyalty_reward: {
         Args: { _member_id: string; _reward_id: string }
         Returns: {
