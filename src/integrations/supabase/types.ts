@@ -1065,6 +1065,57 @@ export type Database = {
           },
         ]
       }
+      flow_tenant_signups: {
+        Row: {
+          business_type: string
+          city: string | null
+          company_name: string
+          created_at: string
+          email: string
+          first_outlet_name: string | null
+          id: string
+          menu_template: string | null
+          modules: string[]
+          outlet_count: string | null
+          owner_name: string
+          phone: string
+          plan: string
+          status: string
+        }
+        Insert: {
+          business_type: string
+          city?: string | null
+          company_name: string
+          created_at?: string
+          email: string
+          first_outlet_name?: string | null
+          id?: string
+          menu_template?: string | null
+          modules?: string[]
+          outlet_count?: string | null
+          owner_name: string
+          phone: string
+          plan?: string
+          status?: string
+        }
+        Update: {
+          business_type?: string
+          city?: string | null
+          company_name?: string
+          created_at?: string
+          email?: string
+          first_outlet_name?: string | null
+          id?: string
+          menu_template?: string | null
+          modules?: string[]
+          outlet_count?: string | null
+          owner_name?: string
+          phone?: string
+          plan?: string
+          status?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           branch_id: string | null
