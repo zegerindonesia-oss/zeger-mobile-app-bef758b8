@@ -483,6 +483,7 @@
   .flow-btn:hover { transform: translateY(-1px); box-shadow: 0 18px 34px -12px hsl(354 77% 50% / 0.65); }
   .flow-btn-ghost { background: hsl(0 0% 100%); border: 1px solid hsl(220 13% 88%); color: hsl(222 47% 11%); box-shadow: 0 8px 18px -14px hsl(222 47% 11% / 0.3); }
   .flow-hero-glow { background: radial-gradient(ellipse at 85% 10%, hsl(354 77% 50% / 0.22), transparent 55%), radial-gradient(ellipse at 10% 90%, hsl(355 100% 65% / 0.08), transparent 50%); }
+  .flow-hero-orb { background: radial-gradient(circle at 35% 30%, hsl(355 100% 72%), hsl(354 77% 50%) 70%); box-shadow: 0 40px 80px -30px hsl(354 77% 45% / 0.55); }
   .flow-input { background: hsl(0 0% 100%); border: 1px solid hsl(220 13% 88%); color: hsl(222 47% 11%); }
   .flow-input:focus { outline: none; border-color: hsl(354 77% 50%); box-shadow: 0 0 0 3px hsl(354 77% 50% / 0.15); }
   .flow-chip-on { border-color: hsl(354 77% 50%); background: hsl(354 100% 97%); box-shadow: 0 0 0 2px hsl(354 77% 50% / 0.2); }
