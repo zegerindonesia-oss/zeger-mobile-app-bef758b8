@@ -201,19 +201,22 @@ ${r.notes ? `<div>Catatan: ${esc(r.notes)}</div>` : ''}
 // ---------- Print engine ----------
 /** Prints HTML via a hidden iframe. Each call is one print job; browser picks the printer
  *  (set the default printer, or run Chrome with --kiosk-printing for silent printing). */
-export const printHtml = (html: string, copies = 1) =>
+const printOnce = (html: string) =>
   new Promise<void>((resolve) => {
     const iframe = document.createElement('iframe');
     iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
     document.body.appendChild(iframe);
     const d = iframe.contentDocument!;
-    const body = copies > 1 ? html.replace('<body>', '<body>').replace(/<\/body>/, '') : html;
-    d.open(); d.write(copies > 1 ? Array(copies).fill(body).join('<div style="page-break-after:always"></div>') : html); d.close();
+    d.open(); d.write(html); d.close();
     setTimeout(() => {
       try { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); } catch { /* ignore */ }
       setTimeout(() => { iframe.remove(); resolve(); }, 1000);
     }, 250);
   });
+
+export const printHtml = async (html: string, copies = 1) => {
+  for (let i = 0; i < Math.max(1, copies); i++) await printOnce(html);
+};
 
 const enabled = (s: PrintSettings, role: PrinterRole) => s.printers.filter((p) => p.enabled && p.role === role);
 
