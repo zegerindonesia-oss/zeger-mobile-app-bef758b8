@@ -227,6 +227,13 @@ const POSMain = () => {
         cart.items.map((i) => ({ product_id: i.product_id, qty: i.qty, is_custom: i.is_custom }))
       );
 
+      // Potong stok bahan baku sesuai resep (BOM)
+      try {
+        await (supabase as any).rpc('deduct_recipe_for_transaction', { _transaction_id: tx.id });
+      } catch (err) {
+        console.error('deduct recipe failed', err);
+      }
+
       // Mark voucher as used
       if (voucher?.voucher_id) {
         await markVoucherUsed(voucher.voucher_id, tx.id);
