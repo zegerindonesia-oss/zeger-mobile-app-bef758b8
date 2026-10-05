@@ -61,7 +61,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
     <aside className={cn('glass-sidebar h-screen flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
       <div className={cn('flex items-center gap-3 px-4 h-20 border-b border-primary-foreground/10', collapsed && 'justify-center px-0')}>
         <ZegerLogo size="sm" className="text-primary-foreground" />
-        {!collapsed && <span className="font-bold text-lg font-heading">Zeger POS</span>}
+        {!collapsed && <span className="pos-number font-bold text-lg">Zeger POS</span>}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 space-y-1 py-2">
         {items.map((it) => {

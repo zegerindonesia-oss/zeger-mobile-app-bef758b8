@@ -47,7 +47,7 @@ const POSMain = () => {
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [statsKey, setStatsKey] = useState(0);
 
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -481,7 +481,7 @@ const POSMain = () => {
              <h1 className="text-lg font-bold truncate">Terminal Kasir</h1>
             <p className="text-xs text-muted-foreground truncate">{branchName}{activeShift?.shift_type ? ` · Shift ${activeShift.shift_type}` : ''}</p>
           </div>
-           <span className={`rounded-xl px-3 py-2 text-xs font-semibold flex items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+           <span className={`hidden lg:flex rounded-xl px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
             {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
             {online ? 'Online' : 'Offline'}
           </span>

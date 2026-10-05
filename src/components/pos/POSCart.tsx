@@ -98,14 +98,14 @@ export const POSCart = ({
             </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5 ml-10">{totals.itemCount} item dipilih</p>
           </div>
-          <span className="rounded-lg bg-muted px-2 py-1 text-[10px] font-bold">AKTIF</span>
-        </div>
-        <div className="flex items-center justify-end h-0 relative z-10">
-          {items.length > 0 && (
-            <Button size="sm" variant="ghost" className="absolute bottom-10 right-14 text-destructive" onClick={onClear} title="Kosongkan pesanan">
-              <Trash2 className="h-3 w-3" /> Bersihkan
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            <span className="rounded-lg bg-muted px-2 py-1 text-[10px] font-bold">AKTIF</span>
+            {items.length > 0 && (
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={onClear} title="Kosongkan pesanan">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
         <Select value={orderType} onValueChange={setOrderType}>
           <SelectTrigger className="h-10 rounded-xl bg-background/80 shadow-inner">
