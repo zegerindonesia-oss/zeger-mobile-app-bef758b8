@@ -152,6 +152,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     icon: Settings, 
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"],
     children: [
+      { id: "saas-tenants", label: "Superadmin SaaS", icon: Building2, path: "/settings/tenants", roles: ["1_HO_Admin", "1_HO_Owner", "ho_admin", "ho_owner"] },
       { 
         id: "app-management", 
         label: "App Management", 

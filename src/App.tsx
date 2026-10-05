@@ -59,6 +59,7 @@ import LoyaltyManagement from "./pages/settings/LoyaltyManagement";
 import CRMManagement from "./pages/settings/CRMManagement";
 import CustomerAppSettings from "./pages/settings/CustomerAppSettings";
 import SubscriptionPlans from "./pages/settings/SubscriptionPlans";
+import TenantManagement from "./pages/settings/TenantManagement";
 import VoucherManagement from "./pages/settings/VoucherManagement";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
@@ -344,6 +345,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager']}>
                 <ModernLayout>
                   <VoucherManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/settings/tenants" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', '1_HO_Admin', '1_HO_Owner']}>
+                <ModernLayout>
+                  <TenantManagement />
                 </ModernLayout>
               </RoleBasedRoute>
             } />
