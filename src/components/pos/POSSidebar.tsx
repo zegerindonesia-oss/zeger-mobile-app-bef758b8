@@ -34,7 +34,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   const lvl = levelOf(role);
   const all: Level[] = ['ho', 'manager', 'kasir', 'finance'];
 
-  const items: Item[] = [
+  const items = ([
     { label: 'Kasir (POS)', icon: ShoppingCart, path: '/pos', levels: all },
     { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all },
     { label: 'Kas Masuk/Keluar', icon: Banknote, action: onCashMovement, levels: all },
@@ -49,7 +49,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
     { label: 'Laporan', icon: BarChart3, path: '/finance/profit-loss', levels: ['ho', 'finance'] },
     { label: 'Pengguna', icon: UserCog, path: '/settings/users', levels: ['ho', 'manager'] },
     { label: 'Pengaturan', icon: Settings, path: '/settings/app-management', levels: ['ho'] },
-  ].filter((i) => i.levels.includes(lvl));
+  ] as Item[]).filter((i) => i.levels.includes(lvl));
 
   return (
     <aside className={cn('glass-sidebar h-screen flex flex-col text-primary-foreground transition-all duration-300 shrink-0', collapsed ? 'w-[76px]' : 'w-[240px]')}>
