@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePOSShift } from '@/hooks/usePOSShift';
@@ -8,7 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { POSSidebar } from '@/components/pos/POSSidebar';
 import { POSStatsBar } from '@/components/pos/POSStatsBar';
-import { Menu, Wifi, WifiOff, Monitor } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Monitor, Armchair } from 'lucide-react';
+import { POSTableMap } from '@/components/pos/POSTableMap';
+import type { POSTable } from '@/hooks/usePOSTables';
 import { POSProductGrid } from '@/components/pos/POSProductGrid';
 import { POSCart } from '@/components/pos/POSCart';
 import { POSPayment } from '@/components/pos/POSPayment';
@@ -58,6 +60,11 @@ const POSMain = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [redemption, setRedemption] = useState<AppliedRedemption | null>(null);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
+  const [tableMapOpen, setTableMapOpen] = useState(false);
+  const [selectedTable, setSelectedTable] = useState<POSTable | null>(null);
+  const sentLineIds = useRef<Set<string>>(new Set());
+  const sentQty = useRef<Record<string, number>>({});
+  const canManageTables = ['ho_admin','ho_owner','1_HO_Admin','1_HO_Owner','branch_manager','sb_branch_manager','2_Hub_Branch_Manager','3_SB_Branch_Manager'].includes(userProfile?.role || '');
 
   useEffect(() => {
     getLoyaltyEarnSettings().then(setLoyaltySettings);
@@ -159,9 +166,18 @@ const POSMain = () => {
         return;
       }
 
+      const tableTxnId: string | undefined = selectedTable?.open_bill?.txn_id;
+      if (tableTxnId && selectedTable) {
+        const unsent = cart.items
+          .map((i) => ({ i, add: i.qty - (sentQty.current[i.line_id] || 0) }))
+          .filter((x) => x.add > 0);
+        await sendToKitchen(tableTxnId, selectedTable.table_number, unsent);
+      }
+
       const { data: tx, error: txErr } = await supabase
         .from('pos_transactions')
         .insert({
+          ...(tableTxnId ? { id: tableTxnId } : {}),
           transaction_number: txNum,
           branch_id: userProfile.branch_id,
           kasir_id: userProfile.id,
@@ -254,6 +270,17 @@ const POSMain = () => {
         change_amount: payload.change,
       });
 
+      // Auto-release table (and merged tables) after payment
+      if (selectedTable) {
+        const db = supabase as any;
+        await db.from('pos_tables').update({
+          status: 'available', guest_name: null, guest_count: null, occupied_at: null,
+          current_total: 0, open_bill: null, merged_into: null,
+        }).or(`id.eq.${selectedTable.id},merged_into.eq.${selectedTable.id}`);
+        setSelectedTable(null);
+        sentQty.current = {};
+      }
+
       setPaymentOpen(false);
       cart.clear();
       promo.clearPromos();
@@ -298,6 +325,73 @@ const POSMain = () => {
       toast.success('Shift dibuka');
     } catch (e: any) {
       toast.error(e.message || 'Gagal buka shift');
+    }
+  };
+
+  const handleSelectTable = (t: POSTable) => {
+    setSelectedTable(t);
+    sentQty.current = {};
+    setTableNumber(t.table_number);
+    setOrderType('dine_in');
+    if (t.guest_name && !customerName) setCustomerName(t.guest_name);
+  };
+
+  const handleRecallTable = (t: POSTable) => {
+    if (cart.items.length > 0 && selectedTable?.id !== t.id && !window.confirm('Keranjang saat ini akan diganti dengan bill meja. Lanjutkan?')) return;
+    handleSelectTable(t);
+    cart.loadItems(t.open_bill?.items || [], Number(t.open_bill?.discount_bill || 0));
+    setCustomerName(t.guest_name || '');
+    sentLineIds.current = new Set((t.open_bill?.items || []).map((i: POSCartItem) => i.line_id));
+    sentQty.current = Object.fromEntries((t.open_bill?.items || []).map((i: POSCartItem) => [i.line_id, i.qty]));
+  };
+
+  const sendToKitchen = async (txnId: string, tableNo: string, lines: { i: POSCartItem; add: number }[]) => {
+    if (!lines.length || !userProfile?.branch_id) return;
+    const db = supabase as any;
+    const { data: ticket, error } = await db.from('pos_kds_tickets').insert({
+      transaction_id: txnId,
+      branch_id: userProfile.branch_id,
+      status: 'queued',
+      order_type: 'dine_in',
+      table_number: tableNo,
+      customer_name: customerName || null,
+      transaction_number: `MEJA ${tableNo}`,
+    }).select().single();
+    if (error) throw error;
+    await db.from('pos_kds_ticket_items').insert(lines.map(({ i, add }) => ({
+      ticket_id: ticket.id, product_id: i.is_custom ? null : i.product_id,
+      product_name: i.product_name, qty: add, notes: lineNotes(i) || null,
+    })));
+  };
+
+  const handleHoldToTable = async () => {
+    if (!selectedTable || !userProfile?.branch_id) return;
+    const db = supabase as any;
+    try {
+      // New / increased lines go to kitchen
+      const newLines = cart.items
+        .map((i) => ({ i, add: i.qty - (sentQty.current[i.line_id] || 0) }))
+        .filter((x) => x.add > 0);
+      const txnId = selectedTable.open_bill?.txn_id || crypto.randomUUID();
+      await db.from('pos_tables').update({
+        status: 'occupied',
+        guest_name: customerName || selectedTable.guest_name || null,
+        occupied_at: selectedTable.occupied_at || new Date().toISOString(),
+        current_total: cart.totals.total,
+        open_bill: { items: cart.items, discount_bill: cart.discountBill, txn_id: txnId },
+      }).eq('id', selectedTable.id);
+      if (newLines.length) {
+        await sendToKitchen(txnId, selectedTable.table_number, newLines);
+      }
+      toast.success(`Pesanan disimpan ke Meja ${selectedTable.table_number}${newLines.length ? ' & dikirim ke dapur' : ''}`);
+      cart.clear();
+      setSelectedTable(null);
+      setTableNumber('');
+      setCustomerName('');
+      sentLineIds.current = new Set();
+      sentQty.current = {};
+    } catch (e: any) {
+      toast.error(e.message || 'Gagal menyimpan ke meja');
     }
   };
 
@@ -353,6 +447,9 @@ const POSMain = () => {
             {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
             {online ? 'Online' : 'Offline'}
           </span>
+          <button onClick={() => setTableMapOpen(true)} className="glass-raised h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-medium">
+            <Armchair className="h-4 w-4" /> Meja
+          </button>
           <POSVoiceOrder onAdd={cart.addItem} />
           <POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} />
           <button onClick={() => navigate('/pos/kds')} className="glass-raised h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-medium">
@@ -400,6 +497,8 @@ const POSMain = () => {
             redemption={redemption}
             onClearRedemption={() => setRedemption(null)}
             memberMinTransaction={loyaltySettings.min_transaction}
+            onOpenTables={() => setTableMapOpen(true)}
+            onHoldToTable={handleHoldToTable}
           />
           </section>
           <section className="flex-1 min-w-0 glass-raised rounded-2xl overflow-hidden">
@@ -425,6 +524,15 @@ const POSMain = () => {
           }
         }}
         onConfirm={handlePay}
+      />
+      <POSTableMap
+        open={tableMapOpen}
+        onOpenChange={setTableMapOpen}
+        branchId={userProfile?.branch_id || null}
+        canManage={canManageTables}
+        selectedTableId={selectedTable?.id || null}
+        onSelect={handleSelectTable}
+        onRecall={handleRecallTable}
       />
       <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} />
       <POSSplitBillDialog

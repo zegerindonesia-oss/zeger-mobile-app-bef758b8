@@ -151,8 +151,15 @@ export const usePOSCart = () => {
     };
   }, [items, discountBill, taxPercent, serviceChargePercent]);
 
+  /** Replace whole cart (used when recalling an open bill from a table). */
+  const loadItems = useCallback((next: POSCartItem[], bill = 0) => {
+    setItems(next);
+    setDiscountBill(bill);
+  }, []);
+
   return {
     items,
+    loadItems,
     addItem,
     addCustomItem,
     addBundle,

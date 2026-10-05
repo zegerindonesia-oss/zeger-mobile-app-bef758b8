@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X, Gift, History } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X, Gift, History, Armchair, Save } from 'lucide-react';
 import { POSCartItem } from '@/hooks/usePOSCart';
 import { AppliedPromo } from '@/hooks/usePOSPromo';
 import { POSPromoDialog } from './POSPromoDialog';
@@ -52,6 +52,8 @@ interface Props {
   redemption?: { code: string; discount: number; reward_name: string } | null;
   onClearRedemption?: () => void;
   memberMinTransaction?: number;
+  onOpenTables?: () => void;
+  onHoldToTable?: () => void;
 }
 
 export const POSCart = ({
@@ -61,7 +63,7 @@ export const POSCart = ({
   removeItem, onClear, onPay, onSplit, branchId,
   appliedPromos, onApplyVoucher, onRemovePromo, totalPromoDiscount,
   member, onScanMember, onClearMember, onRedeemPoints, onShowMemberHistory,
-  redemption, onClearRedemption, memberMinTransaction = 0,
+  redemption, onClearRedemption, memberMinTransaction = 0, onOpenTables, onHoldToTable,
 }: Props) => {
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
   const showExternal = ['gofood', 'grabfood', 'shopeefood'].includes(orderType);
@@ -112,9 +114,20 @@ export const POSCart = ({
             <SelectItem value="internal">Internal</SelectItem>
           </SelectContent>
         </Select>
-        {showTable && (
+        {showTable && (onOpenTables ? (
+          <div className="mt-2 flex gap-2">
+            <Button size="sm" variant={tableNumber ? 'default' : 'outline'} className="flex-1 h-8 justify-start" onClick={onOpenTables}>
+              <Armchair className="h-4 w-4 mr-1" /> {tableNumber ? `Meja ${tableNumber}` : 'Pilih Meja'}
+            </Button>
+            {tableNumber && onHoldToTable && items.length > 0 && (
+              <Button size="sm" variant="outline" className="h-8" onClick={onHoldToTable} title="Simpan pesanan ke meja (open bill) & kirim ke dapur">
+                <Save className="h-4 w-4 mr-1" /> Simpan
+              </Button>
+            )}
+          </div>
+        ) : (
           <Input className="mt-2 h-8" placeholder="Nomor meja" value={tableNumber} onChange={(e) => setTableNumber(e.target.value)} />
-        )}
+        ))}
         {showExternal && (
           <Input className="mt-2 h-8" placeholder="Nomor order platform" value={externalOrderId} onChange={(e) => setExternalOrderId(e.target.value)} />
         )}
