@@ -58,7 +58,7 @@ const Hero = () => {
             Kasir, dapur, stok, resep, rider keliling, keuangan, sampai aplikasi pelanggan — satu ekosistem dari hulu ke hilir, terintegrasi AI.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }} className="mt-8 flex flex-wrap gap-3">
-            <Link to="/onboarding" className="flow-btn rounded-full px-7 py-4 font-bold flex items-center gap-2">Coba Gratis 14 Hari <ArrowRight className="h-5 w-5" /></Link>
+            <Link to="/daftar" className="flow-btn rounded-full px-7 py-4 font-bold flex items-center gap-2">Coba Gratis 14 Hari <ArrowRight className="h-5 w-5" /></Link>
             <Link to="/auth" className="flow-btn-ghost rounded-full px-7 py-4 font-bold flex items-center gap-2"><Play className="h-4 w-4" />Lihat Demo</Link>
           </motion.div>
           <div className="mt-6 flex flex-wrap gap-5 text-xs flow-muted">{['Tanpa kartu kredit', 'Setup 3 menit', 'Support WhatsApp'].map((t) => <span key={t} className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" />{t}</span>)}</div>
@@ -316,7 +316,7 @@ export const FinalCTA = () => (
       <h2 className="text-4xl md:text-6xl font-extrabold">Powering Every Bite <span className="flow-red">of Growth.</span></h2>
       <p className="mt-4 text-background/70 max-w-xl mx-auto">Daftarkan bisnis Anda, isi profil dan menu — POS siap dipakai hari ini juga.</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link to="/onboarding" className="flow-btn rounded-full px-8 py-4 font-bold inline-flex items-center gap-2">Mulai Gratis <ArrowRight className="h-5 w-5" /></Link>
+        <Link to="/daftar" className="flow-btn rounded-full px-8 py-4 font-bold inline-flex items-center gap-2">Mulai Gratis <ArrowRight className="h-5 w-5" /></Link>
         <Link to="/harga" className="rounded-full px-8 py-4 font-bold border border-background/25">Lihat Harga</Link>
       </div>
     </div>

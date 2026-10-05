@@ -50,7 +50,7 @@ export const FlowNav = () => {
         </nav>
         <div className="flex items-center gap-2">
           <Link to="/auth" className="hidden sm:block text-sm font-semibold flow-ink px-3">Masuk</Link>
-          <Link to="/onboarding" className="flow-btn rounded-full px-5 py-2.5 text-sm font-bold flex items-center gap-1.5">Coba Gratis <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/daftar" className="flow-btn rounded-full px-5 py-2.5 text-sm font-bold flex items-center gap-1.5">Coba Gratis <ArrowRight className="h-4 w-4" /></Link>
           <button className="lg:hidden p-2" onClick={() => setMobile(!mobile)} aria-label="Menu">{mobile ? <X /> : <Menu />}</button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,13 +36,16 @@ const schema = z.object({
 
 const FlowOnboarding = () => {
   const [params] = useSearchParams();
+  const { user, loading } = useAuth();
+  const nav = useNavigate();
+  const meta = (user?.user_metadata || {}) as Record<string, any>;
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [f, setF] = useState({
-    company_name: '', business_type: 'coffee_shop', outlet_count: '1', owner_name: '', email: '', phone: '',
+    company_name: '', business_type: 'coffee_shop', outlet_count: '1', owner_name: meta.full_name || '', email: user?.email || '', phone: meta.phone || '',
     first_outlet_name: '', city: '', menu_template: 'coffee',
-    modules: ['pos', 'kds', 'bom', 'loyalty'] as string[], plan: params.get('plan') || 'pro',
+    modules: ['pos', 'kds', 'bom', 'loyalty'] as string[], plan: meta.flow_plan || params.get('plan') || 'pro',
   });
   useEffect(() => { document.title = 'Onboarding | FlowF&B'; }, []);
   const set = (k: string, v: any) => setF((s) => ({ ...s, [k]: v }));
@@ -60,8 +64,8 @@ const FlowOnboarding = () => {
     if (!r.success) { toast.error(r.error.issues[0].message); return; }
     setSaving(true);
     const { error } = await supabase.from('flow_tenant_signups' as any).insert({ ...f, ...r.data, status: 'pending' });
-    setSaving(false);
-    if (error) { toast.error('Gagal menyimpan, coba lagi.'); return; }
+    if (error) { setSaving(false); toast.error('Gagal menyimpan, coba lagi.'); return; }
+    await supabase.auth.updateUser({ data: { onboarded: true, company_name: r.data.company_name } });
     setDone(true);
   };
 
@@ -72,13 +76,16 @@ const FlowOnboarding = () => {
     </label>
   );
 
+  if (loading) return null;
+  if (!user) return <Navigate to={`/daftar${params.get('plan') ? `?plan=${params.get('plan')}` : ''}`} replace />;
+
   if (done) return (
     <div className="flow-site min-h-screen grid place-items-center px-5 flow-hero-glow">
       <div className="flow-card rounded-[32px] p-10 max-w-lg text-center">
         <div className="mx-auto h-16 w-16 rounded-full flow-bg-red grid place-items-center"><PartyPopper className="h-8 w-8" /></div>
         <h1 className="mt-6 text-3xl font-extrabold flow-ink">Selamat datang, {f.company_name}!</h1>
-        <p className="mt-3 flow-muted">Pendaftaran diterima. Tim FlowF&B akan menghubungi {f.phone} untuk aktivasi akun, impor menu, dan pelatihan kasir.</p>
-        <Link to="/" className="flow-btn mt-8 inline-flex rounded-2xl px-6 py-3.5 font-bold">Kembali ke Beranda</Link>
+        <p className="mt-3 flow-muted">Setup selesai. Trial 14 hari Anda sudah aktif — tim kami akan membantu impor menu via WhatsApp {f.phone}.</p>
+        <button onClick={() => { window.location.href = '/'; }} className="flow-btn mt-8 inline-flex rounded-2xl px-6 py-3.5 font-bold">Masuk ke Workspace</button>
       </div>
     </div>
   );
@@ -87,7 +94,7 @@ const FlowOnboarding = () => {
     <div className="flow-site min-h-screen flow-hero-glow">
       <header className="max-w-5xl mx-auto px-5 h-20 flex items-center justify-between">
         <Link to="/"><FlowLogo size="sm" /></Link>
-        <Link to="/auth" className="text-sm font-semibold flow-ink">Sudah punya akun? Masuk</Link>
+        <span className="text-sm font-semibold flow-muted">{user.email}</span>
       </header>
       <main className="max-w-3xl mx-auto px-5 pb-20">
         <div className="flex items-center gap-2 mb-8">
