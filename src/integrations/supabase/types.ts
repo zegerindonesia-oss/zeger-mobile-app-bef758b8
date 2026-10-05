@@ -1664,6 +1664,108 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_table_sections: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pos_tables: {
+        Row: {
+          branch_id: string
+          capacity: number
+          created_at: string
+          current_total: number
+          guest_count: number | null
+          guest_name: string | null
+          id: string
+          is_active: boolean
+          merged_into: string | null
+          occupied_at: string | null
+          open_bill: Json | null
+          section_id: string | null
+          shape: string
+          sort_order: number
+          status: string
+          table_number: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          capacity?: number
+          created_at?: string
+          current_total?: number
+          guest_count?: number | null
+          guest_name?: string | null
+          id?: string
+          is_active?: boolean
+          merged_into?: string | null
+          occupied_at?: string | null
+          open_bill?: Json | null
+          section_id?: string | null
+          shape?: string
+          sort_order?: number
+          status?: string
+          table_number: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          capacity?: number
+          created_at?: string
+          current_total?: number
+          guest_count?: number | null
+          guest_name?: string | null
+          id?: string
+          is_active?: boolean
+          merged_into?: string | null
+          occupied_at?: string | null
+          open_bill?: Json | null
+          section_id?: string | null
+          shape?: string
+          sort_order?: number
+          status?: string
+          table_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_tables_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "pos_tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_tables_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "pos_table_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_transaction_items: {
         Row: {
           category: string | null
