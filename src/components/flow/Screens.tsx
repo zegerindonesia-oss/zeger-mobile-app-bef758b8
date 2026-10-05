@@ -52,8 +52,8 @@ export const DashboardScreen = () => (
 export const CustomerAppScreen = () => (
   <div className="h-full flex flex-col bg-background">
     <div className="flow-bg-red px-4 pt-10 pb-5">
-      <div className="text-xs font-bold">FlowF&B · Outlet Kemiri</div>
-      <div className="text-xl font-extrabold leading-tight mt-3">Good Coffee<br />Better Business.</div>
+      <div className="text-xs font-extrabold tracking-wide">ZEGER COFFEE</div>
+      <div className="text-xl font-extrabold leading-tight mt-3">Mood Booster<br />Untuk Harimu.</div>
       <div className="mt-3 rounded-full bg-background/95 text-[10px] flow-muted px-3 py-2">Cari menu favoritmu…</div>
     </div>
     <div className="p-3 flex-1 overflow-hidden">
@@ -63,7 +63,7 @@ export const CustomerAppScreen = () => (
           <div key={m.n} className="rounded-xl border border-border overflow-hidden"><img src={m.img} alt="" className="h-16 w-full object-cover" /><div className="p-1.5"><div className="text-[10px] font-bold flow-ink truncate">{m.n}</div><div className="text-[9px] flow-red font-bold">Rp {m.p}</div></div></div>
         ))}
       </div>
-      <div className="mt-2 rounded-xl flow-soft p-2 flex justify-between items-center"><span className="text-[10px] font-bold flow-ink">Poin Kamu</span><span className="text-sm font-extrabold flow-red">1.250</span></div>
+      <div className="mt-2 rounded-xl flow-soft p-2 flex justify-between items-center"><span className="text-[10px] font-bold flow-ink">Zeger Points</span><span className="text-sm font-extrabold flow-red">1.250</span></div>
     </div>
   </div>
 );
