@@ -5,6 +5,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PermissionProvider } from "@/hooks/usePermissions";
 import App from "./App";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/sora/600.css";
+import "@fontsource/sora/700.css";
 import "./index.css";
 import { initLoyaltySync } from "@/lib/loyalty";
 

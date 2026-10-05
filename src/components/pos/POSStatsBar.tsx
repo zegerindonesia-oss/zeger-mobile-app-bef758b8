@@ -38,13 +38,13 @@ export const POSStatsBar = ({ branchId, refreshKey }: { branchId: string | null;
   return (
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       {cards.map((c) => (
-        <div key={c.label} className="glass-raised rounded-2xl p-3.5 flex items-center gap-3">
-          <div className="h-11 w-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <div key={c.label} className="glass-raised rounded-2xl px-4 py-3.5 flex items-center gap-3 transition-shadow hover:shadow-glass">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <c.icon className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <div className="text-xs text-muted-foreground">{c.label}</div>
-            <div className="text-xl font-bold tracking-tight truncate">{c.value}</div>
+            <div className="pos-number text-xl font-bold truncate">{c.value}</div>
           </div>
         </div>
       ))}
