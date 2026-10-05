@@ -18,7 +18,7 @@ import featLoyalty from '@/assets/flow/feat-loyalty-crm.jpg';
 import featApp from '@/assets/flow/feat-aplikasi-customer.jpg';
 import featVoice from '@/assets/flow/feat-voice-ai.jpg';
 import featBack from '@/assets/flow/feat-back-office.jpg';
-import ecosystemDevices from '@/assets/flow/ecosystem-devices.png.asset.json';
+import ecosystemDevices from '@/assets/flow/ecosystem-devices-v2.png.asset.json';
 import customerCollage from '@/assets/flow/customer-app-collage.png.asset.json';
 import featInvoice from '@/assets/flow/feat-invoice.jpg';
 import featFinance from '@/assets/flow/feat-laporan-keuangan.jpg';
