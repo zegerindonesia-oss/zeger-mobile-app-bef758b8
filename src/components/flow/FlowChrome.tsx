@@ -45,7 +45,7 @@ export const FlowNav = () => {
             </div>
           ))}
           <Link to="/harga" className="px-4 py-2 rounded-full hover:bg-muted">Harga</Link>
-          <Link to="/customer" className="px-4 py-2 rounded-full hover:bg-muted">Customer</Link>
+          <Link to="/kisah-customer" className="px-4 py-2 rounded-full hover:bg-muted">Customer</Link>
           <Link to="/tentang" className="px-4 py-2 rounded-full hover:bg-muted">Tentang</Link>
         </nav>
         <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export const FlowNav = () => {
               {m.items.map((i) => <Link key={i.slug} to={`${m.base}/${i.slug}`} onClick={() => setMobile(false)} className="block py-1.5 text-sm flow-ink">{i.title}</Link>)}
             </div>
           ))}
-          {['harga', 'customer', 'tentang', 'auth'].map((p) => <Link key={p} to={`/${p}`} className="block py-1.5 text-sm font-semibold flow-ink capitalize">{p === 'auth' ? 'Masuk' : p}</Link>)}
+          {['harga', 'kisah-customer', 'tentang', 'auth'].map((p) => <Link key={p} to={`/${p}`} className="block py-1.5 text-sm font-semibold flow-ink capitalize">{p === 'auth' ? 'Masuk' : p}</Link>)}
         </div>
       )}
     </header>
@@ -74,7 +74,7 @@ export const FlowFooter = () => (
       <div className="md:col-span-2"><FlowLogo size="sm" /><p className="text-sm flow-muted mt-4 max-w-xs">The Operating System for F&B. A brand by Flowstack · Indonesia.</p></div>
       <div><div className="font-bold flow-ink mb-3 text-sm">Produk</div>{PRODUCTS.slice(0, 5).map((p) => <Link key={p.slug} to={`/produk/${p.slug}`} className="block text-sm flow-muted py-1 hover:text-primary">{p.title}</Link>)}</div>
       <div><div className="font-bold flow-ink mb-3 text-sm">Solusi</div>{SOLUTIONS.map((p) => <Link key={p.slug} to={`/solusi/${p.slug}`} className="block text-sm flow-muted py-1 hover:text-primary">{p.title}</Link>)}</div>
-      <div><div className="font-bold flow-ink mb-3 text-sm">Perusahaan</div>{[['Harga', '/harga'], ['Customer', '/customer'], ['Tentang', '/tentang'], ['Masuk', '/auth'], ['Daftar', '/onboarding']].map(([l, h]) => <Link key={h} to={h} className="block text-sm flow-muted py-1 hover:text-primary">{l}</Link>)}</div>
+      <div><div className="font-bold flow-ink mb-3 text-sm">Perusahaan</div>{[['Harga', '/harga'], ['Customer', '/kisah-customer'], ['Tentang', '/tentang'], ['Masuk', '/auth'], ['Daftar', '/onboarding']].map(([l, h]) => <Link key={h} to={h} className="block text-sm flow-muted py-1 hover:text-primary">{l}</Link>)}</div>
     </div>
     <div className="border-t border-border py-5 text-center text-xs flow-muted">© {new Date().getFullYear()} FlowF&B by Flowstack. All rights reserved.</div>
   </footer>

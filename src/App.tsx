@@ -82,7 +82,7 @@ const App = () => (
             <Route path="/produk/:slug" element={<FlowDetail kind="produk" />} />
             <Route path="/solusi/:slug" element={<FlowDetail kind="solusi" />} />
             <Route path="/harga" element={<FlowPricing />} />
-            <Route path="/customer" element={<FlowCustomers />} />
+            <Route path="/kisah-customer" element={<FlowCustomers />} />
             <Route path="/tentang" element={<FlowAbout />} />
             <Route path="/" element={
               <HomeGate>
