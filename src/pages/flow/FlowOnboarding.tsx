@@ -103,7 +103,7 @@ const FlowOnboarding = () => {
           {step === 0 && (
             <div className="space-y-5">
               <h1 className="text-2xl font-extrabold flow-ink">Ceritakan bisnis Anda</h1>
-              <Field k="company_name" label="Nama Brand / Perusahaan" ph="cth. Kopi Senja" />
+              {Field({ k: "company_name", label: "Nama Brand / Perusahaan", ph: "cth. Kopi Senja" })}
               <div>
                 <span className="text-sm font-semibold flow-ink">Jenis Bisnis</span>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2">
