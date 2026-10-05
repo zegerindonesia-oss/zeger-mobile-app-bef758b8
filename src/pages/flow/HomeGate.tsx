@@ -10,6 +10,6 @@ export const HomeGate = ({ children }: { children: ReactNode }) => {
   if (loading) return null;
   if (!user) return <FlowLanding />;
   const meta = (user.user_metadata || {}) as Record<string, any>;
-  if (meta.flow_tenant) return meta.onboarded ? <FlowWorkspace /> : <Navigate to="/daftar" replace />;
+  if (meta.flow_tenant) return meta.onboarded ? <FlowWorkspace /> : <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 };
