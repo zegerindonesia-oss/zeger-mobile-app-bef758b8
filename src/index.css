@@ -487,3 +487,16 @@
   .flow-input:focus { outline: none; border-color: hsl(354 77% 50%); box-shadow: 0 0 0 3px hsl(354 77% 50% / 0.15); }
   .flow-chip-on { border-color: hsl(354 77% 50%); background: hsl(354 100% 97%); box-shadow: 0 0 0 2px hsl(354 77% 50% / 0.2); }
 }
+
+@layer components {
+  .flow-mac-lid { background: linear-gradient(160deg, hsl(220 6% 30%), hsl(222 10% 12%)); box-shadow: 0 40px 80px -30px hsl(222 47% 11% / 0.55), inset 0 0 0 1px hsl(0 0% 100% / 0.12); }
+  .flow-mac-base { background: linear-gradient(180deg, hsl(220 8% 86%), hsl(220 6% 66%)); box-shadow: 0 24px 40px -18px hsl(222 47% 11% / 0.5); }
+  .flow-iphone { background: linear-gradient(145deg, hsl(220 6% 28%), hsl(222 12% 8%)); box-shadow: 0 50px 90px -30px hsl(222 47% 11% / 0.6), inset 0 0 0 1.5px hsl(0 0% 100% / 0.14); }
+  .flow-glass { background: hsl(0 0% 100% / 0.75); backdrop-filter: blur(18px) saturate(160%); border: 1px solid hsl(0 0% 100% / 0.8); box-shadow: 0 20px 40px -20px hsl(354 77% 30% / 0.35); }
+  .flow-marquee { display: flex; width: max-content; animation: flow-marquee 40s linear infinite; }
+  @keyframes flow-marquee { to { transform: translateX(-50%); } }
+  .flow-float { animation: flow-float 6s ease-in-out infinite; }
+  @keyframes flow-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  .flow-dark-lux { background: radial-gradient(ellipse at 80% 20%, hsl(354 77% 40% / 0.35), transparent 50%), hsl(350 30% 8%); color: hsl(0 0% 100%); }
+  @media (prefers-reduced-motion: reduce) { .flow-marquee, .flow-float { animation: none; } }
+}
