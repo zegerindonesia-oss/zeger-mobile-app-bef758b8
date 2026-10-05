@@ -47,7 +47,7 @@ const POSMain = () => {
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [statsKey, setStatsKey] = useState(0);
 
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -460,7 +460,7 @@ const POSMain = () => {
   }
 
   return (
-    <div className="h-screen flex pos-canvas">
+    <div className="h-screen flex pos-canvas overflow-hidden">
       <POSSidebar
         collapsed={collapsed}
         role={userProfile?.role}
@@ -473,24 +473,24 @@ const POSMain = () => {
         onLogout={signOut}
       />
       <main className="flex-1 min-w-0 flex flex-col gap-3 p-3 overflow-hidden">
-        <header className="flex items-center gap-3">
-          <button onClick={() => setCollapsed((c) => !c)} className="glass-raised h-10 w-10 rounded-xl flex items-center justify-center" title="Sembunyikan / tampilkan menu">
+        <header className="pos-command-header rounded-2xl min-h-16 px-4 py-2 flex items-center gap-3">
+          <button onClick={() => setCollapsed((c) => !c)} className="pos-raised-control h-10 w-10 rounded-xl flex items-center justify-center transition-all" title="Sembunyikan / tampilkan menu">
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0 leading-tight">
-            <h1 className="text-lg font-bold truncate">Selamat bertugas, {(userProfile?.full_name || 'Kasir').split(' ')[0]} 👋</h1>
+             <h1 className="text-lg font-bold truncate">Terminal Kasir</h1>
             <p className="text-xs text-muted-foreground truncate">{branchName}{activeShift?.shift_type ? ` · Shift ${activeShift.shift_type}` : ''}</p>
           </div>
-          <span className={`glass-raised rounded-full px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 ${online ? 'text-success' : 'text-destructive'}`}>
+           <span className={`hidden lg:flex rounded-xl px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
             {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
             {online ? 'Online' : 'Offline'}
           </span>
-          <button onClick={() => setTableMapOpen(true)} className="glass-raised h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-medium">
+           <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold transition-all">
             <Armchair className="h-4 w-4" /> Meja
           </button>
           <POSVoiceOrder onAdd={cart.addItem} />
           <POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} />
-          <button onClick={() => navigate('/pos/kds')} className="glass-raised h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-medium">
+           <button onClick={() => navigate('/pos/kds')} className="pos-raised-control h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold transition-all">
             <Monitor className="h-4 w-4" /> KDS
           </button>
         </header>
@@ -498,7 +498,15 @@ const POSMain = () => {
         <POSStatsBar branchId={userProfile?.branch_id || null} refreshKey={statsKey} />
 
         <div className="flex-1 min-h-0 flex gap-3">
-          <section className="w-[400px] shrink-0 glass-raised rounded-2xl overflow-hidden">
+          <section className="flex-1 min-w-0 pos-panel rounded-2xl overflow-hidden order-1">
+            <POSProductGrid
+              branchId={userProfile?.branch_id || null}
+              onAdd={cart.addItem}
+              onAddBundle={cart.addBundle}
+              onAddCustom={cart.addCustomItem}
+            />
+          </section>
+          <section className="w-[390px] xl:w-[410px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2">
             <POSCart
             items={cart.items}
             totals={cart.totals}
@@ -538,14 +546,6 @@ const POSMain = () => {
             onOpenTables={() => setTableMapOpen(true)}
             onHoldToTable={handleHoldToTable}
           />
-          </section>
-          <section className="flex-1 min-w-0 glass-raised rounded-2xl overflow-hidden">
-            <POSProductGrid
-              branchId={userProfile?.branch_id || null}
-              onAdd={cart.addItem}
-              onAddBundle={cart.addBundle}
-              onAddCustom={cart.addCustomItem}
-            />
           </section>
         </div>
       </main>

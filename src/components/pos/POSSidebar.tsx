@@ -58,10 +58,10 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   ] as Item[]).filter((i) => i.levels.includes(lvl));
 
   return (
-    <aside className={cn('glass-sidebar h-screen flex flex-col text-primary-foreground transition-all duration-300 shrink-0', collapsed ? 'w-[76px]' : 'w-[240px]')}>
-      <div className={cn('flex items-center gap-2 px-4 h-16', collapsed && 'justify-center px-0')}>
+    <aside className={cn('glass-sidebar h-screen flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
+      <div className={cn('flex items-center gap-3 px-4 h-20 border-b border-primary-foreground/10', collapsed && 'justify-center px-0')}>
         <ZegerLogo size="sm" className="text-primary-foreground" />
-        {!collapsed && <span className="font-bold text-lg tracking-tight">Zeger POS</span>}
+        {!collapsed && <span className="pos-number font-bold text-lg">Zeger POS</span>}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 space-y-1 py-2">
         {items.map((it) => {
@@ -73,9 +73,9 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
               title={it.label}
               onClick={() => (it.action ? it.action() : navigate(it.path!))}
               className={cn(
-                'w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                'w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 active:translate-y-px',
                 collapsed && 'justify-center px-0',
-                active ? 'glass-pill-active' : 'text-primary-foreground/85 hover:bg-primary-foreground/15',
+                active ? 'glass-pill-active' : 'text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground',
               )}
             >
               <Icon className="h-[18px] w-[18px] shrink-0" />

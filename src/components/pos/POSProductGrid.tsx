@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, PackageOpen } from 'lucide-react';
 import { POSCartItem } from '@/hooks/usePOSCart';
 import { POSBundleCard, BundleData } from './POSBundleCard';
 import { POSCustomItemDialog } from './POSCustomItemDialog';
@@ -151,14 +151,20 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
   }, [bundles, activeCat, search]);
 
   const stockBadge = (qty: number) => {
-    if (qty <= 0) return <Badge variant="destructive">HABIS</Badge>;
-    if (qty <= 5) return <Badge variant="secondary">MENIPIS</Badge>;
-    return <Badge variant="default">TERSEDIA</Badge>;
+    if (qty <= 0) return <Badge variant="destructive" className="rounded-lg text-[9px]">Habis</Badge>;
+    if (qty <= 5) return <Badge variant="secondary" className="rounded-lg text-[9px]">Sisa {qty}</Badge>;
+    return <Badge className="rounded-lg bg-success/10 text-success hover:bg-success/15 text-[9px] shadow-none">Tersedia</Badge>;
   };
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b space-y-2 bg-card">
+      <div className="p-4 border-b border-border/60 space-y-3 bg-card/70 backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold">Katalog Menu</h2>
+            <p className="text-[11px] text-muted-foreground">Pilih menu untuk menambahkan ke pesanan</p>
+          </div>
+        </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -166,22 +172,22 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
               placeholder="Cari menu (nama / kode)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
+              className="pl-9 h-10 rounded-xl bg-background/80 border-border/70 shadow-inner"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => setCustomOpen(true)}>
+          <Button variant="outline" size="sm" className="h-10" onClick={() => setCustomOpen(true)}>
             <Plus className="h-3 w-3 mr-1" />
             Custom
           </Button>
         </div>
-        <div className="flex gap-1 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
           {categories.map((c) => (
             <Button
               key={c}
               size="sm"
               variant={activeCat === c ? 'default' : 'outline'}
               onClick={() => setActiveCat(c)}
-              className="flex-shrink-0"
+              className="flex-shrink-0 px-4"
             >
               {c}
             </Button>
@@ -189,13 +195,16 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-4 custom-scroll">
         {loading ? (
           <div className="text-center text-muted-foreground py-8">Memuat menu...</div>
         ) : filteredProducts.length === 0 && filteredBundles.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">Tidak ada menu</div>
+          <div className="h-full min-h-52 flex flex-col items-center justify-center text-muted-foreground">
+            <PackageOpen className="h-8 w-8 mb-2 opacity-40" />
+            <span>Tidak ada menu</span>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
             {filteredBundles.map((b) => (
               <POSBundleCard key={b.id} bundle={b} onAdd={onAddBundle} />
             ))}
@@ -205,26 +214,29 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
               return (
                 <Card
                   key={p.id}
-                  className={`p-2 cursor-pointer hover:border-primary transition ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`pos-product-card group p-3 cursor-pointer rounded-2xl overflow-hidden ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => {
                     if (getModifierGroups(p).length > 0) return setModProduct(p);
                     onAdd(toCartProduct(p));
                   }}
                 >
                   {p.image_url ? (
-                    <div className="aspect-square w-full bg-muted rounded overflow-hidden mb-2">
-                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="aspect-[4/3] w-full bg-muted rounded-xl overflow-hidden mb-3">
+                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                     </div>
                   ) : (
-                    <div className="aspect-square w-full bg-muted rounded mb-2 flex items-center justify-center text-xs text-muted-foreground">
+                    <div className="aspect-[4/3] w-full bg-muted/70 rounded-xl mb-3 flex items-center justify-center text-xs font-bold text-muted-foreground">
                       {p.name.slice(0, 2).toUpperCase()}
                     </div>
                   )}
-                  <div className="text-xs font-medium line-clamp-2 leading-tight">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">{p.category}</div>
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="text-sm font-bold text-primary">
+                  <div className="text-sm font-bold line-clamp-2 leading-snug min-h-10">{p.name}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{p.category || 'Menu'}</div>
+                  <div className="flex items-center justify-between gap-2 mt-2">
+                    <div className="pos-number text-sm font-bold text-primary">
                       Rp{Number(p.price).toLocaleString('id-ID')}
+                    </div>
+                    <div className="h-8 w-8 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 flex items-center justify-center transition-transform group-hover:scale-105">
+                      <Plus className="h-4 w-4" />
                     </div>
                   </div>
                   {branchId && <div className="mt-1">{stockBadge(qty)}</div>}
