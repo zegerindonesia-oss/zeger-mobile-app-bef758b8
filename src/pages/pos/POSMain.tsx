@@ -166,9 +166,18 @@ const POSMain = () => {
         return;
       }
 
+      const tableTxnId: string | undefined = selectedTable?.open_bill?.txn_id;
+      if (tableTxnId && selectedTable) {
+        const unsent = cart.items
+          .map((i) => ({ i, add: i.qty - (sentQty.current[i.line_id] || 0) }))
+          .filter((x) => x.add > 0);
+        await sendToKitchen(tableTxnId, selectedTable.table_number, unsent);
+      }
+
       const { data: tx, error: txErr } = await supabase
         .from('pos_transactions')
         .insert({
+          ...(tableTxnId ? { id: tableTxnId } : {}),
           transaction_number: txNum,
           branch_id: userProfile.branch_id,
           kasir_id: userProfile.id,
@@ -334,6 +343,25 @@ const POSMain = () => {
     sentQty.current = Object.fromEntries((t.open_bill?.items || []).map((i: POSCartItem) => [i.line_id, i.qty]));
   };
 
+  const sendToKitchen = async (txnId: string, tableNo: string, lines: { i: POSCartItem; add: number }[]) => {
+    if (!lines.length || !userProfile?.branch_id) return;
+    const db = supabase as any;
+    const { data: ticket, error } = await db.from('pos_kds_tickets').insert({
+      transaction_id: txnId,
+      branch_id: userProfile.branch_id,
+      status: 'queued',
+      order_type: 'dine_in',
+      table_number: tableNo,
+      customer_name: customerName || null,
+      transaction_number: `MEJA ${tableNo}`,
+    }).select().single();
+    if (error) throw error;
+    await db.from('pos_kds_ticket_items').insert(lines.map(({ i, add }) => ({
+      ticket_id: ticket.id, product_id: i.is_custom ? null : i.product_id,
+      product_name: i.product_name, qty: add, notes: lineNotes(i) || null,
+    })));
+  };
+
   const handleHoldToTable = async () => {
     if (!selectedTable || !userProfile?.branch_id) return;
     const db = supabase as any;
@@ -342,28 +370,16 @@ const POSMain = () => {
       const newLines = cart.items
         .map((i) => ({ i, add: i.qty - (sentQty.current[i.line_id] || 0) }))
         .filter((x) => x.add > 0);
+      const txnId = selectedTable.open_bill?.txn_id || crypto.randomUUID();
       await db.from('pos_tables').update({
         status: 'occupied',
         guest_name: customerName || selectedTable.guest_name || null,
         occupied_at: selectedTable.occupied_at || new Date().toISOString(),
         current_total: cart.totals.total,
-        open_bill: { items: cart.items, discount_bill: cart.discountBill },
+        open_bill: { items: cart.items, discount_bill: cart.discountBill, txn_id: txnId },
       }).eq('id', selectedTable.id);
       if (newLines.length) {
-        const { data: ticket } = await db.from('pos_kds_tickets').insert({
-          branch_id: userProfile.branch_id,
-          ticket_number: `T${selectedTable.table_number}-${String(Date.now()).slice(-4)}`,
-          order_type: 'dine_in',
-          table_number: selectedTable.table_number,
-          customer_name: customerName || null,
-          source: 'pos',
-          status: 'new',
-        }).select().single();
-        if (ticket) {
-          await db.from('pos_kds_ticket_items').insert(newLines.map(({ i, add }) => ({
-            ticket_id: ticket.id, product_name: i.product_name, qty: add, notes: lineNotes(i) || null,
-          })));
-        }
+        await sendToKitchen(txnId, selectedTable.table_number, newLines);
       }
       toast.success(`Pesanan disimpan ke Meja ${selectedTable.table_number}${newLines.length ? ' & dikirim ke dapur' : ''}`);
       cart.clear();
