@@ -8,4 +8,5 @@
 ## Mobile apps (Oct 2026)
 - [x] POS kasir fit HP & tablet (bottom cart drawer, compact header)
 - [x] Kasir, Rider, Customer installable on Android/iOS home screen (manifest + icons)
+- [x] Rider & Customer instant taps + safe-area for phone notches
 - [ ] Native store apps (Capacitor) — needs user to export to GitHub & build locally

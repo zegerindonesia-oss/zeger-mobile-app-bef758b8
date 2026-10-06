@@ -168,6 +168,15 @@
   .touch-pan-x {
     touch-action: pan-x pan-y;
   }
+
+  /* Native-like instant taps on phones/tablets (removes 300ms delay + grey flash) */
+  button, a, [role="button"], input, select, textarea, label {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  
   
   .overscroll-none {
     overscroll-behavior: none;
