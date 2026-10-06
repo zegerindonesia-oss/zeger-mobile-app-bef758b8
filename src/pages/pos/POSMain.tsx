@@ -663,8 +663,9 @@ const POSMain = () => {
           <PointsHistoryList memberId={member?.id} limit={30} />
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </>
+    );
+  }
 };
 
 export default POSMain;
