@@ -243,8 +243,16 @@ export const POSCart = ({
         )}
       </div>
 
-       <div className="border-t border-border/60 p-4 space-y-2.5 bg-muted/40 backdrop-blur-xl">
-        {/* Voucher */}
+       <div className="shrink-0 border-t border-border/60 p-3 md:p-4 space-y-2 bg-muted/40 backdrop-blur-xl">
+        <button
+          type="button"
+          onClick={() => setShowAdjust((v) => !v)}
+          className="w-full flex items-center justify-between rounded-xl bg-background/70 px-3 h-9 text-xs font-semibold"
+        >
+          <span className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5 text-primary" /> Voucher & Diskon</span>
+          <span className="text-muted-foreground">{showAdjust ? 'Tutup ▲' : 'Buka ▼'}</span>
+        </button>
+        {showAdjust && (<>
         <POSVoucherInput
           branchId={branchId}
           subtotal={totals.subtotal}
@@ -252,20 +260,18 @@ export const POSCart = ({
           onApply={onApplyVoucher}
           onRemove={onRemovePromo}
         />
-
-        {/* Bill discount + button promo */}
         <div className="flex items-center gap-2">
           <Label className="text-xs flex-shrink-0">Diskon Bill</Label>
           <Input
             type="number"
-            className="h-7 text-sm"
+            className="h-8 text-sm"
             value={discountBill || ''}
             onChange={(e) => setDiscountBill(Number(e.target.value) || 0)}
           />
           <Button
             size="sm"
             variant="outline"
-            className="h-7"
+            className="h-8"
             onClick={() => {
               setPromoDialogTarget(null);
               setPromoDialogScope('bill');
@@ -274,6 +280,7 @@ export const POSCart = ({
             <Tag className="h-3 w-3" />
           </Button>
         </div>
+        </>)}
 
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
