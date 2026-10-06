@@ -6,3 +6,4 @@
 - SaaS plans (ids free/sme/mid_market/enterprise) and their default modules live in src/lib/flow-plans.ts, mirrored server-side by public.plan_modules(); provision_tenant derives modules from plan so signups cannot self-grant modules.
 - POS layout is touch-first: phones (<md) use full catalog + bottom cart drawer, tablets/desktop use split view; install support is manifest-only (no service worker) to keep previews safe.
 - Native Android/iOS apps are Capacitor shells (capacitor.config.ts) loading the published domain, so APKs update without rebuilds; native folders are generated locally by the user via `npx cap add android`.
+- POS TV queue screens pair without login via `/tv?branch=<id>` reading the minimal-field `get_queue_display` RPC; per-branch video/running text lives in `pos_display_settings`, so TVs never hold staff credentials.
