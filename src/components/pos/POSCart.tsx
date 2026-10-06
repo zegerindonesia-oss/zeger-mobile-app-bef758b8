@@ -71,6 +71,7 @@ export const POSCart = ({
 
   const [promoDialogScope, setPromoDialogScope] = useState<'item' | 'bill' | null>(null);
   const [promoDialogTarget, setPromoDialogTarget] = useState<POSCartItem | null>(null);
+  const [showAdjust, setShowAdjust] = useState(false);
 
   const voucher = appliedPromos.find((p) => p.source === 'voucher');
   const redemptionDiscount = redemption?.discount || 0;
@@ -88,8 +89,8 @@ export const POSCart = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-card/80 backdrop-blur-xl">
-      <div className="p-4 border-b border-border/60">
+    <div className="flex flex-col h-full min-h-0 bg-card/80 backdrop-blur-xl">
+      <div className="shrink-0 p-3 md:p-4 border-b border-border/60">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="font-bold flex items-center gap-2">
