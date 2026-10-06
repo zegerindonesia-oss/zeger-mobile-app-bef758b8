@@ -22,7 +22,7 @@ export const useTenantModules = () => {
       const { data: tid } = await (supabase.rpc as any)('current_tenant_id');
       if (!tid) return;
       // Freemium fallback: expired trials drop to Free on the server.
-      await (supabase.rpc as any)('downgrade_expired_trials').catch?.(() => {});
+      await (supabase.rpc as any)('downgrade_expired_trials');
       const { data } = await (supabase.from as any)('tenants').select('modules, subscription_status, trial_ends_at').eq('id', tid).maybeSingle();
       const trialOver = data?.subscription_status === 'trial' && data?.trial_ends_at && new Date(data.trial_ends_at).getTime() < Date.now();
       const mods: string[] = trialOver ? ['pos'] : data?.modules?.length ? data.modules : ALL_MODULES;

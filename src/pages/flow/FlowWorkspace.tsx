@@ -37,7 +37,7 @@ const FlowWorkspace = () => {
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-2xl flow-bg-red grid place-items-center"><Clock className="h-6 w-6" /></div>
                 <div>
-                  <div className="font-extrabold flow-ink">Trial aktif — sisa {left} hari</div>
+                  <div className="font-extrabold flow-ink">Trial full fitur aktif — sisa {left} hari</div>
                   <div className="text-sm flow-muted">Berakhir {new Date(meta.trial_ends_at).toLocaleDateString('id-ID', { dateStyle: 'long', timeZone: 'Asia/Jakarta' })}</div>
                 </div>
               </div>
