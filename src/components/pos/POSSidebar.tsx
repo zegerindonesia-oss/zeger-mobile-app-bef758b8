@@ -39,13 +39,14 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
 
   const { hasModule } = useTenantModules();
   const items = ([
+    { label: 'Dashboard Kasir', icon: BarChart3, path: '/pos/dashboard', levels: all },
     { label: 'Kasir (POS)', icon: ShoppingCart, path: '/pos', levels: all },
     { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all, module: 'kds' },
     { label: 'Layar Antrean TV', icon: Tv, path: '/pos/queue', levels: all, module: 'queue' },
     { label: 'Kas Masuk/Keluar', icon: Banknote, action: onCashMovement, levels: all },
     { label: 'Laporan X (Shift)', icon: FileBarChart, action: onXReport, levels: all },
     { label: 'Tutup Shift (Z)', icon: DoorClosed, action: onCloseShift, levels: all },
-    { label: 'Pengaturan Printer', icon: Printer, action: onPrinterSettings, levels: all },
+    { label: 'Pengaturan POS', icon: Printer, path: '/pos/settings', levels: all },
     { label: 'Dashboard ERP', icon: LayoutDashboard, path: '/admin', levels: ['ho', 'manager', 'finance'] },
     { label: 'Transaksi', icon: Receipt, path: '/transactions', levels: ['ho', 'manager', 'finance'] },
     { label: 'Produk', icon: Package, path: '/master/products', levels: ['ho', 'manager'] },

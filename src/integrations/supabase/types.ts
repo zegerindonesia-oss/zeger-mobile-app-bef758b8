@@ -1609,6 +1609,38 @@ export type Database = {
           },
         ]
       }
+      pos_display_settings: {
+        Row: {
+          branch_id: string
+          running_text: string | null
+          updated_at: string
+          updated_by: string | null
+          video_url: string | null
+        }
+        Insert: {
+          branch_id: string
+          running_text?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          branch_id?: string
+          running_text?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_display_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_kds_ticket_items: {
         Row: {
           created_at: string
@@ -4500,6 +4532,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_queue_display: { Args: { _branch_id: string }; Returns: Json }
       get_staff_emails: {
         Args: never
         Returns: {

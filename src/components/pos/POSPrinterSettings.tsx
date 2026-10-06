@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,8 @@ interface Props {
   branchId: string | null;
   userId?: string;
   onSaved?: (s: PrintSettings) => void;
+  /** Render as a full-page section instead of a dialog. */
+  inline?: boolean;
 }
 
 const roleMeta: Record<PrinterRole, { label: string; icon: any }> = {
@@ -29,7 +32,7 @@ const roleMeta: Record<PrinterRole, { label: string; icon: any }> = {
   sticker: { label: 'Stiker Cup', icon: Sticker },
 };
 
-export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSaved }: Props) => {
+export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSaved, inline }: Props) => {
   const [s, setS] = useState<PrintSettings | null>(null);
   const [products, setProducts] = useState<{ id: string; name: string; category: string | null }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -67,19 +70,14 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
       await savePrintSettings(branchId, s, userId);
       toast.success('Pengaturan printer tersimpan');
       onSaved?.(s);
-      onOpenChange(false);
+      if (!inline) onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message || 'Gagal menyimpan');
     } finally { setSaving(false); }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Printer className="h-5 w-5 text-primary" /> Pengaturan Printer</DialogTitle>
-        </DialogHeader>
-
+    <Shell inline={inline} open={open} onOpenChange={onOpenChange}>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Teks atas struk</Label><Input value={s.receiptHeader} placeholder="Alamat / No. WA" onChange={(e) => setS({ ...s, receiptHeader: e.target.value })} /></div>
           <div><Label>Teks bawah struk</Label><Input value={s.receiptFooter} onChange={(e) => setS({ ...s, receiptFooter: e.target.value })} /></div>
@@ -154,11 +152,27 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
           Setiap printer dicetak sebagai pekerjaan terpisah. Untuk cetak tanpa dialog, jalankan Chrome dengan mode kiosk-printing dan atur printer default.
         </p>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
-          <Button onClick={save} disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
-        </DialogFooter>
+        <div className="flex justify-end gap-2 pt-2">
+          {!inline && <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>}
+          <Button onClick={save} disabled={saving} className="h-11 px-6">{saving ? 'Menyimpan...' : 'Simpan Pengaturan Printer'}</Button>
+        </div>
+    </Shell>
+  );
+};
+
+const Shell = ({ inline, open, onOpenChange, children }: { inline?: boolean; open: boolean; onOpenChange: (o: boolean) => void; children: ReactNode }) =>
+  inline ? (
+    <div className="space-y-4">
+      <h2 className="text-lg font-bold flex items-center gap-2"><Printer className="h-5 w-5 text-primary" /> Pengaturan Printer</h2>
+      {children}
+    </div>
+  ) : (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Printer className="h-5 w-5 text-primary" /> Pengaturan Printer</DialogTitle>
+        </DialogHeader>
+        {children}
       </DialogContent>
     </Dialog>
   );
-};

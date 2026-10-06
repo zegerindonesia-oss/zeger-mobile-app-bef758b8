@@ -7,7 +7,6 @@ import { usePOSPromo } from '@/hooks/usePOSPromo';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { POSSidebar } from '@/components/pos/POSSidebar';
-import { POSStatsBar } from '@/components/pos/POSStatsBar';
 import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -469,7 +468,7 @@ const POSMain = () => {
     branchName,
     onCashMovement: () => { setMobileNavOpen(false); setCashOpen(true); },
     onCloseShift: () => { setMobileNavOpen(false); setCloseOpen(true); },
-    onPrinterSettings: () => { setMobileNavOpen(false); setPrinterOpen(true); },
+    onPrinterSettings: () => { setMobileNavOpen(false); navigate('/pos/settings'); },
     onXReport: () => { setMobileNavOpen(false); activeShift ? setReport({ kind: 'X', shift: activeShift }) : toast.error('Tidak ada shift aktif'); },
     onLogout: signOut,
   };
@@ -513,9 +512,6 @@ const POSMain = () => {
           </button>
         </header>
 
-        <div className="hidden lg:block">
-          <POSStatsBar branchId={userProfile?.branch_id || null} refreshKey={statsKey} />
-        </div>
 
         <div className="flex-1 min-h-0 flex gap-3">
           <section className="flex-1 min-w-0 pos-panel rounded-2xl overflow-hidden order-1 pb-20 md:pb-0">
