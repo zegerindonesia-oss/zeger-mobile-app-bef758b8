@@ -505,3 +505,11 @@
   .flow-dark-lux { background: radial-gradient(ellipse at 80% 20%, hsl(354 77% 40% / 0.35), transparent 50%), hsl(350 30% 8%); color: hsl(0 0% 100%); }
   @media (prefers-reduced-motion: reduce) { .flow-marquee, .flow-float { animation: none; } }
 }
+
+/* Touch-first POS: instant taps, lighter GPU on mobile */
+@layer components {
+  .pos-touch button, .pos-touch [role="button"], .pos-touch .pos-product-card { touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
+  @media (max-width: 1024px) {
+    .pos-touch .pos-product-card, .pos-touch .pos-command-header, .pos-touch .pos-panel { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 1px 2px hsl(var(--pos-shadow)); }
+  }
+}
