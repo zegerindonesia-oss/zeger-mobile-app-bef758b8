@@ -1612,6 +1612,7 @@ export type Database = {
       pos_display_settings: {
         Row: {
           branch_id: string
+          media_items: Json
           running_text: string | null
           updated_at: string
           updated_by: string | null
@@ -1619,6 +1620,7 @@ export type Database = {
         }
         Insert: {
           branch_id: string
+          media_items?: Json
           running_text?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -1626,6 +1628,7 @@ export type Database = {
         }
         Update: {
           branch_id?: string
+          media_items?: Json
           running_text?: string | null
           updated_at?: string
           updated_by?: string | null

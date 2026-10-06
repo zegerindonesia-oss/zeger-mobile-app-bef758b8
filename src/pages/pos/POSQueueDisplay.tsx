@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { playAlertBeep, unlockAudio } from '@/lib/audio';
+import { TvMediaItem, detectMediaType, gdriveId, spotifyEmbed, youtubeId } from '@/lib/tv-media';
 import { ChefHat, BellRing, Maximize, Volume2, ArrowLeft } from 'lucide-react';
 
 interface Ticket {
@@ -30,7 +31,35 @@ const speak = (text: string) => {
   } catch { /* speech not supported */ }
 };
 
-const youtubeId = (url: string) => url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)?.[1];
+/** Rotates through the cashier-configured playlist (video, live, drive, banner, spotify). */
+const MediaPlaylist = ({ items, fallback }: { items: TvMediaItem[]; fallback: string | null }) => {
+  const list = items.length ? items : fallback ? [{ type: detectMediaType(fallback), url: fallback }] : [];
+  const [idx, setIdx] = useState(0);
+  const cur = list[idx % Math.max(list.length, 1)];
+  const next = useCallback(() => setIdx((i) => (i + 1) % Math.max(list.length, 1)), [list.length]);
+  useEffect(() => { setIdx(0); }, [list.length]);
+  useEffect(() => {
+    if (!cur || list.length < 2) return;
+    // Videos advance on end; others (and YouTube/Drive iframes) after their duration.
+    if (cur.type === 'video') return;
+    const sec = cur.duration || (cur.type === 'image' ? 8 : 60);
+    const t = setTimeout(next, sec * 1000);
+    return () => clearTimeout(t);
+  }, [cur, list.length, next]);
+  if (!cur) return <PromoVideo url={null} />;
+  const key = `${idx}-${cur.url}`;
+  if (cur.type === 'image') return <img key={key} src={cur.url} alt="Promo" className="h-full w-full object-cover animate-fade-in" />;
+  if (cur.type === 'spotify') {
+    const src = spotifyEmbed(cur.url);
+    return src ? <div className="h-full w-full flex items-center justify-center p-6"><iframe key={key} src={src} className="w-full h-[380px] max-w-xl rounded-2xl" allow="autoplay; encrypted-media" title="Spotify" /></div> : <PromoVideo url={null} />;
+  }
+  if (cur.type === 'gdrive') {
+    const id = gdriveId(cur.url);
+    return id ? <iframe key={key} className="h-full w-full" src={`https://drive.google.com/file/d/${id}/preview?autoplay=1`} allow="autoplay" title="Promo" /> : <PromoVideo url={null} />;
+  }
+  if (cur.type === 'video') return <video key={key} className="h-full w-full object-cover" src={cur.url} autoPlay muted playsInline loop={list.length < 2} onEnded={next} />;
+  return <PromoVideo key={key} url={cur.url} />;
+};
 
 const PromoVideo = ({ url }: { url: string | null }) => {
   if (!url) {
@@ -68,6 +97,7 @@ const POSQueueDisplay = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [branchName, setBranchName] = useState('');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [mediaItems, setMediaItems] = useState<TvMediaItem[]>([]);
   const [runningText, setRunningText] = useState('');
   const [now, setNow] = useState(new Date());
   const [soundOn, setSoundOn] = useState(false);
@@ -82,6 +112,7 @@ const POSQueueDisplay = () => {
     if (!data) return;
     setBranchName(data.branch_name || '');
     setVideoUrl(data.video_url || null);
+    setMediaItems(Array.isArray(data.media_items) ? data.media_items : []);
     setRunningText(data.running_text || '');
     const list = (data.tickets || []) as Ticket[];
     const ready = list.filter((t) => t.status === 'ready');
@@ -172,7 +203,7 @@ const POSQueueDisplay = () => {
         </section>
 
         <section className="min-h-0 flex flex-col bg-foreground">
-          <div className="flex-1 min-h-0"><PromoVideo url={videoUrl} /></div>
+          <div className="flex-1 min-h-0"><MediaPlaylist items={mediaItems} fallback={videoUrl} /></div>
           {runningText && (
             <div className="overflow-hidden bg-primary text-primary-foreground py-2">
               <p className="text-center truncate px-4 text-lg font-semibold">{runningText}</p>
