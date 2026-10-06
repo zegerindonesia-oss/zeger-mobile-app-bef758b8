@@ -6,6 +6,7 @@ import { FlowShell, Reveal } from '@/components/flow/FlowChrome';
 import { MacBook, IPhone } from '@/components/flow/Devices';
 import { DashboardScreen, CustomerAppScreen } from '@/components/flow/Screens';
 import { PRODUCTS, SOLUTIONS } from '@/lib/flow-content';
+import { PLANS, MODULE_LABELS, formatPrice, type FlowPlan } from '@/lib/flow-plans';
 import { FinalCTA } from './FlowLanding';
 import promo from '@/assets/flow/zeger-promo.png.asset.json';
 
@@ -58,29 +59,72 @@ export const FlowDetail = ({ kind }: { kind: 'produk' | 'solusi' }) => {
   );
 };
 
-const plans = [
-  { name: 'Starter', who: 'UMKM, Booth, Street Food', price: '299rb', items: ['POS Kasir 1 outlet', 'Produk & stok dasar', 'Laporan penjualan', 'Cetak struk thermal'] },
-  { name: 'Pro', who: 'Café & Restoran', price: '799rb', hot: true, items: ['Semua fitur Starter', 'Meja, KDS & Layar Antrean', 'Bahan baku & resep HPP', 'Loyalty & CRM', 'Voice AI kasir'] },
-  { name: 'Enterprise', who: 'Franchise, Chain, Hotel', price: 'Custom', items: ['Semua fitur Pro', 'Multi outlet & hub', 'Mobile selling rider', 'Aplikasi customer white-label', 'Dedicated success manager'] },
+const LIMIT_ROWS: [keyof FlowPlan['limits'], string][] = [['trx', 'Transaksi'], ['outlets', 'Outlet'], ['devices', 'Perangkat kasir'], ['users', 'Akun staf'], ['history', 'Riwayat data']];
+const COMPETITORS = [
+  ['KDS dapur multi-stasiun', 'Add-on berbayar', 'Termasuk (Mid-Market)'],
+  ['Layar antrean TV + suara', 'Tidak ada / pihak ketiga', 'Termasuk (Mid-Market)'],
+  ['Resep HPP potong stok otomatis', 'Paket ERP terpisah', 'Mulai Flow SME'],
+  ['Voice AI kasir', 'Tidak ada', 'Termasuk (Mid-Market)'],
+  ['Mobile selling rider + GPS', 'Tidak ada', 'Termasuk (Enterprise)'],
+  ['Aplikasi customer brand sendiri', 'Custom, biaya tinggi', 'Termasuk (Enterprise)'],
+  ['Paket gratis', 'Terbatas / promo', 'Gratis selamanya'],
 ];
 
 export const FlowPricing = () => {
   useEffect(() => { window.scrollTo(0, 0); document.title = 'Harga | FlowF&B'; }, []);
   return (
     <FlowShell>
-      <PageHero eyebrow="HARGA" title="Paket untuk setiap skala bisnis F&B" desc="Aktifkan modul sesuai kebutuhan. Upgrade atau tambah outlet kapan saja." />
-      <section className="max-w-6xl mx-auto px-5 pb-24 grid md:grid-cols-3 gap-6">
-        {plans.map((p, k) => (
-          <Reveal key={p.name} delay={k * 0.1}>
-            <motion.div whileHover={{ y: -8 }} className={`rounded-[28px] p-8 h-full ${p.hot ? 'flow-dark-lux' : 'flow-card'}`}>
-              {p.hot && <span className="inline-block flow-bg-red rounded-full px-3 py-1 text-xs font-bold mb-3">Paling Populer</span>}
-              <div className="text-xl font-extrabold">{p.name}</div><div className={`text-sm ${p.hot ? 'text-background/70' : 'flow-muted'}`}>{p.who}</div>
-              <div className="mt-5 text-4xl font-extrabold">{p.price !== 'Custom' && <span className="text-lg align-top">Rp</span>}{p.price}<span className="text-sm font-medium opacity-60">{p.price !== 'Custom' && ' /outlet/bln'}</span></div>
-              <ul className="mt-6 space-y-2.5 text-sm">{p.items.map((i) => <li key={i} className="flex gap-2"><Check className="h-4 w-4 flow-red shrink-0 mt-0.5" />{i}</li>)}</ul>
-              <Link to={`/daftar?plan=${p.name.toLowerCase()}`} className={`mt-8 block text-center rounded-full py-3.5 font-bold ${p.hot ? 'flow-btn' : 'flow-btn-ghost'}`}>Mulai {p.name}</Link>
+      <PageHero eyebrow="HARGA" title="Mulai gratis. Naik kelas saat bisnis Anda tumbuh." desc="Fitur lebih lengkap, harga hingga 60% lebih hemat dari platform F&B lain. Paket berbayar bisa dicoba gratis 14 hari." />
+      <section className="max-w-7xl mx-auto px-5 pb-16 grid md:grid-cols-2 xl:grid-cols-4 gap-5">
+        {PLANS.map((p, k) => (
+          <Reveal key={p.id} delay={k * 0.08}>
+            <motion.div whileHover={{ y: -8 }} className={`rounded-[28px] p-7 h-full flex flex-col ${p.hot ? 'flow-dark-lux' : 'flow-card'}`}>
+              <div className="h-7">{p.hot && <span className="inline-block flow-bg-red rounded-full px-3 py-1 text-xs font-bold">Paling Populer</span>}</div>
+              <div className="text-xl font-extrabold mt-2">{p.name}</div>
+              <div className={`text-sm ${p.hot ? 'text-background/70' : 'flow-muted'}`}>{p.who}</div>
+              <div className="mt-5 text-4xl font-extrabold">{formatPrice(p.price)}<span className="text-sm font-medium opacity-60">{p.price ? ' /outlet/bln' : ' selamanya'}</span></div>
+              <div className={`text-xs mt-1 ${p.hot ? 'text-background/60' : 'flow-muted'}`}>{p.compare}</div>
+              <div className={`mt-5 grid grid-cols-2 gap-2 text-xs rounded-2xl p-3 ${p.hot ? 'bg-background/10' : 'flow-soft'}`}>
+                {LIMIT_ROWS.map(([key, label]) => <div key={key}><div className="opacity-60">{label}</div><div className="font-bold">{p.limits[key]}</div></div>)}
+              </div>
+              <ul className="mt-5 space-y-2 text-sm flex-1">{p.features.map((i) => <li key={i} className="flex gap-2"><Check className="h-4 w-4 flow-red shrink-0 mt-0.5" />{i}</li>)}</ul>
+              <Link to={`/daftar?plan=${p.id}`} className={`mt-7 block text-center rounded-full py-3.5 font-bold ${p.hot ? 'flow-btn' : 'flow-btn-ghost'}`}>{p.price ? `Coba ${p.name} 14 hari` : 'Daftar Gratis'}</Link>
             </motion.div>
           </Reveal>
         ))}
+      </section>
+
+      <section className="max-w-7xl mx-auto px-5 pb-16">
+        <h2 className="text-3xl font-extrabold flow-ink mb-6">Bandingkan semua modul</h2>
+        <div className="flow-card rounded-3xl overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-border">
+              <th className="text-left p-4 flow-ink">Modul</th>
+              {PLANS.map((p) => <th key={p.id} className={`p-4 text-center ${p.hot ? 'flow-red' : 'flow-ink'}`}>{p.name}<div className="text-xs font-medium flow-muted">{formatPrice(p.price)}</div></th>)}
+            </tr></thead>
+            <tbody>
+              {LIMIT_ROWS.map(([key, label]) => (
+                <tr key={key} className="border-b border-border"><td className="p-4 font-semibold flow-ink">{label}</td>{PLANS.map((p) => <td key={p.id} className="p-4 text-center flow-muted">{p.limits[key]}</td>)}</tr>
+              ))}
+              {Object.entries(MODULE_LABELS).map(([id, label]) => (
+                <tr key={id} className="border-b border-border last:border-0"><td className="p-4 font-semibold flow-ink">{label}</td>
+                  {PLANS.map((p) => <td key={p.id} className="p-4 text-center">{p.modules.includes(id) ? <Check className="h-5 w-5 flow-red mx-auto" /> : <span className="flow-muted">—</span>}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs flow-muted mt-3">Butuh modul satuan? Modul apa pun bisa ditambahkan sebagai add-on tanpa harus naik paket.</p>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-5 pb-24">
+        <h2 className="text-3xl font-extrabold flow-ink mb-6">Kenapa FlowF&B lebih unggul</h2>
+        <div className="flow-card rounded-3xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-border"><th className="text-left p-4 flow-ink">Kebutuhan F&B</th><th className="p-4 flow-muted">Platform lain umumnya</th><th className="p-4 flow-red">FlowF&B</th></tr></thead>
+            <tbody>{COMPETITORS.map(([a, b, c]) => <tr key={a} className="border-b border-border last:border-0"><td className="p-4 font-semibold flow-ink">{a}</td><td className="p-4 text-center flow-muted">{b}</td><td className="p-4 text-center font-bold flow-ink">{c}</td></tr>)}</tbody>
+          </table>
+        </div>
       </section>
       <FinalCTA />
     </FlowShell>
