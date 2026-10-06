@@ -204,7 +204,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
             <span>Tidak ada menu</span>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2.5">
             {filteredBundles.map((b) => (
               <POSBundleCard key={b.id} bundle={b} onAdd={onAddBundle} />
             ))}
@@ -214,29 +214,28 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
               return (
                 <Card
                   key={p.id}
-                  className={`pos-product-card group p-3 cursor-pointer rounded-2xl overflow-hidden ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`pos-product-card group p-2 cursor-pointer rounded-2xl overflow-hidden ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => {
                     if (getModifierGroups(p).length > 0) return setModProduct(p);
                     onAdd(toCartProduct(p));
                   }}
                 >
                   {p.image_url ? (
-                    <div className="aspect-[4/3] w-full bg-muted rounded-xl overflow-hidden mb-3">
+                    <div className="h-20 w-full bg-muted rounded-xl overflow-hidden mb-2">
                       <img src={p.image_url} alt={p.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                     </div>
                   ) : (
-                    <div className="aspect-[4/3] w-full bg-muted/70 rounded-xl mb-3 flex items-center justify-center text-xs font-bold text-muted-foreground">
+                    <div className="h-20 w-full bg-muted/70 rounded-xl mb-2 flex items-center justify-center text-xs font-bold text-muted-foreground">
                       {p.name.slice(0, 2).toUpperCase()}
                     </div>
                   )}
-                  <div className="text-sm font-bold line-clamp-2 leading-snug min-h-10">{p.name}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{p.category || 'Menu'}</div>
-                  <div className="flex items-center justify-between gap-2 mt-2">
-                    <div className="pos-number text-sm font-bold text-primary">
+                  <div className="text-xs font-bold line-clamp-2 leading-snug min-h-8">{p.name}</div>
+                  <div className="flex items-center justify-between gap-1 mt-1">
+                    <div className="pos-number text-xs font-bold text-primary">
                       Rp{Number(p.price).toLocaleString('id-ID')}
                     </div>
-                    <div className="h-8 w-8 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 flex items-center justify-center transition-transform group-hover:scale-105">
-                      <Plus className="h-4 w-4" />
+                    <div className="h-7 w-7 rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20 flex items-center justify-center">
+                      <Plus className="h-3.5 w-3.5" />
                     </div>
                   </div>
                   {branchId && <div className="mt-1">{stockBadge(qty)}</div>}

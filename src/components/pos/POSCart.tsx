@@ -328,24 +328,22 @@ export const POSCart = ({
             <span>{fmt(totals.tax)}</span>
           </div>
         )}
-         <div className="flex justify-between items-center pt-3 border-t">
-           <span className="font-bold">Total Pembayaran</span>
-           <span className="pos-number text-2xl font-bold text-primary">{fmt(finalTotal)}</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-             className="h-12 rounded-xl"
-            disabled={items.length < 2}
-            onClick={onSplit}
-          >
-            <Split className="h-4 w-4 mr-1" />
-            Split
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+          <Button variant="outline" className="h-12 rounded-2xl font-semibold" disabled={items.length === 0 || !onHoldToTable} onClick={onHoldToTable}>
+            <Save className="h-4 w-4 mr-1.5" /> Simpan
           </Button>
-           <Button className="h-12 text-base rounded-xl shadow-lg shadow-primary/25" disabled={items.length === 0 || memberBlocked} onClick={onPay}>
-             Bayar Sekarang
+          <Button variant="outline" className="h-12 rounded-2xl font-semibold" disabled={items.length < 2} onClick={onSplit}>
+            <Split className="h-4 w-4 mr-1.5" /> Split Bill
           </Button>
         </div>
+        <Button
+          className="w-full h-16 rounded-2xl text-lg font-bold shadow-lg shadow-primary/30 flex items-center justify-between px-5"
+          disabled={items.length === 0 || memberBlocked}
+          onClick={onPay}
+        >
+          <span>Bayar</span>
+          <span className="flex items-center gap-2"><span className="opacity-50">|</span><span className="pos-number text-xl">{fmt(finalTotal)}</span> ›</span>
+        </Button>
       </div>
 
       <POSPromoDialog
