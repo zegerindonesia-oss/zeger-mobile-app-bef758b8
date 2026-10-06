@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { ZegerLogo } from '@/components/ui/zeger-logo';
 import { cn } from '@/lib/utils';
+import { useTenantModules } from '@/hooks/useTenantModules';
 
 type Level = 'ho' | 'manager' | 'kasir' | 'finance';
 
@@ -16,7 +17,7 @@ const levelOf = (role?: string): Level => {
   return 'kasir';
 };
 
-interface Item { label: string; icon: any; path?: string; action?: () => void; levels: Level[]; }
+interface Item { label: string; icon: any; path?: string; action?: () => void; levels: Level[]; module?: string; }
 
 interface Props {
   collapsed: boolean;
@@ -36,10 +37,11 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   const lvl = levelOf(role);
   const all: Level[] = ['ho', 'manager', 'kasir', 'finance'];
 
+  const { hasModule } = useTenantModules();
   const items = ([
     { label: 'Kasir (POS)', icon: ShoppingCart, path: '/pos', levels: all },
-    { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all },
-    { label: 'Layar Antrean TV', icon: Tv, path: '/pos/queue', levels: all },
+    { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all, module: 'kds' },
+    { label: 'Layar Antrean TV', icon: Tv, path: '/pos/queue', levels: all, module: 'queue' },
     { label: 'Kas Masuk/Keluar', icon: Banknote, action: onCashMovement, levels: all },
     { label: 'Laporan X (Shift)', icon: FileBarChart, action: onXReport, levels: all },
     { label: 'Tutup Shift (Z)', icon: DoorClosed, action: onCloseShift, levels: all },
@@ -48,14 +50,14 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
     { label: 'Transaksi', icon: Receipt, path: '/transactions', levels: ['ho', 'manager', 'finance'] },
     { label: 'Produk', icon: Package, path: '/master/products', levels: ['ho', 'manager'] },
     { label: 'Stok', icon: Boxes, path: '/inventory', levels: ['ho', 'manager'] },
-    { label: 'Bahan & Resep', icon: Package, path: '/inventory/raw-materials', levels: ['ho', 'manager'] },
-    { label: 'Pelanggan', icon: Users, path: '/customers', levels: ['ho', 'manager'] },
+    { label: 'Bahan & Resep', icon: Package, path: '/inventory/raw-materials', levels: ['ho', 'manager'], module: 'bom' },
+    { label: 'Pelanggan', icon: Users, path: '/customers', levels: ['ho', 'manager'], module: 'loyalty' },
     { label: 'Promo', icon: Tag, path: '/settings/promo-management', levels: ['ho', 'manager'] },
-    { label: 'Loyalty', icon: Gift, path: '/settings/app-management/loyalty', levels: ['ho', 'manager'] },
-    { label: 'Laporan', icon: BarChart3, path: '/finance/profit-loss', levels: ['ho', 'finance'] },
+    { label: 'Loyalty', icon: Gift, path: '/settings/app-management/loyalty', levels: ['ho', 'manager'], module: 'loyalty' },
+    { label: 'Laporan', icon: BarChart3, path: '/finance/profit-loss', levels: ['ho', 'finance'], module: 'finance' },
     { label: 'Pengguna', icon: UserCog, path: '/settings/users', levels: ['ho', 'manager'] },
     { label: 'Pengaturan', icon: Settings, path: '/settings/app-management', levels: ['ho'] },
-  ] as Item[]).filter((i) => i.levels.includes(lvl));
+  ] as Item[]).filter((i) => i.levels.includes(lvl) && hasModule(i.module));
 
   return (
     <aside className={cn('glass-sidebar h-screen flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
