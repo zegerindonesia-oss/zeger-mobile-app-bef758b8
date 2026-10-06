@@ -459,46 +459,62 @@ const POSMain = () => {
     );
   }
 
+  const sidebarProps = {
+    role: userProfile?.role,
+    userName: userProfile?.full_name || 'Kasir',
+    branchName,
+    onCashMovement: () => { setMobileNavOpen(false); setCashOpen(true); },
+    onCloseShift: () => { setMobileNavOpen(false); setCloseOpen(true); },
+    onPrinterSettings: () => { setMobileNavOpen(false); setPrinterOpen(true); },
+    onXReport: () => { setMobileNavOpen(false); activeShift ? setReport({ kind: 'X', shift: activeShift }) : toast.error('Tidak ada shift aktif'); },
+    onLogout: signOut,
+  };
+  const fmtRp = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
+
   return (
-    <div className="h-screen flex pos-canvas overflow-hidden">
-      <POSSidebar
-        collapsed={collapsed}
-        role={userProfile?.role}
-        userName={userProfile?.full_name || 'Kasir'}
-        branchName={branchName}
-        onCashMovement={() => setCashOpen(true)}
-        onCloseShift={() => setCloseOpen(true)}
-        onPrinterSettings={() => setPrinterOpen(true)}
-        onXReport={() => activeShift ? setReport({ kind: 'X', shift: activeShift }) : toast.error('Tidak ada shift aktif')}
-        onLogout={signOut}
-      />
-      <main className="flex-1 min-w-0 flex flex-col gap-3 p-3 overflow-hidden">
-        <header className="pos-command-header rounded-2xl min-h-16 px-4 py-2 flex items-center gap-3">
-          <button onClick={() => setCollapsed((c) => !c)} className="pos-raised-control h-10 w-10 rounded-xl flex items-center justify-center transition-all" title="Sembunyikan / tampilkan menu">
+    <div className="h-[100dvh] flex pos-canvas pos-touch overflow-hidden">
+      <div className="hidden md:flex">
+        <POSSidebar collapsed={collapsed} {...sidebarProps} />
+      </div>
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="p-0 w-[260px] border-0 [&>button]:hidden">
+          <POSSidebar collapsed={false} {...sidebarProps} />
+        </SheetContent>
+      </Sheet>
+      <main className="flex-1 min-w-0 flex flex-col gap-2 md:gap-3 p-2 md:p-3 overflow-hidden">
+        <header className="pos-command-header rounded-2xl min-h-14 md:min-h-16 px-2 md:px-4 py-2 flex items-center gap-1.5 md:gap-3">
+          <button
+            onClick={() => (window.innerWidth < 768 ? setMobileNavOpen(true) : setCollapsed((c) => !c))}
+            className="pos-raised-control h-10 w-10 shrink-0 rounded-xl flex items-center justify-center"
+            title="Menu"
+          >
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0 leading-tight">
-             <h1 className="text-lg font-bold truncate">Terminal Kasir</h1>
-            <p className="text-xs text-muted-foreground truncate">{branchName}{activeShift?.shift_type ? ` · Shift ${activeShift.shift_type}` : ''}</p>
+            <h1 className="text-base md:text-lg font-bold truncate">Terminal Kasir</h1>
+            <p className="text-[11px] md:text-xs text-muted-foreground truncate">{branchName}{activeShift?.shift_type ? ` · Shift ${activeShift.shift_type}` : ''}</p>
           </div>
-           <span className={`hidden lg:flex rounded-xl px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+          <span className={`hidden lg:flex rounded-xl px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
             {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
             {online ? 'Online' : 'Offline'}
           </span>
-           <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold transition-all">
-            <Armchair className="h-4 w-4" /> Meja
+          {!online && <WifiOff className="lg:hidden h-4 w-4 text-destructive shrink-0" />}
+          <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Meja">
+            <Armchair className="h-4 w-4" /> <span className="hidden sm:inline">Meja</span>
           </button>
           <POSVoiceOrder onAdd={cart.addItem} />
-          <POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} />
-           <button onClick={() => navigate('/pos/kds')} className="pos-raised-control h-10 px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold transition-all">
-            <Monitor className="h-4 w-4" /> KDS
+          <div className="hidden sm:block"><POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} /></div>
+          <button onClick={() => navigate('/pos/kds')} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl hidden sm:flex items-center gap-1.5 text-sm font-semibold shrink-0" title="KDS">
+            <Monitor className="h-4 w-4" /> <span className="hidden lg:inline">KDS</span>
           </button>
         </header>
 
-        <POSStatsBar branchId={userProfile?.branch_id || null} refreshKey={statsKey} />
+        <div className="hidden lg:block">
+          <POSStatsBar branchId={userProfile?.branch_id || null} refreshKey={statsKey} />
+        </div>
 
         <div className="flex-1 min-h-0 flex gap-3">
-          <section className="flex-1 min-w-0 pos-panel rounded-2xl overflow-hidden order-1">
+          <section className="flex-1 min-w-0 pos-panel rounded-2xl overflow-hidden order-1 pb-20 md:pb-0">
             <POSProductGrid
               branchId={userProfile?.branch_id || null}
               onAdd={cart.addItem}
@@ -506,7 +522,34 @@ const POSMain = () => {
               onAddCustom={cart.addCustomItem}
             />
           </section>
-          <section className="w-[390px] xl:w-[410px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2">
+          {cartDrawerNode(false)}
+        </div>
+      </main>
+
+      {/* Mobile floating cart dock */}
+      <div className="md:hidden fixed inset-x-2 bottom-2 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <button
+          onClick={() => setCartOpen(true)}
+          className="w-full h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg flex items-center justify-between px-4 active:scale-[0.98] transition-transform"
+        >
+          <span className="flex items-center gap-2 font-semibold">
+            <ShoppingCart className="h-5 w-5" />
+            {cart.totals.itemCount} item
+          </span>
+          <span className="pos-number font-bold text-base">{fmtRp(paymentTotal)} ›</span>
+        </button>
+      </div>
+      <Drawer open={cartOpen} onOpenChange={setCartOpen}>
+        <DrawerContent className="h-[92dvh] p-0">
+          <div className="flex-1 min-h-0 overflow-hidden">{cartDrawerNode(true)}</div>
+        </DrawerContent>
+      </Drawer>
+    </div>
+  );
+
+  function cartDrawerNode(mobile: boolean) {
+    return (
+          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[330px] lg:w-[370px] xl:w-[410px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
             <POSCart
             items={cart.items}
             totals={cart.totals}
