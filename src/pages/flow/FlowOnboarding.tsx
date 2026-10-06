@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { FlowLogo } from '@/components/flow/FlowLogo';
 import { Coffee, UtensilsCrossed, Croissant, Sandwich, CloudCog, Check, ArrowLeft, ArrowRight, PartyPopper } from 'lucide-react';
+import { PLANS, getPlan, formatPrice } from '@/lib/flow-plans';
 
 const TYPES = [
   { id: 'coffee_shop', t: 'Coffee Shop', i: Coffee }, { id: 'restaurant', t: 'Restoran', i: UtensilsCrossed },

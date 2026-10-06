@@ -43,7 +43,7 @@ const FlowSignup = () => {
       email: r.data.email, password: r.data.password,
       options: {
         emailRedirectTo: `${window.location.origin}/onboarding`,
-        data: { full_name: r.data.owner_name, phone: r.data.phone, flow_tenant: true, flow_plan: params.get('plan') || 'pro', trial_ends_at: trialEnds, onboarded: false },
+        data: { full_name: r.data.owner_name, phone: r.data.phone, flow_tenant: true, flow_plan: params.get('plan') || 'mid_market', trial_ends_at: trialEnds, onboarded: false },
       },
     });
     setSaving(false);
@@ -54,7 +54,7 @@ const FlowSignup = () => {
   const handleGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?plan=${encodeURIComponent(params.get('plan') || 'pro')}`, queryParams: { prompt: 'select_account' } },
+      options: { redirectTo: `${window.location.origin}/auth/callback?plan=${encodeURIComponent(params.get('plan') || 'mid_market')}`, queryParams: { prompt: 'select_account' } },
     });
     if (error) toast.error(error.message.includes('provider') ? 'Login Google belum aktif. Silakan hubungi admin untuk mengaktifkannya.' : error.message);
   };
