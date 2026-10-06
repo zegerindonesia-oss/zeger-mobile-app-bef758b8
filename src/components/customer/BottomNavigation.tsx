@@ -12,7 +12,7 @@ interface BottomNavigationProps {
 
 export function BottomNavigation({ activeView, activeOrdersCount, onNavigate }: BottomNavigationProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_15px_rgba(0,0,0,0.05)] rounded-t-2xl z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_15px_rgba(0,0,0,0.05)] rounded-t-2xl z-50 pb-safe">
       <div className="flex justify-around items-center py-2 max-w-md mx-auto">
         {/* Home */}
         <button
