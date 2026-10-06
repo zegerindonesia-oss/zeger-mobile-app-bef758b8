@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { playAlertBeep, unlockAudio } from '@/lib/audio';
-import { ChefHat, BellRing, Maximize, Volume2 } from 'lucide-react';
+import { ChefHat, BellRing, Maximize, Volume2, ArrowLeft } from 'lucide-react';
 
 interface Ticket {
   id: string;
   status: string;
-  order_type: string | null;
   table_number: string | null;
   customer_name: string | null;
   transaction_number: string | null;
   created_at: string;
-  ready_at: string | null;
 }
 
 /** Short, easy-to-call number shown on the TV. */
@@ -31,27 +30,60 @@ const speak = (text: string) => {
   } catch { /* speech not supported */ }
 };
 
+const youtubeId = (url: string) => url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)?.[1];
+
+const PromoVideo = ({ url }: { url: string | null }) => {
+  if (!url) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+        <p className="text-6xl font-black tracking-tight">ZEGER</p>
+        <p className="mt-2 text-lg opacity-80">Happiness in every cup ☕</p>
+      </div>
+    );
+  }
+  const yt = youtubeId(url);
+  if (yt) {
+    return (
+      <iframe
+        className="h-full w-full pointer-events-none"
+        src={`https://www.youtube.com/embed/${yt}?autoplay=1&mute=1&loop=1&playlist=${yt}&controls=0&modestbranding=1&rel=0`}
+        allow="autoplay; encrypted-media"
+        title="Promo"
+      />
+    );
+  }
+  return <video className="h-full w-full object-cover" src={url} autoPlay muted loop playsInline />;
+};
+
+/**
+ * TV queue screen. Works logged-in (cashier's branch) or as a paired TV via
+ * `/tv?branch=<id>` using the public read-only queue feed (no login on the TV).
+ */
 const POSQueueDisplay = () => {
   const { userProfile } = useAuth();
-  const branchId = userProfile?.branch_id;
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const paired = params.get('branch');
+  const branchId = paired || localStorage.getItem('flow_tv_branch') || userProfile?.branch_id || null;
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [branchName, setBranchName] = useState('');
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [runningText, setRunningText] = useState('');
   const [now, setNow] = useState(new Date());
   const [soundOn, setSoundOn] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
   const readyIds = useRef<Set<string> | null>(null);
 
+  useEffect(() => { if (paired) localStorage.setItem('flow_tv_branch', paired); }, [paired]);
+
   const load = useCallback(async () => {
     if (!branchId) return;
-    const since = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
-    const { data } = await (supabase as any)
-      .from('pos_kds_tickets')
-      .select('id,status,order_type,table_number,customer_name,transaction_number,created_at,ready_at')
-      .eq('branch_id', branchId)
-      .in('status', ['queued', 'cooking', 'ready'])
-      .gte('created_at', since)
-      .order('created_at');
-    const list = (data || []) as Ticket[];
+    const { data } = await (supabase as any).rpc('get_queue_display', { _branch_id: branchId });
+    if (!data) return;
+    setBranchName(data.branch_name || '');
+    setVideoUrl(data.video_url || null);
+    setRunningText(data.running_text || '');
+    const list = (data.tickets || []) as Ticket[];
     const ready = list.filter((t) => t.status === 'ready');
     if (readyIds.current) {
       const fresh = ready.filter((t) => !readyIds.current!.has(t.id));
@@ -73,24 +105,16 @@ const POSQueueDisplay = () => {
 
   useEffect(() => {
     load();
-    if (!branchId) return;
-    const ch = supabase
-      .channel(`queue_${branchId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_kds_tickets', filter: `branch_id=eq.${branchId}` }, () => load())
-      .subscribe();
-    const poll = setInterval(load, 20000);
-    return () => { supabase.removeChannel(ch); clearInterval(poll); };
-  }, [branchId, load]);
+    const poll = setInterval(load, 4000);
+    return () => clearInterval(poll);
+  }, [load]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (!branchId) return;
-    supabase.from('branches').select('name').eq('id', branchId).maybeSingle().then(({ data }) => setBranchName(data?.name || ''));
-  }, [branchId]);
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && userProfile) navigate('/pos'); };
+    window.addEventListener('keydown', esc);
+    return () => { clearInterval(id); window.removeEventListener('keydown', esc); };
+  }, [navigate, userProfile]);
 
   const preparing = tickets.filter((t) => t.status !== 'ready');
   const ready = tickets.filter((t) => t.status === 'ready').slice().reverse();
@@ -102,12 +126,30 @@ const POSQueueDisplay = () => {
     document.documentElement.requestFullscreen?.().catch(() => undefined);
   };
 
+  if (!branchId) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background text-center p-8">
+        <div>
+          <p className="text-2xl font-bold">Layar TV belum terhubung</p>
+          <p className="text-muted-foreground mt-2">Buka Pengaturan POS di kasir → "Layar TV Antrean", lalu scan QR atau ketik link-nya di browser TV.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden select-none">
-      <header className="flex items-center justify-between px-8 py-4 bg-primary text-primary-foreground">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">ZEGER</h1>
-          <p className="text-sm opacity-80">{branchName}</p>
+      <header className="flex items-center justify-between px-6 py-3 bg-primary text-primary-foreground">
+        <div className="flex items-center gap-4">
+          {userProfile && (
+            <button onClick={() => navigate('/pos')} className="h-11 w-11 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 flex items-center justify-center" title="Kembali ke POS (Esc)">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">ZEGER</h1>
+            <p className="text-sm opacity-80">{branchName}</p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-4xl font-bold tabular-nums">{now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })}</p>
@@ -115,36 +157,45 @@ const POSQueueDisplay = () => {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 grid grid-cols-5">
-        <section className="col-span-2 flex flex-col border-r p-6 min-h-0">
-          <h2 className="flex items-center gap-3 text-2xl font-bold text-muted-foreground mb-4"><ChefHat className="h-8 w-8" /> Sedang Disiapkan</h2>
-          <div className="grid grid-cols-3 gap-3 content-start overflow-hidden">
-            {preparing.map((t) => (
-              <div key={t.id} className="rounded-2xl border-2 bg-card py-5 text-center shadow-sm">
-                <p className="text-4xl font-extrabold tabular-nums">{queueNo(t)}</p>
-                {t.customer_name && <p className="text-sm text-muted-foreground truncate px-2">{t.customer_name}</p>}
+      <div className="flex-1 min-h-0 grid grid-cols-[1fr_2fr_1fr]">
+        <section className="flex flex-col border-r p-4 min-h-0">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-muted-foreground mb-3"><ChefHat className="h-7 w-7" /> Disiapkan</h2>
+          <div className="grid grid-cols-2 gap-2 content-start overflow-hidden">
+            {preparing.slice(0, 14).map((t) => (
+              <div key={t.id} className="rounded-2xl border-2 bg-card py-3 text-center shadow-sm">
+                <p className="text-3xl font-extrabold tabular-nums">{queueNo(t)}</p>
+                {t.customer_name && <p className="text-xs text-muted-foreground truncate px-2">{t.customer_name}</p>}
               </div>
             ))}
-            {!preparing.length && <p className="col-span-3 text-muted-foreground text-lg">Tidak ada antrean</p>}
+            {!preparing.length && <p className="col-span-2 text-muted-foreground">Tidak ada antrean</p>}
           </div>
         </section>
 
-        <section className="col-span-3 flex flex-col p-6 bg-success/5 min-h-0">
-          <h2 className="flex items-center gap-3 text-2xl font-bold text-success mb-4"><BellRing className="h-8 w-8" /> Siap Diambil</h2>
-          <div className="grid grid-cols-3 gap-4 content-start overflow-hidden">
-            {ready.map((t) => (
-              <div key={t.id} className={`rounded-3xl bg-success text-success-foreground py-8 text-center shadow-lg transition ${highlight === t.id ? 'animate-pulse scale-105 ring-8 ring-success/30' : ''}`}>
+        <section className="min-h-0 flex flex-col bg-foreground">
+          <div className="flex-1 min-h-0"><PromoVideo url={videoUrl} /></div>
+          {runningText && (
+            <div className="overflow-hidden bg-primary text-primary-foreground py-2">
+              <p className="whitespace-nowrap animate-[marquee_25s_linear_infinite] text-lg font-semibold">{runningText}</p>
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col p-4 bg-success/5 min-h-0 border-l">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-success mb-3"><BellRing className="h-7 w-7" /> Siap Diambil</h2>
+          <div className="grid gap-3 content-start overflow-hidden">
+            {ready.slice(0, 6).map((t) => (
+              <div key={t.id} className={`rounded-3xl bg-success text-success-foreground py-5 text-center shadow-lg transition ${highlight === t.id ? 'animate-pulse scale-105 ring-8 ring-success/30' : ''}`}>
                 <p className="text-6xl font-black tabular-nums">{queueNo(t)}</p>
                 {t.customer_name && <p className="text-lg font-medium truncate px-3">{t.customer_name}</p>}
               </div>
             ))}
-            {!ready.length && <p className="col-span-3 text-muted-foreground text-lg">Belum ada pesanan siap</p>}
+            {!ready.length && <p className="text-muted-foreground">Belum ada pesanan siap</p>}
           </div>
         </section>
       </div>
 
-      <footer className="px-8 py-3 border-t flex items-center justify-between text-sm text-muted-foreground">
-        <span>Terima kasih telah menunggu ☕ Silakan ambil pesanan saat nomor Anda muncul di kolom hijau.</span>
+      <footer className="px-6 py-2 border-t flex items-center justify-between text-sm text-muted-foreground">
+        <span>Silakan ambil pesanan saat nomor Anda muncul di kolom hijau.</span>
         {!soundOn ? (
           <button onClick={enable} className="flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 font-medium">
             <Maximize className="h-4 w-4" /> Aktifkan Suara & Layar Penuh
