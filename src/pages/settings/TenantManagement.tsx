@@ -161,7 +161,7 @@ export default function TenantManagement() {
             {!edit.is_platform_owner && (
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" disabled={saving} onClick={() => extendTrial(7)}>+7 hari trial</Button>
-                <Button size="sm" variant="outline" disabled={saving} onClick={() => extendTrial(14)}>+14 hari trial</Button>
+                <Button size="sm" variant="outline" disabled={saving} onClick={() => extendTrial(7)}>+7 hari trial</Button>
                 <Button size="sm" disabled={saving} onClick={() => activate(1)}>Aktifkan 1 bulan</Button>
                 <Button size="sm" disabled={saving} onClick={() => activate(12)}>Aktifkan 1 tahun</Button>
               </div>

@@ -74,7 +74,7 @@ export const FlowPricing = () => {
   useEffect(() => { window.scrollTo(0, 0); document.title = 'Harga | FlowF&B'; }, []);
   return (
     <FlowShell>
-      <PageHero eyebrow="HARGA" title="Mulai gratis. Naik kelas saat bisnis Anda tumbuh." desc="Fitur lebih lengkap, harga hingga 60% lebih hemat dari platform F&B lain. Paket berbayar bisa dicoba gratis 14 hari." />
+      <PageHero eyebrow="HARGA" title="Mulai gratis. Naik kelas saat bisnis Anda tumbuh." desc="Fitur lebih lengkap, harga hingga 60% lebih hemat dari platform F&B lain. Semua pendaftar dapat trial 7 hari full fitur, lalu otomatis lanjut di paket Free bila belum berlangganan." />
       <section className="max-w-7xl mx-auto px-5 pb-16 grid md:grid-cols-2 xl:grid-cols-4 gap-5">
         {PLANS.map((p, k) => (
           <Reveal key={p.id} delay={k * 0.08}>
@@ -88,7 +88,7 @@ export const FlowPricing = () => {
                 {LIMIT_ROWS.map(([key, label]) => <div key={key}><div className="opacity-60">{label}</div><div className="font-bold">{p.limits[key]}</div></div>)}
               </div>
               <ul className="mt-5 space-y-2 text-sm flex-1">{p.features.map((i) => <li key={i} className="flex gap-2"><Check className="h-4 w-4 flow-red shrink-0 mt-0.5" />{i}</li>)}</ul>
-              <Link to={`/daftar?plan=${p.id}`} className={`mt-7 block text-center rounded-full py-3.5 font-bold ${p.hot ? 'flow-btn' : 'flow-btn-ghost'}`}>{p.price ? `Coba ${p.name} 14 hari` : 'Daftar Gratis'}</Link>
+              <Link to={`/daftar?plan=${p.id}`} className={`mt-7 block text-center rounded-full py-3.5 font-bold ${p.hot ? 'flow-btn' : 'flow-btn-ghost'}`}>{p.price ? `Coba ${p.name} 7 hari` : 'Daftar Gratis'}</Link>
             </motion.div>
           </Reveal>
         ))}
