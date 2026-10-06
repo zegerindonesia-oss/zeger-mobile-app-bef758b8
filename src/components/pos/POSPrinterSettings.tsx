@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -159,7 +160,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
   );
 };
 
-const Shell = ({ inline, open, onOpenChange, children }: { inline?: boolean; open: boolean; onOpenChange: (o: boolean) => void; children: React.ReactNode }) =>
+const Shell = ({ inline, open, onOpenChange, children }: { inline?: boolean; open: boolean; onOpenChange: (o: boolean) => void; children: ReactNode }) =>
   inline ? (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><Printer className="h-5 w-5 text-primary" /> Pengaturan Printer</h2>

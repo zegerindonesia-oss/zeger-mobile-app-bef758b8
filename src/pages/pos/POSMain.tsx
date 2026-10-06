@@ -7,7 +7,6 @@ import { usePOSPromo } from '@/hooks/usePOSPromo';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { POSSidebar } from '@/components/pos/POSSidebar';
-import { POSStatsBar } from '@/components/pos/POSStatsBar';
 import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
