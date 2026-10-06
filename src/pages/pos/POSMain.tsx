@@ -590,9 +590,12 @@ const POSMain = () => {
             onHoldToTable={handleHoldToTable}
           />
           </section>
-        </div>
-      </main>
+    );
+  }
 
+  function renderModals() {
+    return (
+    <>
       <OpenShiftModal open={!activeShift && !shiftLoading} onOpen={handleOpenShift} />
       <POSPayment
         open={paymentOpen}
