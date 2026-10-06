@@ -60,7 +60,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   ] as Item[]).filter((i) => i.levels.includes(lvl) && hasModule(i.module));
 
   return (
-    <aside className={cn('glass-sidebar h-screen flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
+    <aside className={cn('glass-sidebar h-[100dvh] flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
       <div className={cn('flex items-center gap-3 px-4 h-20 border-b border-primary-foreground/10', collapsed && 'justify-center px-0')}>
         <ZegerLogo size="sm" className="text-primary-foreground" />
         {!collapsed && <span className="pos-number font-bold text-lg">Zeger POS</span>}
