@@ -185,10 +185,9 @@ const POSMain = () => {
         await sendToKitchen(tableTxnId, selectedTable.table_number, unsent);
       }
 
-      const { data: tx, error: txErr } = await supabase
-        .from('pos_transactions')
-        .insert({
-          ...(tableTxnId ? { id: tableTxnId } : {}),
+      const isOffline = !navigator.onLine;
+      const txRow = {
+          id: tableTxnId || crypto.randomUUID(),
           transaction_number: txNum,
           branch_id: userProfile.branch_id,
           kasir_id: userProfile.id,
@@ -212,11 +211,8 @@ const POSMain = () => {
           status: 'paid',
           paid_at: new Date().toISOString(),
           member_id: member?.id || null,
-        })
-        .select()
-        .single();
-      if (txErr) throw txErr;
-
+      };
+      const tx = { id: txRow.id };
       const itemsPayload = cart.items.map((i) => ({
         transaction_id: tx.id,
         product_id: i.is_custom ? null : i.product_id,
@@ -229,33 +225,35 @@ const POSMain = () => {
         subtotal_item: i.price * i.qty - i.discount_item * i.qty,
         notes: lineNotes(i) || null,
       }));
-      const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
-      if (itemErr) throw itemErr;
 
-      // Sync: kurangi stok inventory
-      await decrementInventory(
-        userProfile.branch_id,
-        cart.items.map((i) => ({ product_id: i.product_id, qty: i.qty, is_custom: i.is_custom }))
-      );
+      if (isOffline) {
+        enqueueOfflineSale({
+          id: tx.id, created_at: new Date().toISOString(), tx: txRow, items: itemsPayload,
+          branch_id: userProfile.branch_id,
+          stock: cart.items.filter((i) => !i.is_custom).map((i) => ({ product_id: i.product_id, qty: i.qty })),
+        });
+      } else {
+        const { error: txErr } = await supabase.from('pos_transactions').insert(txRow as any);
+        if (txErr) throw txErr;
+        const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
+        if (itemErr) throw itemErr;
 
-      // Potong stok bahan baku sesuai resep (BOM)
-      try {
-        await (supabase as any).rpc('deduct_recipe_for_transaction', { _transaction_id: tx.id });
-      } catch (err) {
-        console.error('deduct recipe failed', err);
-      }
-
-      // Mark voucher as used
-      if (voucher?.voucher_id) {
-        await markVoucherUsed(voucher.voucher_id, tx.id);
-      }
-
-      // Consume loyalty redemption code
-      if (redemption?.code) {
+        await decrementInventory(
+          userProfile.branch_id,
+          cart.items.map((i) => ({ product_id: i.product_id, qty: i.qty, is_custom: i.is_custom }))
+        );
         try {
-          await useRedemption(redemption.code, cart.totals.total - voucherDiscount, 'pos', tx.id);
+          await (supabase as any).rpc('deduct_recipe_for_transaction', { _transaction_id: tx.id });
         } catch (err) {
-          console.error('use_redemption failed', err);
+          console.error('deduct recipe failed', err);
+        }
+        if (voucher?.voucher_id) await markVoucherUsed(voucher.voucher_id, tx.id);
+        if (redemption?.code) {
+          try {
+            await useRedemption(redemption.code, cart.totals.total - voucherDiscount, 'pos', tx.id);
+          } catch (err) {
+            console.error('use_redemption failed', err);
+          }
         }
       }
 
