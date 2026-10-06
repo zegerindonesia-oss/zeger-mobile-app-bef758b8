@@ -496,9 +496,9 @@ const POSMain = () => {
             <h1 className="text-base md:text-lg font-bold truncate">Terminal Kasir</h1>
             <p className="text-[11px] md:text-xs text-muted-foreground truncate">{branchName}{activeShift?.shift_type ? ` · Shift ${activeShift.shift_type}` : ''}</p>
           </div>
-          <span className={`hidden lg:flex rounded-xl px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
-            {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-            {online ? 'Online' : 'Offline'}
+          <span className={`hidden lg:flex rounded-full px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+            <span className={`h-2 w-2 rounded-full ${online ? 'bg-success' : 'bg-destructive animate-pulse'}`} />
+            {online ? 'Online' : 'Offline — mode lokal'}
           </span>
           {!online && <WifiOff className="lg:hidden h-4 w-4 text-destructive shrink-0" />}
           <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Meja">
@@ -549,7 +549,7 @@ const POSMain = () => {
 
   function cartDrawerNode(mobile: boolean) {
     return (
-          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[330px] lg:w-[370px] xl:w-[410px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
+          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[360px] lg:w-[420px] xl:w-[460px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
             <POSCart
             items={cart.items}
             totals={cart.totals}
