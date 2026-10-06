@@ -4339,6 +4339,7 @@ export type Database = {
         Returns: number
       }
       disablelongtransactions: { Args: never; Returns: string }
+      downgrade_expired_trials: { Args: never; Returns: number }
       dropgeometrycolumn:
         | {
             Args: {
