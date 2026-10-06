@@ -28,6 +28,7 @@ import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type Loya
 import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
 import { POSShiftReport } from '@/components/pos/POSShiftReport';
 import { loadPrintSettings, printReceipt, printKitchen, DEFAULT_SETTINGS, type PrintSettings } from '@/lib/pos-printing';
+import { enqueueOfflineSale } from '@/lib/pos-offline';
 import { POSVoiceOrder } from '@/components/pos/POSVoiceOrder';
 import type { POSCartItem } from '@/hooks/usePOSCart';
 
@@ -302,7 +303,7 @@ const POSMain = () => {
       });
 
       // Auto-release table (and merged tables) after payment
-      if (selectedTable) {
+      if (selectedTable && !isOffline) {
         const db = supabase as any;
         await db.from('pos_tables').update({
           status: 'available', guest_name: null, guest_count: null, occupied_at: null,
@@ -319,7 +320,7 @@ const POSMain = () => {
       setTableNumber('');
       setExternalOrderId('');
       setCustomerName('');
-      if (member?.id) {
+      if (member?.id && !isOffline) {
         const pts = await awardLoyaltyPoints({
           memberId: member.id,
           amount: finalTotal,
@@ -334,7 +335,7 @@ const POSMain = () => {
         setMember(null);
       }
       setStatsKey((k) => k + 1);
-      toast.success('Pembayaran berhasil');
+      toast.success(isOffline ? 'Tersimpan offline — akan disinkronkan otomatis saat online' : 'Pembayaran berhasil');
     } catch (e: any) {
       toast.error(e.message || 'Gagal memproses pembayaran');
     }
