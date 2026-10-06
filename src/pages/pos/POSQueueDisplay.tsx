@@ -175,7 +175,7 @@ const POSQueueDisplay = () => {
           <div className="flex-1 min-h-0"><PromoVideo url={videoUrl} /></div>
           {runningText && (
             <div className="overflow-hidden bg-primary text-primary-foreground py-2">
-              <p className="whitespace-nowrap animate-[marquee_25s_linear_infinite] text-lg font-semibold">{runningText}</p>
+              <p className="text-center truncate px-4 text-lg font-semibold">{runningText}</p>
             </div>
           )}
         </section>
