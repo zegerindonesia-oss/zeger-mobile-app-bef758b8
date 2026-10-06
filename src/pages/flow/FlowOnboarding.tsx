@@ -90,7 +90,7 @@ const FlowOnboarding = () => {
       <div className="flow-card rounded-[32px] p-10 max-w-lg text-center">
         <div className="mx-auto h-16 w-16 rounded-full flow-bg-red grid place-items-center"><PartyPopper className="h-8 w-8" /></div>
         <h1 className="mt-6 text-3xl font-extrabold flow-ink">Selamat datang, {f.company_name}!</h1>
-        <p className="mt-3 flow-muted">Workspace siap! Outlet "{f.first_outlet_name}"{f.menu_template !== 'manual' ? ' dan menu awal' : ''} sudah dibuat. Trial 14 hari Anda aktif.</p>
+        <p className="mt-3 flow-muted">Workspace siap! Outlet "{f.first_outlet_name}"{f.menu_template !== 'manual' ? ' dan menu awal' : ''} sudah dibuat. Trial 7 hari full fitur Anda aktif.</p>
         <button onClick={() => { window.location.href = '/'; }} className="flow-btn mt-8 inline-flex rounded-2xl px-6 py-3.5 font-bold">Masuk ke Workspace</button>
       </div>
     </div>

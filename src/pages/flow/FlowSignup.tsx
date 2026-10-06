@@ -16,7 +16,7 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export const TRIAL_DAYS = 14;
+export const TRIAL_DAYS = 7;
 
 const schema = z.object({
   owner_name: z.string().trim().min(2, 'Nama wajib diisi').max(100),
@@ -25,7 +25,7 @@ const schema = z.object({
   password: z.string().min(8, 'Password minimal 8 karakter').max(72),
 });
 
-/** Step 1 of the SaaS funnel: create an account that starts a 14-day trial. */
+/** Step 1 of the SaaS funnel: create an account that starts a 7-day full-feature trial. */
 const FlowSignup = () => {
   const nav = useNavigate();
   const [params] = useSearchParams();
