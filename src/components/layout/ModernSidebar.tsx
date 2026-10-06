@@ -38,6 +38,7 @@ import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTenantModules } from "@/hooks/useTenantModules";
 
 interface MenuItem {
   id: string;
@@ -46,6 +47,7 @@ interface MenuItem {
   path?: string;
   children?: MenuItem[];
   roles?: string[];
+  module?: string;
 }
 
 interface ModernSidebarProps {
@@ -83,10 +85,10 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "central-kitchen", label: "Branch Hub", icon: Coffee, path: "/analytics/central-kitchen", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] },
       { id: "transactions", label: "Transactions", icon: FileText, path: "/transactions" },
       { id: "transaction-details", label: "Details Transaction", icon: BarChart3, path: "/transaction-details" },
-      { id: "cash-deposit", label: "Cash Deposit", icon: Banknote, path: "/analytics/cash-deposit", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
-      { id: "orders-management", label: "Online Orders", icon: ShoppingCart, path: "/orders-management", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
-      { id: "customers", label: "Customers", icon: Database, path: "/customers" },
-      { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance" },
+      { id: "cash-deposit", label: "Cash Deposit", icon: Banknote, path: "/analytics/cash-deposit", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
+      { id: "orders-management", label: "Online Orders", icon: ShoppingCart, path: "/orders-management", module: "customer_app", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
+      { id: "customers", label: "Customers", icon: Database, path: "/customers", module: "loyalty" },
+      { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance", module: "rider" },
       { id: "location-analytics", label: "Location Analytics", icon: LocationPin, path: "/location-analytics", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "bh_report"] }
     ]
   },
@@ -98,11 +100,11 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     children: [
       { id: "purchasing", label: "Purchasing", icon: ShoppingCart, path: "/inventory/purchasing", roles: ["3_SB_Branch_Manager", "sb_branch_manager"] },
       { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
-      { id: "raw-materials", label: "Bahan Baku & Resep", icon: Package, path: "/inventory/raw-materials", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager"] },
+      { id: "raw-materials", label: "Bahan Baku & Resep", icon: Package, path: "/inventory/raw-materials", module: "bom", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager"] },
       { id: "waste-management", label: "Waste Management", icon: Trash2, path: "/inventory/waste-management", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
       { id: "small-branch-stock", label: "Small Branch Stock", icon: Store, path: "/inventory/small-branch-stock", roles: ["3_SB_Branch_Manager", "sb_branch_manager"] },
-      { id: "stock-transfer", label: "Kirim Stok ke Rider", icon: Truck, path: "/stock-transfer", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
-      { id: "stock-card-rider", label: "Stock Card Rider", icon: FileText, path: "/inventory/stock-card-rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
+      { id: "stock-transfer", label: "Kirim Stok ke Rider", icon: Truck, path: "/stock-transfer", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
+      { id: "stock-card-rider", label: "Stock Card Rider", icon: FileText, path: "/inventory/stock-card-rider", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
       { id: "branch-transfer", label: "Kirim Stok Ke Small Branch", icon: Store, path: "/inventory/branch-transfer", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"] }
     ]
   },
@@ -119,13 +121,14 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     id: "finance",
     label: "Finance",
     icon: DollarSign,
+    module: "finance",
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "finance", "bh_report"],
     children: [
       { id: "profit-loss", label: "Laba Rugi", icon: FileText, path: "/finance/profit-loss" },
       { id: "cash-flow", label: "Arus Kas", icon: PieChart, path: "/finance/cash-flow" },
       { id: "balance-sheet", label: "Neraca", icon: FileText, path: "/finance/balance-sheet" },
       { id: "operational-expenses", label: "Beban Operasional", icon: FileText, path: "/finance/operational-expenses", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "bh_report"] },
-      { id: "rider-income", label: "Pendapatan Rider", icon: Calculator, path: "/finance/rider-income", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "finance"] }
+      { id: "rider-income", label: "Pendapatan Rider", icon: Calculator, path: "/finance/rider-income", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "finance"] }
     ]
   },
   {
@@ -158,6 +161,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
         label: "App Management", 
         icon: Smartphone, 
         roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "ho_admin", "branch_manager"],
+        module: "customer_app",
         children: [
           {
             id: "app-overview",
@@ -195,7 +199,8 @@ const getMenuItems = (userRole: string): MenuItem[] => [
         id: "rider-management", 
         label: "Rider Management", 
         icon: Truck, 
-        path: "/settings/riders"
+        path: "/settings/riders",
+        module: "rider"
       },
       { 
         id: "branch-management", 
@@ -209,6 +214,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
         label: "Rider Reassignment", 
         icon: UserCog, 
         path: "/settings/rider-reassignment",
+        module: "rider",
         roles: ["1_HO_Admin", "ho_admin"]
       }
     ]
@@ -218,6 +224,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
 export const ModernSidebar = ({ userRole, isOpen, onToggle }: ModernSidebarProps) => {
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["dashboard"]);
   const navigate = useNavigate();
+  const { hasModule } = useTenantModules();
 
   const handleSignOut = async () => {
     try {
@@ -240,13 +247,13 @@ export const ModernSidebar = ({ userRole, isOpen, onToggle }: ModernSidebarProps
 
   const menuItems = getMenuItems(userRole);
   const filteredMenuItems = menuItems.filter(item => 
-    !item.roles || item.roles.includes(userRole)
+    (!item.roles || item.roles.includes(userRole)) && hasModule(item.module)
   );
 
   const renderMenuItem = (item: MenuItem, isChild = false) => {
     const Icon = item.icon;
     const filteredChildren = item.children?.filter(child => 
-      !child.roles || child.roles.includes(userRole)
+      (!child.roles || child.roles.includes(userRole)) && hasModule(child.module)
     );
     const hasChildren = filteredChildren && filteredChildren.length > 0;
     const isExpanded = expandedMenus.includes(item.id);
