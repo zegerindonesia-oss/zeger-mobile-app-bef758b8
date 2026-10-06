@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { playAlertBeep, unlockAudio } from '@/lib/audio';
+import { TvMediaItem, detectMediaType, gdriveId, spotifyEmbed, youtubeId } from '@/lib/tv-media';
 import { ChefHat, BellRing, Maximize, Volume2, ArrowLeft } from 'lucide-react';
 
 interface Ticket {
@@ -96,6 +97,7 @@ const POSQueueDisplay = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [branchName, setBranchName] = useState('');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [mediaItems, setMediaItems] = useState<TvMediaItem[]>([]);
   const [runningText, setRunningText] = useState('');
   const [now, setNow] = useState(new Date());
   const [soundOn, setSoundOn] = useState(false);
@@ -110,6 +112,7 @@ const POSQueueDisplay = () => {
     if (!data) return;
     setBranchName(data.branch_name || '');
     setVideoUrl(data.video_url || null);
+    setMediaItems(Array.isArray(data.media_items) ? data.media_items : []);
     setRunningText(data.running_text || '');
     const list = (data.tickets || []) as Ticket[];
     const ready = list.filter((t) => t.status === 'ready');
@@ -200,7 +203,7 @@ const POSQueueDisplay = () => {
         </section>
 
         <section className="min-h-0 flex flex-col bg-foreground">
-          <div className="flex-1 min-h-0"><PromoVideo url={videoUrl} /></div>
+          <div className="flex-1 min-h-0"><MediaPlaylist items={mediaItems} fallback={videoUrl} /></div>
           {runningText && (
             <div className="overflow-hidden bg-primary text-primary-foreground py-2">
               <p className="text-center truncate px-4 text-lg font-semibold">{runningText}</p>
