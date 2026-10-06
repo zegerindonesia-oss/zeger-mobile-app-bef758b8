@@ -4606,6 +4606,7 @@ export type Database = {
           status: string
         }[]
       }
+      plan_modules: { Args: { _plan: string }; Returns: string[] }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }

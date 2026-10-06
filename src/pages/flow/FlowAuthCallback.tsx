@@ -25,7 +25,7 @@ const FlowAuthCallback = () => {
         await supabase.auth.updateUser({
           data: {
             flow_tenant: true,
-            flow_plan: params.get('plan') || meta.flow_plan || 'pro',
+            flow_plan: params.get('plan') || meta.flow_plan || 'mid_market',
             trial_ends_at: meta.trial_ends_at || new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString(),
             onboarded: false,
             full_name: meta.full_name || meta.name || '',

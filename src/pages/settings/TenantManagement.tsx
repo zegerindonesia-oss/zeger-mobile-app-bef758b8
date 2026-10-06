@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Building2, Search, Settings2, CalendarPlus, Users, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PLANS, getPlan, formatPrice } from '@/lib/flow-plans';
 
 const MODULES = [
   { id: 'pos', t: 'POS Kasir', lock: true }, { id: 'table', t: 'Manajemen Meja' }, { id: 'kds', t: 'Kitchen Display' },
@@ -120,7 +121,7 @@ export default function TenantManagement() {
                     <div className="font-semibold flex items-center gap-2">{t.name}{t.is_platform_owner && <Badge variant="outline">Pilot</Badge>}</div>
                     <div className="text-xs text-muted-foreground">{t.config?.phone || t.slug} · daftar {fmt(t.created_at)}</div>
                   </td>
-                  <td className="p-3 capitalize">{t.plan}</td>
+                  <td className="p-3">{getPlan(t.plan).name}</td>
                   <td className="p-3"><Badge variant={s.v}>{s.l}</Badge></td>
                   <td className="p-3">{t.subscription_status === 'trial'
                     ? <span className={left !== null && left <= 3 ? 'text-destructive font-semibold' : ''}>{left !== null && left > 0 ? `Sisa ${left} hari` : 'Habis'}</span>
@@ -144,9 +145,9 @@ export default function TenantManagement() {
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
                 <div className="text-xs font-semibold mb-1">Paket</div>
-                <Select value={edit.plan} onValueChange={(v) => save({ plan: v })}>
+                <Select value={getPlan(edit.plan).id} onValueChange={(v) => save({ plan: v, modules: getPlan(v).modules }, `Paket ${getPlan(v).name} — modul disesuaikan`)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{['starter', 'pro', 'enterprise'].map((p) => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}</SelectContent>
+                  <SelectContent>{PLANS.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} · {formatPrice(p.price)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
