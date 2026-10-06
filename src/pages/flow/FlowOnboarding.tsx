@@ -45,7 +45,7 @@ const FlowOnboarding = () => {
   const [f, setF] = useState({
     company_name: '', business_type: 'coffee_shop', outlet_count: '1', owner_name: meta.full_name || '', email: user?.email || '', phone: meta.phone || '',
     first_outlet_name: '', city: '', menu_template: 'coffee',
-    modules: ['pos', 'kds', 'bom', 'loyalty'] as string[], plan: meta.flow_plan || params.get('plan') || 'pro',
+    modules: ['pos'] as string[], plan: getPlan(meta.flow_plan || params.get('plan')).id as string,
   });
   useEffect(() => { document.title = 'Onboarding | FlowF&B'; }, []);
   const set = (k: string, v: any) => setF((s) => ({ ...s, [k]: v }));
@@ -159,21 +159,23 @@ const FlowOnboarding = () => {
           )}
           {step === 3 && (
             <div className="space-y-4">
-              <h1 className="text-2xl font-extrabold flow-ink">Pilih modul yang aktif</h1>
-              <div className="flex gap-2">
-                {['starter', 'pro', 'enterprise'].map((p) => (
-                  <button key={p} type="button" onClick={() => set('plan', p)} className={`rounded-xl border border-border px-4 py-2 text-sm font-bold capitalize ${f.plan === p ? 'flow-chip-on flow-red' : 'flow-ink'}`}>{p}</button>
+              <h1 className="text-2xl font-extrabold flow-ink">Pilih paket</h1>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {PLANS.map((p) => (
+                  <button key={p.id} type="button" onClick={() => set('plan', p.id)} className={`rounded-2xl border border-border p-3 text-left ${getPlan(f.plan).id === p.id ? 'flow-chip-on' : ''}`}>
+                    <div className="font-bold flow-ink">{p.name} · {formatPrice(p.price)}{p.price ? '/bln' : ''}</div>
+                    <div className="text-xs flow-muted">{p.who}</div>
+                  </button>
                 ))}
               </div>
+              <div className="text-sm font-semibold flow-ink">Modul termasuk</div>
               <div className="grid sm:grid-cols-3 gap-2">
                 {MODULES.map((m) => {
-                  const on = f.modules.includes(m.id);
+                  const on = getPlan(f.plan).modules.includes(m.id);
                   return (
-                    <button key={m.id} type="button" disabled={m.lock}
-                      onClick={() => set('modules', on ? f.modules.filter((x) => x !== m.id) : [...f.modules, m.id])}
-                      className={`rounded-2xl border border-border p-3 text-left text-sm font-semibold flow-ink flex items-center gap-2 ${on ? 'flow-chip-on' : ''}`}>
+                    <div key={m.id} className={`rounded-2xl border border-border p-3 text-left text-sm font-semibold flex items-center gap-2 ${on ? 'flow-chip-on flow-ink' : 'flow-muted opacity-60'}`}>
                       <span className={`h-5 w-5 rounded-md grid place-items-center ${on ? 'flow-bg-red' : 'border border-border'}`}>{on && <Check className="h-3.5 w-3.5" />}</span>{m.t}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
