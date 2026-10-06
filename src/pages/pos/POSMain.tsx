@@ -8,7 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { POSSidebar } from '@/components/pos/POSSidebar';
 import { POSStatsBar } from '@/components/pos/POSStatsBar';
-import { Menu, Wifi, WifiOff, Monitor, Armchair } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart } from 'lucide-react';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { POSTableMap } from '@/components/pos/POSTableMap';
 import type { POSTable } from '@/hooks/usePOSTables';
 import { POSProductGrid } from '@/components/pos/POSProductGrid';
@@ -48,6 +50,8 @@ const POSMain = () => {
   const [customerName, setCustomerName] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
   const [collapsed, setCollapsed] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const [statsKey, setStatsKey] = useState(0);
 
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -569,8 +573,8 @@ const POSMain = () => {
             setItemDiscount={cart.setItemDiscount}
             removeItem={cart.removeItem}
             onClear={cart.clear}
-            onPay={() => setPaymentOpen(true)}
-            onSplit={() => setSplitOpen(true)}
+            onPay={() => { setCartOpen(false); setPaymentOpen(true); }}
+            onSplit={() => { setCartOpen(false); setSplitOpen(true); }}
             branchId={userProfile?.branch_id || null}
             appliedPromos={promo.appliedPromos}
             onApplyVoucher={handleApplyVoucher}
