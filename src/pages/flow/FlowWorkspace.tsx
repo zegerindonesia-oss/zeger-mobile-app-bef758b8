@@ -27,9 +27,9 @@ const FlowWorkspace = () => {
         {expired ? (
           <div className="flow-card rounded-[32px] p-10 max-w-xl mx-auto text-center mt-10">
             <div className="mx-auto h-16 w-16 rounded-full flow-bg-red grid place-items-center"><Lock className="h-8 w-8" /></div>
-            <h1 className="mt-6 text-3xl font-extrabold flow-ink">Masa trial telah berakhir</h1>
-            <p className="mt-3 flow-muted">Pilih paket untuk melanjutkan akses ke POS, back office, dan seluruh data bisnis Anda. Data Anda tetap aman.</p>
-            <Link to="/harga" className="flow-btn mt-8 inline-flex rounded-2xl px-6 py-3.5 font-bold">Pilih Paket</Link>
+            <h1 className="mt-6 text-3xl font-extrabold flow-ink">Trial full fitur selesai</h1>
+            <p className="mt-3 flow-muted">Akun Anda tetap aktif di paket Flow Free selamanya — POS kasir tetap jalan dan data Anda utuh. Upgrade kapan saja untuk membuka kembali KDS Dapur, Layar Antrean, Resep & HPP, dan modul premium lainnya.</p>
+            <Link to="/harga" className="flow-btn mt-8 inline-flex rounded-2xl px-6 py-3.5 font-bold">Upgrade Paket</Link>
           </div>
         ) : (
           <>
