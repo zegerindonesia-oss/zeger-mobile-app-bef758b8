@@ -10,9 +10,10 @@ import { ArrowLeft, Printer, Tv, Copy, ExternalLink } from 'lucide-react';
 import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
 import { cn } from '@/lib/utils';
 import { TvMediaItem, TvMediaType, TV_MEDIA_LABEL, detectMediaType, isDriveFolder } from '@/lib/tv-media';
-import { Plus, Trash2, ArrowUp } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, RefreshCw } from 'lucide-react';
+import { POSDataSync } from '@/components/pos/POSDataSync';
 
-type Tab = 'printer' | 'tv';
+type Tab = 'printer' | 'tv' | 'sync';
 
 /** Full-page POS settings: printers + TV queue pairing & promo video. */
 const POSSettings = () => {
@@ -61,6 +62,7 @@ const POSSettings = () => {
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: 'printer', label: 'Printer', icon: Printer },
     { id: 'tv', label: 'Layar TV Antrean', icon: Tv },
+    { id: 'sync', label: 'Sinkronkan Data', icon: RefreshCw },
   ];
 
   return (
@@ -84,6 +86,7 @@ const POSSettings = () => {
           {tab === 'printer' && (
             <POSPrinterSettings inline open onOpenChange={() => undefined} branchId={branchId} userId={userProfile?.id} />
           )}
+          {tab === 'sync' && <POSDataSync />}
           {tab === 'tv' && (
             <div className="space-y-6">
               <div className="grid lg:grid-cols-[240px_1fr] gap-6 items-start">

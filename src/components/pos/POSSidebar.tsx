@@ -6,6 +6,9 @@ import {
 import { ZegerLogo } from '@/components/ui/zeger-logo';
 import { cn } from '@/lib/utils';
 import { useTenantModules } from '@/hooks/useTenantModules';
+import { usePOSConnection } from '@/lib/pos-offline';
+import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Level = 'ho' | 'manager' | 'kasir' | 'finance';
 
@@ -38,6 +41,12 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   const all: Level[] = ['ho', 'manager', 'kasir', 'finance'];
 
   const { hasModule } = useTenantModules();
+  const conn = usePOSConnection();
+  const doSync = async () => {
+    if (!conn.online) return toast.error('Masih offline — penjualan tersimpan aman di perangkat');
+    const r = await conn.sync();
+    r.failed ? toast.error(`${r.failed} transaksi gagal disinkronkan`) : toast.success('Semua penjualan tersinkronisasi');
+  };
   const items = ([
     { label: 'Dashboard Kasir', icon: BarChart3, path: '/pos/dashboard', levels: all },
     { label: 'Kasir (POS)', icon: ShoppingCart, path: '/pos', levels: all },
@@ -65,6 +74,18 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
       <div className={cn('flex items-center gap-3 px-4 h-20 border-b border-primary-foreground/10', collapsed && 'justify-center px-0')}>
         <ZegerLogo size="sm" className="text-primary-foreground" />
         {!collapsed && <span className="pos-number font-bold text-lg">Zeger POS</span>}
+      </div>
+      <div className="px-3 pt-3">
+        <button onClick={doSync} title="Sinkronkan Penjualan"
+          className={cn('w-full rounded-2xl bg-primary-foreground text-primary font-bold text-sm flex items-center gap-2 h-11 shadow-md active:translate-y-px', collapsed ? 'justify-center' : 'px-3')}>
+          <RefreshCw className={cn('h-4 w-4 shrink-0', conn.syncing && 'animate-spin')} />
+          {!collapsed && <span className="truncate">Sinkronkan Penjualan</span>}
+        </button>
+        <div className={cn('mt-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold flex items-center gap-2', collapsed && 'justify-center px-0', conn.online ? (conn.pending ? 'bg-warning/90 text-warning-foreground' : 'bg-success text-success-foreground') : 'bg-destructive text-destructive-foreground')}
+          title={conn.online ? 'Online' : 'Offline'}>
+          <span className={cn('h-2 w-2 rounded-full bg-current shrink-0', !conn.online && 'animate-pulse')} />
+          {!collapsed && <span className="truncate">{!conn.online ? `Offline · ${conn.pending} tertunda` : conn.pending ? `${conn.pending} penjualan belum sync` : 'Semua penjualan tersinkronisasi'}</span>}
+        </div>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 space-y-1 py-2">
         {items.map((it) => {

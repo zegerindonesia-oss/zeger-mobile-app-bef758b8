@@ -28,6 +28,7 @@ import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type Loya
 import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
 import { POSShiftReport } from '@/components/pos/POSShiftReport';
 import { loadPrintSettings, printReceipt, printKitchen, DEFAULT_SETTINGS, type PrintSettings } from '@/lib/pos-printing';
+import { enqueueOfflineSale } from '@/lib/pos-offline';
 import { POSVoiceOrder } from '@/components/pos/POSVoiceOrder';
 import type { POSCartItem } from '@/hooks/usePOSCart';
 
@@ -185,10 +186,9 @@ const POSMain = () => {
         await sendToKitchen(tableTxnId, selectedTable.table_number, unsent);
       }
 
-      const { data: tx, error: txErr } = await supabase
-        .from('pos_transactions')
-        .insert({
-          ...(tableTxnId ? { id: tableTxnId } : {}),
+      const isOffline = !navigator.onLine;
+      const txRow = {
+          id: tableTxnId || crypto.randomUUID(),
           transaction_number: txNum,
           branch_id: userProfile.branch_id,
           kasir_id: userProfile.id,
@@ -212,11 +212,8 @@ const POSMain = () => {
           status: 'paid',
           paid_at: new Date().toISOString(),
           member_id: member?.id || null,
-        })
-        .select()
-        .single();
-      if (txErr) throw txErr;
-
+      };
+      const tx = { id: txRow.id };
       const itemsPayload = cart.items.map((i) => ({
         transaction_id: tx.id,
         product_id: i.is_custom ? null : i.product_id,
@@ -229,33 +226,35 @@ const POSMain = () => {
         subtotal_item: i.price * i.qty - i.discount_item * i.qty,
         notes: lineNotes(i) || null,
       }));
-      const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
-      if (itemErr) throw itemErr;
 
-      // Sync: kurangi stok inventory
-      await decrementInventory(
-        userProfile.branch_id,
-        cart.items.map((i) => ({ product_id: i.product_id, qty: i.qty, is_custom: i.is_custom }))
-      );
+      if (isOffline) {
+        enqueueOfflineSale({
+          id: tx.id, created_at: new Date().toISOString(), tx: txRow, items: itemsPayload,
+          branch_id: userProfile.branch_id,
+          stock: cart.items.filter((i) => !i.is_custom).map((i) => ({ product_id: i.product_id, qty: i.qty })),
+        });
+      } else {
+        const { error: txErr } = await supabase.from('pos_transactions').insert(txRow as any);
+        if (txErr) throw txErr;
+        const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
+        if (itemErr) throw itemErr;
 
-      // Potong stok bahan baku sesuai resep (BOM)
-      try {
-        await (supabase as any).rpc('deduct_recipe_for_transaction', { _transaction_id: tx.id });
-      } catch (err) {
-        console.error('deduct recipe failed', err);
-      }
-
-      // Mark voucher as used
-      if (voucher?.voucher_id) {
-        await markVoucherUsed(voucher.voucher_id, tx.id);
-      }
-
-      // Consume loyalty redemption code
-      if (redemption?.code) {
+        await decrementInventory(
+          userProfile.branch_id,
+          cart.items.map((i) => ({ product_id: i.product_id, qty: i.qty, is_custom: i.is_custom }))
+        );
         try {
-          await useRedemption(redemption.code, cart.totals.total - voucherDiscount, 'pos', tx.id);
+          await (supabase as any).rpc('deduct_recipe_for_transaction', { _transaction_id: tx.id });
         } catch (err) {
-          console.error('use_redemption failed', err);
+          console.error('deduct recipe failed', err);
+        }
+        if (voucher?.voucher_id) await markVoucherUsed(voucher.voucher_id, tx.id);
+        if (redemption?.code) {
+          try {
+            await useRedemption(redemption.code, cart.totals.total - voucherDiscount, 'pos', tx.id);
+          } catch (err) {
+            console.error('use_redemption failed', err);
+          }
         }
       }
 
@@ -304,7 +303,7 @@ const POSMain = () => {
       });
 
       // Auto-release table (and merged tables) after payment
-      if (selectedTable) {
+      if (selectedTable && !isOffline) {
         const db = supabase as any;
         await db.from('pos_tables').update({
           status: 'available', guest_name: null, guest_count: null, occupied_at: null,
@@ -321,7 +320,7 @@ const POSMain = () => {
       setTableNumber('');
       setExternalOrderId('');
       setCustomerName('');
-      if (member?.id) {
+      if (member?.id && !isOffline) {
         const pts = await awardLoyaltyPoints({
           memberId: member.id,
           amount: finalTotal,
@@ -336,7 +335,7 @@ const POSMain = () => {
         setMember(null);
       }
       setStatsKey((k) => k + 1);
-      toast.success('Pembayaran berhasil');
+      toast.success(isOffline ? 'Tersimpan offline — akan disinkronkan otomatis saat online' : 'Pembayaran berhasil');
     } catch (e: any) {
       toast.error(e.message || 'Gagal memproses pembayaran');
     }
@@ -497,9 +496,9 @@ const POSMain = () => {
             <h1 className="text-base md:text-lg font-bold truncate">Terminal Kasir</h1>
             <p className="text-[11px] md:text-xs text-muted-foreground truncate">{branchName}{activeShift?.shift_type ? ` · Shift ${activeShift.shift_type}` : ''}</p>
           </div>
-          <span className={`hidden lg:flex rounded-xl px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
-            {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-            {online ? 'Online' : 'Offline'}
+          <span className={`hidden lg:flex rounded-full px-3 py-2 text-xs font-semibold items-center gap-1.5 ${online ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+            <span className={`h-2 w-2 rounded-full ${online ? 'bg-success' : 'bg-destructive animate-pulse'}`} />
+            {online ? 'Online' : 'Offline — mode lokal'}
           </span>
           {!online && <WifiOff className="lg:hidden h-4 w-4 text-destructive shrink-0" />}
           <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Meja">
@@ -550,7 +549,7 @@ const POSMain = () => {
 
   function cartDrawerNode(mobile: boolean) {
     return (
-          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[330px] lg:w-[370px] xl:w-[410px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
+          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[360px] lg:w-[420px] xl:w-[460px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
             <POSCart
             items={cart.items}
             totals={cart.totals}
