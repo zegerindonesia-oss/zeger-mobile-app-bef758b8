@@ -78,7 +78,7 @@ const POSSettings = () => {
   const [logs, setLogs] = useState<any[]>([]);
   useEffect(() => {
     if (tab !== 'log' || !branchId) return;
-    (supabase as any).from('pos_cash_movements').select('id,type,amount,reason,created_at').eq('branch_id', branchId).order('created_at', { ascending: false }).limit(50)
+    (supabase as any).from('pos_cash_movements').select('id,movement_type,amount,reason,created_at').eq('branch_id', branchId).order('created_at', { ascending: false }).limit(50)
       .then(({ data }: any) => setLogs(data || []));
   }, [tab, branchId]);
   const Shortcut = ({ title, desc, to }: { title: string; desc: string; to: string }) => (
@@ -112,8 +112,8 @@ const POSSettings = () => {
           {tab === 'menu' && (
             <div className="space-y-3"><h2 className="text-lg font-bold">Manajemen Menu</h2>
               <Shortcut title="Produk & Harga" desc="Tambah, ubah harga, aktif/nonaktif menu" to="/master/products" />
-              <Shortcut title="Paket Bundle" desc="Atur paket/combo menu" to="/settings/bundles" />
-              <Shortcut title="Promo & Voucher" desc="Atur promo otomatis dan kode voucher" to="/settings/promos" />
+              <Shortcut title="Paket Bundle" desc="Atur paket/combo menu" to="/settings/bundle-management" />
+              <Shortcut title="Promo & Voucher" desc="Atur promo otomatis dan kode voucher" to="/settings/promo-management" />
             </div>
           )}
           {tab === 'cetakan' && (
@@ -152,7 +152,7 @@ const POSSettings = () => {
             <div className="space-y-3"><h2 className="text-lg font-bold">Log Kas Kasir</h2>
               {logs.map((l) => (
                 <div key={l.id} className="flex justify-between rounded-xl border bg-background p-3 text-sm">
-                  <span><b className="uppercase">{l.type}</b> · {l.reason || '-'}</span>
+                  <span><b className="uppercase">{l.movement_type}</b> · {l.reason || '-'}</span>
                   <span>Rp{Number(l.amount).toLocaleString('id-ID')} · {new Date(l.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span>
                 </div>
               ))}
