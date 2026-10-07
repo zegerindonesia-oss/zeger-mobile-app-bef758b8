@@ -33,6 +33,7 @@ interface Props {
   onAdd: (p: Omit<POSCartItem, 'qty' | 'discount_item' | 'notes' | 'line_id' | 'modifiers'>, opts?: AddItemOptions) => void;
   onAddBundle: (b: BundleData) => void;
   onAddCustom: (d: { name: string; price: number; qty: number; notes: string }) => void;
+  toolbar?: React.ReactNode;
 }
 
 const toCartProduct = (p: Product) => ({
@@ -40,7 +41,7 @@ const toCartProduct = (p: Product) => ({
   category: p.category, price: Number(p.price), image_url: p.image_url,
 });
 
-export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Props) => {
+export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, toolbar }: Props) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [bundles, setBundles] = useState<BundleData[]>([]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
@@ -158,13 +159,8 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom }: Pr
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-border/60 space-y-3 bg-card/70 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-base font-bold">Katalog Menu</h2>
-            <p className="text-[11px] text-muted-foreground">Pilih menu untuk menambahkan ke pesanan</p>
-          </div>
-        </div>
+      <div className="p-3 md:p-4 border-b border-border/60 space-y-3 bg-card/70 backdrop-blur-xl">
+        {toolbar}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

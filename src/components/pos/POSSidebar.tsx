@@ -81,11 +81,12 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
           <RefreshCw className={cn('h-4 w-4 shrink-0', conn.syncing && 'animate-spin')} />
           {!collapsed && <span className="truncate">Sinkronkan Penjualan</span>}
         </button>
-        <div className={cn('mt-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold flex items-center gap-2', collapsed && 'justify-center px-0', conn.online ? (conn.pending ? 'bg-warning/90 text-warning-foreground' : 'bg-success text-success-foreground') : 'bg-destructive text-destructive-foreground')}
-          title={conn.online ? 'Online' : 'Offline'}>
-          <span className={cn('h-2 w-2 rounded-full bg-current shrink-0', !conn.online && 'animate-pulse')} />
-          {!collapsed && <span className="truncate">{!conn.online ? `Offline · ${conn.pending} tertunda` : conn.pending ? `${conn.pending} penjualan belum sync` : 'Semua penjualan tersinkronisasi'}</span>}
-        </div>
+        {(conn.pending > 0 || !conn.online) && (
+          <div className={cn('mt-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold flex items-center gap-2', collapsed && 'justify-center px-0', conn.online ? 'bg-warning/90 text-warning-foreground' : 'bg-destructive text-destructive-foreground')}>
+            <span className={cn('h-2 w-2 rounded-full bg-current shrink-0', !conn.online && 'animate-pulse')} />
+            {!collapsed && <span className="truncate">{!conn.online ? `Offline · ${conn.pending} tertunda` : `${conn.pending} penjualan belum sync`}</span>}
+          </div>
+        )}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 space-y-1 py-2">
         {items.map((it) => {
