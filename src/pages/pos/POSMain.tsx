@@ -10,6 +10,7 @@ import { POSSidebar } from '@/components/pos/POSSidebar';
 import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart, LayoutGrid, QrCode, UserRound } from 'lucide-react';
 import { POSModeDialog } from '@/components/pos/POSModeDialog';
 import { modeLabel } from '@/lib/pos-order-modes';
+import { usePOSBranchSettings } from '@/hooks/usePOSBranchSettings';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { POSTableMap } from '@/components/pos/POSTableMap';
@@ -49,6 +50,7 @@ const POSMain = () => {
   const [orderType, setOrderType] = useState('take_away');
   const [pax, setPax] = useState(1);
   const [modeOpen, setModeOpen] = useState(false);
+  const { settings: branchPos } = usePOSBranchSettings(userProfile?.branch_id || null);
   const [tableNumber, setTableNumber] = useState('');
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -469,10 +471,10 @@ const POSMain = () => {
     role: userProfile?.role,
     userName: userProfile?.full_name || 'Kasir',
     branchName,
-    onCashMovement: () => { setMobileNavOpen(false); setCashOpen(true); },
-    onCloseShift: () => { setMobileNavOpen(false); setCloseOpen(true); },
+    onCashMovement: () => navigate('/pos/settings?tab=kas'),
+    onCloseShift: () => navigate('/pos/settings?tab=shift'),
     onPrinterSettings: () => { setMobileNavOpen(false); navigate('/pos/settings'); },
-    onXReport: () => { setMobileNavOpen(false); activeShift ? setReport({ kind: 'X', shift: activeShift }) : toast.error('Tidak ada shift aktif'); },
+    onXReport: () => navigate('/pos/settings?tab=shift'),
     onLogout: signOut,
   };
   const fmtRp = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
@@ -523,6 +525,7 @@ const POSMain = () => {
               onAdd={cart.addItem}
               onAddBundle={cart.addBundle}
               onAddCustom={cart.addCustomItem}
+              hiddenProductIds={branchPos?.hidden_product_ids}
               toolbar={
                 <div className="flex gap-2">
                   <button onClick={() => setModeOpen(true)} className="pos-raised-control h-11 px-3 rounded-xl flex items-center gap-2 text-sm font-semibold shrink-0">
@@ -659,7 +662,7 @@ const POSMain = () => {
         onConfirm={handleCloseShift}
       />
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
-      <POSModeDialog open={modeOpen} onOpenChange={setModeOpen} orderType={orderType} pax={pax} externalOrderId={externalOrderId}
+      <POSModeDialog allowedModes={branchPos?.order_modes} open={modeOpen} onOpenChange={setModeOpen} orderType={orderType} pax={pax} externalOrderId={externalOrderId}
         onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); if (v.orderType === 'dine_in' && !tableNumber) setTableMapOpen(true); }} />
       <MemberScanDialog
         open={memberScanOpen}

@@ -70,6 +70,7 @@ import ProductManagement from "./pages/master/ProductManagement";
 import RiderIncome from "./pages/finance/RiderIncome";
 import PromoManagement from "./pages/settings/PromoManagement";
 import BundleManagement from "./pages/settings/BundleManagement";
+import POSBranchConfig from "./pages/settings/POSBranchConfig";
 
 const queryClient = new QueryClient();
 
@@ -393,6 +394,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', '1_HO_Admin', '1_HO_Owner']}>
                 <ModernLayout>
                   <BundleManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/settings/pos-branches" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', '1_HO_Admin', '1_HO_Owner', 'branch_manager', 'sb_branch_manager', '2_Hub_Branch_Manager', '3_SB_Branch_Manager']}>
+                <ModernLayout>
+                  <POSBranchConfig />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

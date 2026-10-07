@@ -1515,6 +1515,47 @@ export type Database = {
           },
         ]
       }
+      pos_branch_settings: {
+        Row: {
+          branch_id: string
+          cash_in_categories: string[]
+          cash_out_categories: string[]
+          created_at: string
+          hidden_product_ids: string[]
+          order_modes: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          cash_in_categories?: string[]
+          cash_out_categories?: string[]
+          created_at?: string
+          hidden_product_ids?: string[]
+          order_modes?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: string
+          cash_in_categories?: string[]
+          cash_out_categories?: string[]
+          created_at?: string
+          hidden_product_ids?: string[]
+          order_modes?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_branch_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_bundles: {
         Row: {
           applicable_branch_ids: string[] | null
@@ -1572,6 +1613,7 @@ export type Database = {
         Row: {
           amount: number
           branch_id: string
+          category: string | null
           created_at: string
           id: string
           kasir_id: string
@@ -1582,6 +1624,7 @@ export type Database = {
         Insert: {
           amount?: number
           branch_id: string
+          category?: string | null
           created_at?: string
           id?: string
           kasir_id: string
@@ -1592,6 +1635,7 @@ export type Database = {
         Update: {
           amount?: number
           branch_id?: string
+          category?: string | null
           created_at?: string
           id?: string
           kasir_id?: string

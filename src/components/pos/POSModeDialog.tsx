@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LayoutGrid, Users, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getEnabledModes, EXTERNAL_MODES } from '@/lib/pos-order-modes';
+import { ALL_ORDER_MODES, EXTERNAL_MODES } from '@/lib/pos-order-modes';
 
 interface Props {
   open: boolean;
@@ -12,14 +12,15 @@ interface Props {
   orderType: string;
   pax: number;
   externalOrderId: string;
+  allowedModes?: string[];
   onConfirm: (v: { orderType: string; pax: number; externalOrderId: string }) => void;
 }
 
-export const POSModeDialog = ({ open, onOpenChange, orderType, pax, externalOrderId, onConfirm }: Props) => {
+export const POSModeDialog = ({ open, onOpenChange, orderType, pax, externalOrderId, allowedModes, onConfirm }: Props) => {
   const [mode, setMode] = useState(orderType);
   const [p, setP] = useState(pax);
   const [ext, setExt] = useState(externalOrderId);
-  const modes = getEnabledModes();
+  const modes = ALL_ORDER_MODES.filter((m) => !allowedModes || allowedModes.includes(m.id));
   useEffect(() => { if (open) { setMode(orderType); setP(pax); setExt(externalOrderId); } }, [open]); // eslint-disable-line
 
   return (

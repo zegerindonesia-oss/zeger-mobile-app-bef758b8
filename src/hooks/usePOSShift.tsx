@@ -113,7 +113,7 @@ export const usePOSShift = () => {
     return data;
   };
 
-  const addCashMovement = async (type: 'in' | 'out', amount: number, reason: string) => {
+  const addCashMovement = async (type: 'in' | 'out', amount: number, reason: string, category?: string) => {
     if (!activeShift || !userProfile?.id) throw new Error('Tidak ada shift aktif');
     const { error } = await supabase.from('pos_cash_movements').insert({
       shift_id: activeShift.id,
@@ -122,7 +122,8 @@ export const usePOSShift = () => {
       movement_type: type,
       amount,
       reason,
-    });
+      category: category || null,
+    } as any);
     if (error) throw error;
 
     const updateField = type === 'in' ? 'total_cash_in' : 'total_cash_out';

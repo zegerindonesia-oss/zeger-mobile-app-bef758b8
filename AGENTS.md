@@ -7,3 +7,4 @@
 - POS layout is touch-first: phones (<md) use full catalog + bottom cart drawer, tablets/desktop use split view; install support is manifest-only (no service worker) to keep previews safe.
 - Native Android/iOS apps are Capacitor shells (capacitor.config.ts) loading the published domain, so APKs update without rebuilds; native folders are generated locally by the user via `npx cap add android`.
 - POS TV queue screens pair without login via `/tv?branch=<id>` reading the minimal-field `get_queue_display` RPC; per-branch video/running text lives in `pos_display_settings`, so TVs never hold staff credentials.
+- Per-branch POS config (order modes, hidden menu items, cash categories) lives in `pos_branch_settings`, edited only in Back Office (/settings/pos-branches); cashier POS reads it, so outlets cannot self-configure.
