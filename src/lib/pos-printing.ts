@@ -162,6 +162,7 @@ export interface ShiftReportPrint {
   opening_cash: number; cash_in: number; cash_out: number;
   payments: { method: string; count: number; amount: number }[];
   categories: { category: string; qty: number; amount: number }[];
+  products?: { name: string; qty: number; amount: number }[];
   gross: number; discount: number; service: number; tax: number; net: number;
   tx_count: number; void_count: number; expected_cash: number;
   closing_cash?: number | null; difference?: number | null; notes?: string | null;
@@ -186,6 +187,8 @@ export const renderShiftReport = (r: ShiftReportPrint, paper: PaperWidth) => doc
 ${r.payments.map((p) => `<div class="row"><span>${esc(p.method.toUpperCase())} (${p.count})</span><span>${rp(p.amount)}</span></div>`).join('') || '<div>-</div>'}
 <div class="hr"></div><div class="b">PER KATEGORI</div>
 ${r.categories.map((c) => `<div class="row"><span>${esc(c.category)} (${c.qty})</span><span>${rp(c.amount)}</span></div>`).join('') || '<div>-</div>'}
+<div class="hr"></div><div class="b">RINCIAN PRODUK</div>
+${(r.products || []).map((p) => `<div class="row"><span>${p.qty}x ${esc(p.name)}</span><span>${rp(p.amount)}</span></div>`).join('') || '<div>-</div>'}
 <div class="hr"></div><div class="b">KAS LACI</div>
 <div class="row"><span>Modal Awal</span><span>${rp(r.opening_cash)}</span></div>
 <div class="row"><span>Tunai Masuk Penjualan</span><span>${rp(r.payments.find((p) => p.method === 'cash')?.amount || 0)}</span></div>
@@ -260,12 +263,16 @@ export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; bran
   });
   const ids = paid.map((t: any) => t.id);
   const cats: Record<string, { qty: number; amount: number }> = {};
+  const prods: Record<string, { qty: number; amount: number }> = {};
   for (let i = 0; i < ids.length; i += 200) {
-    const { data: items } = await db.from('pos_transaction_items').select('category,qty,subtotal_item').in('transaction_id', ids.slice(i, i + 200));
+    const { data: items } = await db.from('pos_transaction_items').select('category,product_name,qty,subtotal_item').in('transaction_id', ids.slice(i, i + 200));
     (items || []).forEach((it: any) => {
       const c = it.category || 'Lainnya';
       cats[c] ??= { qty: 0, amount: 0 };
       cats[c].qty += Number(it.qty || 0); cats[c].amount += Number(it.subtotal_item || 0);
+      const n = it.product_name || 'Item';
+      prods[n] ??= { qty: 0, amount: 0 };
+      prods[n].qty += Number(it.qty || 0); prods[n].amount += Number(it.subtotal_item || 0);
     });
   }
   const sum = (k: string) => paid.reduce((s: number, t: any) => s + Number(t[k] || 0), 0);
@@ -276,6 +283,7 @@ export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; bran
     printed_at: new Date().toISOString(), opening_cash: Number(shift.opening_cash || 0),
     cash_in: Number(shift.total_cash_in || 0), cash_out: Number(shift.total_cash_out || 0),
     payments: Object.entries(pay).map(([method, v]) => ({ method, ...v })),
+    products: Object.entries(prods).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.qty - a.qty),
     categories: Object.entries(cats).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.amount - a.amount),
     gross: sum('subtotal'), discount: sum('discount_item') + sum('discount_bill'), service: sum('service_charge'), tax: sum('tax'),
     net: sum('total'), tx_count: paid.length, void_count: all.filter((t: any) => t.status === 'void' || t.status === 'voided').length,
