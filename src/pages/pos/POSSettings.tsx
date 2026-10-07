@@ -13,16 +13,20 @@ import { TvMediaItem, TvMediaType, TV_MEDIA_LABEL, detectMediaType, isDriveFolde
 import { Plus, Trash2, ArrowUp, RefreshCw } from 'lucide-react';
 import { POSDataSync } from '@/components/pos/POSDataSync';
 import { UtensilsCrossed, FileText, Wallet, SlidersHorizontal, Globe, ScrollText } from 'lucide-react';
-import { ALL_ORDER_MODES, getEnabledModes, setEnabledModes } from '@/lib/pos-order-modes';
 
-type Tab = 'printer' | 'tv' | 'sync' | 'menu' | 'cetakan' | 'kas' | 'lainnya' | 'bahasa' | 'log';
+type Tab = 'printer' | 'tv' | 'sync' | 'menu' | 'cetakan' | 'kas' | 'shift' | 'lainnya' | 'bahasa' | 'log';
+import { POSCashPage } from '@/components/pos/POSCashPage';
+import { POSShiftPage } from '@/components/pos/POSShiftPage';
+import { FileBarChart } from 'lucide-react';
 
 /** Full-page POS settings: printers + TV queue pairing & promo video. */
 const POSSettings = () => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
   const branchId = userProfile?.branch_id || null;
-  const [tab, setTab] = useState<Tab>('printer');
+  const [tab, setTab] = useState<Tab>(((new URLSearchParams(window.location.search).get('tab')) as Tab) || 'printer');
+  const [branchName, setBranchName] = useState('Cabang');
+  useEffect(() => { if (branchId) supabase.from('branches').select('name').eq('id', branchId).maybeSingle().then(({ data }) => data && setBranchName(data.name)); }, [branchId]);
   const [videoUrl, setVideoUrl] = useState('');
   const [runningText, setRunningText] = useState('');
   const [items, setItems] = useState<TvMediaItem[]>([]);
@@ -67,14 +71,13 @@ const POSSettings = () => {
     { id: 'cetakan', label: 'Pengaturan Cetakan', icon: FileText },
     { id: 'sync', label: 'Sinkronkan Data', icon: RefreshCw },
     { id: 'tv', label: 'Layar TV Antrean', icon: Tv },
-    { id: 'kas', label: 'Kas & Laporan', icon: Wallet },
+    { id: 'kas', label: 'Kas Masuk / Keluar', icon: Wallet },
+    { id: 'shift', label: 'Laporan & Tutup Shift', icon: FileBarChart },
     { id: 'lainnya', label: 'Pengaturan Lainnya', icon: SlidersHorizontal },
     { id: 'bahasa', label: 'Bahasa', icon: Globe },
     { id: 'log', label: 'Log', icon: ScrollText },
   ];
-  const [modes, setModes] = useState<string[]>(getEnabledModes().map((m) => m.id));
   const [lang, setLang] = useState(localStorage.getItem('pos_lang') || 'id');
-  const toggleMode = (id: string) => setModes((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const [logs, setLogs] = useState<any[]>([]);
   useEffect(() => {
     if (tab !== 'log' || !branchId) return;
@@ -122,21 +125,12 @@ const POSSettings = () => {
               <POSPrinterSettings inline open onOpenChange={() => undefined} branchId={branchId} userId={userProfile?.id} />
             </div>
           )}
-          {tab === 'kas' && (
-            <div className="space-y-3"><h2 className="text-lg font-bold">Kas & Laporan</h2>
-              <Shortcut title="Kas Masuk / Kas Keluar" desc="Buka terminal kasir → menu samping Kas Masuk/Keluar" to="/pos" />
-              <Shortcut title="Dashboard & Rekap Kasir" desc="Penjualan, metode bayar, rekap shift" to="/pos/dashboard" />
-            </div>
-          )}
+          {tab === 'kas' && <POSCashPage branchId={branchId} />}
+          {tab === 'shift' && <POSShiftPage branchId={branchId} branchName={branchName} kasirName={userProfile?.full_name || 'Kasir'} />}
           {tab === 'lainnya' && (
-            <div className="space-y-4"><h2 className="text-lg font-bold">Mode Transaksi Aktif</h2>
-              <p className="text-sm text-muted-foreground">Pilih mode penjualan yang tampil di dialog Mode Transaksi pada perangkat ini.</p>
-              <div className="grid sm:grid-cols-2 gap-2">
-                {ALL_ORDER_MODES.map((m) => (
-                  <button key={m.id} onClick={() => toggleMode(m.id)} className={cn('h-12 rounded-xl border font-semibold text-sm', modes.includes(m.id) ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted')}>{m.label}</button>
-                ))}
-              </div>
-              <Button className="h-11" disabled={!modes.length} onClick={() => { setEnabledModes(modes); toast.success('Mode transaksi disimpan'); }}>Simpan</Button>
+            <div className="space-y-3"><h2 className="text-lg font-bold">Pengaturan Lainnya</h2>
+              <p className="text-sm text-muted-foreground">Mode transaksi, menu yang dijual dan kategori kas cabang ini diatur oleh Back Office (Settings → Pengaturan POS Cabang).</p>
+              <Shortcut title="Pengaturan POS Cabang" desc="Khusus manager / admin pusat" to="/settings/pos-branches" />
             </div>
           )}
           {tab === 'bahasa' && (
