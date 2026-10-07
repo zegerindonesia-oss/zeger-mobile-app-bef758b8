@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X, Gift, History, Armchair, Save } from 'lucide-react';
 import { POSCartItem } from '@/hooks/usePOSCart';
 import { AppliedPromo } from '@/hooks/usePOSPromo';
@@ -108,41 +107,15 @@ export const POSCart = ({
             )}
           </div>
         </div>
-        <Select value={orderType} onValueChange={setOrderType}>
-          <SelectTrigger className="h-10 rounded-xl bg-background/80 shadow-inner">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="dine_in">Dine In</SelectItem>
-            <SelectItem value="take_away">Take Away</SelectItem>
-            <SelectItem value="gofood">GoFood</SelectItem>
-            <SelectItem value="grabfood">GrabFood</SelectItem>
-            <SelectItem value="shopeefood">ShopeeFood</SelectItem>
-            <SelectItem value="zeger_app">Zeger App</SelectItem>
-            <SelectItem value="internal">Internal</SelectItem>
-          </SelectContent>
-        </Select>
-        {showTable && (onOpenTables ? (
-          <div className="mt-2 flex gap-2">
-            <Button size="sm" variant={tableNumber ? 'default' : 'outline'} className="flex-1 h-9 justify-start" onClick={onOpenTables}>
+        {showTable && onOpenTables && (
+          <div className="flex gap-2">
+            <Button size="sm" variant={tableNumber ? 'default' : 'outline'} className="flex-1 h-9 justify-start rounded-xl" onClick={onOpenTables}>
               <Armchair className="h-4 w-4 mr-1" /> {tableNumber ? `Meja ${tableNumber}` : 'Pilih Meja'}
             </Button>
-            {tableNumber && onHoldToTable && items.length > 0 && (
-              <Button size="sm" variant="outline" className="h-9" onClick={onHoldToTable} title="Simpan pesanan ke meja (open bill) & kirim ke dapur">
-                <Save className="h-4 w-4 mr-1" /> Simpan
-              </Button>
-            )}
           </div>
-        ) : (
-          <Input className="mt-2 h-8" placeholder="Nomor meja" value={tableNumber} onChange={(e) => setTableNumber(e.target.value)} />
-        ))}
-        {showExternal && (
-          <Input className="mt-2 h-8" placeholder="Nomor order platform" value={externalOrderId} onChange={(e) => setExternalOrderId(e.target.value)} />
         )}
-        <Input className="mt-2 h-9 rounded-xl bg-background/80 shadow-inner" placeholder="Nama customer (opsional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-        {onScanMember && (
-          member ? (
-            <div className="mt-2 rounded border border-primary/30 bg-primary/5 px-2 py-1.5">
+        {member && (
+            <div className="mt-2 rounded-xl border border-primary/30 bg-primary/5 px-2 py-1.5">
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate">{member.name || 'Member'}</div>
@@ -166,11 +139,6 @@ export const POSCart = ({
               </p>
             )}
             </div>
-          ) : (
-            <Button size="sm" variant="outline" className="mt-2 h-8 w-full" onClick={onScanMember}>
-              Scan QR Member
-            </Button>
-          )
         )}
       </div>
 

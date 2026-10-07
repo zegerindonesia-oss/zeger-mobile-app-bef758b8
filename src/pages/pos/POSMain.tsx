@@ -7,7 +7,9 @@ import { usePOSPromo } from '@/hooks/usePOSPromo';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { POSSidebar } from '@/components/pos/POSSidebar';
-import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart, LayoutGrid, QrCode, UserRound } from 'lucide-react';
+import { POSModeDialog } from '@/components/pos/POSModeDialog';
+import { modeLabel } from '@/lib/pos-order-modes';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { POSTableMap } from '@/components/pos/POSTableMap';
@@ -45,6 +47,8 @@ const POSMain = () => {
 
   const [branchName, setBranchName] = useState('Cabang');
   const [orderType, setOrderType] = useState('take_away');
+  const [pax, setPax] = useState(1);
+  const [modeOpen, setModeOpen] = useState(false);
   const [tableNumber, setTableNumber] = useState('');
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -519,6 +523,23 @@ const POSMain = () => {
               onAdd={cart.addItem}
               onAddBundle={cart.addBundle}
               onAddCustom={cart.addCustomItem}
+              toolbar={
+                <div className="flex gap-2">
+                  <button onClick={() => setModeOpen(true)} className="pos-raised-control h-11 px-3 rounded-xl flex items-center gap-2 text-sm font-semibold shrink-0">
+                    <LayoutGrid className="h-4 w-4 text-primary" />
+                    <span className="truncate max-w-[9rem]">{modeLabel(orderType)}{orderType === 'dine_in' ? ` · ${pax} pax` : ''}</span>
+                  </button>
+                  <div className="relative flex-1 min-w-0">
+                    <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Info tambahan / nama pelanggan"
+                      className="w-full h-11 pl-9 pr-3 rounded-xl border border-border/70 bg-background/80 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                  <button onClick={() => setMemberScanOpen(true)} title="Scan QR Member"
+                    className={`h-11 w-11 shrink-0 rounded-xl flex items-center justify-center ${member ? 'bg-primary text-primary-foreground' : 'pos-raised-control text-primary'}`}>
+                    <QrCode className="h-5 w-5" />
+                  </button>
+                </div>
+              }
             />
           </section>
           {cartDrawerNode(false)}
@@ -549,7 +570,7 @@ const POSMain = () => {
 
   function cartDrawerNode(mobile: boolean) {
     return (
-          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[360px] lg:w-[420px] xl:w-[460px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
+          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[380px] lg:w-[460px] xl:w-[520px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
             <POSCart
             items={cart.items}
             totals={cart.totals}
@@ -638,6 +659,8 @@ const POSMain = () => {
         onConfirm={handleCloseShift}
       />
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
+      <POSModeDialog open={modeOpen} onOpenChange={setModeOpen} orderType={orderType} pax={pax} externalOrderId={externalOrderId}
+        onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); if (v.orderType === 'dine_in' && !tableNumber) setTableMapOpen(true); }} />
       <MemberScanDialog
         open={memberScanOpen}
         onOpenChange={setMemberScanOpen}

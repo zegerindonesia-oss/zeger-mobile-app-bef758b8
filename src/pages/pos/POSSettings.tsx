@@ -12,8 +12,10 @@ import { cn } from '@/lib/utils';
 import { TvMediaItem, TvMediaType, TV_MEDIA_LABEL, detectMediaType, isDriveFolder } from '@/lib/tv-media';
 import { Plus, Trash2, ArrowUp, RefreshCw } from 'lucide-react';
 import { POSDataSync } from '@/components/pos/POSDataSync';
+import { UtensilsCrossed, FileText, Wallet, SlidersHorizontal, Globe, ScrollText } from 'lucide-react';
+import { ALL_ORDER_MODES, getEnabledModes, setEnabledModes } from '@/lib/pos-order-modes';
 
-type Tab = 'printer' | 'tv' | 'sync';
+type Tab = 'printer' | 'tv' | 'sync' | 'menu' | 'cetakan' | 'kas' | 'lainnya' | 'bahasa' | 'log';
 
 /** Full-page POS settings: printers + TV queue pairing & promo video. */
 const POSSettings = () => {
@@ -60,10 +62,30 @@ const POSSettings = () => {
   const moveUp = (i: number) => i > 0 && setItems((l) => { const c = [...l]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; });
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'printer', label: 'Printer', icon: Printer },
-    { id: 'tv', label: 'Layar TV Antrean', icon: Tv },
+    { id: 'printer', label: 'Koneksi Printer', icon: Printer },
+    { id: 'menu', label: 'Manajemen Menu', icon: UtensilsCrossed },
+    { id: 'cetakan', label: 'Pengaturan Cetakan', icon: FileText },
     { id: 'sync', label: 'Sinkronkan Data', icon: RefreshCw },
+    { id: 'tv', label: 'Layar TV Antrean', icon: Tv },
+    { id: 'kas', label: 'Kas & Laporan', icon: Wallet },
+    { id: 'lainnya', label: 'Pengaturan Lainnya', icon: SlidersHorizontal },
+    { id: 'bahasa', label: 'Bahasa', icon: Globe },
+    { id: 'log', label: 'Log', icon: ScrollText },
   ];
+  const [modes, setModes] = useState<string[]>(getEnabledModes().map((m) => m.id));
+  const [lang, setLang] = useState(localStorage.getItem('pos_lang') || 'id');
+  const toggleMode = (id: string) => setModes((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  const [logs, setLogs] = useState<any[]>([]);
+  useEffect(() => {
+    if (tab !== 'log' || !branchId) return;
+    (supabase as any).from('pos_cash_movements').select('id,movement_type,amount,reason,created_at').eq('branch_id', branchId).order('created_at', { ascending: false }).limit(50)
+      .then(({ data }: any) => setLogs(data || []));
+  }, [tab, branchId]);
+  const Shortcut = ({ title, desc, to }: { title: string; desc: string; to: string }) => (
+    <button onClick={() => navigate(to)} className="w-full text-left rounded-2xl border bg-background p-4 hover:bg-muted transition flex items-center justify-between gap-3">
+      <div><div className="font-semibold">{title}</div><div className="text-xs text-muted-foreground">{desc}</div></div><ExternalLink className="h-4 w-4 text-muted-foreground" />
+    </button>
+  );
 
   return (
     <div className="min-h-[100dvh] pos-canvas pos-touch p-3 md:p-5 space-y-4">
@@ -87,6 +109,56 @@ const POSSettings = () => {
             <POSPrinterSettings inline open onOpenChange={() => undefined} branchId={branchId} userId={userProfile?.id} />
           )}
           {tab === 'sync' && <POSDataSync />}
+          {tab === 'menu' && (
+            <div className="space-y-3"><h2 className="text-lg font-bold">Manajemen Menu</h2>
+              <Shortcut title="Produk & Harga" desc="Tambah, ubah harga, aktif/nonaktif menu" to="/master/products" />
+              <Shortcut title="Paket Bundle" desc="Atur paket/combo menu" to="/settings/bundle-management" />
+              <Shortcut title="Promo & Voucher" desc="Atur promo otomatis dan kode voucher" to="/settings/promo-management" />
+            </div>
+          )}
+          {tab === 'cetakan' && (
+            <div className="space-y-3"><h2 className="text-lg font-bold">Pengaturan Cetakan</h2>
+              <p className="text-sm text-muted-foreground">Format struk, lebar kertas, logo, footer dan auto-print diatur per stasiun printer.</p>
+              <POSPrinterSettings inline open onOpenChange={() => undefined} branchId={branchId} userId={userProfile?.id} />
+            </div>
+          )}
+          {tab === 'kas' && (
+            <div className="space-y-3"><h2 className="text-lg font-bold">Kas & Laporan</h2>
+              <Shortcut title="Kas Masuk / Kas Keluar" desc="Buka terminal kasir → menu samping Kas Masuk/Keluar" to="/pos" />
+              <Shortcut title="Dashboard & Rekap Kasir" desc="Penjualan, metode bayar, rekap shift" to="/pos/dashboard" />
+            </div>
+          )}
+          {tab === 'lainnya' && (
+            <div className="space-y-4"><h2 className="text-lg font-bold">Mode Transaksi Aktif</h2>
+              <p className="text-sm text-muted-foreground">Pilih mode penjualan yang tampil di dialog Mode Transaksi pada perangkat ini.</p>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {ALL_ORDER_MODES.map((m) => (
+                  <button key={m.id} onClick={() => toggleMode(m.id)} className={cn('h-12 rounded-xl border font-semibold text-sm', modes.includes(m.id) ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted')}>{m.label}</button>
+                ))}
+              </div>
+              <Button className="h-11" disabled={!modes.length} onClick={() => { setEnabledModes(modes); toast.success('Mode transaksi disimpan'); }}>Simpan</Button>
+            </div>
+          )}
+          {tab === 'bahasa' && (
+            <div className="space-y-3"><h2 className="text-lg font-bold">Bahasa</h2>
+              {[['id', 'Bahasa Indonesia'], ['en', 'English']].map(([v, l]) => (
+                <button key={v} onClick={() => { setLang(v); localStorage.setItem('pos_lang', v); toast.success('Bahasa disimpan'); }}
+                  className={cn('w-full h-12 rounded-xl border font-semibold', lang === v ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted')}>{l}</button>
+              ))}
+              <p className="text-xs text-muted-foreground">Terjemahan English penuh menyusul; saat ini tampilan tetap Bahasa Indonesia.</p>
+            </div>
+          )}
+          {tab === 'log' && (
+            <div className="space-y-3"><h2 className="text-lg font-bold">Log Kas Kasir</h2>
+              {logs.map((l) => (
+                <div key={l.id} className="flex justify-between rounded-xl border bg-background p-3 text-sm">
+                  <span><b className="uppercase">{l.movement_type}</b> · {l.reason || '-'}</span>
+                  <span>Rp{Number(l.amount).toLocaleString('id-ID')} · {new Date(l.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</span>
+                </div>
+              ))}
+              {!logs.length && <p className="text-sm text-muted-foreground">Belum ada aktivitas.</p>}
+            </div>
+          )}
           {tab === 'tv' && (
             <div className="space-y-6">
               <div className="grid lg:grid-cols-[240px_1fr] gap-6 items-start">
