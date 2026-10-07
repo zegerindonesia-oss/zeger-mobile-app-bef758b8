@@ -34,6 +34,7 @@ interface Props {
   onAddBundle: (b: BundleData) => void;
   onAddCustom: (d: { name: string; price: number; qty: number; notes: string }) => void;
   toolbar?: React.ReactNode;
+  hiddenProductIds?: string[];
 }
 
 const toCartProduct = (p: Product) => ({
@@ -41,7 +42,7 @@ const toCartProduct = (p: Product) => ({
   category: p.category, price: Number(p.price), image_url: p.image_url,
 });
 
-export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, toolbar }: Props) => {
+export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, toolbar, hiddenProductIds = [] }: Props) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [bundles, setBundles] = useState<BundleData[]>([]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
@@ -135,6 +136,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
   const filteredProducts = useMemo(() => {
     if (activeCat === 'Bundle') return [];
     return products.filter((p) => {
+      if (hiddenProductIds.includes(p.id)) return false;
       const matchCat = activeCat === 'Semua' || p.category === activeCat;
       const matchSearch =
         !search ||
@@ -142,7 +144,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
         p.code.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [products, activeCat, search]);
+  }, [products, activeCat, search, hiddenProductIds]);
 
   const filteredBundles = useMemo(() => {
     if (activeCat !== 'Semua' && activeCat !== 'Bundle') return [];

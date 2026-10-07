@@ -98,10 +98,10 @@ const POSSettings = () => {
       </header>
 
       <div className="grid md:grid-cols-[220px_1fr] gap-4">
-        <nav className="pos-panel rounded-2xl p-2 flex md:flex-col gap-1 h-fit">
+        <nav className="pos-panel rounded-2xl p-2 flex md:flex-col gap-1 h-fit overflow-x-auto">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn('flex-1 md:flex-none flex items-center gap-2 rounded-xl px-3 h-11 text-sm font-semibold transition', tab === t.id ? 'bg-primary text-primary-foreground shadow' : 'hover:bg-muted')}>
+              className={cn('shrink-0 md:flex-none flex items-center gap-2 rounded-xl px-3 h-11 text-sm font-semibold transition', tab === t.id ? 'bg-primary text-primary-foreground shadow' : 'hover:bg-muted')}>
               <t.icon className="h-4 w-4" /> {t.label}
             </button>
           ))}
