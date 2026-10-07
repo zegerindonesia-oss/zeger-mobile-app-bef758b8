@@ -101,6 +101,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "purchasing", label: "Purchasing", icon: ShoppingCart, path: "/inventory/purchasing", roles: ["3_SB_Branch_Manager", "sb_branch_manager"] },
       { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
       { id: "raw-materials", label: "Bahan Baku & Resep", icon: Package, path: "/inventory/raw-materials", module: "bom", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager"] },
+      { id: "procurement", label: "PO & Invoice Pembelian", icon: FileText, path: "/inventory/procurement", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager", "finance"] },
       { id: "waste-management", label: "Waste Management", icon: Trash2, path: "/inventory/waste-management", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
       { id: "small-branch-stock", label: "Small Branch Stock", icon: Store, path: "/inventory/small-branch-stock", roles: ["3_SB_Branch_Manager", "sb_branch_manager"] },
       { id: "stock-transfer", label: "Kirim Stok ke Rider", icon: Truck, path: "/stock-transfer", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
@@ -156,6 +157,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"],
     children: [
       { id: "pos-branch-config", label: "Pengaturan POS Cabang", icon: Store, path: "/settings/pos-branches", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
+      { id: "module-access", label: "Hak Akses Modul", icon: UserCog, path: "/settings/module-access", roles: ["1_HO_Admin", "1_HO_Owner", "ho_admin", "ho_owner"] },
       { id: "saas-tenants", label: "Superadmin SaaS", icon: Building2, path: "/settings/tenants", roles: ["1_HO_Admin", "1_HO_Owner", "ho_admin", "ho_owner"] },
       { 
         id: "app-management", 
