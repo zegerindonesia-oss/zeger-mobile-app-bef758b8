@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X, Gift, History, Armchair, Save } from 'lucide-react';
 import { POSCartItem } from '@/hooks/usePOSCart';
 import { AppliedPromo } from '@/hooks/usePOSPromo';

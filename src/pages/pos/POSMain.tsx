@@ -570,7 +570,7 @@ const POSMain = () => {
 
   function cartDrawerNode(mobile: boolean) {
     return (
-          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[360px] lg:w-[420px] xl:w-[460px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
+          <section className={mobile ? 'h-full overflow-hidden' : 'hidden md:block w-[380px] lg:w-[460px] xl:w-[520px] shrink-0 pos-panel rounded-2xl overflow-hidden order-2'}>
             <POSCart
             items={cart.items}
             totals={cart.totals}
