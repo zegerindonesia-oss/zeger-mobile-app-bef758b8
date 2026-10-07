@@ -46,6 +46,8 @@ import CentralKitchenAnalytics from "./pages/analytics/CentralKitchen";
 import CashDeposit from "./pages/analytics/CashDeposit";
 import WasteManagementPage from "./pages/inventory/WasteManagementPage";
 import RawMaterials from "./pages/inventory/RawMaterials";
+import ProcurementInvoice from "./pages/inventory/ProcurementInvoice";
+import ModuleAccess from "./pages/settings/ModuleAccess";
 import POSQueueDisplay from "./pages/pos/POSQueueDisplay";
 import POSDashboard from "./pages/pos/POSDashboard";
 import POSSettings from "./pages/pos/POSSettings";
@@ -436,6 +438,20 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'ho_staff', 'branch_manager', 'sb_branch_manager', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', '2_Hub_Branch_Manager', '3_SB_Branch_Manager']}>
                 <ModernLayout>
                   <RawMaterials />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/inventory/procurement" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'ho_staff', 'branch_manager', 'sb_branch_manager', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', '2_Hub_Branch_Manager', '3_SB_Branch_Manager', 'finance']}>
+                <ModernLayout>
+                  <ProcurementInvoice />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/settings/module-access" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', '1_HO_Admin', '1_HO_Owner']}>
+                <ModernLayout>
+                  <ModuleAccess />
                 </ModernLayout>
               </RoleBasedRoute>
             } />
