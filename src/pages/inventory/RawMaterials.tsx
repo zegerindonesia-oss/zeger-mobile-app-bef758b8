@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, AlertTriangle, PackagePlus, ClipboardCheck, ChefHat, Wheat, History } from 'lucide-react';
+import { Plus, Trash2, Save, AlertTriangle, PackagePlus, ClipboardCheck, ChefHat, Wheat, History, FlaskConical, FileSpreadsheet } from 'lucide-react';
+import { WipTab } from '@/components/master/WipTab';
+import { MasterExcelTab } from '@/components/master/MasterExcelTab';
 
 const db = supabase as any;
 const HO = ['ho_admin', 'ho_owner', 'ho_staff', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff'];
@@ -18,7 +20,7 @@ const rp = (n: number) => `Rp${Math.round(n || 0).toLocaleString('id-ID')}`;
 const num = (n: number) => Number(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
 const jkt = (iso: string) => new Date(iso).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' });
 
-interface Material { id: string; code: string | null; name: string; category: string; unit: string; cost_per_unit: number; min_stock: number; is_active: boolean }
+interface Material { id: string; code: string | null; name: string; category: string; unit: string; cost_per_unit: number; min_stock: number; is_active: boolean; material_type?: string; yield_quantity?: number }
 
 const RawMaterials = () => {
   const { userProfile } = useAuth();
@@ -53,7 +55,7 @@ const RawMaterials = () => {
     <div className="space-y-4 p-1">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Bahan Baku & Resep</h1>
+          <h1 className="text-2xl font-bold">Bahan Baku, WIP & Resep</h1>
           <p className="text-sm text-muted-foreground">Master bahan, resep menu (HPP), stok masuk, opname & riwayat. Stok bahan terpotong otomatis saat kasir menjual.</p>
         </div>
         {isHO && (
@@ -73,12 +75,16 @@ const RawMaterials = () => {
       <Tabs defaultValue="materials">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="materials"><Wheat className="h-4 w-4 mr-1" />Bahan Baku</TabsTrigger>
+          <TabsTrigger value="wip"><FlaskConical className="h-4 w-4 mr-1" />Bahan WIP</TabsTrigger>
           <TabsTrigger value="recipes"><ChefHat className="h-4 w-4 mr-1" />Resep & HPP</TabsTrigger>
           <TabsTrigger value="in"><PackagePlus className="h-4 w-4 mr-1" />Stok Masuk</TabsTrigger>
           <TabsTrigger value="opname"><ClipboardCheck className="h-4 w-4 mr-1" />Opname</TabsTrigger>
           <TabsTrigger value="history"><History className="h-4 w-4 mr-1" />Riwayat</TabsTrigger>
+          <TabsTrigger value="excel"><FileSpreadsheet className="h-4 w-4 mr-1" />Import / Export Excel</TabsTrigger>
         </TabsList>
         <TabsContent value="materials"><MaterialsTab materials={materials} stock={stock} reload={load} /></TabsContent>
+        <TabsContent value="wip"><WipTab materials={materials} branchId={branchId} reload={load} /></TabsContent>
+        <TabsContent value="excel"><MasterExcelTab materials={materials} reload={load} /></TabsContent>
         <TabsContent value="recipes"><RecipesTab materials={materials} /></TabsContent>
         <TabsContent value="in"><MovementTab mode="in" materials={materials} stock={stock} branchId={branchId} reload={load} /></TabsContent>
         <TabsContent value="opname"><MovementTab mode="adjust" materials={materials} stock={stock} branchId={branchId} reload={load} /></TabsContent>
@@ -89,13 +95,13 @@ const RawMaterials = () => {
 };
 
 const MaterialsTab = ({ materials, stock, reload }: { materials: Material[]; stock: Record<string, number>; reload: () => void }) => {
-  const empty = { code: '', name: '', category: 'Umum', unit: 'gr', cost_per_unit: '', min_stock: '' };
+  const empty = { code: '', name: '', category: 'Umum', unit: 'gr', cost_per_unit: '', min_stock: '', material_type: 'raw', yield_quantity: '' };
   const [f, setF] = useState<any>(empty);
   const [editId, setEditId] = useState<string | null>(null);
 
   const save = async () => {
     if (!f.name.trim()) return toast.error('Nama bahan wajib diisi');
-    const row = { code: f.code || null, name: f.name.trim(), category: f.category || 'Umum', unit: f.unit, cost_per_unit: Number(f.cost_per_unit) || 0, min_stock: Number(f.min_stock) || 0 };
+    const row = { code: f.code || null, name: f.name.trim(), category: f.category || 'Umum', unit: f.unit, cost_per_unit: Number(f.cost_per_unit) || 0, min_stock: Number(f.min_stock) || 0, material_type: f.material_type, yield_quantity: Number(f.yield_quantity) || 1 };
     const { error } = editId ? await db.from('raw_materials').update(row).eq('id', editId) : await db.from('raw_materials').insert(row);
     if (error) return toast.error(error.message);
     toast.success(editId ? 'Bahan diperbarui' : 'Bahan ditambahkan');
@@ -116,7 +122,13 @@ const MaterialsTab = ({ materials, stock, reload }: { materials: Material[]; sto
           </Select>
           <Input type="number" placeholder="Harga / satuan" value={f.cost_per_unit} onChange={(e) => setF({ ...f, cost_per_unit: e.target.value })} />
           <Input type="number" placeholder="Stok minimum" value={f.min_stock} onChange={(e) => setF({ ...f, min_stock: e.target.value })} />
+          <Select value={f.material_type} onValueChange={(v) => setF({ ...f, material_type: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="raw">Bahan Mentah</SelectItem><SelectItem value="wip">WIP (Setengah Jadi)</SelectItem></SelectContent>
+          </Select>
+          {f.material_type === 'wip' && <Input type="number" placeholder="Hasil per batch (mis. 60)" value={f.yield_quantity} onChange={(e) => setF({ ...f, yield_quantity: e.target.value })} />}
         </div>
+        {f.material_type === 'wip' && <p className="text-xs text-muted-foreground">Komposisi bahan penyusun WIP diatur di tab "Bahan WIP". HPP per satuan dihitung otomatis dari komposisi.</p>}
         <div className="flex gap-2">
           <Button onClick={save}><Save className="h-4 w-4 mr-1" />{editId ? 'Simpan Perubahan' : 'Tambah'}</Button>
           {editId && <Button variant="ghost" onClick={() => { setF(empty); setEditId(null); }}>Batal</Button>}
@@ -130,14 +142,14 @@ const MaterialsTab = ({ materials, stock, reload }: { materials: Material[]; sto
               return (
                 <TableRow key={m.id}>
                   <TableCell>{m.code || '-'}</TableCell>
-                  <TableCell className="font-medium">{m.name}</TableCell>
+                  <TableCell className="font-medium">{m.name} {m.material_type === 'wip' && <Badge variant="secondary" className="ml-1">WIP</Badge>}</TableCell>
                   <TableCell>{m.category}</TableCell>
                   <TableCell className="text-right">{rp(m.cost_per_unit)}/{m.unit}</TableCell>
                   <TableCell className="text-right">{low ? <Badge variant="destructive">{num(q)} {m.unit}</Badge> : `${num(q)} ${m.unit}`}</TableCell>
                   <TableCell className="text-right">{num(m.min_stock)}</TableCell>
                   <TableCell className="text-right">{rp(q * m.cost_per_unit)}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" onClick={() => { setEditId(m.id); setF({ code: m.code || '', name: m.name, category: m.category, unit: m.unit, cost_per_unit: m.cost_per_unit, min_stock: m.min_stock }); }}>Ubah</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditId(m.id); setF({ code: m.code || '', name: m.name, category: m.category, unit: m.unit, cost_per_unit: m.cost_per_unit, min_stock: m.min_stock, material_type: m.material_type || 'raw', yield_quantity: m.yield_quantity ?? '' }); }}>Ubah</Button>
                     <Button size="icon" variant="ghost" onClick={async () => {
                       if (!window.confirm(`Nonaktifkan ${m.name}?`)) return;
                       const { error } = await db.from('raw_materials').update({ is_active: false }).eq('id', m.id);
@@ -198,7 +210,7 @@ const RecipesTab = ({ materials }: { materials: Material[] }) => {
               <div className="flex gap-2">
                 <Select value={matId} onValueChange={setMatId}>
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Bahan" /></SelectTrigger>
-                  <SelectContent>{materials.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} ({m.unit})</SelectItem>)}</SelectContent>
+                  <SelectContent>{materials.map((m) => <SelectItem key={m.id} value={m.id}>{m.material_type === 'wip' ? '[WIP] ' : ''}{m.name} ({m.unit})</SelectItem>)}</SelectContent>
                 </Select>
                 <Input className="w-28" type="number" placeholder="Takaran" value={qty} onChange={(e) => setQty(e.target.value)} />
                 <Button onClick={add}><Plus className="h-4 w-4" /></Button>

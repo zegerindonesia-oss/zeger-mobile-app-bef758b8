@@ -20,6 +20,8 @@ interface Product {
   name: string;
   code: string;
   category: string | null;
+  brand?: string | null;
+  sub_category?: string | null;
   price: number;
   cost_price: number | null;
   ck_price: number | null;
@@ -34,6 +36,8 @@ const emptyForm = {
   name: "",
   code: "",
   category: "",
+  brand: "",
+  sub_category: "",
   price: 0,
   cost_price: 0,
   ck_price: 0,
@@ -111,6 +115,8 @@ const ProductManagement = () => {
       name: product.name,
       code: product.code,
       category: product.category || "",
+      brand: product.brand || "",
+      sub_category: product.sub_category || "",
       price: product.price,
       cost_price: product.cost_price || 0,
       ck_price: product.ck_price || 0,
@@ -144,6 +150,8 @@ const ProductManagement = () => {
       name: form.name,
       code: form.code,
       category: form.category || null,
+      brand: form.brand || null,
+      sub_category: form.sub_category || null,
       price: form.price,
       cost_price: form.cost_price || null,
       ck_price: form.ck_price || null,
@@ -285,7 +293,7 @@ const ProductManagement = () => {
                       <TableCell className="font-mono text-xs">{p.code}</TableCell>
                       <TableCell className="font-medium">{p.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{p.category || "-"}</Badge>
+                        <Badge variant="outline">{p.category || "-"}</Badge>{p.sub_category && <span className="block text-xs text-muted-foreground mt-1">{p.brand ? `${p.brand} · ` : ""}{p.sub_category}</span>}
                       </TableCell>
                       <TableCell className="text-right">{formatRp(p.price)}</TableCell>
                       <TableCell className="text-right">{p.cost_price ? formatRp(p.cost_price) : "-"}</TableCell>
@@ -361,12 +369,22 @@ const ProductManagement = () => {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Brand</Label>
+                <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="Contoh: Zeger Coffee" />
+              </div>
+              <div className="space-y-2">
+                <Label>Sub Kategori</Label>
+                <Input value={form.sub_category} onChange={(e) => setForm((f) => ({ ...f, sub_category: e.target.value }))} placeholder="Contoh: Espresso Based, Non Coffee" />
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label>Kategori</Label>
+              <Label>Kategori Besar</Label>
               <Input
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                placeholder="Contoh: Coffee, Snack, Can Series"
+                placeholder="Contoh: Minuman, Makanan, Snack"
                 list="category-list"
               />
               <datalist id="category-list">
