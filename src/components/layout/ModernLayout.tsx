@@ -75,14 +75,14 @@ export const ModernLayout = ({ children }: ModernLayoutProps) => {
         />
       </div>
       
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'ml-[17rem]' : 'ml-[5.5rem]'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ml-0 ${sidebarOpen ? 'lg:ml-[17rem]' : 'lg:ml-[5.5rem]'}`}>
         <ModernHeader 
           profile={profile}
           branch={branch}
           onMenuClick={toggleSidebar}
         />
         
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="bo-main flex-1 p-3 sm:p-4 lg:p-6 overflow-auto">
           {children || <Outlet />}
         </main>
       </div>

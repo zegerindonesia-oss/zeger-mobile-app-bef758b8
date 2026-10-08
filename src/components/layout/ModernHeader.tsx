@@ -55,29 +55,29 @@ export const ModernHeader = ({ profile, branch, onMenuClick }: ModernHeaderProps
   };
 
   return (
-    <header className="sticky top-0 z-40 nav-glass px-6 py-4">
-      <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-40 nav-glass px-3 py-2.5 sm:px-6 sm:py-4">
+      <div className="flex items-center justify-between gap-2">
         {/* Left side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={onMenuClick}
-            className="lg:hidden"
+            className="lg:hidden shrink-0"
           >
             <Menu className="h-5 w-5" />
           </Button>
           
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-2xl font-semibold text-gray-900 truncate">
               {['ho_admin', 'ho_owner', '1_HO_Admin', '1_HO_Owner'].includes(profile.role) ? 'Dashboard' : 
                branch ? `${branch.name} Dashboard` : 'Dashboard'}
             </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-sm text-gray-600">
+            <div className="flex items-center gap-2 mt-0.5 sm:mt-1 min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">
                 {getGreeting()}, {profile.full_name}
               </p>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
                 {getRoleDisplay()}
               </Badge>
             </div>
