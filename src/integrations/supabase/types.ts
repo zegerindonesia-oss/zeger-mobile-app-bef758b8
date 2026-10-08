@@ -2651,6 +2651,7 @@ export type Database = {
       }
       products: {
         Row: {
+          brand: string | null
           category: string | null
           ck_price: number | null
           code: string
@@ -2663,10 +2664,12 @@ export type Database = {
           is_active: boolean | null
           name: string
           price: number
+          sub_category: string | null
           tenant_id: string
           updated_at: string | null
         }
         Insert: {
+          brand?: string | null
           category?: string | null
           ck_price?: number | null
           code: string
@@ -2679,10 +2682,12 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price: number
+          sub_category?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
         Update: {
+          brand?: string | null
           category?: string | null
           ck_price?: number | null
           code?: string
@@ -2695,6 +2700,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          sub_category?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
@@ -3227,11 +3233,13 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          material_type: string
           min_stock: number
           name: string
           tenant_id: string
           unit: string
           updated_at: string
+          yield_quantity: number
         }
         Insert: {
           category?: string
@@ -3240,11 +3248,13 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          material_type?: string
           min_stock?: number
           name: string
           tenant_id?: string
           unit?: string
           updated_at?: string
+          yield_quantity?: number
         }
         Update: {
           category?: string
@@ -3253,11 +3263,13 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          material_type?: string
           min_stock?: number
           name?: string
           tenant_id?: string
           unit?: string
           updated_at?: string
+          yield_quantity?: number
         }
         Relationships: [
           {
@@ -4539,6 +4551,45 @@ export type Database = {
           },
         ]
       }
+      wip_components: {
+        Row: {
+          created_at: string
+          id: string
+          material_id: string
+          quantity: number
+          wip_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          material_id: string
+          quantity: number
+          wip_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          material_id?: string
+          quantity?: number
+          wip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wip_components_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wip_components_wip_id_fkey"
+            columns: ["wip_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       geography_columns: {
@@ -5165,6 +5216,10 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      produce_wip: {
+        Args: { _batches: number; _branch_id: string; _wip_id: string }
+        Returns: number
+      }
       provision_tenant: {
         Args: {
           _business_type: string
