@@ -28,7 +28,6 @@ const cleanupAuthState = () => {
   }
 };
 const Auth = () => {
-  const isMobile = useIsMobile();
   const {
     user,
     userProfile,
@@ -59,7 +58,8 @@ const Auth = () => {
     full_name: "",
     phone: ""
   });
-  const navigate = useNavigate();
+  const [showPw, setShowPw] = useState(false);
+  useEffect(() => { document.title = "Masuk | Flow F&B ERP"; }, []);
 
   // Redirect authenticated users to their dashboard
   useEffect(() => {
