@@ -31,7 +31,9 @@ import {
   Smartphone,
   LayoutDashboard,
   Award,
-  Image
+  Image,
+  Receipt,
+  ClipboardList
 } from "lucide-react";
 import { MapPin as LocationPin } from "lucide-react";
 import { FlowMark } from "@/components/flow/FlowLogo";
@@ -93,6 +95,20 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     ]
   },
   {
+    id: "invoicing",
+    label: "Invoicing",
+    icon: Receipt,
+    roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager", "finance"],
+    children: [
+      { id: "inv-sales", label: "Invoice Penjualan", icon: Receipt, path: "/invoicing/sales" },
+      { id: "inv-sales-orders", label: "Pesanan Penjualan", icon: ClipboardList, path: "/invoicing/sales-orders" },
+      { id: "inv-po", label: "PO Pembelian", icon: ShoppingCart, path: "/invoicing/purchase-orders" },
+      { id: "inv-purchase", label: "Invoice Pembelian", icon: FileText, path: "/invoicing/purchase-invoices" },
+      { id: "inv-customers", label: "Pelanggan B2B", icon: Users, path: "/invoicing/customers" },
+      { id: "inv-suppliers", label: "Supplier", icon: Truck, path: "/invoicing/suppliers" }
+    ]
+  },
+  {
     id: "inventory",
     label: "Inventory",
     icon: Package,
@@ -101,7 +117,6 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "purchasing", label: "Purchasing", icon: ShoppingCart, path: "/inventory/purchasing", roles: ["3_SB_Branch_Manager", "sb_branch_manager"] },
       { id: "stock", label: "Stock Management", icon: Package, path: "/inventory" },
       { id: "raw-materials", label: "Bahan Baku & Resep", icon: Package, path: "/inventory/raw-materials", module: "bom", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager"] },
-      { id: "procurement", label: "PO & Invoice Pembelian", icon: FileText, path: "/inventory/procurement", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager", "finance"] },
       { id: "waste-management", label: "Waste Management", icon: Trash2, path: "/inventory/waste-management", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
       { id: "small-branch-stock", label: "Small Branch Stock", icon: Store, path: "/inventory/small-branch-stock", roles: ["3_SB_Branch_Manager", "sb_branch_manager"] },
       { id: "stock-transfer", label: "Kirim Stok ke Rider", icon: Truck, path: "/stock-transfer", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },

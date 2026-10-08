@@ -52,6 +52,13 @@ export const ModernBranchDashboard = () => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
   const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [selectedBranch, setSelectedBranch] = useState<string>("all");
+  const [branchList, setBranchList] = useState<{ id: string; name: string }[]>([]);
+  const [applied, setApplied] = useState(0);
+  const isHOUser = ['ho_admin', 'ho_owner', 'ho_staff', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', 'finance'].includes(userProfile?.role || '');
+  useEffect(() => {
+    if (isHOUser) supabase.from('branches').select('id, name').eq('is_active', true).order('name').then(({ data }) => setBranchList(data || []));
+  }, [isHOUser]);
   const [salesFilter, setSalesFilter] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
 
   // Set default dates using Asia/Jakarta timezone
@@ -147,7 +154,7 @@ export const ModernBranchDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [selectedUser, salesFilter, startDate, endDate, menuFilter, hourlyFilter, riderFilter]);
+  }, [selectedUser, selectedBranch, salesFilter, startDate, endDate, menuFilter, hourlyFilter, riderFilter]);
 
   // Real-time subscription for online orders
   useEffect(() => {
@@ -476,8 +483,8 @@ export const ModernBranchDashboard = () => {
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;  // Small Branch managers: filter by their branch
         console.log("🏪 Small Branch Manager - filtering by branch:", branchIdFilter);
-      } else {
-        console.log("👑 HO Admin - viewing all branches");
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Use centralized sales calculation for consistency with timezone handling
@@ -593,6 +600,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Generate chart data based on the date range
@@ -696,6 +705,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Use the main date filters instead of separate menuFilter
@@ -816,6 +827,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Use the main date filters instead of separate hourlyFilter
@@ -902,6 +915,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Fetch riders; if a rider is selected, only fetch that rider
@@ -1178,12 +1193,11 @@ export const ModernBranchDashboard = () => {
   return (
     <div className="min-h-screen bo-dashboard">
       <div className="max-w-7xl mx-auto space-y-6">
-        <BackOfficeOverview />
-        {/* Header */}
-        <div className="bg-white rounded-3xl shadow-sm border-0 p-6">
+        {/* Header — single master filter for the whole dashboard */}
+        <div className="bo-card p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Sales Report</h1>
+              <h1 className="text-2xl font-bold text-foreground">Sales Report</h1>
               <p className="text-sm text-gray-500">{new Date().toLocaleDateString('id-ID', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -1194,6 +1208,15 @@ export const ModernBranchDashboard = () => {
             </div>
             
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+              {isHOUser && (
+                <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                  <SelectTrigger className="w-40 h-8 text-xs rounded-full"><Building className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Cabang</SelectItem>
+                    {branchList.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={selectedUser} onValueChange={setSelectedUser}>
                 <SelectTrigger className="w-32 h-8 text-xs border-gray-200 rounded-full">
                   <SelectValue placeholder="All Users" />
@@ -1227,7 +1250,7 @@ export const ModernBranchDashboard = () => {
                 <Input id="end-date" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-32 h-8 text-xs border-gray-200 rounded-full" />
                 
                 <Button 
-                  onClick={fetchDashboardData}
+                  onClick={() => { setApplied(a => a + 1); fetchDashboardData(); }}
                   size="sm" 
                   className="h-8 px-3 text-xs bg-primary hover:bg-primary/90 rounded-full"
                 >
@@ -1237,6 +1260,8 @@ export const ModernBranchDashboard = () => {
             </div>
           </div>
         </div>
+
+        <BackOfficeOverview startDate={startDate} endDate={endDate} branchId={selectedBranch} refreshKey={applied} />
 
         {/* KPI Cards - 8 cards in responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

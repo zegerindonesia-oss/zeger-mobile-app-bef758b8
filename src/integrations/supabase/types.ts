@@ -227,6 +227,48 @@ export type Database = {
           },
         ]
       }
+      business_customers: {
+        Row: {
+          address: string | null
+          contact_name: string | null
+          created_at: string
+          default_terms_days: number
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          default_terms_days?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          default_terms_days?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cash_deposit_verifications: {
         Row: {
           created_at: string | null
@@ -3301,6 +3343,132 @@ export type Database = {
           },
         ]
       }
+      sales_invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          product_id: string | null
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          product_id?: string | null
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          product_id?: string | null
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "sales_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_invoices: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          discount_amount: number
+          doc_number: string
+          doc_type: string
+          due_date: string | null
+          event_date: string | null
+          id: string
+          issue_date: string
+          notes: string | null
+          paid_amount: number
+          status: string
+          subtotal: number
+          tax_percent: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          discount_amount?: number
+          doc_number: string
+          doc_type?: string
+          due_date?: string | null
+          event_date?: string | null
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          paid_amount?: number
+          status?: string
+          subtotal?: number
+          tax_percent?: number
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          discount_amount?: number
+          doc_number?: string
+          doc_type?: string
+          due_date?: string | null
+          event_date?: string | null
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          paid_amount?: number
+          status?: string
+          subtotal?: number
+          tax_percent?: number
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_invoices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "business_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_management: {
         Row: {
           branch_id: string
@@ -3865,6 +4033,7 @@ export type Database = {
           contact_name: string | null
           created_at: string
           default_terms_days: number
+          email: string | null
           id: string
           is_active: boolean
           name: string
@@ -3877,6 +4046,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           default_terms_days?: number
+          email?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -3889,6 +4059,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           default_terms_days?: number
+          email?: string | null
           id?: string
           is_active?: boolean
           name?: string

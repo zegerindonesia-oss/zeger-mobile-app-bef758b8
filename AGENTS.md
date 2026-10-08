@@ -10,3 +10,4 @@
 - Per-branch POS config (order modes, hidden menu items, cash categories) lives in `pos_branch_settings`, edited only in Back Office (/settings/pos-branches); cashier POS reads it, so outlets cannot self-configure.
 - Procurement (PO → receive → invoice/due date → payments) lives in purchase_orders/purchase_order_items/purchase_payments; receiving goes only through the receive_purchase_order RPC so stock-in and invoice totals stay atomic; access = is_material_manager() or a granted 'procurement' row in user_module_permissions (has_procurement_access).
 - Material unit conversions live in material_units (factor to the material's base unit); recipes and stock always use the base unit.
+- Invoicing is its own back-office module (/invoicing/*): sales invoices/orders live in sales_invoices(+items, doc_type invoice|order) with business_customers; purchase side reuses the procurement page; access reuses has_procurement_access so cashiers stay excluded.

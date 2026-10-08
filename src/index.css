@@ -545,3 +545,21 @@
   .bo-fade-up { animation: bo-fade-up .45s ease-out both; }
 }
 @keyframes bo-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Unified hover for every back-office card (overview + legacy dashboard cards) */
+@layer components {
+  .bo-shell main .bo-card,
+  .bo-shell main .rounded-3xl,
+  .bo-shell main .rounded-2xl.border,
+  .bo-shell main .rounded-xl.border {
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  }
+  .bo-shell main .bo-card:hover,
+  .bo-shell main .rounded-3xl:hover,
+  .bo-shell main .rounded-2xl.border:hover {
+    transform: translateY(-3px);
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow: 0 2px 6px hsl(var(--primary) / 0.08), 0 18px 36px -16px hsl(var(--primary) / 0.35);
+  }
+  .bo-shell main .rounded-3xl { border: 1px solid hsl(220 14% 94%); }
+}
