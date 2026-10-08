@@ -210,7 +210,7 @@ const RecipesTab = ({ materials }: { materials: Material[] }) => {
               <div className="flex gap-2">
                 <Select value={matId} onValueChange={setMatId}>
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Bahan" /></SelectTrigger>
-                  <SelectContent>{materials.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} ({m.unit})</SelectItem>)}</SelectContent>
+                  <SelectContent>{materials.map((m) => <SelectItem key={m.id} value={m.id}>{m.material_type === 'wip' ? '[WIP] ' : ''}{m.name} ({m.unit})</SelectItem>)}</SelectContent>
                 </Select>
                 <Input className="w-28" type="number" placeholder="Takaran" value={qty} onChange={(e) => setQty(e.target.value)} />
                 <Button onClick={add}><Plus className="h-4 w-4" /></Button>
