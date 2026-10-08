@@ -600,6 +600,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Generate chart data based on the date range
@@ -703,6 +705,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Use the main date filters instead of separate menuFilter
@@ -823,6 +827,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Use the main date filters instead of separate hourlyFilter
@@ -909,6 +915,8 @@ export const ModernBranchDashboard = () => {
         branchIdFilter = userProfile.branch_id;
       } else if (userProfile?.role === 'sb_branch_manager' && userProfile?.branch_id) {
         branchIdFilter = userProfile.branch_id;
+      } else if (selectedBranch !== 'all') {
+        branchIdFilter = selectedBranch;
       }
       
       // Fetch riders; if a rider is selected, only fetch that rider
