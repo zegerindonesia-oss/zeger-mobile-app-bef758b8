@@ -564,3 +564,19 @@
   }
   .bo-shell main .rounded-3xl { border: 1px solid hsl(220 14% 94%); }
 }
+
+/* Back Office — mobile friendly tables & cards (phones only; desktop unchanged) */
+@media (max-width: 767px) {
+  .bo-main .bo-table th,
+  .bo-main .bo-table td,
+  .bo-main table th,
+  .bo-main table td { padding: 0.5rem 0.5rem; white-space: nowrap; }
+  .bo-main table th { height: auto; font-size: 0.6875rem; }
+  .bo-main table td .font-medium,
+  .bo-main table td.font-medium { white-space: normal; min-width: 8rem; }
+  .bo-main table { min-width: 100%; }
+  .bo-main .overflow-x-auto, .bo-main .overflow-auto { -webkit-overflow-scrolling: touch; }
+  .bo-main [class*="CardContent"], .bo-main .bo-card { padding-left: 0.875rem; padding-right: 0.875rem; }
+  .bo-main h1 { font-size: 1.25rem; }
+  .bo-main input[type="date"] { min-width: 0; }
+}

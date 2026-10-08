@@ -1194,10 +1194,10 @@ export const ModernBranchDashboard = () => {
     <div className="min-h-screen bo-dashboard">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header — single master filter for the whole dashboard */}
-        <div className="bo-card p-6">
+        <div className="bo-card p-4 sm:p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Sales Report</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Sales Report</h1>
               <p className="text-sm text-gray-500">{new Date().toLocaleDateString('id-ID', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -1207,7 +1207,7 @@ export const ModernBranchDashboard = () => {
               })}</p>
             </div>
             
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4">
               {isHOUser && (
                 <Select value={selectedBranch} onValueChange={setSelectedBranch}>
                   <SelectTrigger className="w-40 h-8 text-xs rounded-full"><Building className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
@@ -1242,7 +1242,7 @@ export const ModernBranchDashboard = () => {
                 </SelectContent>
               </Select>
               
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <Label htmlFor="start-date" className="text-xs text-gray-600">From:</Label>
                 <Input id="start-date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-32 h-8 text-xs border-gray-200 rounded-full" />
                 
