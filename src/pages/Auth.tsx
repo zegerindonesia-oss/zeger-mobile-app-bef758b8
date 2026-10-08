@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FlowLogo, FlowMark } from "@/components/flow/FlowLogo";
-import heroImg from "@/assets/flow/login-hero.jpg";
+import heroImg from "@/assets/flow/hero-businesswoman-user.png";
 import { ArrowRight, BarChart3, ChefHat, Eye, EyeOff, Gift, Lock, Mail, Package, Receipt, ShieldCheck, ShoppingCart, Sparkles } from "lucide-react";
 const cleanupAuthState = () => {
   try {
@@ -190,9 +190,9 @@ const Auth = () => {
 
   return <div className="flow-site min-h-screen grid lg:grid-cols-[1.1fr_1fr]">
       {/* Left: hero */}
-      <aside className="relative hidden lg:block overflow-hidden">
-        <img src={heroImg} width={1024} height={1344} alt="Owner F&B menggunakan Flow F&B ERP" className="absolute inset-0 h-full w-full object-cover object-top" />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/90 via-foreground/40 to-foreground/10" />
+      <aside className="relative hidden lg:block overflow-hidden flow-bg-red">
+        <img src={heroImg} width={1024} height={1536} alt="Owner F&B menggunakan Flow F&B ERP" className="absolute right-[-6%] bottom-0 h-[92%] w-auto object-contain object-bottom drop-shadow-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-foreground/30 to-transparent" />
         <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14">
           <Link to="/landing" className="inline-flex w-fit rounded-2xl bg-background/90 backdrop-blur px-4 py-2.5"><FlowLogo size="sm" /></Link>
           <div className="space-y-6 text-background">
