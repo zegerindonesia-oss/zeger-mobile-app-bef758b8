@@ -66,7 +66,7 @@ export const ModernLayout = ({ children }: ModernLayoutProps) => {
   }
 
   return (
-    <div className="min-h-screen gradient-bg flex">
+    <div className="min-h-screen bo-shell flex">
       <div className="fixed left-0 top-0 h-full z-50">
         <ModernSidebar 
           userRole={profile.role} 
@@ -75,7 +75,7 @@ export const ModernLayout = ({ children }: ModernLayoutProps) => {
         />
       </div>
       
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'ml-[17rem]' : 'ml-[5.5rem]'}`}>
         <ModernHeader 
           profile={profile}
           branch={branch}

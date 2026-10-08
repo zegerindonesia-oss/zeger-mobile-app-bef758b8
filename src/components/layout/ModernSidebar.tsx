@@ -34,7 +34,7 @@ import {
   Image
 } from "lucide-react";
 import { MapPin as LocationPin } from "lucide-react";
-import { ZegerLogo } from "@/components/ui/zeger-logo";
+import { FlowMark } from "@/components/flow/FlowLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -318,19 +318,20 @@ export const ModernSidebar = ({ userRole, isOpen, onToggle }: ModernSidebarProps
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed left-0 top-0 h-full bg-primary text-primary-foreground z-50 transition-all duration-300 ease-in-out flex flex-col",
-        isOpen ? "w-64" : "w-20",
-        !isOpen && "lg:w-20"
+        "fixed left-2 top-2 bottom-2 bo-sidebar text-primary-foreground z-50 transition-all duration-300 ease-in-out flex flex-col overflow-y-auto",
+        isOpen ? "w-64" : "w-[72px]"
       )}>
         {/* Header */}
         <div className="p-4 border-b border-primary-light/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <ZegerLogo size="sm" className="w-8 h-8" />
+              <span className="h-10 w-10 rounded-2xl bg-background grid place-items-center shadow-md flex-shrink-0">
+                <FlowMark className="h-7 w-7" />
+              </span>
               {isOpen && (
-                <div>
-                  <h2 className="font-semibold text-sm">Zeger</h2>
-                  <p className="text-xs text-primary-foreground/70">Coffee & More</p>
+                <div className="leading-tight">
+                  <h2 className="font-extrabold text-base tracking-tight">Flow F&amp;B</h2>
+                  <p className="text-[10px] tracking-[0.3em] text-primary-foreground/75">ERP BACK OFFICE</p>
                 </div>
               )}
             </div>
