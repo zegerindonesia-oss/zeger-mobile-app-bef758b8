@@ -47,6 +47,7 @@ import CashDeposit from "./pages/analytics/CashDeposit";
 import WasteManagementPage from "./pages/inventory/WasteManagementPage";
 import RawMaterials from "./pages/inventory/RawMaterials";
 import ProcurementInvoice from "./pages/inventory/ProcurementInvoice";
+import SalesInvoicing from "./pages/invoicing/SalesInvoicing";
 import ModuleAccess from "./pages/settings/ModuleAccess";
 import POSQueueDisplay from "./pages/pos/POSQueueDisplay";
 import POSDashboard from "./pages/pos/POSDashboard";
@@ -441,13 +442,21 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
-            <Route path="/inventory/procurement" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'ho_staff', 'branch_manager', 'sb_branch_manager', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', '2_Hub_Branch_Manager', '3_SB_Branch_Manager', 'finance']}>
-                <ModernLayout>
-                  <ProcurementInvoice />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
+            {[
+              ['/inventory/procurement', <ProcurementInvoice />],
+              ['/invoicing/purchase-orders', <ProcurementInvoice tab="new" />],
+              ['/invoicing/purchase-invoices', <ProcurementInvoice tab="debt" />],
+              ['/invoicing/suppliers', <ProcurementInvoice tab="supplier" />],
+              ['/invoicing/sales', <SalesInvoicing mode="invoice" />],
+              ['/invoicing/sales-orders', <SalesInvoicing mode="order" />],
+              ['/invoicing/customers', <SalesInvoicing mode="customers" />],
+            ].map(([path, el]) => (
+              <Route key={path as string} path={path as string} element={
+                <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'ho_staff', 'branch_manager', 'sb_branch_manager', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', '2_Hub_Branch_Manager', '3_SB_Branch_Manager', 'finance']}>
+                  <ModernLayout key={path as string}>{el}</ModernLayout>
+                </RoleBasedRoute>
+              } />
+            ))}
             <Route path="/settings/module-access" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', '1_HO_Admin', '1_HO_Owner']}>
                 <ModernLayout>

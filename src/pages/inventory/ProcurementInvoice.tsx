@@ -19,7 +19,7 @@ const num = (n: number) => Number(n || 0).toLocaleString('id-ID', { maximumFract
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 const daysTo = (d: string) => Math.round((new Date(d + 'T00:00:00').getTime() - new Date(today() + 'T00:00:00').getTime()) / 86400000);
 
-export default function ProcurementInvoice() {
+export default function ProcurementInvoice({ tab = 'new' }: { tab?: string }) {
   const { userProfile } = useAuth();
   const isHO = HO.includes(userProfile?.role || '');
   const [branches, setBranches] = useState<any[]>([]);
@@ -78,7 +78,7 @@ export default function ProcurementInvoice() {
         <Card className={overdue.length ? 'border-destructive/50' : ''}><CardContent className="p-4"><p className="text-xs text-muted-foreground">Lewat Jatuh Tempo</p><p className={`text-2xl font-bold ${overdue.length ? 'text-destructive' : ''}`}>{rp(overdue.reduce((s, p) => s + p.total_amount - p.paid_amount, 0))}</p></CardContent></Card>
       </div>
 
-      <Tabs defaultValue="new">
+      <Tabs key={tab} defaultValue={tab}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="new"><Plus className="h-4 w-4 mr-1" />PO Baru</TabsTrigger>
           <TabsTrigger value="list"><Truck className="h-4 w-4 mr-1" />Daftar PO & Penerimaan</TabsTrigger>
@@ -200,6 +200,8 @@ function POList({ pos, materials, reload }: any) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div><span className="font-semibold">{po.po_number}</span> · {po.suppliers?.name || 'Tanpa supplier'} · {po.order_date} {statusBadge(po.status)}</div>
             <div className="flex items-center gap-2"><span className="font-bold">{rp(po.total_amount)}</span>
+              <Button size="icon" variant="ghost" title="Kirim PO via WhatsApp" disabled={!waPhone(po.suppliers?.phone)} onClick={() => window.open(`https://wa.me/${waPhone(po.suppliers?.phone)}?text=${encodeURIComponent(poText(po, matName))}`, '_blank')}><MessageCircle className="h-4 w-4 text-success" /></Button>
+              <Button size="icon" variant="ghost" title="Kirim PO via Email" disabled={!po.suppliers?.email} onClick={() => window.open(`mailto:${po.suppliers?.email}?subject=${encodeURIComponent('Purchase Order ' + po.po_number)}&body=${encodeURIComponent(poText(po, matName))}`)}><Mail className="h-4 w-4" /></Button>
               {po.status === 'ordered' && <><Button size="sm" onClick={() => { setOpen(open === po.id ? null : po.id); setInv({ number: '', date: today(), terms: String(po.terms_days) }); }}><PackageCheck className="h-4 w-4 mr-1" />Terima Barang</Button><Button size="sm" variant="ghost" onClick={() => cancel(po)}>Batal</Button></>}
             </div>
           </div>
