@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Wifi, WifiOff, LogOut, Receipt, DoorClosed, Plus, Minus, Monitor } from 'lucide-react';
-import { FlowMark } from '@/components/flow/FlowLogo';
+import { FlowLogo } from '@/components/flow/FlowLogo';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -27,7 +27,7 @@ export const POSHeader = ({ branchName, kasirName, shiftType, online, onCloseShi
   return (
     <div className="flex items-center justify-between gap-4 border-b bg-card px-4 py-2">
       <div className="flex items-center gap-3">
-        <FlowMark className="h-9 w-9 shrink-0" />
+        <span className="rounded-full bg-background border px-4 py-1.5 shadow-sm shrink-0"><FlowLogo size="sm" /></span>
         <div className="leading-tight">
           <div className="font-semibold text-sm">{branchName}</div>
           <div className="text-xs text-muted-foreground">
