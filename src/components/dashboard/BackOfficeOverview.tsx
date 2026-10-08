@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from "recharts";
-import { Building2, TrendingUp, Receipt, Wallet, CalendarClock, AlertTriangle } from "lucide-react";
+import { TrendingUp, Receipt, Wallet, CalendarClock, AlertTriangle } from "lucide-react";
 
 const rp = (n: number) => "Rp " + Math.round(n || 0).toLocaleString("id-ID");
 const short = (n: number) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "jt" : n >= 1e3 ? (n / 1e3).toFixed(0) + "rb" : String(Math.round(n)));
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const jakartaNow = () => new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-const PIE = ["hsl(var(--primary))", "hsl(var(--success))", "hsl(217 91% 60%)", "hsl(var(--warning))"];
-
-type Period = "today" | "7d" | "month" | "30d";
+const PIE = ["hsl(var(--primary))", "hsl(var(--success))", "hsl(var(--warning))", "hsl(var(--primary-dark))", "hsl(var(--primary-light))"];
 
 const fetchAll = async (build: () => any) => {
   const out: any[] = [];
@@ -27,33 +24,18 @@ const fetchAll = async (build: () => any) => {
   return out;
 };
 
-export const BackOfficeOverview = () => {
+interface Props { startDate: string; endDate: string; branchId: string; refreshKey?: number }
+
+export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 0 }: Props) => {
   const { userProfile } = useAuth();
   const role = userProfile?.role || "";
   const isHO = ["ho_admin", "ho_owner", "ho_staff", "1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "finance"].includes(role);
   const lockedBranch = !isHO ? userProfile?.branch_id || null : null;
-
-  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
-  const [branchId, setBranchId] = useState<string>("all");
-  const [period, setPeriod] = useState<Period>("month");
   const [loading, setLoading] = useState(true);
   const [tx, setTx] = useState<any[]>([]);
   const [pos, setPos] = useState<any[]>([]);
-
-  useEffect(() => {
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => setBranches(data || []));
-  }, []);
-
   const effectiveBranch = lockedBranch || (branchId === "all" ? null : branchId);
-
-  const range = useMemo(() => {
-    const now = jakartaNow();
-    const s = new Date(now);
-    if (period === "7d") s.setDate(now.getDate() - 6);
-    if (period === "30d") s.setDate(now.getDate() - 29);
-    if (period === "month") s.setDate(1);
-    return { start: ymd(s), end: ymd(now) };
-  }, [period]);
+  const range = useMemo(() => ({ start: startDate, end: endDate }), [startDate, endDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +76,7 @@ export const BackOfficeOverview = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [range, effectiveBranch]);
+  }, [range, effectiveBranch, refreshKey]);
 
   const daily = useMemo(() => {
     const m = new Map<string, number>();
@@ -148,35 +130,6 @@ export const BackOfficeOverview = () => {
 
   return (
     <section className="space-y-5 bo-fade-up">
-      <div className="bo-card p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Sales Overview</h2>
-          <p className="text-sm text-muted-foreground">Ringkasan penjualan, pembayaran & perencanaan cash flow</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {lockedBranch ? (
-            <Badge variant="secondary" className="rounded-full h-9 px-4"><Building2 className="h-4 w-4 mr-2" />{branches.find((b) => b.id === lockedBranch)?.name || "Cabang Anda"}</Badge>
-          ) : (
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger className="w-48 rounded-full"><Building2 className="h-4 w-4 mr-2" /><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Cabang</SelectItem>
-                {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <SelectTrigger className="w-40 rounded-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Hari Ini</SelectItem>
-              <SelectItem value="7d">7 Hari</SelectItem>
-              <SelectItem value="month">Bulan Ini</SelectItem>
-              <SelectItem value="30d">30 Hari</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((k) => (
           <div key={k.label} className="bo-card bo-card-hover p-5">
@@ -206,17 +159,39 @@ export const BackOfficeOverview = () => {
           )}
         </div>
         <div className="bo-card bo-card-hover p-5">
-          <h3 className="font-semibold mb-4">Metode Pembayaran</h3>
+          <h3 className="font-semibold">Metode Pembayaran</h3>
+          <p className="text-xs text-muted-foreground mb-2">Porsi omset per metode</p>
           {loading ? <Skeleton className="h-64 w-full" /> : pay.length === 0 ? <p className="text-sm text-muted-foreground py-20 text-center">Belum ada transaksi</p> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={pay} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
-                  {pay.map((_, i) => <Cell key={i} fill={PIE[i % PIE.length]} />)}
-                </Pie>
-                <Tooltip formatter={(v: number) => rp(v)} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={190}>
+                  <PieChart>
+                    <defs>{PIE.map((c, i) => <linearGradient key={i} id={`boPie${i}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor={c} stopOpacity={1} /><stop offset="1" stopColor={c} stopOpacity={0.7} /></linearGradient>)}</defs>
+                    <Pie data={pay} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={4} cornerRadius={8} stroke="none">
+                      {pay.map((_, i) => <Cell key={i} fill={`url(#boPie${i % PIE.length})`} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => rp(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 grid place-items-center pointer-events-none text-center">
+                  <div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div><div className="text-base font-bold">{short(total)}</div></div>
+                </div>
+              </div>
+              <div className="space-y-2 mt-2">
+                {pay.sort((a, b) => b.value - a.value).map((p, i) => {
+                  const pct = total ? (p.value / total) * 100 : 0;
+                  return (
+                    <div key={p.name}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="flex items-center gap-2 font-medium"><span className="h-2.5 w-2.5 rounded-full" style={{ background: PIE[i % PIE.length] }} />{p.name}</span>
+                        <span className="text-muted-foreground">{rp(p.value)} · <b className="text-foreground">{pct.toFixed(0)}%</b></span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: PIE[i % PIE.length] }} /></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
