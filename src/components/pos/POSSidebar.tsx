@@ -3,7 +3,7 @@ import {
   ShoppingCart, Monitor, Tv, LayoutDashboard, Package, Users, BarChart3, Tag, Gift,
   Settings, LogOut, Banknote, DoorClosed, Boxes, Headphones, UserCog, Receipt, Printer, FileBarChart,
 } from 'lucide-react';
-import { ZegerLogo } from '@/components/ui/zeger-logo';
+import { FlowMark } from '@/components/flow/FlowLogo';
 import { cn } from '@/lib/utils';
 import { useTenantModules } from '@/hooks/useTenantModules';
 import { usePOSConnection } from '@/lib/pos-offline';
@@ -72,8 +72,8 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   return (
     <aside className={cn('glass-sidebar h-[100dvh] flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
       <div className={cn('flex items-center gap-3 px-4 h-20 border-b border-primary-foreground/10', collapsed && 'justify-center px-0')}>
-        <ZegerLogo size="sm" className="text-primary-foreground" />
-        {!collapsed && <span className="pos-number font-bold text-lg">Zeger POS</span>}
+        <FlowMark className="h-10 w-10 shrink-0 drop-shadow" />
+        {!collapsed && <span className="pos-number font-bold text-lg">Flow F&B POS</span>}
       </div>
       <div className="px-3 pt-3">
         <button onClick={doSync} title="Sinkronkan Penjualan"

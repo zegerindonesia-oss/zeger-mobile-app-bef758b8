@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
 import { ProductBulkUpload } from "@/components/master/ProductBulkUpload";
 import { ImageUpload } from "@/components/shared/ImageUpload";
+import { normalizeImageUrl } from "@/lib/image-url";
 
 interface Product {
   id: string;
@@ -156,7 +157,7 @@ const ProductManagement = () => {
       cost_price: form.cost_price || null,
       ck_price: form.ck_price || null,
       description: form.description || null,
-      image_url: form.image_url || null,
+      image_url: normalizeImageUrl(form.image_url),
       custom_options: customOpts,
       is_active: form.is_active,
     };

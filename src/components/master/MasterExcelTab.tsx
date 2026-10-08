@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { normalizeImageUrl } from '@/lib/image-url';
 
 const db = supabase as any;
 const S = { prod: 'Produk', mat: 'Bahan Baku', wip: 'Komposisi WIP', rec: 'Resep Menu' };
 const H = {
-  prod: ['Brand', 'Kategori Besar', 'Sub Kategori', 'Kode Menu', 'Nama Menu', 'Harga Jual', 'Deskripsi', 'Aktif (TRUE/FALSE)'],
+  prod: ['Brand', 'Kategori Besar', 'Sub Kategori', 'Kode Menu', 'Nama Menu', 'Harga Jual', 'Deskripsi', 'Aktif (TRUE/FALSE)', 'Link Foto (URL / Google Drive)'],
   mat: ['Kode Bahan', 'Nama Bahan', 'Tipe (MENTAH/WIP)', 'Kategori', 'Satuan', 'Harga per Satuan', 'Stok Minimum', 'Hasil per Batch (WIP)'],
   wip: ['Nama Bahan WIP', 'Nama Bahan Penyusun', 'Takaran per Batch'],
   rec: ['Kode Menu', 'Nama Menu', 'Nama Bahan (Mentah/WIP)', 'Takaran per Porsi'],
@@ -29,7 +30,7 @@ export const MasterExcelTab = ({ materials, reload }: { materials: any[]; reload
 
   const template = () => {
     const wb = XLSX.utils.book_new();
-    sheet(wb, S.prod, H.prod, [['Zeger Coffee', 'Minuman', 'Espresso Based', 'KS-001', 'Aren Latte', 18000, 'Latte gula aren', 'TRUE']]);
+    sheet(wb, S.prod, H.prod, [['Zeger Coffee', 'Minuman', 'Espresso Based', 'KS-001', 'Aren Latte', 18000, 'Latte gula aren', 'TRUE', 'https://drive.google.com/file/d/ID_FILE/view?usp=sharing']]);
     sheet(wb, S.mat, H.mat, [
       ['BK-01', 'Biji Kopi Arabica', 'MENTAH', 'Kopi', 'gr', 250, 1000, ''],
       ['AIR-01', 'Air Mineral', 'MENTAH', 'Umum', 'ml', 0.5, 0, ''],
@@ -50,7 +51,7 @@ export const MasterExcelTab = ({ materials, reload }: { materials: any[]; reload
     const mm = Object.fromEntries(materials.map((m) => [m.id, m]));
     const pm = Object.fromEntries((p.data || []).map((x: any) => [x.id, x]));
     const wb = XLSX.utils.book_new();
-    sheet(wb, S.prod, H.prod, (p.data || []).map((x: any) => [x.brand || '', x.category || '', x.sub_category || '', x.code, x.name, x.price, x.description || '', x.is_active ? 'TRUE' : 'FALSE']));
+    sheet(wb, S.prod, H.prod, (p.data || []).map((x: any) => [x.brand || '', x.category || '', x.sub_category || '', x.code, x.name, x.price, x.description || '', x.is_active ? 'TRUE' : 'FALSE', x.image_url || '']));
     sheet(wb, S.mat, H.mat, materials.map((m) => [m.code || '', m.name, m.material_type === 'wip' ? 'WIP' : 'MENTAH', m.category, m.unit, m.cost_per_unit, m.min_stock, m.material_type === 'wip' ? m.yield_quantity : '']));
     sheet(wb, S.wip, H.wip, (w.data || []).filter((c: any) => mm[c.wip_id] && mm[c.material_id]).map((c: any) => [mm[c.wip_id].name, mm[c.material_id].name, c.quantity]));
     sheet(wb, S.rec, H.rec, (r.data || []).filter((c: any) => pm[c.product_id] && mm[c.material_id]).map((c: any) => [pm[c.product_id].code, pm[c.product_id].name, mm[c.material_id].name, c.quantity]));
@@ -83,7 +84,7 @@ export const MasterExcelTab = ({ materials, reload }: { materials: any[]; reload
       for (const r of rows(S.prod)) {
         const code = String(r[3]).trim(); const name = String(r[4]).trim();
         if (!code || !name) { out.push(`Produk tanpa kode/nama dilewati`); continue; }
-        const row = { brand: String(r[0]).trim() || null, category: String(r[1]).trim() || null, sub_category: String(r[2]).trim() || null, code, name, price: Number(r[5]) || 0, description: String(r[6]).trim() || null, is_active: key(r[7]) !== 'false' };
+        const row = { brand: String(r[0]).trim() || null, category: String(r[1]).trim() || null, sub_category: String(r[2]).trim() || null, code, name, price: Number(r[5]) || 0, description: String(r[6]).trim() || null, is_active: key(r[7]) !== 'false', ...(String(r[8] ?? '').trim() ? { image_url: normalizeImageUrl(r[8]) } : {}) };
         const ex = pByCode[key(code)];
         const res = ex ? await db.from('products').update(row).eq('id', ex.id).select('id,code,name').single() : await db.from('products').insert(row).select('id,code,name').single();
         if (res.error) out.push(`Produk "${name}": ${res.error.message}`); else { pByCode[key(code)] = res.data; pByName[key(name)] = res.data; pOk++; }
@@ -127,7 +128,7 @@ export const MasterExcelTab = ({ materials, reload }: { materials: any[]; reload
     <Card>
       <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileSpreadsheet className="h-4 w-4" />Import / Export Excel: Produk, Bahan, WIP & Resep</CardTitle></CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">Satu file Excel berisi 4 sheet: <b>Produk</b> (Brand → Kategori Besar → Sub Kategori → Menu), <b>Bahan Baku</b> (Mentah / WIP), <b>Komposisi WIP</b>, dan <b>Resep Menu</b>. Data yang sudah ada dicocokkan lewat Kode Menu dan Nama Bahan, lalu diperbarui.</p>
+        <p className="text-sm text-muted-foreground">Satu file Excel berisi 4 sheet: <b>Produk</b> (Brand → Kategori Besar → Sub Kategori → Menu), <b>Bahan Baku</b> (Mentah / WIP), <b>Komposisi WIP</b>, dan <b>Resep Menu</b>. Kolom Link Foto bisa diisi link Google Drive (file di-share "Siapa saja yang memiliki link") atau link gambar lain. Data yang sudah ada dicocokkan lewat Kode Menu dan Nama Bahan, lalu diperbarui.</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={template}><Download className="h-4 w-4 mr-1" />Download Template</Button>
           <Button variant="outline" onClick={exportAll}><Download className="h-4 w-4 mr-1" />Export Data Saat Ini</Button>

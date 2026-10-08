@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { normalizeImageUrl } from "@/lib/image-url";
 
 interface Product {
   id: string;
@@ -64,7 +65,7 @@ const TEMPLATE_HEADERS = [
   "HPP (Cost Price)",
   "HPP CK",
   "Deskripsi",
-  "URL Foto",
+  "Link Foto (URL / Google Drive)",
   "Custom Options (JSON)",
   "Aktif (TRUE/FALSE)",
 ];
@@ -166,7 +167,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
             cost_price: Number(get("cost_price")) || 0,
             ck_price: Number(get("ck_price")) || 0,
             description: String(get("description") || "").trim(),
-            image_url: String(get("image_url") || "").trim(),
+            image_url: normalizeImageUrl(get("image_url")) || "",
             custom_options: String(get("custom_options") || "").trim(),
             is_active: isActiveRaw === "TRUE" || isActiveRaw === "1" || isActiveRaw === "YA",
           };
