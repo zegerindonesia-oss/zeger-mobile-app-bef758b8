@@ -10,7 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, FileText, Truck, Wallet, Users, Ruler, Network, PackageCheck } from 'lucide-react';
+import { Plus, Trash2, FileText, Truck, Wallet, Users, Ruler, Network, PackageCheck, MessageCircle, Mail } from 'lucide-react';
+import { waPhone } from '@/pages/invoicing/SalesInvoicing';
 
 const db = supabase as any;
 const HO = ['ho_admin', 'ho_owner', 'ho_staff', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', 'finance'];
@@ -45,7 +46,7 @@ export default function ProcurementInvoice({ tab = 'new' }: { tab?: string }) {
     ]);
     setMaterials(m.data || []); setUnits(u.data || []); setSuppliers(s.data || []);
     if (branchId) {
-      const { data } = await db.from('purchase_orders').select('*, suppliers(name), purchase_order_items(*)').eq('branch_id', branchId).order('created_at', { ascending: false });
+      const { data } = await db.from('purchase_orders').select('*, suppliers(name, phone, email), purchase_order_items(*)').eq('branch_id', branchId).order('created_at', { ascending: false });
       setPos(data || []);
     }
   }, [branchId]);
@@ -172,6 +173,8 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
   );
 }
 
+const poText = (po: any, matName: (id: string) => string) => `PURCHASE ORDER ${po.po_number}\nKepada: ${po.suppliers?.name || '-'}\nTanggal: ${po.order_date}${po.expected_date ? `\nMohon dikirim: ${po.expected_date}` : ''}\n\n${po.purchase_order_items.map((it: any) => `• ${matName(it.material_id)} ${num(it.quantity)} ${it.unit_name} @ ${rp(it.unit_price)}`).join('\n')}\n\nTOTAL: ${rp(po.total_amount)}${po.notes ? `\nCatatan: ${po.notes}` : ''}\n\nMohon konfirmasi. Terima kasih.`;
+
 const statusBadge = (s: string) => s === 'ordered' ? <Badge variant="secondary">Menunggu Barang</Badge> : s === 'received' ? <Badge>Diterima</Badge> : <Badge variant="outline">Batal</Badge>;
 
 function POList({ pos, materials, reload }: any) {
@@ -270,26 +273,27 @@ function DebtTab({ pos, reload }: any) {
 }
 
 function SupplierTab({ suppliers, reload }: any) {
-  const [f, setF] = useState({ name: '', contact_name: '', phone: '', default_terms_days: '' });
+  const [f, setF] = useState({ name: '', contact_name: '', phone: '', email: '', default_terms_days: '' });
   const save = async () => {
     if (!f.name.trim()) return toast.error('Nama supplier wajib');
     const { error } = await db.from('suppliers').insert({ ...f, default_terms_days: Number(f.default_terms_days) || 0 });
     if (error) return toast.error(error.message);
-    setF({ name: '', contact_name: '', phone: '', default_terms_days: '' }); reload();
+    setF({ name: '', contact_name: '', phone: '', email: '', default_terms_days: '' }); reload();
   };
   return (
     <Card><CardContent className="p-3 space-y-3">
-      <div className="grid md:grid-cols-5 gap-2">
+      <div className="grid md:grid-cols-6 gap-2">
         <Input placeholder="Nama supplier" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <Input placeholder="Kontak" value={f.contact_name} onChange={(e) => setF({ ...f, contact_name: e.target.value })} />
-        <Input placeholder="Telepon" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+        <Input placeholder="No. WhatsApp" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+        <Input placeholder="Email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
         <Input type="number" placeholder="Tempo default (hari)" value={f.default_terms_days} onChange={(e) => setF({ ...f, default_terms_days: e.target.value })} />
         <Button onClick={save}><Plus className="h-4 w-4 mr-1" />Tambah</Button>
       </div>
       <Table>
-        <TableHeader><TableRow><TableHead>Nama</TableHead><TableHead>Kontak</TableHead><TableHead>Telepon</TableHead><TableHead>Tempo</TableHead><TableHead /></TableRow></TableHeader>
+        <TableHeader><TableRow><TableHead>Nama</TableHead><TableHead>Kontak</TableHead><TableHead>WhatsApp</TableHead><TableHead>Email</TableHead><TableHead>Tempo</TableHead><TableHead /></TableRow></TableHeader>
         <TableBody>{suppliers.map((s: any) => (
-          <TableRow key={s.id}><TableCell className="font-medium">{s.name}</TableCell><TableCell>{s.contact_name}</TableCell><TableCell>{s.phone}</TableCell><TableCell>{s.default_terms_days} hari</TableCell>
+          <TableRow key={s.id}><TableCell className="font-medium">{s.name}</TableCell><TableCell>{s.contact_name}</TableCell><TableCell>{s.phone}</TableCell><TableCell>{s.email}</TableCell><TableCell>{s.default_terms_days} hari</TableCell>
             <TableCell><Button size="icon" variant="ghost" onClick={async () => { await db.from('suppliers').update({ is_active: false }).eq('id', s.id); reload(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>
         ))}</TableBody>
       </Table>
