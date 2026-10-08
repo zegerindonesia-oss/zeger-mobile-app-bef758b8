@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { chunkArray } from "@/lib/array-utils";
 import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
 import { useAuth } from "@/hooks/useAuth";
+import { BackOfficeOverview } from "./BackOfficeOverview";
 interface DashboardStats {
   totalSales: number;
   totalTransactions: number;
@@ -1175,8 +1176,9 @@ export const ModernBranchDashboard = () => {
     );
   }
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bo-dashboard">
       <div className="max-w-7xl mx-auto space-y-6">
+        <BackOfficeOverview />
         {/* Header */}
         <div className="bg-white rounded-3xl shadow-sm border-0 p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
