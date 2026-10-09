@@ -15,6 +15,7 @@ import POSMain from "./pages/pos/POSMain";
 import POSKitchen from "./pages/pos/POSKitchen";
 import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
+import CxLab from "./pages/dev/CxLab";
 import NotFound from "./pages/NotFound";
 import FlowLanding from "./pages/flow/FlowLanding";
 import FlowOnboarding from "./pages/flow/FlowOnboarding";
