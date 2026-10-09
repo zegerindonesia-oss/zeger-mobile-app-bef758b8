@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Clock, Copy, Crown, Gift, Percent, Tag, Ticket } from 'lucide-react';
+import { Check, Clock, Copy, Gift, Percent, Tag, Ticket, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cxArt, formatRupiah } from '@/lib/customer-art';
+import { voucherHeadline, voucherKind, voucherStub } from '@/lib/customer-voucher';
 
 interface Voucher {
   id: string;
@@ -221,22 +222,23 @@ function VoucherTicket({
   voucher: Voucher; claimed?: boolean; owned?: boolean; dim?: boolean; used?: boolean; busy?: boolean;
   onClaim?: () => void; onCopy?: () => void;
 }) {
-  const pct = voucher.discount_type === 'percentage';
+  const kind = voucherKind(voucher);
+  const stub = voucherStub(voucher);
   const left = daysLeft(voucher.valid_until);
   return (
     <article className="cx-ticket flex overflow-hidden" data-dim={dim ? 'true' : 'false'}>
       <div className="cx-ticket-stub flex w-[92px] shrink-0 flex-col items-center justify-center gap-0.5 p-2.5 text-center">
-        {pct ? <Percent className="h-5 w-5" /> : <Ticket className="h-5 w-5" />}
-        <span className="cx-num text-lg font-extrabold leading-none">
-          {pct ? `${voucher.discount_value}%` : `${Math.round(voucher.discount_value / 1000)}K`}
+        {kind === 'percentage' ? <Percent className="h-5 w-5" /> : kind === 'shipping' ? <Truck className="h-5 w-5" /> : <Ticket className="h-5 w-5" />}
+        <span className={cn('cx-num font-extrabold leading-none', stub.big.length > 4 ? 'text-base' : 'text-lg')}>
+          {stub.big}
         </span>
-        <span className="text-[10px] font-bold uppercase tracking-wide opacity-85">Off</span>
+        <span className="text-[10px] font-bold uppercase tracking-wide opacity-85">{stub.sub}</span>
       </div>
       <div className="relative min-w-0 flex-1 p-3.5">
         <span className="cx-notch -left-2.5 -top-2.5" />
         <span className="cx-notch -bottom-2.5 -left-2.5" />
         <div className="flex items-start gap-2">
-          <p className="min-w-0 flex-1 text-sm font-extrabold leading-tight">{voucher.description || `Diskon ${pct ? `${voucher.discount_value}%` : formatRupiah(voucher.discount_value)}`}</p>
+          <p className="min-w-0 flex-1 text-sm font-extrabold leading-tight">{voucherHeadline(voucher)}</p>
           {used && <span className="shrink-0 rounded-full bg-[hsl(var(--cx-rail))] px-2 py-0.5 text-[10px] font-bold text-muted-foreground">Terpakai</span>}
         </div>
         {(voucher.min_order || 0) > 0 && (
