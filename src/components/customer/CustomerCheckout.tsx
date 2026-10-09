@@ -119,8 +119,8 @@ export default function CustomerCheckout({
     [selectedVoucher, subtotal, shippingDue],
   );
 
-  const afterVoucher = Math.max(0, subtotal - voucherDiscount);
-  const maxPointsCanUse = Math.max(0, Math.min(customerUser.points || 0, Math.floor(afterVoucher / 500)));
+  const payableBeforePoints = Math.max(0, subtotal + takeAwayCharge + shippingDue - voucherDiscount);
+  const maxPointsCanUse = Math.max(0, Math.min(customerUser.points || 0, Math.floor(payableBeforePoints / 500)));
   const pointsDiscount = usePoints ? maxPointsCanUse * 500 : 0;
   const total = Math.max(0, subtotal + deliveryFee + takeAwayCharge - deliveryDiscount - voucherDiscount - pointsDiscount);
   const earnedPoints = pointsFor(total);
