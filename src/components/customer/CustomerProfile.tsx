@@ -95,11 +95,13 @@ export function CustomerProfile({ customerUser, onUpdateProfile, onNavigate }: C
     <div className="cx-app min-h-screen pb-32">
       {/* Hero */}
       <div className="cx-stage-dark relative px-5 pt-8 pb-16 text-white overflow-hidden">
-        <img
-          src={cxArt.crown}
-          alt=""
+        <span
           aria-hidden
-          className="cx-art cx-float-slow pointer-events-none absolute -right-7 bottom-1 h-24 w-24 object-contain opacity-30"
+          className="pointer-events-none absolute -right-16 -top-14 h-48 w-48 rounded-full bg-white/10 blur-2xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-10 bottom-[-3rem] h-36 w-36 rounded-full bg-white/[0.07] blur-2xl"
         />
         <div className="flex items-center gap-4 relative">
           <div className="h-16 w-16 rounded-full bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center overflow-hidden shrink-0">
