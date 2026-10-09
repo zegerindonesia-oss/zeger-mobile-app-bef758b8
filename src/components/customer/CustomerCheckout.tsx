@@ -284,7 +284,9 @@ export default function CustomerCheckout({
             <p className="text-sm font-bold">{selectedVoucher ? selectedVoucher.voucher?.code : 'Pakai Voucher'}</p>
             <p className="text-[11px] text-muted-foreground truncate">
               {selectedVoucher
-                ? (voucherDiscount > 0 ? `Hemat ${formatRupiah(voucherDiscount)}` : `Min. belanja ${formatRupiah(selectedVoucher.voucher?.min_order || 0)}`)
+                ? (voucherDiscount > 0
+                  ? `Hemat ${formatRupiah(voucherDiscount)}`
+                  : voucherBlockedReason(selectedVoucher.voucher!, { subtotal, shippingDue }) || 'Belum bisa dipakai')
                 : `${vouchers.length} voucher siap dipakai`}
             </p>
           </div>
