@@ -308,96 +308,96 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-4">
-      {/* Hero banner */}
-      <div className="relative bg-[#EA2831] px-4 pt-6 pb-24 overflow-hidden">
-        <h1 className="text-white text-2xl font-extrabold leading-tight max-w-[60%]">
-          KINI HADIR LEBIH DEKAT LEBIH HEMAT
+    <div className="cx-app min-h-screen bg-[hsl(var(--cx-canvas))] pb-6">
+      {/* Hero */}
+      <div className="cx-stage relative overflow-hidden bg-gradient-to-br from-zeger-dark to-zeger px-5 pb-24 pt-7">
+        <div className="pointer-events-none absolute -right-10 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+        <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/18 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+          <Bike className="h-3.5 w-3.5" /> Zeger On The Wheels
+        </span>
+        <h1 className="relative mt-3 max-w-[64%] text-2xl font-extrabold leading-tight text-white">
+          Kopi favoritmu, antar sampai titikmu
         </h1>
-        <div className="absolute right-2 top-2 w-40 h-40 rounded-full bg-white/10" />
+        <img src={cxArt.scooter} alt="" className="cx-art cx-float pointer-events-none absolute -bottom-2 right-2 h-28 w-auto opacity-95" />
       </div>
 
       {/* Greeting card */}
-      <div className="mx-4 -mt-16 mb-4 bg-white rounded-2xl shadow-lg p-4 relative z-10">
-        <p className="font-bold text-gray-900 text-base">
-          Hi, {(customerUser?.name || 'GUEST').toUpperCase()}
-        </p>
+      <div className="relative z-10 mx-5 -mt-14 mb-4">
+        <div className="cx-card cx-rise flex items-center gap-3 rounded-[24px] p-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zeger-soft text-sm font-extrabold text-zeger">
+            {(customerUser?.name || 'G').charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-extrabold">Hai, {(customerUser?.name || 'Guest')}</p>
+            <p className="truncate text-[11px] text-muted-foreground">Pilih rider terdekat untuk pesananmu</p>
+          </div>
+        </div>
       </div>
 
-      {/* Distance filter chips */}
-      <div className="px-4 mb-3 flex gap-2">
-        {DISTANCE_OPTIONS.map(km => (
-          <button
-            key={km}
-            onClick={() => setRadiusKm(km)}
-            className={`flex-1 py-3 rounded-full font-semibold text-sm transition-all ${
-              radiusKm === km
-                ? 'bg-[#EA2831] text-white shadow-md'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-          >
-            {km} km
-          </button>
-        ))}
+      {/* Distance filter */}
+      <div className="mb-4 px-5">
+        <div className="cx-seg flex">
+          {DISTANCE_OPTIONS.map(km => (
+            <button
+              key={km}
+              onClick={() => setRadiusKm(km)}
+              data-active={radiusKm === km}
+              className="cx-seg-item flex-1 py-2.5 text-xs font-bold"
+            >
+              {km} km
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Section title + refresh */}
-      <div className="px-4 flex items-center justify-between mb-3">
-        <h2 className="text-xl font-extrabold text-gray-900">Temukan Rider-mu</h2>
+      <div className="mb-3 flex items-center justify-between px-5">
+        <h2 className="text-base font-extrabold">Temukan rider-mu</h2>
         <button
           onClick={() => userLocation && fetchNearbyRiders(userLocation.lat, userLocation.lng)}
-          className="w-10 h-10 rounded-lg bg-[#EA2831] text-white flex items-center justify-center shadow-md active:scale-95"
-          aria-label="Refresh"
+          className="cx-icon-btn h-10 w-10"
+          aria-label="Muat ulang"
         >
-          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4.5 w-4.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       {/* Map */}
-      <div className="px-4 mb-4">
-        <div className="relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
-          <div ref={mapContainer} className="h-64 w-full bg-gray-100" />
+      <div className="mb-4 px-5">
+        <div className="cx-card relative overflow-hidden rounded-[26px] p-0">
+          <div ref={mapContainer} className="h-60 w-full bg-[hsl(var(--cx-rail))]" />
           {mapsKeyMissing ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
-              <MapPin className="mb-3 h-10 w-10 text-[#EA2831]" />
-              <p className="font-bold text-gray-900">Peta belum aktif</p>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                Google Maps browser key belum tersedia. Rider tetap bisa dipilih dari daftar di bawah.
+              <MapPin className="mb-3 h-9 w-9 text-zeger" />
+              <p className="text-sm font-extrabold">Peta belum aktif</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                Rider tetap bisa dipilih dari daftar di bawah.
               </p>
             </div>
           ) : mapError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
-              <AlertCircle className="mb-3 h-10 w-10 text-[#EA2831]" />
-              <p className="font-bold text-gray-900">Peta gagal dimuat</p>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                {mapError}
-              </p>
+              <AlertCircle className="mb-3 h-9 w-9 text-zeger" />
+              <p className="text-sm font-extrabold">Peta gagal dimuat</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{mapError}</p>
             </div>
           ) : null}
         </div>
       </div>
 
-      {mapError && (
-        <div className="mx-4 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          {mapError}
-        </div>
-      )}
-
       {/* Rider cards */}
       {loading ? (
         <div className="py-12 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#EA2831] mx-auto mb-2" />
-          <p className="text-sm text-gray-500">Mencari rider terdekat...</p>
+          <Loader2 className="mx-auto mb-2 h-7 w-7 animate-spin text-zeger" />
+          <p className="text-xs font-semibold text-muted-foreground">Mencari rider terdekat…</p>
         </div>
       ) : filteredRiders.length === 0 ? (
-        <div className="mx-4 py-10 text-center bg-gray-50 rounded-2xl">
-          <MapPin className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-          <p className="font-semibold text-gray-700">Belum ada rider dalam {radiusKm} km</p>
-          <p className="text-xs text-gray-500 mt-1">Coba perluas jangkauan pencarian</p>
+        <div className="mx-5 rounded-[26px] bg-[hsl(var(--cx-rail))] py-10 text-center">
+          <MapPin className="mx-auto mb-2 h-9 w-9 text-muted-foreground/50" />
+          <p className="text-sm font-bold">Belum ada rider dalam {radiusKm} km</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Coba perluas jangkauan pencarian</p>
         </div>
       ) : (
-        <div className="px-4 space-y-3">
+        <div className="space-y-3 px-5">
           {filteredRiders.map(rider => {
             const status = statusLabel(rider);
             const isFav = favorites.has(rider.id);
@@ -411,70 +411,66 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
               <div
                 key={rider.id}
                 ref={(el) => { riderCardRefs.current[rider.id] = el; }}
-                className={`rounded-2xl p-3 bg-white flex items-center gap-3 active:scale-[0.99] transition-all ${
-                  isFocused
-                    ? 'border-2 border-[#EA2831] shadow-lg ring-2 ring-[#EA2831]/20'
-                    : 'border-2 border-[#EA2831]/30 shadow-sm'
+                className={`cx-card cx-rise flex items-center gap-3 rounded-[24px] p-3.5 transition-all active:scale-[0.99] ${
+                  isFocused ? 'ring-2 ring-zeger/35' : ''
                 }`}
                 onClick={() => focusRiderOnMap(rider)}
               >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
-                  <div className="w-16 h-16 rounded-full overflow-hidden bg-white ring-1 ring-black/5 shadow-md flex items-center justify-center">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-zeger-soft shadow-md ring-2 ring-white">
                     {rider.photo_url ? (
-                      <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
+                      <img src={rider.photo_url} alt={rider.full_name} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#EA2831] font-bold text-xl">
-                        {rider.full_name.charAt(0)}
-                      </div>
+                      <span className="text-xl font-extrabold text-zeger">{rider.full_name.charAt(0)}</span>
                     )}
                   </div>
-                  <span className={`absolute -bottom-0 -right-0 w-4 h-4 rounded-full border-2 border-white ${status.color}`} />
+                  <span className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white ${status.color}`} />
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-bold text-gray-900 uppercase truncate">{rider.full_name}</p>
-                      <p className="text-xs text-gray-500 leading-tight line-clamp-2">{subtitle}</p>
+                      <p className="truncate text-sm font-extrabold">{rider.full_name}</p>
+                      <p className="line-clamp-2 text-[11px] leading-tight text-muted-foreground">{subtitle}</p>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleFav(rider.id); }}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 transition active:scale-90"
                       aria-label="Favorit"
                     >
-                      <Heart className={`h-5 w-5 ${isFav ? 'fill-[#EA2831] text-[#EA2831]' : 'text-gray-400'}`} />
+                      <Heart className={`h-5 w-5 ${isFav ? 'fill-zeger text-zeger' : 'text-muted-foreground/50'}`} />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
                       {rider.lat !== null && rider.lng !== null && (
-                        <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
+                        <span className="cx-num rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
                           {rider.distance_km.toFixed(2)} km
                         </span>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); openWhatsApp(rider.phone, rider.full_name); }}
-                        className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm active:scale-95"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm transition active:scale-90"
                         aria-label="WhatsApp"
                       >
-                        <MessageCircle className="h-4 w-4 text-white" />
+                        <MessageCircle className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); openDirection(rider); }}
                         disabled={rider.lat === null || rider.lng === null}
-                        className="w-7 h-7 rounded-full bg-[#EA2831] flex items-center justify-center shadow-sm active:scale-95 disabled:opacity-40 disabled:active:scale-100"
-                        aria-label="Direction"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-zeger text-white shadow-sm transition active:scale-90 disabled:opacity-40"
+                        aria-label="Rute"
                       >
-                        <Navigation className="h-4 w-4 text-white" />
+                        <Navigation className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedRider(rider); }}
-                      className="px-4 py-1.5 rounded-full bg-[#EA2831] text-white text-xs font-bold shadow"
+                      className="cx-btn cx-btn-primary px-4 py-2 text-[11px]"
                     >
-                      Lihat Stok
+                      Lihat stok
                     </button>
                   </div>
                 </div>
@@ -486,7 +482,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
       {/* Rider detail bottom sheet */}
       <Sheet open={!!selectedRider} onOpenChange={(o) => !o && setSelectedRider(null)}>
-        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden">
+        <SheetContent side="bottom" className="cx-app h-[92vh] overflow-hidden rounded-t-[30px] p-0">
           {selectedRider && <RiderDetailSheet
             rider={selectedRider}
             isFav={favorites.has(selectedRider.id)}
