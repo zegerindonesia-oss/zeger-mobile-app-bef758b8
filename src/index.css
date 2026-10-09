@@ -26,6 +26,12 @@
     --zeger-cream: 43 96% 94%;
     --zeger-gold: 42 92% 52%;
     --zeger-foreground: 0 0% 100%;
+    /* Customer app canvas / lines / depth */
+    --cx-canvas: 20 30% 98%;
+    --cx-rail: 20 16% 94%;
+    --cx-line: 20 14% 90%;
+    --cx-ink: 20 14% 12%;
+    --cx-shadow: 355 40% 20%;
     --gradient-sidebar: linear-gradient(160deg, hsl(354 70% 18%) 0%, hsl(354 72% 30%) 40%, hsl(354 77% 46%) 75%, hsl(355 100% 62%) 100%);
     /* Zeger Brand Colors */
     --background: 0 0% 98%;
