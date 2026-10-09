@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone, MessageCircle } from 'lucide-react';
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, MessageCircle, Bike } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { buildMapsScriptUrl, getGoogleMapsKey } from '@/config/maps';
+import { artworkFor, cxArt, formatRupiah, onArtError } from '@/lib/customer-art';
 
 interface StockItem {
   product_id: string;
