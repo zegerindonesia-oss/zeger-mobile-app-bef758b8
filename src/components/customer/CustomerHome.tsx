@@ -388,6 +388,32 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   );
 }
 
+function BannerSlide({ banner, active, onOpen }: { banner: Banner; active: boolean; onOpen: () => void }) {
+  const primary = normalizeImageUrl(banner.image_url) || zegerPromo.url;
+  const [src, setSrc] = useState(primary);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => { setSrc(primary); setFailed(false); }, [primary]);
+
+  if (failed) return null;
+
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      onError={() => (src === zegerPromo.url ? setFailed(true) : setSrc(zegerPromo.url))}
+      onClick={onOpen}
+      className={cn(
+        'absolute inset-0 h-full w-full object-cover transition-all duration-[900ms] ease-out',
+        active ? 'scale-100 opacity-100' : 'scale-105 opacity-0',
+        banner.link_url && 'cursor-pointer',
+      )}
+    />
+  );
+}
+
+
 function Feature({
   art, fallbackIcon: Icon, title, desc, onClick,
 }: { art: string; fallbackIcon: typeof Gift; title: string; desc: string; onClick: () => void }) {
