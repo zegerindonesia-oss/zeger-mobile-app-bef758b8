@@ -29,13 +29,13 @@
 - [x] CustomerCartNew + CustomerCheckout — outlet asli, voucher, poin, ongkir
 - [x] CustomerProfile, CustomerCare, CustomerNotifications, CustomerReferral
 - [x] BottomNavigation — floating glass dock
-- [ ] CustomerAuth — layar masuk/daftar brand Zeger
-- [ ] CustomerOrders — daftar pesanan gaya baru
-- [ ] CustomerPaymentMethod — pilih pembayaran (glass + raised)
-- [ ] CustomerOrderWaiting / CustomerOrderSuccess — animasi 3D
-- [ ] CustomerOrderTracking + OrderDetail — peta & struk
-- [ ] CustomerMap (On The Wheels) — panggil rider via WhatsApp
-- [ ] CustomerStreetComingSoon
+- [x] CustomerAuth — layar masuk/daftar brand Zeger
+- [x] CustomerOrders — daftar pesanan gaya baru
+- [x] CustomerPaymentMethod — pilih pembayaran (glass + raised)
+- [x] CustomerOrderWaiting / CustomerOrderSuccess — animasi 3D
+- [x] CustomerOrderTracking + OrderDetail — peta & struk
+- [x] CustomerMap (On The Wheels) — panggil rider via WhatsApp
+- [x] CustomerStreetComingSoon
 
 ### Perbaikan fungsi
 - [x] Nomor Zeger Care → +62 813-3180-488
