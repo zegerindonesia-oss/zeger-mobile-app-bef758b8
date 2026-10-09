@@ -685,52 +685,38 @@ function deriveFlavor(product: StockItem): { coffee: number; creaminess: number;
 
 function ProductDetailView({ product, onClose }: { product: StockItem; onClose: () => void }) {
   const flavor = deriveFlavor(product);
+  const art = artworkFor({ name: product.name, category: product.category });
+  const outOfStock = product.stock_quantity <= 0;
+
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header with image */}
-      <div className="relative bg-white pt-4 pb-16">
-        <div className="flex items-center justify-between px-4">
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900 bg-white"
-            aria-label="Kembali"
-          >
-            <ArrowLeft className="h-6 w-6" />
+    <div className="flex h-full flex-col bg-[hsl(var(--cx-canvas))]">
+      {/* Header with artwork */}
+      <div className="cx-stage relative flex-shrink-0 overflow-hidden bg-gradient-to-br from-zeger-dark to-zeger pb-10 pt-4">
+        <div className="relative z-10 flex items-center justify-between px-4">
+          <button onClick={onClose} className="cx-icon-btn h-10 w-10" aria-label="Kembali">
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h2 className="text-gray-900 text-lg font-bold">Detail Menu</h2>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900 bg-white" aria-label="Favorit">
-            <Heart className="h-6 w-6" />
-          </button>
+          <h2 className="text-sm font-extrabold text-white">Detail Menu</h2>
+          <span className="w-10" />
         </div>
-        <div className="flex justify-center mt-4 relative bg-white">
+        <div className="relative z-10 mt-2 flex justify-center">
           <img
-            src="/__l5e/assets-v1/fae4c1de-2361-4c9e-8f55-4976866ad7f6/zeger-logo.png"
-            alt="Zeger"
-            className="absolute top-0 right-4 w-10 h-10 object-contain opacity-90"
+            src={product.image_url || art}
+            onError={onArtError(art)}
+            alt={product.name}
+            className="cx-art cx-float h-52 w-auto max-w-[70%] object-contain"
           />
-          <div className="relative w-64 h-64 flex items-end justify-center bg-white">
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-40 h-3 rounded-full bg-black/15 blur-md" />
-            {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="relative max-h-64 object-contain"
-              />
-            ) : (
-              <div className="relative w-40 h-56 bg-white rounded-2xl" />
-            )}
-          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-8 -mt-6 bg-white">
-        <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-4">{product.name}</h1>
+      <div className="-mt-6 flex-1 overflow-y-auto rounded-t-[28px] bg-[hsl(var(--cx-canvas))] px-5 pb-10 pt-6">
+        <h1 className="text-center text-xl font-extrabold">{product.name}</h1>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-white p-4 flex items-center justify-center">
-            <p className="text-xl font-extrabold text-gray-900">Rp {product.price.toLocaleString('id-ID')}</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="cx-card flex items-center justify-center rounded-[22px] p-4">
+            <p className="cx-num text-lg font-extrabold text-zeger">{formatRupiah(product.price)}</p>
           </div>
-          <div className="rounded-2xl bg-white px-3 py-2">
+          <div className="cx-card rounded-[22px] px-3.5 py-2.5">
             <table className="w-full">
               <tbody>
                 <FlavorDots label="Coffee" level={flavor.coffee} />
@@ -742,14 +728,18 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
         </div>
 
         {product.description && (
-          <p className="text-center text-gray-500 mt-4 leading-relaxed">{product.description}</p>
+          <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">{product.description}</p>
         )}
 
-        <div className="mt-4 flex items-center justify-center">
-          <span className="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
-            Tersedia {product.stock_quantity} cup
+        <div className="mt-5 flex items-center justify-center">
+          <span className={`rounded-full px-4 py-1.5 text-xs font-bold ${outOfStock ? 'bg-[hsl(var(--cx-rail))] text-muted-foreground' : 'bg-emerald-50 text-emerald-700'}`}>
+            {outOfStock ? 'Stok habis' : `Tersedia ${product.stock_quantity} cup`}
           </span>
         </div>
+
+        <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground">
+          Pesan langsung ke rider lewat WhatsApp, atau temui rider di titik lokasinya.
+        </p>
       </div>
     </div>
   );
