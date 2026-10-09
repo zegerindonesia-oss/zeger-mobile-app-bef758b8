@@ -104,18 +104,22 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
             touchX.current = null;
           }}
         >
+          {/* Brand backdrop — always rendered so a missing banner image still looks finished */}
+          <div className="absolute inset-0 bg-gradient-to-br from-zeger-dark via-zeger to-zeger-dark" />
+          <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-[86px] flex flex-col items-center px-8 text-center">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.3em] text-white/70">Zeger Coffee</p>
+            <p className="mt-1 text-xl font-extrabold leading-tight text-white drop-shadow-sm">
+              {banners[slide]?.title || 'Ngopi enak, poinnya ikut'}
+            </p>
+          </div>
+
           {banners.map((b, i) => (
-            <img
+            <BannerSlide
               key={b.id}
-              src={normalizeImageUrl(b.image_url) || zegerPromo.url}
-              alt={b.title}
-              onError={onArtError(zegerPromo.url)}
-              onClick={() => b.link_url && window.open(b.link_url, '_blank', 'noopener')}
-              className={cn(
-                'absolute inset-0 h-full w-full object-cover transition-all duration-[900ms] ease-out',
-                i === slide ? 'scale-100 opacity-100' : 'scale-105 opacity-0',
-                b.link_url && 'cursor-pointer',
-              )}
+              banner={b}
+              active={i === slide}
+              onOpen={() => b.link_url && window.open(b.link_url, '_blank', 'noopener')}
             />
           ))}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[hsl(var(--cx-shadow)/0.45)] via-transparent to-[hsl(var(--cx-shadow)/0.55)]" />
