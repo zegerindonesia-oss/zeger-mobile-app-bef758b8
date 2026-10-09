@@ -1,4 +1,4 @@
-import { ChevronLeft, MessageCircle, HelpCircle, Phone, Clock } from 'lucide-react';
+import { ChevronLeft, MessageCircle, HelpCircle, Clock } from 'lucide-react';
 import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cxArt } from '@/lib/customer-art';
