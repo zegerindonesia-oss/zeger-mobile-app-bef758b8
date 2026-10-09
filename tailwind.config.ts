@@ -19,7 +19,18 @@ export default {
 		},
 		extend: {
 			colors: {
-				zeger: { DEFAULT: "hsl(var(--zeger))", dark: "hsl(var(--zeger-dark))", soft: "hsl(var(--zeger-soft))", cream: "hsl(var(--zeger-cream))", gold: "hsl(var(--zeger-gold))", foreground: "hsl(var(--zeger-foreground))" },
+				// Zeger brand palette (single source — tokens live in index.css)
+				zeger: {
+					DEFAULT: 'hsl(var(--zeger))',
+					dark: 'hsl(var(--zeger-dark))',
+					soft: 'hsl(var(--zeger-soft))',
+					cream: 'hsl(var(--zeger-cream))',
+					gold: 'hsl(var(--zeger-gold))',
+					foreground: 'hsl(var(--zeger-foreground))',
+					red: 'hsl(var(--zeger))',
+					'red-dark': 'hsl(var(--zeger-dark))',
+					brown: 'hsl(30 60% 26%)',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -33,13 +44,6 @@ export default {
 					shadow: 'var(--glass-shadow)',
 				},
 				
-				// Zeger Brand Colors
-				zeger: {
-					red: '#DC2626',
-					'red-dark': '#B91C1C',
-					cream: '#FEF3C7',
-					brown: '#92400E',
-				},
 				
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
