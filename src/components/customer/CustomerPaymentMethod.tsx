@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, QrCode, ShieldCheck, Wallet, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { formatRupiah } from '@/lib/customer-art';
 import { cn } from '@/lib/utils';
 
 interface CustomerPaymentMethodProps {
@@ -15,11 +13,11 @@ interface CustomerPaymentMethodProps {
   onSuccess: (paymentMethod?: string, invoiceUrl?: string) => void;
 }
 
-const eWalletOptions = [
-  { id: 'GOPAY', name: 'GOPAY', icon: '💚', bgColor: 'bg-green-500' },
-  { id: 'SHOPEEPAY', name: 'SHOPEEPAY / SPAYLATER', icon: '🟠', bgColor: 'bg-orange-500' },
-  { id: 'OVO', name: 'OVO', icon: '🟣', bgColor: 'bg-purple-600' },
-  { id: 'JENIUSPAY', name: 'JENIUS PAY', icon: '🔵', bgColor: 'bg-blue-500' },
+const E_WALLETS = [
+  { id: 'GOPAY', name: 'GoPay', note: 'Bayar lewat aplikasi Gojek', ring: 'from-emerald-400 to-emerald-600' },
+  { id: 'SHOPEEPAY', name: 'ShopeePay / SPayLater', note: 'Saldo atau cicilan Shopee', ring: 'from-orange-400 to-orange-600' },
+  { id: 'OVO', name: 'OVO', note: 'Saldo OVO & OVO Points', ring: 'from-violet-400 to-violet-600' },
+  { id: 'JENIUSPAY', name: 'Jenius Pay', note: 'Bayar dengan $cashtag', ring: 'from-sky-400 to-sky-600' },
 ];
 
 export default function CustomerPaymentMethod({
@@ -37,15 +35,10 @@ export default function CustomerPaymentMethod({
 
   const handlePayment = async () => {
     if (!selectedMethod) {
-      toast({
-        title: 'Error',
-        description: 'Pilih metode pembayaran terlebih dahulu',
-        variant: 'destructive',
-      });
+      toast({ title: 'Pilih metode dulu', description: 'Tentukan cara pembayaran kamu.', variant: 'destructive' });
       return;
     }
 
-    // SPECIAL HANDLING FOR QRIS - Show static QRIS
     if (selectedMethod === 'QRIS') {
       setShowQRISModal(true);
       return;
@@ -54,42 +47,21 @@ export default function CustomerPaymentMethod({
     setLoading(true);
 
     try {
-      console.log('💳 Processing payment:', {
-        order_id: orderId,
-        amount: totalAmount,
-        method: selectedMethod
-      });
-
-      // Call Xendit edge function for e-wallets
       const { data, error } = await supabase.functions.invoke('create-xendit-invoice', {
-        body: {
-          order_id: orderId,
-          amount: totalAmount,
-          payment_method: selectedMethod,
-        },
+        body: { order_id: orderId, amount: totalAmount, payment_method: selectedMethod },
       });
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('✅ Xendit response:', data);
-
-      // Redirect to Xendit payment page
       if (data?.invoice_url) {
-        console.log('🔗 Redirecting to:', data.invoice_url);
         window.location.href = data.invoice_url;
       } else {
-        // Payment method doesn't require redirect
         onSuccess(selectedMethod);
       }
-      
     } catch (error: any) {
-      console.error('❌ Payment error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Gagal memproses pembayaran',
+        title: 'Pembayaran gagal diproses',
+        description: error.message || 'Coba lagi beberapa saat.',
         variant: 'destructive',
       });
       setLoading(false);
@@ -97,198 +69,182 @@ export default function CustomerPaymentMethod({
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f6f6] font-display">
-      <div className="container mx-auto max-w-md">
-        <div className="flex flex-col h-screen">
-          {/* Header */}
-          <header className="flex items-center p-4 border-b border-gray-200 bg-white">
-            <button onClick={onBack} className="text-gray-900">
-              <ArrowLeft className="h-6 w-6" />
-            </button>
-            <h1 className="flex-1 text-center text-lg font-medium text-gray-900">
-              Metode Pembayaran
-            </h1>
-            <div className="w-6"></div>
-          </header>
+    <div className="cx-app min-h-screen bg-[hsl(var(--cx-canvas))]">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col">
+        {/* Header */}
+        <header className="cx-bar sticky top-0 z-20 flex items-center gap-3 px-4 py-3">
+          <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-10 w-10">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-extrabold">Metode Pembayaran</h1>
+            <p className="text-[11px] text-muted-foreground">
+              {orderType === 'outlet_delivery' ? 'Pesanan diantar' : 'Pesanan diambil di outlet'}
+            </p>
+          </div>
+        </header>
 
-          {/* Main Content */}
-          <main className="flex-1 p-4 overflow-y-auto">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">E-Wallet</h2>
-            <div className="space-y-4">
-              {eWalletOptions.map((wallet) => (
-                <label 
-                  key={wallet.id}
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all",
-                    selectedMethod === wallet.id 
-                      ? "border-[#EA2831] bg-red-50" 
-                      : "border-gray-200 bg-white"
-                  )}
+        <main className="flex-1 space-y-5 px-5 pb-40 pt-4">
+          {/* Amount */}
+          <section className="cx-card cx-rise relative overflow-hidden rounded-[26px] bg-gradient-to-br from-zeger-dark to-zeger p-5 text-white">
+            <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+            <p className="relative text-[11px] font-semibold uppercase tracking-wide text-white/80">Total bayar</p>
+            <p className="cx-num relative mt-1 text-3xl font-extrabold">{formatRupiah(totalAmount)}</p>
+            <p className="relative mt-2 inline-flex items-center gap-1.5 text-[11px] text-white/85">
+              <ShieldCheck className="h-3.5 w-3.5" /> Transaksi aman & terenkripsi
+            </p>
+          </section>
+
+          {/* E-wallet */}
+          <section className="space-y-2.5">
+            <h2 className="flex items-center gap-2 pl-1 text-sm font-extrabold">
+              <Wallet className="h-4 w-4 text-zeger" /> E-Wallet
+            </h2>
+            {E_WALLETS.map((w) => {
+              const active = selectedMethod === w.id;
+              return (
+                <button
+                  key={w.id}
+                  type="button"
+                  onClick={() => setSelectedMethod(w.id)}
+                  data-active={active}
+                  className="cx-opt flex w-full items-center gap-3 rounded-[22px] p-3.5 text-left"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm",
-                      wallet.bgColor
-                    )}>
-                      {wallet.icon}
-                    </div>
-                    <span className="font-medium text-gray-900">{wallet.name}</span>
-                  </div>
-                  <input 
-                    type="radio"
-                    name="payment_method"
-                    value={wallet.id}
-                    checked={selectedMethod === wallet.id}
-                    onChange={() => setSelectedMethod(wallet.id)}
-                    className="form-radio h-5 w-5 text-[#EA2831]"
-                  />
-                </label>
-              ))}
-            </div>
+                  <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-md', w.ring)}>
+                    <Wallet className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">{w.name}</span>
+                    <span className="block truncate text-[11px] opacity-70">{w.note}</span>
+                  </span>
+                  <span className={cn(
+                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
+                    active ? 'border-white bg-white/25' : 'border-[hsl(var(--cx-line))]',
+                  )}>
+                    {active && <Check className="h-3.5 w-3.5" />}
+                  </span>
+                </button>
+              );
+            })}
+          </section>
 
-            <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">QRIS</h2>
-            <label className="flex items-center justify-between p-4 rounded-lg bg-white border border-gray-200 cursor-pointer">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-8 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">
-                  QRIS
-                </div>
-                <span className="font-medium text-gray-900">QRIS</span>
-              </div>
-              <input 
-                type="radio"
-                name="payment_method"
-                value="QRIS"
-                checked={selectedMethod === 'QRIS'}
-                onChange={() => setSelectedMethod('QRIS')}
-                className="form-radio h-5 w-5 text-[#EA2831]"
-              />
-            </label>
-          </main>
-
-          {/* Footer */}
-          <footer className="p-4 border-t border-gray-200 bg-white">
-            <div className="bg-purple-900 text-white p-4 rounded-lg flex items-start space-x-3 mb-4">
-              <div className="bg-red-500 rounded-full p-2">
-                <span className="text-white text-xl">📢</span>
-              </div>
-              <div>
-                <p className="font-bold">Pastikan Saldo Cukup!</p>
-                <p className="text-sm">Pastikan saldo kamu cukup sebelum melakukan pembayaran</p>
-              </div>
-            </div>
-            <button 
-              onClick={handlePayment}
-              disabled={!selectedMethod || loading}
-              className={cn(
-                "w-full py-4 rounded-full font-bold transition-colors",
-                selectedMethod 
-                  ? "bg-[#EA2831] text-white hover:bg-red-600" 
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              )}
+          {/* QRIS */}
+          <section className="space-y-2.5">
+            <h2 className="flex items-center gap-2 pl-1 text-sm font-extrabold">
+              <QrCode className="h-4 w-4 text-zeger" /> QRIS
+            </h2>
+            <button
+              type="button"
+              onClick={() => setSelectedMethod('QRIS')}
+              data-active={selectedMethod === 'QRIS'}
+              className="cx-opt flex w-full items-center gap-3 rounded-[22px] p-3.5 text-left"
             >
-              {loading ? 'Memproses...' : 'Konfirmasi'}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-md">
+                <QrCode className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold">Scan QRIS Zeger</span>
+                <span className="block text-[11px] opacity-70">Semua e-wallet & mobile banking</span>
+              </span>
+              <span className={cn(
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
+                selectedMethod === 'QRIS' ? 'border-white bg-white/25' : 'border-[hsl(var(--cx-line))]',
+              )}>
+                {selectedMethod === 'QRIS' && <Check className="h-3.5 w-3.5" />}
+              </span>
             </button>
-          </footer>
-        </div>
+          </section>
+
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[11px] leading-relaxed text-amber-900">
+            <span className="font-bold">Pastikan saldo cukup.</span> Pesanan diproses setelah pembayaran berhasil dikonfirmasi.
+          </p>
+        </main>
+
+        {/* Sticky footer */}
+        <footer className="cx-bar fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-5 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3">
+          <button
+            onClick={handlePayment}
+            disabled={!selectedMethod || loading}
+            className="cx-btn cx-btn-primary w-full py-4 text-sm"
+          >
+            {loading
+              ? (<><Loader2 className="h-4 w-4 animate-spin" /> Memproses…</>)
+              : (<>Bayar {formatRupiah(totalAmount)}</>)}
+          </button>
+        </footer>
       </div>
 
-      {/* QRIS Payment Modal */}
+      {/* QRIS modal */}
       {showQRISModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
-              <h2 className="text-lg font-bold text-gray-900">Pembayaran QRIS</h2>
-              <button 
-                onClick={() => {
-                  setShowQRISModal(false);
-                  setPaymentConfirmed(false);
-                }}
-                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/55 backdrop-blur-sm sm:items-center">
+          <div className="cx-pop-in max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[30px] bg-white sm:rounded-[30px]">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[hsl(var(--cx-line))] bg-white/90 px-5 py-4 backdrop-blur">
+              <h2 className="text-base font-extrabold">Pembayaran QRIS</h2>
+              <button
+                onClick={() => { setShowQRISModal(false); setPaymentConfirmed(false); }}
+                aria-label="Tutup"
+                className="cx-icon-btn h-9 w-9"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* QRIS Image */}
-            <div className="p-6">
-              <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
-                <img 
-                  src="/qris/zeger-qris.jpg" 
-                  alt="QRIS Code Zeger Coffee"
-                  className="w-full h-auto rounded-lg"
-                />
+            <div className="space-y-5 p-5">
+              <div className="cx-card rounded-[24px] p-3">
+                <img src="/qris/zeger-qris.jpg" alt="Kode QRIS Zeger Coffee" className="w-full rounded-[18px]" />
               </div>
 
-              {/* Instructions */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-bold text-blue-900 mb-2">Cara Pembayaran:</h3>
-                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                  <li>Buka aplikasi e-wallet Anda (GoPay, OVO, Dana, dll)</li>
-                  <li>Pilih menu "Scan QR" atau "Bayar"</li>
-                  <li>Scan QRIS code di atas</li>
-                  <li>Masukkan nominal: <span className="font-bold">Rp{totalAmount.toLocaleString('id-ID')}</span></li>
-                  <li>Konfirmasi pembayaran</li>
-                  <li>Klik tombol "Sudah Bayar" di bawah</li>
-                </ol>
+              <div className="rounded-[22px] bg-[hsl(var(--cx-rail))] p-4 text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Total pembayaran</p>
+                <p className="cx-num mt-1 text-3xl font-extrabold text-zeger">{formatRupiah(totalAmount)}</p>
               </div>
 
-              {/* Total Amount */}
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 text-center">
-                <p className="text-sm text-gray-600 mb-1">Total Pembayaran</p>
-                <p className="text-3xl font-bold text-[#EA2831]">
-                  Rp{totalAmount.toLocaleString('id-ID')}
-                </p>
-              </div>
+              <ol className="space-y-2 rounded-[22px] border border-[hsl(var(--cx-line))] p-4 text-xs leading-relaxed text-muted-foreground">
+                {[
+                  'Buka aplikasi e-wallet atau m-banking kamu',
+                  'Pilih menu Scan QR lalu arahkan ke kode di atas',
+                  `Masukkan nominal ${formatRupiah(totalAmount)}`,
+                  'Selesaikan pembayaran, lalu tekan "Sudah bayar"',
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-2.5">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zeger text-[10px] font-bold text-white">{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
 
-              {/* Confirmation Checkbox */}
-              <label className="flex items-start gap-3 mb-6 cursor-pointer">
-                <input 
+              <label className="flex cursor-pointer items-start gap-3 rounded-[20px] bg-[hsl(var(--cx-rail))] p-4">
+                <input
                   type="checkbox"
                   checked={paymentConfirmed}
                   onChange={(e) => setPaymentConfirmed(e.target.checked)}
-                  className="mt-1 h-5 w-5 text-[#EA2831] rounded"
+                  className="mt-0.5 h-5 w-5 accent-[hsl(var(--zeger))]"
                 />
-                <span className="text-sm text-gray-700">
-                  Saya sudah melakukan pembayaran melalui QRIS
-                </span>
+                <span className="text-xs font-semibold leading-snug">Saya sudah melakukan pembayaran melalui QRIS</span>
               </label>
 
-              {/* Confirm Button */}
-              <button
-                onClick={() => {
-                  if (!paymentConfirmed) {
-                    toast({
-                      title: 'Perhatian',
-                      description: 'Centang konfirmasi pembayaran terlebih dahulu',
-                      variant: 'destructive'
-                    });
-                    return;
-                  }
-                  setShowQRISModal(false);
-                  onSuccess('QRIS');
-                }}
-                disabled={!paymentConfirmed}
-                className={cn(
-                  "w-full py-4 rounded-full font-bold transition-colors",
-                  paymentConfirmed
-                    ? "bg-[#EA2831] text-white hover:bg-red-700"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                )}
-              >
-                Sudah Bayar
-              </button>
-
-              {/* Cancel Button */}
-              <button
-                onClick={() => {
-                  setShowQRISModal(false);
-                  setPaymentConfirmed(false);
-                }}
-                className="w-full mt-3 py-3 text-gray-600 hover:text-gray-900 font-medium"
-              >
-                Batal
-              </button>
+              <div className="space-y-2 pb-[calc(env(safe-area-inset-bottom)+4px)]">
+                <button
+                  onClick={() => {
+                    if (!paymentConfirmed) {
+                      toast({ title: 'Belum dicentang', description: 'Centang konfirmasi pembayaran dulu.', variant: 'destructive' });
+                      return;
+                    }
+                    setShowQRISModal(false);
+                    onSuccess('QRIS');
+                  }}
+                  disabled={!paymentConfirmed}
+                  className="cx-btn cx-btn-primary w-full py-4 text-sm"
+                >
+                  Sudah bayar
+                </button>
+                <button
+                  onClick={() => { setShowQRISModal(false); setPaymentConfirmed(false); }}
+                  className="cx-btn cx-btn-ghost w-full py-3 text-sm"
+                >
+                  Batal
+                </button>
+              </div>
             </div>
           </div>
         </div>

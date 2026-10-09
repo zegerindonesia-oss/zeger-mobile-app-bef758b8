@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Phone, MapPin, Clock, Navigation, Star, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, Clock, Navigation, Star, CheckCircle2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { cxArt } from '@/lib/customer-art';
+import { cn } from '@/lib/utils';
 
 // Import Google Maps API key from config
 import { buildMapsScriptUrl, getGoogleMapsKey } from '@/config/maps';
@@ -33,7 +32,7 @@ export default function CustomerOrderTracking({
   customerLat,
   customerLng,
   deliveryAddress,
-  onCompleted
+  onCompleted,
 }: CustomerOrderTrackingProps) {
   const { toast } = useToast();
   const [riderLocation, setRiderLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -67,24 +66,16 @@ export default function CustomerOrderTracking({
       script.async = true;
       script.defer = true;
       script.onload = initializeMap;
-      
+
       script.onerror = () => {
-        console.error('❌ Failed to load Google Maps script');
-        console.error('Current URL:', window.location.href);
-        console.error('Check:');
-        console.error('1. Maps JavaScript API enabled in Google Cloud');
-        console.error('2. Billing account active');
-        console.error('3. HTTP Referrer restrictions: *.lovableproject.com/*');
-        
         setMapLoadError(true);
-        
         toast({
-          title: "Maps Gagal Dimuat",
-          description: "Periksa koneksi internet atau coba buka di Google Maps",
-          variant: "destructive"
+          title: 'Peta gagal dimuat',
+          description: 'Periksa koneksi internet atau buka lewat Google Maps.',
+          variant: 'destructive',
         });
       };
-      
+
       document.head.appendChild(script);
     };
 
@@ -92,12 +83,13 @@ export default function CustomerOrderTracking({
       if (!mapContainer.current || !(window as any).google?.maps) return;
       const google = (window as any).google;
 
-      // Create map
       map.current = new google.maps.Map(mapContainer.current, {
         center: { lat: customerLat, lng: customerLng },
         zoom: 14,
         mapTypeControl: false,
         fullscreenControl: false,
+        streetViewControl: false,
+        zoomControl: false,
       });
 
       // Customer marker (blue)
@@ -122,7 +114,7 @@ export default function CustomerOrderTracking({
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: '#EF4444', // Zeger red
+          fillColor: '#EF4444',
           fillOpacity: 1,
           strokeColor: '#ffffff',
           strokeWeight: 3,
@@ -130,11 +122,10 @@ export default function CustomerOrderTracking({
         title: rider.full_name,
       });
 
-      // Polyline for route (Zeger red)
       polyline.current = new google.maps.Polyline({
         path: [],
         geodesic: true,
-        strokeColor: '#EF4444', // Zeger red
+        strokeColor: '#EF4444',
         strokeOpacity: 1.0,
         strokeWeight: 3,
         map: map.current,
@@ -144,42 +135,34 @@ export default function CustomerOrderTracking({
     loadGoogleMaps();
   }, []);
 
-  // Phase 5: Subscribe to rider location updates and order status
+  // Subscribe to rider location updates and order status
   useEffect(() => {
     if (!rider.id) return;
 
-    console.log('🔄 Starting real-time tracking for order:', orderId);
-
-    // Subscribe to rider location updates
     const locationChannel = supabase
       .channel('rider_location_tracking')
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'rider_locations',
-        filter: `rider_id=eq.${rider.id}`
-      }, (payload) => {
+        filter: `rider_id=eq.${rider.id}`,
+      }, (payload: any) => {
         const newLat = payload.new.latitude;
         const newLng = payload.new.longitude;
 
-        console.log('📍 Rider location updated:', { newLat, newLng });
-
         setRiderLocation({ lat: newLat, lng: newLng });
 
-        // Update marker position
         if (riderMarker.current) {
           riderMarker.current.setPosition({ lat: newLat, lng: newLng });
         }
 
-        // Update polyline
         if (polyline.current) {
           polyline.current.setPath([
             { lat: newLat, lng: newLng },
-            { lat: customerLat, lng: customerLng }
+            { lat: customerLat, lng: customerLng },
           ]);
         }
 
-        // Center map to show both markers
         if (map.current) {
           const google = (window as any).google;
           const bounds = new google.maps.LatLngBounds();
@@ -188,32 +171,27 @@ export default function CustomerOrderTracking({
           map.current.fitBounds(bounds, 100);
         }
 
-        // Calculate distance and ETA
         calculateDistanceAndETA(newLat, newLng);
       })
       .subscribe();
 
-    // Subscribe to order status changes
     const statusChannel = supabase
       .channel('order_status_tracking')
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'customer_orders',
-        filter: `id=eq.${orderId}`
-      }, (payload) => {
+        filter: `id=eq.${orderId}`,
+      }, (payload: any) => {
         const newStatus = payload.new.status;
-        console.log('📦 Order status changed:', newStatus);
         setOrderStatus(newStatus);
 
         if (newStatus === 'delivered') {
-          console.log('✅ Order delivered!');
-          
           toast({
-            title: "Pesanan Telah Sampai! 🎉",
-            description: "Rider telah menyelesaikan pengiriman. Selamat menikmati!",
+            title: 'Pesanan telah sampai!',
+            description: 'Rider sudah menyelesaikan pengiriman. Selamat menikmati!',
           });
-          
+
           setTimeout(() => {
             onCompleted();
           }, 3000);
@@ -221,24 +199,18 @@ export default function CustomerOrderTracking({
       })
       .subscribe();
 
-    // Subscribe to order_status_history for detailed status updates
     const historyChannel = supabase
       .channel('order_history_tracking')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'order_status_history',
-        filter: `order_id=eq.${orderId}`
-      }, (payload) => {
-        const newHistory = payload.new;
-        console.log('📝 New status history:', newHistory.status);
-        
-        // Update order status based on history
-        setOrderStatus(newHistory.status);
+        filter: `order_id=eq.${orderId}`,
+      }, (payload: any) => {
+        setOrderStatus(payload.new.status);
       })
       .subscribe();
 
-    // Fetch initial rider location
     const fetchInitialLocation = async () => {
       const { data } = await supabase
         .from('rider_locations')
@@ -249,15 +221,14 @@ export default function CustomerOrderTracking({
       if (data) {
         setRiderLocation({ lat: data.latitude, lng: data.longitude });
         calculateDistanceAndETA(data.latitude, data.longitude);
-        
-        // Update marker and map
+
         if (riderMarker.current) {
           riderMarker.current.setPosition({ lat: data.latitude, lng: data.longitude });
         }
         if (polyline.current) {
           polyline.current.setPath([
             { lat: data.latitude, lng: data.longitude },
-            { lat: customerLat, lng: customerLng }
+            { lat: customerLat, lng: customerLng },
           ]);
         }
       }
@@ -273,223 +244,200 @@ export default function CustomerOrderTracking({
   }, [rider.id, orderId]);
 
   const calculateDistanceAndETA = (riderLat: number, riderLng: number) => {
-    // Haversine formula
     const R = 6371; // Earth radius in km
-    const dLat = (customerLat - riderLat) * Math.PI / 180;
-    const dLon = (customerLng - riderLng) * Math.PI / 180;
-    const lat1 = riderLat * Math.PI / 180;
-    const lat2 = customerLat * Math.PI / 180;
+    const dLat = ((customerLat - riderLat) * Math.PI) / 180;
+    const dLon = ((customerLng - riderLng) * Math.PI) / 180;
+    const lat1 = (riderLat * Math.PI) / 180;
+    const lat2 = (customerLat * Math.PI) / 180;
 
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const dist = R * c;
 
     setDistance(dist);
-    
-    // Calculate ETA (assuming average speed of 20 km/h)
+
+    // ETA assuming average speed of 20 km/h
     const estimatedTime = (dist / 20) * 60;
     setEta(Math.ceil(estimatedTime));
   };
 
-  const handleCallRider = () => {
-    if (rider.phone) {
-      console.log('🔍 Original phone:', rider.phone);
-      
-      // Step 1: Remove ALL non-digit characters FIRST
-      let phoneNumber = rider.phone.replace(/\D/g, '');
-      console.log('📱 After removing non-digits:', phoneNumber);
-      
-      // Step 2: Handle different formats
-      if (phoneNumber.startsWith('0')) {
-        // If starts with 0, replace with 62
-        phoneNumber = '62' + phoneNumber.slice(1);
-      } else if (!phoneNumber.startsWith('62')) {
-        // If doesn't start with 62, add it
-        phoneNumber = '62' + phoneNumber;
-      }
-      
-      console.log('✅ Final WhatsApp number:', phoneNumber);
-      console.log('🔗 Opening:', `https://wa.me/${phoneNumber}`);
-      
-      // Open WhatsApp
-      window.open(`https://wa.me/${phoneNumber}`, '_blank');
-    } else {
-      console.error('❌ No phone number found for rider:', rider);
+  const riderWa = (() => {
+    if (!rider.phone) return '';
+    let phoneNumber = rider.phone.replace(/\D/g, '');
+    if (phoneNumber.startsWith('0')) phoneNumber = `62${phoneNumber.slice(1)}`;
+    else if (!phoneNumber.startsWith('62')) phoneNumber = `62${phoneNumber}`;
+    return phoneNumber;
+  })();
+
+  const handleChatRider = () => {
+    if (!riderWa) {
       toast({
-        title: "Nomor Tidak Tersedia",
-        description: "Nomor telepon rider tidak ditemukan",
-        variant: "destructive"
+        title: 'Nomor tidak tersedia',
+        description: 'Nomor telepon rider belum terdaftar.',
+        variant: 'destructive',
       });
+      return;
     }
+    window.open(`https://wa.me/${riderWa}`, '_blank');
   };
 
-  const getStatusText = () => {
+  const statusText = (() => {
     switch (orderStatus) {
-      case 'pending':
-        return 'Mencari rider terdekat...';
-      case 'accepted':
-        return 'Rider sedang menuju lokasi Anda';
-      case 'in_progress':
-        return 'Rider dalam perjalanan ke lokasi Anda';
-      case 'delivered':
-        return 'Rider telah sampai! Pesanan selesai. 🎉';
-      case 'completed':
-        return 'Pesanan selesai';
-      default:
-        return 'Memproses pesanan...';
+      case 'pending': return 'Mencari rider terdekat…';
+      case 'accepted': return 'Rider sedang menuju lokasi kamu';
+      case 'in_progress': return 'Rider dalam perjalanan';
+      case 'arrived': return 'Rider sudah tiba di lokasi';
+      case 'delivered': return 'Pesanan sampai. Selamat menikmati!';
+      case 'completed': return 'Pesanan selesai';
+      default: return 'Memproses pesanan…';
     }
-  };
+  })();
+
+  const onTheWay = ['in_progress', 'arrived', 'delivered', 'completed'].includes(orderStatus);
+  const arrived = ['delivered', 'completed'].includes(orderStatus);
+
+  const steps = [
+    { label: 'Dikonfirmasi', icon: CheckCircle2, done: true, active: !onTheWay },
+    { label: 'Dalam perjalanan', icon: Navigation, done: onTheWay, active: onTheWay && !arrived },
+    { label: 'Sampai', icon: CheckCircle2, done: arrived, active: arrived },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#f8f6f6] flex flex-col">
-      {/* Map Container with Rounded Bottom */}
-      <div className="relative h-48 overflow-hidden rounded-b-3xl">
+    <div className="cx-app flex min-h-screen flex-col bg-[hsl(var(--cx-canvas))]">
+      {/* Map */}
+      <div className="relative h-[42vh] min-h-[280px] w-full overflow-hidden">
         {mapLoadError ? (
-          <div className="flex items-center justify-center h-full min-h-[400px] bg-muted rounded-lg">
-            <div className="text-center space-y-4 p-6">
-              <MapPin className="h-16 w-16 mx-auto text-muted-foreground" />
+          <div className="flex h-full items-center justify-center bg-[hsl(var(--cx-rail))] px-8">
+            <div className="space-y-4 text-center">
+              <MapPin className="mx-auto h-12 w-12 text-muted-foreground" />
               <div>
-                <h3 className="font-semibold text-lg">Peta Tidak Dapat Dimuat</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Gunakan Google Maps sebagai alternatif
-                </p>
+                <h3 className="text-sm font-extrabold">Peta tidak dapat dimuat</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Gunakan Google Maps sebagai alternatif.</p>
               </div>
-              <Button
-                onClick={() => window.open(
-                  `https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}`,
-                  '_blank'
-                )}
-                className="bg-red-500 hover:bg-red-600"
+              <button
+                onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}`, '_blank')}
+                className="cx-btn cx-btn-primary mx-auto px-5 py-3 text-xs"
               >
-                <Navigation className="h-4 w-4 mr-2" />
-                Buka di Google Maps
-              </Button>
+                <Navigation className="h-4 w-4" /> Buka di Google Maps
+              </button>
             </div>
           </div>
         ) : (
-          <>
-            <div ref={mapContainer} className="w-full h-full" />
+          <div ref={mapContainer} className="h-full w-full" />
+        )}
 
-            {/* Overlay Header with Gradient */}
-            <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/50 to-transparent">
-              <div className="flex items-center">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white/20"
-                  onClick={() => window.history.back()}
-                >
-                  <span className="text-white">←</span>
-                </Button>
-                <h1 className="flex-1 text-xl font-semibold text-center text-white">Track Order</h1>
-                <div className="w-10"></div>
-              </div>
-            </div>
-          </>
+        {/* Floating header */}
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-3 bg-gradient-to-b from-black/45 to-transparent px-4 pb-10 pt-4">
+          <button onClick={() => window.history.back()} aria-label="Kembali" className="cx-icon-btn h-10 w-10">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="flex-1 text-center">
+            <p className="text-sm font-extrabold text-white drop-shadow">Lacak Pesanan</p>
+          </div>
+          <div className="w-10" />
+        </div>
+
+        {/* Live badge */}
+        {riderLocation && !mapLoadError && (
+          <div className="cx-card-glass absolute bottom-12 left-4 z-10 flex items-center gap-2 rounded-full px-3 py-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <span className="text-[11px] font-bold">Lokasi rider live</span>
+          </div>
         )}
       </div>
 
-      {/* Bottom Info Card - Rounded Top */}
-      <div className="bg-[#f8f6f6] -mt-8 relative rounded-t-3xl flex-1">
-        {/* Home Indicator */}
-        <div className="flex justify-center pt-4 mb-4">
-          <div className="w-16 h-1.5 bg-gray-300 rounded-full"></div>
-        </div>
+      {/* Sheet */}
+      <div className="relative z-20 -mt-7 flex-1 rounded-t-[30px] bg-[hsl(var(--cx-canvas))] pb-10 shadow-[0_-10px_30px_-12px_hsl(var(--cx-shadow)/0.25)]">
+        <div className="mx-auto mb-4 mt-3 h-1.5 w-12 rounded-full bg-[hsl(var(--cx-line))]" />
 
-        {/* Content */}
-        <div className="px-4 pb-4 space-y-6">
-          {/* Estimated Time */}
-          <div className="flex items-center">
-            <Clock className="h-5 w-5 text-gray-500 mr-4" />
-            <div>
-              <p className="text-sm text-gray-500">Estimated Delivery Time</p>
-              <p className="text-lg font-bold text-gray-900">{eta ? `${eta} minutes` : '15 minutes'}</p>
+        <div className="mx-auto w-full max-w-md space-y-4 px-5">
+          {/* Status + ETA */}
+          <div className="cx-card cx-rise flex items-center gap-4 rounded-[26px] p-5">
+            <img src={cxArt.scooter} alt="" className={cn('h-14 w-14 shrink-0 object-contain cx-art', onTheWay && !arrived && 'cx-float')} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold leading-snug">{statusText}</p>
+              <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" /> Estimasi tiba {eta ? `${eta} menit` : '15 menit'}
+              </p>
             </div>
           </div>
 
-          <div className="border-t border-gray-200 pt-4"></div>
-          {/* Status Timeline */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex flex-col items-center flex-1">
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <span className="text-xs mt-1 text-center">Dikonfirmasi</span>
-            </div>
-            <div className="flex-1 h-1 bg-primary" />
-            <div className="flex flex-col items-center flex-1">
-              <div className={`w-8 h-8 rounded-full ${orderStatus === 'in_progress' || orderStatus === 'arrived' ? 'bg-primary animate-pulse' : 'bg-gray-300'} flex items-center justify-center text-white`}>
-                <Navigation className="h-5 w-5" />
-              </div>
-              <span className="text-xs mt-1 text-center">Dalam Perjalanan</span>
-            </div>
-            <div className={`flex-1 h-1 ${orderStatus === 'arrived' || orderStatus === 'delivered' || orderStatus === 'completed' ? 'bg-primary' : 'bg-gray-300'}`} />
-            <div className="flex flex-col items-center flex-1">
-              <div className={`w-8 h-8 rounded-full ${orderStatus === 'delivered' || orderStatus === 'completed' ? 'bg-green-500' : 'bg-gray-300'} flex items-center justify-center text-white`}>
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <span className="text-xs mt-1 text-center">Pesanan Sampai</span>
+          {/* Timeline */}
+          <div className="cx-card cx-rise rounded-[26px] px-5 py-5">
+            <div className="flex items-start">
+              {steps.map((s, i) => (
+                <div key={s.label} className="flex flex-1 items-start">
+                  <div className="flex flex-1 flex-col items-center text-center">
+                    <span className={cn(
+                      'flex h-9 w-9 items-center justify-center rounded-full border-2 transition',
+                      s.done ? 'border-transparent bg-gradient-to-br from-zeger to-zeger-dark text-white shadow-md' : 'border-[hsl(var(--cx-line))] bg-white text-muted-foreground',
+                      s.active && 'cx-pulse-ring',
+                    )}>
+                      <s.icon className="h-4 w-4" />
+                    </span>
+                    <span className={cn('mt-2 text-[11px] font-bold leading-tight', s.done ? 'text-foreground' : 'text-muted-foreground')}>
+                      {s.label}
+                    </span>
+                  </div>
+                  {i < steps.length - 1 && (
+                    <span className={cn('mt-[18px] h-1 flex-1 rounded-full', steps[i + 1].done ? 'bg-zeger' : 'bg-[hsl(var(--cx-line))]')} />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Rider Profile Card */}
-          <Card className="shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-              <Avatar className="h-14 w-14 ring-2 ring-primary/10">
+          {/* Rider */}
+          <div className="cx-card cx-rise space-y-4 rounded-[26px] p-5">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-14 w-14 ring-2 ring-zeger/15">
                 <AvatarImage src={rider.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${rider.id}`} />
                 <AvatarFallback>{rider.full_name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">{rider.full_name}</h3>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    {rider.rating || 4.5}
-                  </Badge>
-                  <Badge variant="default" className="bg-green-500">🟢 Sedang OTW</Badge>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-extrabold">{rider.full_name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {rider.rating || 4.5}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                    Rider Zeger
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Distance & ETA */}
             {distance !== null && eta !== null && (
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="bg-background p-3 rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <MapPin className="h-4 w-4" />
-                    <span className="text-xs">Jarak</span>
-                  </div>
-                  <p className="text-xl font-bold">{distance.toFixed(1)} km</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-[20px] bg-[hsl(var(--cx-rail))] p-3.5">
+                  <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> Jarak</p>
+                  <p className="cx-num mt-1 text-lg font-extrabold">{distance.toFixed(1)} km</p>
                 </div>
-                <div className="bg-background p-3 rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-xs">Estimasi</span>
-                  </div>
-                  <p className="text-xl font-bold">~{eta} menit</p>
+                <div className="rounded-[20px] bg-[hsl(var(--cx-rail))] p-3.5">
+                  <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Clock className="h-3.5 w-3.5" /> Estimasi</p>
+                  <p className="cx-num mt-1 text-lg font-extrabold">~{eta} menit</p>
                 </div>
               </div>
             )}
 
-            {/* Delivery Address */}
-            <div className="flex items-start gap-2 text-sm text-muted-foreground mb-3">
-              <MapPin className="h-4 w-4 mt-0.5" />
+            <div className="flex items-start gap-2 rounded-[20px] bg-[hsl(var(--cx-rail))] p-3.5 text-xs leading-snug">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zeger" />
               <span className="flex-1">{deliveryAddress}</span>
             </div>
 
-              {/* Contact Rider Button */}
-              <Button
-                size="lg"
-                className="w-full bg-[#EA2831] hover:bg-red-600"
-                onClick={handleCallRider}
-              >
-                <Phone className="h-4 w-4 mr-2" />
-                Contact Rider
-              </Button>
-            </CardContent>
-          </Card>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button onClick={() => rider.phone && (window.location.href = `tel:${rider.phone}`)} className="cx-btn cx-btn-ghost py-3 text-xs">
+                <Phone className="h-4 w-4" /> Telepon
+              </button>
+              <button onClick={handleChatRider} className="cx-btn cx-btn-primary py-3 text-xs">
+                <MessageCircle className="h-4 w-4" /> Chat rider
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

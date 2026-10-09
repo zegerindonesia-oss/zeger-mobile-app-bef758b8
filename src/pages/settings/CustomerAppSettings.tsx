@@ -39,6 +39,7 @@ export default function CustomerAppSettings() {
   const [faq, setFaq] = useState<{ q: string; a: string }[]>([]);
   const [referralPoints, setReferralPoints] = useState(50);
   const [prefix, setPrefix] = useState('ZG-');
+  const [fees, setFees] = useState({ delivery_fee: 25400, delivery_discount_percent: 20, takeaway_charge: 3500 });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { document.title = 'Customer App Settings | Zeger ERP'; load(); }, []);
@@ -53,6 +54,7 @@ export default function CustomerAppSettings() {
     setFaq(Array.isArray(map['care.faq_items']) ? map['care.faq_items'] : []);
     setReferralPoints(typeof map['referral.reward_points'] === 'number' ? map['referral.reward_points'] : 50);
     setPrefix(typeof map['referral.code_prefix'] === 'string' ? map['referral.code_prefix'] : 'ZG-');
+    setFees(f => ({ ...f, ...(map['order.fees'] || {}) }));
   };
 
   const upsert = async (key: string, value: any) => {
@@ -69,6 +71,7 @@ export default function CustomerAppSettings() {
       await upsert('care.faq_items', faq);
       await upsert('referral.reward_points', referralPoints);
       await upsert('referral.code_prefix', prefix);
+      await upsert('order.fees', fees);
       invalidateCustomerAppConfig();
       toast.success('Setting disimpan');
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
@@ -88,7 +91,8 @@ export default function CustomerAppSettings() {
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="care">Care</TabsTrigger>
           <TabsTrigger value="referral">Referral</TabsTrigger>
-            <TabsTrigger value="channels">Kanal Outlet</TabsTrigger>
+          <TabsTrigger value="fees">Ongkir & Biaya</TabsTrigger>
+          <TabsTrigger value="channels">Kanal Outlet</TabsTrigger>
         </TabsList>
 
         <TabsContent value="layout">
@@ -138,6 +142,24 @@ export default function CustomerAppSettings() {
           <Card><CardHeader><CardTitle>Referral</CardTitle></CardHeader><CardContent className="space-y-4">
             <div><Label>Prefix kode</Label><Input value={prefix} onChange={e => setPrefix(e.target.value)} /></div>
             <div><Label>Poin bonus per referral</Label><Input type="number" value={referralPoints} onChange={e => setReferralPoints(parseInt(e.target.value) || 0)} /></div>
+          </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="fees">
+          <Card><CardHeader><CardTitle>Ongkos kirim & biaya kemasan</CardTitle></CardHeader><CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">Dipakai di halaman checkout aplikasi customer.</p>
+            <div>
+              <Label>Ongkos kirim (Rp)</Label>
+              <Input type="number" value={fees.delivery_fee} onChange={e => setFees(f => ({ ...f, delivery_fee: parseInt(e.target.value) || 0 }))} />
+            </div>
+            <div>
+              <Label>Diskon ongkir (%)</Label>
+              <Input type="number" value={fees.delivery_discount_percent} onChange={e => setFees(f => ({ ...f, delivery_discount_percent: parseInt(e.target.value) || 0 }))} />
+            </div>
+            <div>
+              <Label>Biaya kemasan take away (Rp)</Label>
+              <Input type="number" value={fees.takeaway_charge} onChange={e => setFees(f => ({ ...f, takeaway_charge: parseInt(e.target.value) || 0 }))} />
+            </div>
           </CardContent></Card>
         </TabsContent>
 

@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { 
-  ArrowLeft, Phone, MapPin, Clock, Package, 
-  DollarSign, User, CheckCircle, XCircle, AlertCircle,
-  Navigation, Loader2
+import {
+  ArrowLeft, Phone, MapPin, Clock, Package,
+  User, CheckCircle, XCircle, AlertCircle,
+  Navigation, Loader2, Store, Bike, Receipt
 } from "lucide-react";
 import { format } from "date-fns";
+import { artworkFor, formatRupiah, onArtError } from "@/lib/customer-art";
+import { describeCustomizations } from "@/lib/customer-pricing";
+import { cn } from "@/lib/utils";
 
 interface OrderDetailProps {
   orderId: string;
@@ -53,17 +52,33 @@ interface OrderData {
   };
 }
 
-const statusConfig = {
-  pending: { label: 'Menunggu Konfirmasi', color: 'bg-yellow-500', icon: Clock },
-  accepted: { label: 'Dikonfirmasi', color: 'bg-blue-500', icon: CheckCircle },
-  confirmed: { label: 'Dikonfirmasi', color: 'bg-blue-500', icon: CheckCircle },
-  in_progress: { label: 'Dalam Pengiriman', color: 'bg-indigo-500', icon: Navigation },
-  preparing: { label: 'Diproses', color: 'bg-purple-500', icon: Package },
-  on_delivery: { label: 'Dalam Pengiriman', color: 'bg-indigo-500', icon: Navigation },
-  delivered: { label: 'Pesanan Selesai', color: 'bg-green-500', icon: CheckCircle },
-  completed: { label: 'Selesai', color: 'bg-green-600', icon: CheckCircle },
-  cancelled: { label: 'Dibatalkan', color: 'bg-red-500', icon: XCircle },
-  rejected: { label: 'Ditolak', color: 'bg-gray-500', icon: AlertCircle }
+type Tone = 'wait' | 'move' | 'done' | 'stop';
+
+const statusConfig: Record<string, { label: string; tone: Tone; icon: any }> = {
+  pending: { label: 'Menunggu Konfirmasi', tone: 'wait', icon: Clock },
+  accepted: { label: 'Dikonfirmasi', tone: 'move', icon: CheckCircle },
+  confirmed: { label: 'Dikonfirmasi', tone: 'move', icon: CheckCircle },
+  in_progress: { label: 'Dalam Pengiriman', tone: 'move', icon: Navigation },
+  preparing: { label: 'Sedang Diproses', tone: 'move', icon: Package },
+  on_delivery: { label: 'Dalam Pengiriman', tone: 'move', icon: Navigation },
+  delivered: { label: 'Pesanan Selesai', tone: 'done', icon: CheckCircle },
+  completed: { label: 'Selesai', tone: 'done', icon: CheckCircle },
+  cancelled: { label: 'Dibatalkan', tone: 'stop', icon: XCircle },
+  rejected: { label: 'Ditolak', tone: 'stop', icon: AlertCircle },
+};
+
+const toneClass: Record<Tone, string> = {
+  wait: 'bg-amber-50 text-amber-700',
+  move: 'bg-sky-50 text-sky-700',
+  done: 'bg-emerald-50 text-emerald-700',
+  stop: 'bg-rose-50 text-rose-700',
+};
+
+const toneDot: Record<Tone, string> = {
+  wait: 'bg-amber-400',
+  move: 'bg-sky-500',
+  done: 'bg-emerald-500',
+  stop: 'bg-rose-500',
 };
 
 export const OrderDetail = ({ orderId, userRole, onBack }: OrderDetailProps) => {
@@ -77,17 +92,11 @@ export const OrderDetail = ({ orderId, userRole, onBack }: OrderDetailProps) => 
     fetchOrderDetail();
     fetchStatusHistory();
 
-    // Real-time subscription
     const channel = supabase
       .channel('order-details')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'customer_orders',
-          filter: `id=eq.${orderId}`
-        },
+        { event: '*', schema: 'public', table: 'customer_orders', filter: `id=eq.${orderId}` },
         () => {
           fetchOrderDetail();
           fetchStatusHistory();
@@ -120,10 +129,10 @@ export const OrderDetail = ({ orderId, userRole, onBack }: OrderDetailProps) => 
         .single();
 
       if (error) throw error;
-      setOrder(data);
+      setOrder(data as any);
     } catch (error) {
       console.error('Error fetching order:', error);
-      toast.error('Gagal memuat detail order');
+      toast.error('Gagal memuat detail pesanan');
     } finally {
       setLoading(false);
     }
@@ -147,47 +156,36 @@ export const OrderDetail = ({ orderId, userRole, onBack }: OrderDetailProps) => 
   const handleUpdateStatus = async (newStatus: string) => {
     setUpdating(true);
     try {
-      // Update order status
       const { error: updateError } = await supabase
         .from('customer_orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', orderId);
 
       if (updateError) throw updateError;
 
-      // Log status change
       const { error: historyError } = await supabase
         .from('order_status_history')
-        .insert({
-          order_id: orderId,
-          status: newStatus,
-          notes: `Status updated to ${newStatus}`
-        });
+        .insert({ order_id: orderId, status: newStatus, notes: `Status updated to ${newStatus}` });
 
       if (historyError) throw historyError;
 
-      toast.success('Status order berhasil diupdate');
+      toast.success('Status pesanan berhasil diperbarui');
       fetchOrderDetail();
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Gagal update status order');
+      toast.error('Gagal memperbarui status pesanan');
     } finally {
       setUpdating(false);
     }
   };
 
   const handleCancelOrder = async () => {
-    if (!confirm('Apakah Anda yakin ingin membatalkan order ini?')) return;
+    if (!confirm('Yakin ingin membatalkan pesanan ini?')) return;
     await handleUpdateStatus('cancelled');
   };
 
   const handleCallRider = () => {
-    if (order?.rider?.phone) {
-      window.location.href = `tel:${order.rider.phone}`;
-    }
+    if (order?.rider?.phone) window.location.href = `tel:${order.rider.phone}`;
   };
 
   const handleNavigate = () => {
@@ -196,330 +194,245 @@ export const OrderDetail = ({ orderId, userRole, onBack }: OrderDetailProps) => 
     }
   };
 
+  const goBack = onBack || (() => navigate(-1));
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="cx-app flex min-h-screen items-center justify-center bg-[hsl(var(--cx-canvas))]">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-zeger" />
+          <p className="mt-3 text-xs font-semibold text-muted-foreground">Memuat pesanan…</p>
+        </div>
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="p-4">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-muted-foreground">Order tidak ditemukan</p>
-            <Button onClick={onBack || (() => navigate(-1))} className="mt-4">
-              Kembali
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="cx-app flex min-h-screen items-center justify-center bg-[hsl(var(--cx-canvas))] p-6">
+        <div className="cx-card w-full max-w-sm rounded-[26px] p-8 text-center">
+          <Receipt className="mx-auto h-10 w-10 text-muted-foreground" />
+          <p className="mt-3 text-sm font-bold">Pesanan tidak ditemukan</p>
+          <button onClick={goBack} className="cx-btn cx-btn-primary mx-auto mt-5 px-6 py-3 text-xs">Kembali</button>
+        </div>
       </div>
     );
   }
 
-  const statusInfo = statusConfig[order.status as keyof typeof statusConfig] || {
-    label: order.status,
-    color: 'bg-gray-500',
-    icon: Clock
-  };
+  const statusInfo = statusConfig[order.status] || { label: order.status, tone: 'wait' as Tone, icon: Clock };
   const StatusIcon = statusInfo.icon;
+  const isWheels = order.order_type === 'on_the_wheels';
+  const subtotal = order.order_items?.reduce((sum, i) => sum + i.price * i.quantity, 0) || 0;
+  const extras = Math.max(0, (order.total_price || 0) - subtotal);
 
   return (
-    <div className="container max-w-4xl mx-auto p-4 space-y-4">
+    <div className="cx-app min-h-screen bg-[hsl(var(--cx-canvas))] pb-28">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack || (() => navigate(-1))}
-        >
+      <header className="cx-bar sticky top-0 z-20 flex items-center gap-3 px-4 py-3">
+        <button onClick={goBack} aria-label="Kembali" className="cx-icon-btn h-10 w-10">
           <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold">Detail Order</h1>
-            {order.order_type && (
-              <Badge 
-                className={
-                  order.order_type === 'on_the_wheels' 
-                    ? 'bg-[#EA2831] hover:bg-red-700 text-white border-0' 
-                    : 'bg-green-600 hover:bg-green-700 text-white border-0'
-                }
-              >
-                {order.order_type === 'on_the_wheels' ? '🏍️ Zeger On The Wheels' : '🏪 Zeger Branch'}
-              </Badge>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">Order #{order.id.slice(0, 8)}</p>
+        </button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-extrabold">Detail Pesanan</h1>
+          <p className="cx-num truncate text-[11px] text-muted-foreground">#{order.id.slice(0, 8).toUpperCase()}</p>
         </div>
-        <Badge className={statusInfo.color}>
-          <StatusIcon className="h-3 w-3 mr-1" />
-          {statusInfo.label}
-        </Badge>
-      </div>
+        <span className={cn('inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold', toneClass[statusInfo.tone])}>
+          <StatusIcon className="h-3.5 w-3.5" /> {statusInfo.label}
+        </span>
+      </header>
 
-      {/* Order Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Informasi Order
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Tipe Order</p>
-              <p className="font-medium">{order.order_type === 'delivery' ? 'Delivery' : 'Pickup'}</p>
+      <div className="mx-auto w-full max-w-md space-y-4 px-5 pt-4">
+        {/* Channel + schedule */}
+        <section className="cx-card cx-rise rounded-[26px] p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-zeger to-zeger-dark text-white shadow-md">
+              {isWheels ? <Bike className="h-5 w-5" /> : <Store className="h-5 w-5" />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-extrabold">{isWheels ? 'Zeger On The Wheels' : 'Zeger Branch'}</p>
+              <p className="truncate text-[11px] text-muted-foreground">
+                {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Payment</p>
-              <p className="font-medium uppercase">{order.payment_method}</p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2.5">
+            <div className="rounded-[18px] bg-[hsl(var(--cx-rail))] p-3">
+              <p className="text-[11px] font-semibold text-muted-foreground">Tipe pesanan</p>
+              <p className="mt-0.5 text-xs font-bold">{order.order_type === 'delivery' || order.order_type === 'outlet_delivery' ? 'Diantar' : isWheels ? 'Rider' : 'Ambil sendiri'}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Waktu Order</p>
-              <p className="font-medium">{format(new Date(order.created_at), 'dd MMM yyyy, HH:mm')}</p>
+            <div className="rounded-[18px] bg-[hsl(var(--cx-rail))] p-3">
+              <p className="text-[11px] font-semibold text-muted-foreground">Pembayaran</p>
+              <p className="mt-0.5 text-xs font-bold uppercase">{order.payment_method || '-'}</p>
             </div>
             {order.estimated_arrival && (
-              <div>
-                <p className="text-sm text-muted-foreground">Estimasi Tiba</p>
-                <p className="font-medium">{format(new Date(order.estimated_arrival), 'HH:mm')}</p>
+              <div className="col-span-2 rounded-[18px] bg-[hsl(var(--cx-rail))] p-3">
+                <p className="text-[11px] font-semibold text-muted-foreground">Estimasi tiba</p>
+                <p className="mt-0.5 text-xs font-bold">{format(new Date(order.estimated_arrival), 'HH:mm')}</p>
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Customer Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Informasi Customer
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div>
-            <p className="text-sm text-muted-foreground">Nama</p>
-            <p className="font-medium">{order.customer_users.name}</p>
+        {/* Items */}
+        <section className="cx-card cx-rise rounded-[26px] p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold">
+            <Package className="h-4 w-4 text-zeger" /> Item pesanan
+          </h2>
+          <div className="space-y-3">
+            {order.order_items?.map((item) => {
+              const art = artworkFor({ name: item.product?.name });
+              const custom = describeCustomizations(item.custom_options);
+              return (
+                <div key={item.id} className="flex gap-3">
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[16px] bg-[hsl(var(--cx-rail))]">
+                    <img
+                      src={item.product?.image_url || art}
+                      onError={onArtError(art)}
+                      alt={item.product?.name || 'Item'}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold">{item.product?.name || 'Produk'}</p>
+                    {custom && <p className="truncate text-[11px] text-muted-foreground">{custom}</p>}
+                    <p className="cx-num mt-0.5 text-[11px] text-muted-foreground">{item.quantity}x · {formatRupiah(item.price)}</p>
+                  </div>
+                  <p className="cx-num shrink-0 text-sm font-bold">{formatRupiah(item.price * item.quantity)}</p>
+                </div>
+              );
+            })}
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Phone</p>
-            <p className="font-medium">{order.customer_users.phone}</p>
+
+          <div className="mt-4 space-y-1.5 border-t border-dashed border-[hsl(var(--cx-line))] pt-4 text-xs">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal</span>
+              <span className="cx-num">{formatRupiah(subtotal)}</span>
+            </div>
+            {extras > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Ongkir & biaya lain</span>
+                <span className="cx-num">{formatRupiah(extras)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1.5 text-sm font-extrabold">
+              <span>Total</span>
+              <span className="cx-num text-zeger">{formatRupiah(order.total_price)}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Delivery / customer */}
+        <section className="cx-card cx-rise space-y-3 rounded-[26px] p-5">
+          <h2 className="flex items-center gap-2 text-sm font-extrabold">
+            <User className="h-4 w-4 text-zeger" /> Penerima
+          </h2>
+          <div className="rounded-[18px] bg-[hsl(var(--cx-rail))] p-3.5">
+            <p className="text-sm font-bold">{order.customer_users?.name || '-'}</p>
+            <p className="text-[11px] text-muted-foreground">{order.customer_users?.phone || '-'}</p>
           </div>
           {order.delivery_address && (
-            <div>
-              <p className="text-sm text-muted-foreground">Alamat Pengiriman</p>
-              <p className="font-medium">{order.delivery_address}</p>
+            <div className="flex items-start gap-2 rounded-[18px] bg-[hsl(var(--cx-rail))] p-3.5 text-xs leading-snug">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zeger" />
+              <span className="flex-1">{order.delivery_address}</span>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Rider Information */}
-      {order.rider_id && order.rider && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Navigation className="h-5 w-5" />
-              Informasi Rider
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <p className="text-sm text-muted-foreground">Nama Rider</p>
-              <p className="font-medium">{order.rider.name}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Phone Rider</p>
-              <p className="font-medium">{order.rider.phone}</p>
+        {/* Rider */}
+        {order.rider_id && order.rider && (
+          <section className="cx-card cx-rise space-y-3 rounded-[26px] p-5">
+            <h2 className="flex items-center gap-2 text-sm font-extrabold">
+              <Bike className="h-4 w-4 text-zeger" /> Rider
+            </h2>
+            <div className="flex items-center gap-3 rounded-[18px] bg-[hsl(var(--cx-rail))] p-3.5">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-sm font-extrabold text-zeger shadow-sm">
+                {(order.rider.name || 'R').charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold">{order.rider.name}</p>
+                <p className="truncate text-[11px] text-muted-foreground">{order.rider.phone}</p>
+              </div>
             </div>
             {userRole === 'customer' && (
-              <Button onClick={handleCallRider} className="w-full">
-                <Phone className="h-4 w-4 mr-2" />
-                Hubungi Rider
-              </Button>
+              <button onClick={handleCallRider} className="cx-btn cx-btn-ghost w-full py-3 text-xs">
+                <Phone className="h-4 w-4" /> Hubungi rider
+              </button>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </section>
+        )}
 
-      {/* Order Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Items Order</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {order.order_items.map((item) => (
-            <div key={item.id} className="flex gap-3 p-3 border rounded-lg">
-              {item.product.image_url && (
-                <img
-                  src={item.product.image_url}
-                  alt={item.product.name}
-                  className="w-16 h-16 rounded object-cover"
-                />
-              )}
-              <div className="flex-1">
-                <p className="font-medium">{item.product.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {item.quantity}x @ Rp {item.price.toLocaleString('id-ID')}
-                </p>
-                {item.custom_options && Object.keys(item.custom_options).length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {Object.entries(item.custom_options).map(([key, value]) => `${key}: ${value}`).join(', ')}
-                  </p>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="font-medium">
-                  Rp {(item.quantity * item.price).toLocaleString('id-ID')}
-                </p>
-              </div>
-            </div>
-          ))}
-          <Separator />
-          <div className="flex justify-between items-center pt-2">
-            <p className="font-bold text-lg">Total</p>
-            <p className="font-bold text-lg text-primary">
-              Rp {order.total_price.toLocaleString('id-ID')}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Status Timeline */}
-      {statusHistory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Timeline Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+        {/* Timeline */}
+        {statusHistory.length > 0 && (
+          <section className="cx-card cx-rise rounded-[26px] p-5">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-extrabold">
+              <Clock className="h-4 w-4 text-zeger" /> Riwayat status
+            </h2>
+            <div className="space-y-0">
               {statusHistory.map((history, index) => {
-                const historyStatusInfo = statusConfig[history.status as keyof typeof statusConfig] || {
-                  label: history.status,
-                  color: 'bg-gray-400',
-                  icon: Clock
-                };
+                const info = statusConfig[history.status] || { label: history.status, tone: 'wait' as Tone, icon: Clock };
+                const last = index === statusHistory.length - 1;
                 return (
                   <div key={history.id} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <div className={`w-3 h-3 rounded-full ${historyStatusInfo.color}`} />
-                      {index < statusHistory.length - 1 && (
-                        <div className="w-0.5 h-full bg-gray-300 my-1" />
-                      )}
+                      <span className={cn('mt-1 h-3 w-3 shrink-0 rounded-full ring-4 ring-white', toneDot[info.tone])} />
+                      {!last && <span className="my-1 w-0.5 flex-1 bg-[hsl(var(--cx-line))]" />}
                     </div>
-                    <div className="flex-1 pb-4">
-                      <p className="font-medium">{historyStatusInfo.label}</p>
-                      <p className="text-sm text-muted-foreground">
+                    <div className={cn('min-w-0 flex-1', last ? 'pb-0' : 'pb-5')}>
+                      <p className="text-xs font-bold">{info.label}</p>
+                      <p className="text-[11px] text-muted-foreground">
                         {format(new Date(history.created_at), 'dd MMM yyyy, HH:mm')}
                       </p>
-                      {history.notes && (
-                        <p className="text-sm text-muted-foreground mt-1">{history.notes}</p>
-                      )}
+                      {history.notes && <p className="mt-0.5 text-[11px] text-muted-foreground">{history.notes}</p>}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </section>
+        )}
 
-      {/* Actions */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-2">
-            {userRole === 'customer' && order.status === 'pending' && (
-              <Button
-                variant="destructive"
-                onClick={handleCancelOrder}
-                disabled={updating}
-              >
-                {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
-                Batalkan Order
-              </Button>
-            )}
+        {/* Actions */}
+        <section className="space-y-2.5 pt-1">
+          {userRole === 'customer' && order.status === 'pending' && (
+            <button onClick={handleCancelOrder} disabled={updating} className="cx-btn cx-btn-ghost w-full py-3.5 text-xs text-destructive">
+              {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />} Batalkan pesanan
+            </button>
+          )}
 
-            {userRole === 'rider' && order.status === 'pending' && (
-              <>
-                <Button
-                  onClick={() => handleUpdateStatus('confirmed')}
-                  disabled={updating}
-                >
-                  {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Terima Order'}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleUpdateStatus('rejected')}
-                  disabled={updating}
-                >
-                  Tolak Order
-                </Button>
-              </>
-            )}
+          {userRole === 'rider' && order.status === 'pending' && (
+            <div className="grid grid-cols-2 gap-2.5">
+              <button onClick={() => handleUpdateStatus('confirmed')} disabled={updating} className="cx-btn cx-btn-primary py-3.5 text-xs">
+                {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Terima pesanan'}
+              </button>
+              <button onClick={() => handleUpdateStatus('rejected')} disabled={updating} className="cx-btn cx-btn-ghost py-3.5 text-xs text-destructive">
+                Tolak pesanan
+              </button>
+            </div>
+          )}
 
-            {userRole === 'rider' && order.status === 'confirmed' && (
-              <Button
-                onClick={() => handleUpdateStatus('preparing')}
-                disabled={updating}
-              >
-                Mulai Proses
-              </Button>
-            )}
+          {userRole === 'rider' && order.status === 'confirmed' && (
+            <button onClick={() => handleUpdateStatus('preparing')} disabled={updating} className="cx-btn cx-btn-primary w-full py-3.5 text-xs">Mulai proses</button>
+          )}
+          {userRole === 'rider' && order.status === 'preparing' && (
+            <button onClick={() => handleUpdateStatus('on_delivery')} disabled={updating} className="cx-btn cx-btn-primary w-full py-3.5 text-xs">Mulai pengiriman</button>
+          )}
+          {userRole === 'rider' && order.status === 'on_delivery' && (
+            <button onClick={() => handleUpdateStatus('delivered')} disabled={updating} className="cx-btn cx-btn-primary w-full py-3.5 text-xs">Selesai diantar</button>
+          )}
+          {userRole === 'rider' && order.latitude && order.longitude && (
+            <button onClick={handleNavigate} className="cx-btn cx-btn-ghost w-full py-3.5 text-xs">
+              <Navigation className="h-4 w-4" /> Navigasi ke customer
+            </button>
+          )}
 
-            {userRole === 'rider' && order.status === 'preparing' && (
-              <Button
-                onClick={() => handleUpdateStatus('on_delivery')}
-                disabled={updating}
-              >
-                Mulai Pengiriman
-              </Button>
-            )}
-
-            {userRole === 'rider' && order.status === 'on_delivery' && (
-              <Button
-                onClick={() => handleUpdateStatus('delivered')}
-                disabled={updating}
-              >
-                Selesai Diantar
-              </Button>
-            )}
-
-            {userRole === 'rider' && order.latitude && order.longitude && (
-              <Button
-                variant="outline"
-                onClick={handleNavigate}
-              >
-                <Navigation className="h-4 w-4 mr-2" />
-                Navigate ke Customer
-              </Button>
-            )}
-
-            {userRole === 'branch' && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {/* Implement assign rider */}}
-                >
-                  Assign Rider
-                </Button>
-                {order.status !== 'cancelled' && order.status !== 'completed' && (
-                  <Button
-                    variant="destructive"
-                    onClick={handleCancelOrder}
-                    disabled={updating}
-                  >
-                    Batalkan Order
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          {userRole === 'branch' && order.status !== 'cancelled' && order.status !== 'completed' && (
+            <button onClick={handleCancelOrder} disabled={updating} className="cx-btn cx-btn-ghost w-full py-3.5 text-xs text-destructive">
+              Batalkan pesanan
+            </button>
+          )}
+        </section>
+      </div>
     </div>
   );
 };

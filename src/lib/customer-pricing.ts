@@ -12,8 +12,41 @@ export const TOPPING_PRICES: Record<string, number> = {
 
 export const SIZE_UPCHARGE: Record<string, number> = {
   large: 5000,
+  ultimate: 10000,
   '1lt': 15000,
 };
+
+export const TOPPING_LABELS: Record<string, string> = {
+  espresso: 'Extra Espresso Shot',
+  oreo: 'Oreo Crumb',
+  cheese: 'Cheese Foam',
+  jelly: 'Jelly Pearl',
+  icecream: 'Ice Cream',
+};
+
+export const SIZE_LABELS: Record<string, string> = {
+  small: 'Small',
+  regular: 'Regular',
+  large: 'Large',
+  ultimate: 'Ultimate',
+  '200ml': '200 ml',
+  '1lt': '1 Liter',
+};
+
+/** Human readable one-liner of everything the customer picked. */
+export function describeCustomizations(c?: Record<string, any> | null): string {
+  if (!c) return '';
+  const parts: string[] = [];
+  if (c.temperature) parts.push(c.temperature === 'hot' ? 'Panas' : 'Dingin');
+  if (c.size) parts.push(SIZE_LABELS[c.size] || String(c.size));
+  if (c.iceLevel) parts.push(`Es ${c.iceLevel === 'normal' ? 'Normal' : c.iceLevel === 'less' ? 'Sedikit' : 'Tanpa Es'}`);
+  if (c.sugarLevel) parts.push(`Gula ${c.sugarLevel === 'normal' ? 'Normal' : c.sugarLevel === 'less' ? 'Sedikit' : 'Tanpa Gula'}`);
+  if (Array.isArray(c.toppings) && c.toppings.length) {
+    parts.push(c.toppings.map((t: string) => TOPPING_LABELS[t] || t).join(', '));
+  }
+  if (c.notes) parts.push(`"${c.notes}"`);
+  return parts.join(' • ');
+}
 
 export interface PricedItem {
   price: number;

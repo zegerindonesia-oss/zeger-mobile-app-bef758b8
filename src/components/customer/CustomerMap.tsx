@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, Phone, MessageCircle } from 'lucide-react';
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, RefreshCw, Heart, MessageCircle, Bike } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { buildMapsScriptUrl, getGoogleMapsKey } from '@/config/maps';
+import { artworkFor, cxArt, formatRupiah, onArtError } from '@/lib/customer-art';
 
 interface StockItem {
   product_id: string;
@@ -308,96 +308,96 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-4">
-      {/* Hero banner */}
-      <div className="relative bg-[#EA2831] px-4 pt-6 pb-24 overflow-hidden">
-        <h1 className="text-white text-2xl font-extrabold leading-tight max-w-[60%]">
-          KINI HADIR LEBIH DEKAT LEBIH HEMAT
+    <div className="cx-app min-h-screen bg-[hsl(var(--cx-canvas))] pb-6">
+      {/* Hero */}
+      <div className="cx-stage relative overflow-hidden bg-gradient-to-br from-zeger-dark to-zeger px-5 pb-24 pt-7">
+        <div className="pointer-events-none absolute -right-10 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+        <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/18 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+          <Bike className="h-3.5 w-3.5" /> Zeger On The Wheels
+        </span>
+        <h1 className="relative mt-3 max-w-[64%] text-2xl font-extrabold leading-tight text-white">
+          Kopi favoritmu, antar sampai titikmu
         </h1>
-        <div className="absolute right-2 top-2 w-40 h-40 rounded-full bg-white/10" />
+        <img src={cxArt.scooter} alt="" className="cx-art cx-float pointer-events-none absolute -bottom-2 right-2 h-28 w-auto opacity-95" />
       </div>
 
       {/* Greeting card */}
-      <div className="mx-4 -mt-16 mb-4 bg-white rounded-2xl shadow-lg p-4 relative z-10">
-        <p className="font-bold text-gray-900 text-base">
-          Hi, {(customerUser?.name || 'GUEST').toUpperCase()}
-        </p>
+      <div className="relative z-10 mx-5 -mt-14 mb-4">
+        <div className="cx-card cx-rise flex items-center gap-3 rounded-[24px] p-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zeger-soft text-sm font-extrabold text-zeger">
+            {(customerUser?.name || 'G').charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-extrabold">Hai, {(customerUser?.name || 'Guest')}</p>
+            <p className="truncate text-[11px] text-muted-foreground">Pilih rider terdekat untuk pesananmu</p>
+          </div>
+        </div>
       </div>
 
-      {/* Distance filter chips */}
-      <div className="px-4 mb-3 flex gap-2">
-        {DISTANCE_OPTIONS.map(km => (
-          <button
-            key={km}
-            onClick={() => setRadiusKm(km)}
-            className={`flex-1 py-3 rounded-full font-semibold text-sm transition-all ${
-              radiusKm === km
-                ? 'bg-[#EA2831] text-white shadow-md'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-          >
-            {km} km
-          </button>
-        ))}
+      {/* Distance filter */}
+      <div className="mb-4 px-5">
+        <div className="cx-seg flex">
+          {DISTANCE_OPTIONS.map(km => (
+            <button
+              key={km}
+              onClick={() => setRadiusKm(km)}
+              data-active={radiusKm === km}
+              className="cx-seg-item flex-1 py-2.5 text-xs font-bold"
+            >
+              {km} km
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Section title + refresh */}
-      <div className="px-4 flex items-center justify-between mb-3">
-        <h2 className="text-xl font-extrabold text-gray-900">Temukan Rider-mu</h2>
+      <div className="mb-3 flex items-center justify-between px-5">
+        <h2 className="text-base font-extrabold">Temukan rider-mu</h2>
         <button
           onClick={() => userLocation && fetchNearbyRiders(userLocation.lat, userLocation.lng)}
-          className="w-10 h-10 rounded-lg bg-[#EA2831] text-white flex items-center justify-center shadow-md active:scale-95"
-          aria-label="Refresh"
+          className="cx-icon-btn h-10 w-10"
+          aria-label="Muat ulang"
         >
-          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4.5 w-4.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       {/* Map */}
-      <div className="px-4 mb-4">
-        <div className="relative rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
-          <div ref={mapContainer} className="h-64 w-full bg-gray-100" />
+      <div className="mb-4 px-5">
+        <div className="cx-card relative overflow-hidden rounded-[26px] p-0">
+          <div ref={mapContainer} className="h-60 w-full bg-[hsl(var(--cx-rail))]" />
           {mapsKeyMissing ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
-              <MapPin className="mb-3 h-10 w-10 text-[#EA2831]" />
-              <p className="font-bold text-gray-900">Peta belum aktif</p>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                Google Maps browser key belum tersedia. Rider tetap bisa dipilih dari daftar di bawah.
+              <MapPin className="mb-3 h-9 w-9 text-zeger" />
+              <p className="text-sm font-extrabold">Peta belum aktif</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                Rider tetap bisa dipilih dari daftar di bawah.
               </p>
             </div>
           ) : mapError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
-              <AlertCircle className="mb-3 h-10 w-10 text-[#EA2831]" />
-              <p className="font-bold text-gray-900">Peta gagal dimuat</p>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                {mapError}
-              </p>
+              <AlertCircle className="mb-3 h-9 w-9 text-zeger" />
+              <p className="text-sm font-extrabold">Peta gagal dimuat</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{mapError}</p>
             </div>
           ) : null}
         </div>
       </div>
 
-      {mapError && (
-        <div className="mx-4 mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" />
-          {mapError}
-        </div>
-      )}
-
       {/* Rider cards */}
       {loading ? (
         <div className="py-12 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#EA2831] mx-auto mb-2" />
-          <p className="text-sm text-gray-500">Mencari rider terdekat...</p>
+          <Loader2 className="mx-auto mb-2 h-7 w-7 animate-spin text-zeger" />
+          <p className="text-xs font-semibold text-muted-foreground">Mencari rider terdekat…</p>
         </div>
       ) : filteredRiders.length === 0 ? (
-        <div className="mx-4 py-10 text-center bg-gray-50 rounded-2xl">
-          <MapPin className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-          <p className="font-semibold text-gray-700">Belum ada rider dalam {radiusKm} km</p>
-          <p className="text-xs text-gray-500 mt-1">Coba perluas jangkauan pencarian</p>
+        <div className="mx-5 rounded-[26px] bg-[hsl(var(--cx-rail))] py-10 text-center">
+          <MapPin className="mx-auto mb-2 h-9 w-9 text-muted-foreground/50" />
+          <p className="text-sm font-bold">Belum ada rider dalam {radiusKm} km</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Coba perluas jangkauan pencarian</p>
         </div>
       ) : (
-        <div className="px-4 space-y-3">
+        <div className="space-y-3 px-5">
           {filteredRiders.map(rider => {
             const status = statusLabel(rider);
             const isFav = favorites.has(rider.id);
@@ -411,70 +411,66 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
               <div
                 key={rider.id}
                 ref={(el) => { riderCardRefs.current[rider.id] = el; }}
-                className={`rounded-2xl p-3 bg-white flex items-center gap-3 active:scale-[0.99] transition-all ${
-                  isFocused
-                    ? 'border-2 border-[#EA2831] shadow-lg ring-2 ring-[#EA2831]/20'
-                    : 'border-2 border-[#EA2831]/30 shadow-sm'
+                className={`cx-card cx-rise flex items-center gap-3 rounded-[24px] p-3.5 transition-all active:scale-[0.99] ${
+                  isFocused ? 'ring-2 ring-zeger/35' : ''
                 }`}
                 onClick={() => focusRiderOnMap(rider)}
               >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
-                  <div className="w-16 h-16 rounded-full overflow-hidden bg-white ring-1 ring-black/5 shadow-md flex items-center justify-center">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-zeger-soft shadow-md ring-2 ring-white">
                     {rider.photo_url ? (
-                      <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
+                      <img src={rider.photo_url} alt={rider.full_name} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#EA2831] font-bold text-xl">
-                        {rider.full_name.charAt(0)}
-                      </div>
+                      <span className="text-xl font-extrabold text-zeger">{rider.full_name.charAt(0)}</span>
                     )}
                   </div>
-                  <span className={`absolute -bottom-0 -right-0 w-4 h-4 rounded-full border-2 border-white ${status.color}`} />
+                  <span className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white ${status.color}`} />
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-bold text-gray-900 uppercase truncate">{rider.full_name}</p>
-                      <p className="text-xs text-gray-500 leading-tight line-clamp-2">{subtitle}</p>
+                      <p className="truncate text-sm font-extrabold">{rider.full_name}</p>
+                      <p className="line-clamp-2 text-[11px] leading-tight text-muted-foreground">{subtitle}</p>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleFav(rider.id); }}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 transition active:scale-90"
                       aria-label="Favorit"
                     >
-                      <Heart className={`h-5 w-5 ${isFav ? 'fill-[#EA2831] text-[#EA2831]' : 'text-gray-400'}`} />
+                      <Heart className={`h-5 w-5 ${isFav ? 'fill-zeger text-zeger' : 'text-muted-foreground/50'}`} />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
                       {rider.lat !== null && rider.lng !== null && (
-                        <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 text-xs font-semibold rounded">
+                        <span className="cx-num rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
                           {rider.distance_km.toFixed(2)} km
                         </span>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); openWhatsApp(rider.phone, rider.full_name); }}
-                        className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm active:scale-95"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm transition active:scale-90"
                         aria-label="WhatsApp"
                       >
-                        <MessageCircle className="h-4 w-4 text-white" />
+                        <MessageCircle className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); openDirection(rider); }}
                         disabled={rider.lat === null || rider.lng === null}
-                        className="w-7 h-7 rounded-full bg-[#EA2831] flex items-center justify-center shadow-sm active:scale-95 disabled:opacity-40 disabled:active:scale-100"
-                        aria-label="Direction"
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-zeger text-white shadow-sm transition active:scale-90 disabled:opacity-40"
+                        aria-label="Rute"
                       >
-                        <Navigation className="h-4 w-4 text-white" />
+                        <Navigation className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedRider(rider); }}
-                      className="px-4 py-1.5 rounded-full bg-[#EA2831] text-white text-xs font-bold shadow"
+                      className="cx-btn cx-btn-primary px-4 py-2 text-[11px]"
                     >
-                      Lihat Stok
+                      Lihat stok
                     </button>
                   </div>
                 </div>
@@ -486,7 +482,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
 
       {/* Rider detail bottom sheet */}
       <Sheet open={!!selectedRider} onOpenChange={(o) => !o && setSelectedRider(null)}>
-        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden">
+        <SheetContent side="bottom" className="cx-app h-[92vh] overflow-hidden rounded-t-[30px] p-0">
           {selectedRider && <RiderDetailSheet
             rider={selectedRider}
             isFav={favorites.has(selectedRider.id)}
@@ -520,75 +516,72 @@ function RiderDetailSheet({
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header with back */}
-      <div className="relative bg-white h-40 flex-shrink-0">
+    <div className="flex h-full flex-col bg-[hsl(var(--cx-canvas))]">
+      {/* Header */}
+      <div className="cx-stage relative h-32 flex-shrink-0 overflow-hidden bg-gradient-to-br from-zeger-dark to-zeger">
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-[#EA2831] text-white flex items-center justify-center shadow-lg"
+          className="cx-icon-btn absolute left-4 top-4 z-10 h-10 w-10"
           aria-label="Kembali"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="w-full h-full flex items-center justify-center">
-          <MapPin className="h-16 w-16 text-[#EA2831]" />
-        </div>
+        <img src={cxArt.scooter} alt="" className="cx-art cx-float absolute right-4 top-3 h-24 w-auto" />
       </div>
 
       {/* Rider info card */}
-      <div className="mx-4 -mt-14 relative z-10 bg-white rounded-2xl border-2 border-[#EA2831]/30 p-4 shadow-lg">
-        <div className="flex items-start gap-3">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-black/5 shadow-lg flex-shrink-0">
-            {rider.photo_url ? (
-              <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-[#EA2831] font-bold text-2xl">
-                {rider.full_name.charAt(0)}
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-extrabold text-gray-900 uppercase">{rider.full_name}</p>
-                <p className="text-sm text-gray-500 leading-tight">{subtitle}</p>
-              </div>
-              <button onClick={onToggleFav} aria-label="Favorit">
-                <Heart className={`h-6 w-6 ${isFav ? 'fill-[#EA2831] text-[#EA2831]' : 'text-gray-400'}`} />
-              </button>
+      <div className="relative z-10 mx-4 -mt-12">
+        <div className="cx-card cx-rise rounded-[26px] p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-zeger-soft shadow-lg ring-2 ring-white">
+              {rider.photo_url ? (
+                <img src={rider.photo_url} alt={rider.full_name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-2xl font-extrabold text-zeger">{rider.full_name.charAt(0)}</span>
+              )}
             </div>
-            {rider.lat !== null && rider.lng !== null && (
-              <span className="inline-block mt-1 px-3 py-1 bg-green-50 text-green-700 text-sm font-semibold rounded">
-                {rider.distance_km.toFixed(2)} km
-              </span>
-            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-extrabold">{rider.full_name}</p>
+                  <p className="text-[11px] leading-tight text-muted-foreground">{subtitle}</p>
+                </div>
+                <button onClick={onToggleFav} aria-label="Favorit" className="transition active:scale-90">
+                  <Heart className={`h-6 w-6 ${isFav ? 'fill-zeger text-zeger' : 'text-muted-foreground/50'}`} />
+                </button>
+              </div>
+              {rider.lat !== null && rider.lng !== null && (
+                <span className="cx-num mt-1.5 inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                  {rider.distance_km.toFixed(2)} km dari kamu
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex gap-2 mt-4">
-          <Button
-            onClick={onWhatsApp}
-            className="rounded-full bg-green-500 hover:bg-green-600 h-12 w-12 p-0 flex-shrink-0"
-            aria-label="WhatsApp"
-          >
-            <Phone className="h-5 w-5 text-white" />
-          </Button>
-          <Button
-            onClick={onDirection}
-            disabled={rider.lat === null || rider.lng === null}
-            className="flex-1 rounded-full bg-[#EA2831] hover:bg-[#c92028] h-12 font-bold"
-          >
-            <Navigation className="h-4 w-4 mr-2" />
-            Direction
-          </Button>
+          <div className="mt-4 flex gap-2.5">
+            <button
+              onClick={onWhatsApp}
+              className="cx-btn cx-btn-ghost h-12 w-12 flex-shrink-0 rounded-full p-0 text-emerald-600"
+              aria-label="WhatsApp"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onDirection}
+              disabled={rider.lat === null || rider.lng === null}
+              className="cx-btn cx-btn-primary h-12 flex-1 text-xs"
+            >
+              <Navigation className="h-4 w-4" /> Lihat rute
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stock list */}
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-6">
-        <h3 className="text-xl font-extrabold text-gray-900 mb-3">Stok Rider</h3>
+      <div className="flex-1 overflow-y-auto px-4 pb-8 pt-5">
+        <h3 className="mb-3 text-base font-extrabold">Stok rider</h3>
         {stock.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-500 bg-gray-50 rounded-xl">
+          <div className="rounded-[22px] bg-[hsl(var(--cx-rail))] py-8 text-center text-xs font-semibold text-muted-foreground">
             Belum ada data stok dari rider ini.
           </div>
         ) : (
@@ -597,41 +590,34 @@ function RiderDetailSheet({
               const qty = item.stock_quantity;
               const outOfStock = qty <= 0;
               const low = qty > 0 && qty < 5;
+              const art = artworkFor({ name: item.name, category: item.category });
               return (
                 <button
                   key={item.product_id}
                   onClick={() => setSelectedProduct(item)}
-                  className={`w-full text-left flex gap-3 p-3 rounded-2xl border transition-transform active:scale-[0.99] ${outOfStock ? 'bg-white border-gray-100 opacity-70' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}
+                  className={`cx-card flex w-full gap-3 rounded-[24px] p-3 text-left transition active:scale-[0.98] ${outOfStock ? 'opacity-65' : ''}`}
                 >
-                  <div className="w-20 h-20 rounded-xl bg-white overflow-hidden flex-shrink-0 flex items-center justify-center">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                    ) : null}
+                  <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-[18px] bg-[hsl(var(--cx-rail))]">
+                    <img
+                      src={item.image_url || art}
+                      onError={onArtError(art)}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-bold text-gray-900 leading-tight">{item.name}</p>
-                      <Heart className="h-5 w-5 text-gray-300 flex-shrink-0" />
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-extrabold leading-tight">{item.name}</p>
                     {item.description && (
-                      <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{item.description}</p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{item.description}</p>
                     )}
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-sm font-semibold text-gray-700">
-                        Rp {item.price.toLocaleString('id-ID')}
-                      </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="cx-num text-sm font-bold text-zeger">{formatRupiah(item.price)}</p>
                       {outOfStock ? (
-                        <span className="px-3 py-1 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">
-                          Stok Habis
-                        </span>
+                        <span className="rounded-full bg-[hsl(var(--cx-rail))] px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground">Stok habis</span>
                       ) : low ? (
-                        <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
-                          Stok &lt; 5
-                        </span>
+                        <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">Sisa {qty}</span>
                       ) : (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                          Stok {qty}
-                        </span>
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">Stok {qty}</span>
                       )}
                     </div>
                   </div>
@@ -644,7 +630,7 @@ function RiderDetailSheet({
 
       {/* Product Detail Sheet */}
       <Sheet open={!!selectedProduct} onOpenChange={(o) => !o && setSelectedProduct(null)}>
-        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden !bg-white">
+        <SheetContent side="bottom" className="cx-app h-[92vh] overflow-hidden rounded-t-[30px] p-0">
           {selectedProduct && (
             <ProductDetailView product={selectedProduct} onClose={() => setSelectedProduct(null)} />
           )}
@@ -657,13 +643,13 @@ function RiderDetailSheet({
 function FlavorDots({ label, level }: { label: string; level: number }) {
   return (
     <tr>
-      <td className="py-1 pr-2 text-[11px] text-gray-700 whitespace-nowrap">{label}</td>
+      <td className="whitespace-nowrap py-1 pr-2 text-[11px] font-semibold text-muted-foreground">{label}</td>
       <td className="py-1">
-        <div className="flex gap-1 justify-end">
+        <div className="flex justify-end gap-1">
           {[1, 2, 3, 4, 5].map(i => (
             <span
               key={i}
-              className={`w-2 h-2 rounded-full border ${i <= level ? 'bg-[#EA2831] border-[#EA2831]' : 'bg-white border-gray-300'}`}
+              className={`h-2 w-2 rounded-full border ${i <= level ? 'border-zeger bg-zeger' : 'border-[hsl(var(--cx-line))] bg-white'}`}
             />
           ))}
         </div>
@@ -699,52 +685,38 @@ function deriveFlavor(product: StockItem): { coffee: number; creaminess: number;
 
 function ProductDetailView({ product, onClose }: { product: StockItem; onClose: () => void }) {
   const flavor = deriveFlavor(product);
+  const art = artworkFor({ name: product.name, category: product.category });
+  const outOfStock = product.stock_quantity <= 0;
+
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header with image */}
-      <div className="relative bg-white pt-4 pb-16">
-        <div className="flex items-center justify-between px-4">
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900 bg-white"
-            aria-label="Kembali"
-          >
-            <ArrowLeft className="h-6 w-6" />
+    <div className="flex h-full flex-col bg-[hsl(var(--cx-canvas))]">
+      {/* Header with artwork */}
+      <div className="cx-stage relative flex-shrink-0 overflow-hidden bg-gradient-to-br from-zeger-dark to-zeger pb-10 pt-4">
+        <div className="relative z-10 flex items-center justify-between px-4">
+          <button onClick={onClose} className="cx-icon-btn h-10 w-10" aria-label="Kembali">
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h2 className="text-gray-900 text-lg font-bold">Detail Menu</h2>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center text-gray-900 bg-white" aria-label="Favorit">
-            <Heart className="h-6 w-6" />
-          </button>
+          <h2 className="text-sm font-extrabold text-white">Detail Menu</h2>
+          <span className="w-10" />
         </div>
-        <div className="flex justify-center mt-4 relative bg-white">
+        <div className="relative z-10 mt-2 flex justify-center">
           <img
-            src="/__l5e/assets-v1/fae4c1de-2361-4c9e-8f55-4976866ad7f6/zeger-logo.png"
-            alt="Zeger"
-            className="absolute top-0 right-4 w-10 h-10 object-contain opacity-90"
+            src={product.image_url || art}
+            onError={onArtError(art)}
+            alt={product.name}
+            className="cx-art cx-float h-52 w-auto max-w-[70%] object-contain"
           />
-          <div className="relative w-64 h-64 flex items-end justify-center bg-white">
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-40 h-3 rounded-full bg-black/15 blur-md" />
-            {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="relative max-h-64 object-contain"
-              />
-            ) : (
-              <div className="relative w-40 h-56 bg-white rounded-2xl" />
-            )}
-          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-8 -mt-6 bg-white">
-        <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-4">{product.name}</h1>
+      <div className="-mt-6 flex-1 overflow-y-auto rounded-t-[28px] bg-[hsl(var(--cx-canvas))] px-5 pb-10 pt-6">
+        <h1 className="text-center text-xl font-extrabold">{product.name}</h1>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-white p-4 flex items-center justify-center">
-            <p className="text-xl font-extrabold text-gray-900">Rp {product.price.toLocaleString('id-ID')}</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="cx-card flex items-center justify-center rounded-[22px] p-4">
+            <p className="cx-num text-lg font-extrabold text-zeger">{formatRupiah(product.price)}</p>
           </div>
-          <div className="rounded-2xl bg-white px-3 py-2">
+          <div className="cx-card rounded-[22px] px-3.5 py-2.5">
             <table className="w-full">
               <tbody>
                 <FlavorDots label="Coffee" level={flavor.coffee} />
@@ -756,14 +728,18 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
         </div>
 
         {product.description && (
-          <p className="text-center text-gray-500 mt-4 leading-relaxed">{product.description}</p>
+          <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">{product.description}</p>
         )}
 
-        <div className="mt-4 flex items-center justify-center">
-          <span className="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
-            Tersedia {product.stock_quantity} cup
+        <div className="mt-5 flex items-center justify-center">
+          <span className={`rounded-full px-4 py-1.5 text-xs font-bold ${outOfStock ? 'bg-[hsl(var(--cx-rail))] text-muted-foreground' : 'bg-emerald-50 text-emerald-700'}`}>
+            {outOfStock ? 'Stok habis' : `Tersedia ${product.stock_quantity} cup`}
           </span>
         </div>
+
+        <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground">
+          Pesan langsung ke rider lewat WhatsApp, atau temui rider di titik lokasinya.
+        </p>
       </div>
     </div>
   );

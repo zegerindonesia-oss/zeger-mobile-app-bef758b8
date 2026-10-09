@@ -13,26 +13,35 @@
 
 ## Customer App redesign (Okt 2026) — Zeger brand, 3D, Apple-glass
 ### Fondasi
-- [ ] Load webfont (Plus Jakarta Sans + Sora) — saat ini font-family dirujuk tapi tidak pernah dimuat
-- [ ] Design layer `cx-*` di index.css: raised red button, glass select, 3D depth, ticket, coin, skala tipografi
-- [ ] Aset 3D (cup iced/hot, botol, koin, scooter, paper bag, gift, crown)
+- [x] Webfont Plus Jakarta Sans + Sora dimuat
+- [x] Design layer `cx-*` di index.css (raised red button, glass select, 3D depth, ticket, coin, skala tipografi)
+- [x] Aset 3D (cup iced/hot, botol, koin, scooter, paper bag, gift, crown)
 
 ### Layar
-- [ ] CustomerHome — hero banner dari Promo Banner Management + fallback, kartu poin 3D, channel picker
-- [ ] CustomerMenu — grid clean, kategori pill glass, placeholder gelas 3D
-- [ ] CustomerProductDetail — opsi glass + animasi tekan, potensi poin, sticky footer
-- [ ] CustomerVouchers — kartu tiket scalloped, klaim + kode promo berfungsi
-- [ ] CustomerLoyalty — warna Zeger (bukan ungu), reward dari tabel loyalty_rewards
-- [ ] CustomerPromoReward — data nyata (promo_banners + loyalty_rewards), bukan mock
-- [ ] CustomerSubscription — polish MyZeger Plan
-- [ ] CustomerOutletList — perbaiki bug pilih outlet + tampilan kartu
-- [ ] CustomerCartNew + CustomerCheckout — outlet asli (hapus "SULAWESI SURABAYA"), banner ungu dihapus
-- [ ] CustomerProfile + CustomerOrders — konsisten brand
-- [ ] BottomNavigation — floating glass dock
+- [x] CustomerHome — hero banner dari Promo Banner Management + fallback, kartu poin 3D, channel picker
+- [x] CustomerMenu — grid clean, kategori pill glass, placeholder gelas 3D
+- [x] CustomerProductDetail — opsi glass + animasi tekan, potensi poin, sticky footer
+- [x] CustomerVouchers — kartu tiket scalloped, klaim + kode promo
+- [x] CustomerLoyalty — warna Zeger, reward dari loyalty_rewards
+- [x] CustomerPromoReward — data nyata (promo_banners + loyalty_rewards)
+- [x] CustomerSubscription — MyZeger Plan
+- [x] CustomerOutletList — pilih outlet + jarak dikirim ke checkout
+- [x] CustomerCartNew + CustomerCheckout — outlet asli, voucher, poin, ongkir
+- [x] CustomerProfile, CustomerCare, CustomerNotifications, CustomerReferral
+- [x] BottomNavigation — floating glass dock
+- [x] CustomerAuth — layar masuk/daftar brand Zeger
+- [x] CustomerOrders — daftar pesanan gaya baru
+- [x] CustomerPaymentMethod — pilih pembayaran (glass + raised)
+- [x] CustomerOrderWaiting / CustomerOrderSuccess — animasi 3D
+- [x] CustomerOrderTracking + OrderDetail — peta & struk
+- [x] CustomerMap (On The Wheels) — panggil rider via WhatsApp
+- [x] CustomerStreetComingSoon
 
 ### Perbaikan fungsi
-- [ ] Nomor Zeger Care → +62 813-3180-488
-- [ ] Voucher demo kedaluwarsa (RLS menyembunyikan voucher lewat tanggal) → perpanjang + UI tahan data kosong
-- [ ] RLS customer_subscriptions pakai auth.uid() padahal app kirim customer_users.id → langganan selalu gagal
-- [ ] Banner `/promo-banners/*.png` broken → fallback gambar
-- [ ] CustomerOutletList kirim string id, CustomerApp baca object → outlet_id kosong saat checkout
+- [x] Nomor Zeger Care → +62 813-3180-488
+- [x] Voucher kedaluwarsa diperpanjang + RPC claim_voucher idempoten
+- [x] Banner promo kedaluwarsa diperpanjang; fallback gambar bila kosong
+- [x] Outlet terpilih (id + jarak) terbawa ke checkout
+- [x] Ongkir / diskon ongkir / biaya kemasan dapat diatur di Back Office (Customer App Settings → Ongkir & Biaya)
+- [ ] Harga & benefit paket MyZeger Plan masih contoh — menunggu harga final dari owner
+- [ ] 114 temuan linter Supabase lama (SECURITY DEFINER dll) — tunggu persetujuan owner

@@ -28,13 +28,22 @@ export interface CustomerAppConfig {
     reward_points: number;
     code_prefix: string;
   };
+  order: {
+    /** Ongkir untuk pesanan delivery dari outlet (Rupiah). */
+    delivery_fee: number;
+    /** Potongan ongkir dalam persen. */
+    delivery_discount_percent: number;
+    /** Biaya kemasan take away (Rupiah). */
+    takeaway_charge: number;
+  };
 }
 
 const DEFAULT: CustomerAppConfig = {
   features: { loyalty: true, subscription: true, vouchers: true, promo_reward: true, referral: true, care: true, notifications: true },
   sections: { membership: true, voucher_referral: true, order_types: true, rider_nearby: true, promo_active: true, big_order: true, zeger_care: true },
-  care: { whatsapp_number: '6281330886182', faq_items: [] },
+  care: { whatsapp_number: '628133180488', faq_items: [] },
   referral: { reward_points: 50, code_prefix: 'ZG-' },
+  order: { delivery_fee: 25400, delivery_discount_percent: 20, takeaway_charge: 3500 },
 };
 
 let cache: CustomerAppConfig | null = null;
@@ -63,6 +72,7 @@ async function loadConfig(): Promise<CustomerAppConfig> {
           reward_points: typeof map['referral.reward_points'] === 'number' ? map['referral.reward_points'] : DEFAULT.referral.reward_points,
           code_prefix: typeof map['referral.code_prefix'] === 'string' ? map['referral.code_prefix'] : DEFAULT.referral.code_prefix,
         },
+        order: { ...DEFAULT.order, ...(map['order.fees'] || {}) },
       };
       cache = cfg;
       return cfg;

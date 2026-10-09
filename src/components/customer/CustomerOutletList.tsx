@@ -15,7 +15,7 @@ interface Branch {
 
 interface CustomerOutletListProps {
   onNavigate: (view: string) => void;
-  onSelectOutlet?: (outlet: { id: string; name: string; address: string }) => void;
+  onSelectOutlet?: (outlet: { id: string; name: string; address: string; distance?: string }) => void;
   channel?: 'branch' | 'street';
   orderMode?: 'pickup' | 'delivery';
 }
@@ -135,7 +135,14 @@ export function CustomerOutletList({ onNavigate, onSelectOutlet, channel = 'bran
               key={o.id}
               disabled={!open}
               onClick={() => {
-                onSelectOutlet?.({ id: o.id, name: o.name, address: o.address || '' });
+                onSelectOutlet?.({
+                  id: o.id,
+                  name: o.name,
+                  address: o.address || '',
+                  distance: o.distance == null
+                    ? undefined
+                    : o.distance < 1 ? `${Math.round(o.distance * 1000)} m` : `${o.distance.toFixed(1)} km`,
+                });
                 onNavigate('menu');
               }}
               className={cn(

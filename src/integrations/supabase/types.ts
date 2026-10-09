@@ -5297,6 +5297,10 @@ export type Database = {
         Returns: boolean
       }
       resolve_stock_alert: { Args: { alert_uuid: string }; Returns: boolean }
+      spend_customer_points: {
+        Args: { _order_id: string; _points: number }
+        Returns: number
+      }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
