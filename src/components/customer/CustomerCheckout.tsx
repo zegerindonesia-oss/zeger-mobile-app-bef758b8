@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { cxArt, artworkFor, onArtError, formatRupiah } from "@/lib/customer-art";
 import { cartSubtotal, unitPrice, describeCustomizations, pointsFor } from "@/lib/customer-pricing";
+import { voucherBlockedReason, voucherDiscountFor, voucherHeadline, voucherKind } from "@/lib/customer-voucher";
 
 interface CartItem {
   id: string;
