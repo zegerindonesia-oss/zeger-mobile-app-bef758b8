@@ -106,21 +106,17 @@ export default function CustomerCheckout({
     return () => { alive = false; };
   }, [customerUser?.id]);
 
-  const voucherDiscount = useMemo(() => {
-    const v = selectedVoucher?.voucher;
-    if (!v) return 0;
-    if ((v.min_order || 0) > subtotal) return 0;
-    const raw = v.discount_type === 'percentage'
-      ? Math.floor(subtotal * (Number(v.discount_value) || 0) / 100)
-      : Number(v.discount_value) || 0;
-    return Math.min(raw, subtotal);
-  }, [selectedVoucher, subtotal]);
-
   const deliveryFee = orderType === "outlet_delivery" ? cfg.order.delivery_fee : 0;
   const takeAwayCharge = orderType === "outlet_pickup" ? cfg.order.takeaway_charge : 0;
   const deliveryDiscount = orderType === "outlet_delivery"
     ? Math.floor(deliveryFee * (cfg.order.delivery_discount_percent / 100))
     : 0;
+  const shippingDue = Math.max(0, deliveryFee - deliveryDiscount);
+
+  const voucherDiscount = useMemo(
+    () => voucherDiscountFor(selectedVoucher?.voucher, { subtotal, shippingDue }),
+    [selectedVoucher, subtotal, shippingDue],
+  );
 
   const afterVoucher = Math.max(0, subtotal - voucherDiscount);
   const maxPointsCanUse = Math.max(0, Math.min(customerUser.points || 0, Math.floor(afterVoucher / 500)));
