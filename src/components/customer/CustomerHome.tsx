@@ -56,7 +56,7 @@ export function CustomerHome({ customerUser, onNavigate, onChooseChannel }: Cust
   useEffect(() => {
     if (!customerUser?.id) return;
     supabase.from('customer_notifications').select('id', { count: 'exact', head: true })
-      .eq('customer_user_id', customerUser.id).eq('is_read', false)
+      .eq('user_id', customerUser.id).is('read_at', null)
       .then(({ count }) => setUnread(count || 0));
   }, [customerUser?.id]);
 
