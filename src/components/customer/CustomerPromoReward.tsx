@@ -4,7 +4,7 @@ import { ChevronRight, Clock, Gift, Lock, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { normalizeImageUrl } from '@/lib/image-url';
 import { artworkFor, cxArt, onArtError } from '@/lib/customer-art';
-import zegerPromo from '@/assets/flow/zeger-promo.png.asset.json';
+import { CxPromoImage } from '@/components/customer/CxPromoImage';
 
 interface Props { customerUser: any; onNavigate: (view: string) => void }
 

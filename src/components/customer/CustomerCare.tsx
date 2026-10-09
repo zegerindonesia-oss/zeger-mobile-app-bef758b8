@@ -47,13 +47,6 @@ export function CustomerCare({ onBack }: Props) {
                 <p className="text-[11px] opacity-90">{formatPhone(wa)}</p>
               </div>
             </button>
-            <a
-              href={wa ? `tel:+${wa}` : undefined}
-              className="cx-btn cx-btn-ghost w-full px-5 py-3.5 flex items-center gap-3"
-            >
-              <Phone className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Telepon Customer Care</span>
-            </a>
             <div className="flex items-center gap-2 rounded-2xl bg-zeger-cream px-4 py-2.5">
               <Clock className="h-3.5 w-3.5 text-zeger-dark shrink-0" />
               <p className="text-[11px] font-medium text-zeger-dark">Setiap hari, 08.00 – 22.00 WIB</p>
