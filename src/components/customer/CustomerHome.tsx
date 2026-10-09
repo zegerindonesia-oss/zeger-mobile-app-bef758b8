@@ -26,7 +26,7 @@ const CHANNELS: { id: CustomerChannel; title: string; desc: string; icon: any }[
 ];
 
 export function CustomerHome({ customerUser, onNavigate, onChooseChannel }: CustomerHomeProps) {
-  const { config } = useCustomerAppConfig();
+  const config = useCustomerAppConfig();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [slide, setSlide] = useState(0);
   const [channel, setChannel] = useState<CustomerChannel>('branch');
