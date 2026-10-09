@@ -60,7 +60,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: Props) {
                 <div className="h-full rounded-full bg-gradient-to-r from-zeger-gold to-[hsl(45_96%_72%)] transition-all duration-700" style={{ width: `${progress}%` }} />
               </div>
               <p className="mt-2 text-[11px] opacity-90">
-                Kurang {Math.max(0, nextReward.points_required - points)} poin lagi untuk <span className="font-bold">{nextReward.name}</span>
+                Kurang {Math.max(0, nextReward.points_required - points)} poin lagi untuk <span className="font-bold">{nextReward.reward_name}</span>
               </p>
             </div>
           )}
@@ -98,9 +98,9 @@ export function CustomerPromoReward({ customerUser, onNavigate }: Props) {
                 >
                   <span className="cx-stage flex aspect-square items-center justify-center">
                     <img
-                      src={normalizeImageUrl(r.image_url) || artworkFor({ name: r.name })}
-                      onError={onArtError(artworkFor({ name: r.name }))}
-                      alt={r.name}
+                      src={normalizeImageUrl(r.image_url) || artworkFor({ name: r.reward_name })}
+                      onError={onArtError(artworkFor({ name: r.reward_name }))}
+                      alt={r.reward_name}
                       loading="lazy"
                       className={cn('cx-art h-[82%] w-[82%] object-contain p-1', !unlocked && 'opacity-60 grayscale-[0.4]')}
                     />
@@ -115,7 +115,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: Props) {
                       {unlocked ? <Sparkles className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                       {r.points_required} poin
                     </span>
-                    <span className="mt-1.5 line-clamp-2 block min-h-[2.1rem] text-xs font-bold leading-snug">{r.name}</span>
+                    <span className="mt-1.5 line-clamp-2 block min-h-[2.1rem] text-xs font-bold leading-snug">{r.reward_name}</span>
                   </span>
                 </button>
               );
