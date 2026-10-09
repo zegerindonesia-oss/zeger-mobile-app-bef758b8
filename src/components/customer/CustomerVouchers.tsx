@@ -84,7 +84,7 @@ export function CustomerVouchers({ customerUser }: { customerUser: any }) {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.from('customer_user_vouchers').insert({ user_id: customerUser.id, voucher_id: voucher.id });
+    const { error } = await (supabase as any).rpc('claim_voucher', { _voucher_id: voucher.id });
     setBusy(false);
     if (error) { toast({ title: 'Gagal klaim', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Voucher diklaim!', description: `${voucher.code} siap dipakai di kasir & aplikasi` });
