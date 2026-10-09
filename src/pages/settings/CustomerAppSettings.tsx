@@ -88,6 +88,7 @@ export default function CustomerAppSettings() {
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="care">Care</TabsTrigger>
           <TabsTrigger value="referral">Referral</TabsTrigger>
+            <TabsTrigger value="channels">Kanal Outlet</TabsTrigger>
         </TabsList>
 
         <TabsContent value="layout">
@@ -139,7 +140,41 @@ export default function CustomerAppSettings() {
             <div><Label>Poin bonus per referral</Label><Input type="number" value={referralPoints} onChange={e => setReferralPoints(parseInt(e.target.value) || 0)} /></div>
           </CardContent></Card>
         </TabsContent>
+
+        <TabsContent value="channels">
+          <OutletChannels />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function OutletChannels() {
+  const [rows, setRows] = useState<{ id: string; name: string; customer_channel: string }[]>([]);
+  const load = async () => {
+    const { data } = await supabase.from('branches').select('id, name, customer_channel').in('branch_type', ['hub', 'small']).eq('is_active', true).order('name');
+    setRows((data as any) || []);
+  };
+  useEffect(() => { load(); }, []);
+  const setChannel = async (id: string, customer_channel: string) => {
+    const { error } = await supabase.from('branches').update({ customer_channel }).eq('id', id);
+    if (error) return toast.error(error.message);
+    toast.success('Kanal outlet diperbarui');
+    load();
+  };
+  return (
+    <Card><CardHeader><CardTitle>Kanal outlet di aplikasi customer</CardTitle></CardHeader><CardContent className="space-y-2">
+      <p className="text-sm text-muted-foreground">Tentukan outlet mana yang muncul di pilihan Zeger Branch atau Zeger On The Street. On The Wheels memakai rider aktif.</p>
+      {rows.map(r => (
+        <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+          <span className="font-medium">{r.name}</span>
+          <div className="flex gap-1">
+            {[['branch', 'Zeger Branch'], ['street', 'On The Street']].map(([v, l]) => (
+              <Button key={v} size="sm" variant={r.customer_channel === v ? 'default' : 'outline'} onClick={() => setChannel(r.id, v)}>{l}</Button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </CardContent></Card>
   );
 }

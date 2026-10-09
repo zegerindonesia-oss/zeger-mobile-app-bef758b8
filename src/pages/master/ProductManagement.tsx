@@ -30,6 +30,7 @@ interface Product {
   image_url: string | null;
   custom_options: any;
   is_active: boolean | null;
+  show_in_customer_app?: boolean | null;
   created_at: string | null;
 }
 
@@ -46,6 +47,7 @@ const emptyForm = {
   image_url: "",
   custom_options: "",
   is_active: true,
+  show_in_customer_app: true,
 };
 
 const ProductManagement = () => {
@@ -125,6 +127,7 @@ const ProductManagement = () => {
       image_url: product.image_url || "",
       custom_options: product.custom_options ? JSON.stringify(product.custom_options, null, 2) : "",
       is_active: product.is_active ?? true,
+      show_in_customer_app: product.show_in_customer_app ?? true,
     });
     setDialogOpen(true);
   };
@@ -160,6 +163,7 @@ const ProductManagement = () => {
       image_url: normalizeImageUrl(form.image_url),
       custom_options: customOpts,
       is_active: form.is_active,
+      show_in_customer_app: form.show_in_customer_app,
     };
 
     if (editingProduct) {
@@ -195,6 +199,14 @@ const ProductManagement = () => {
       toast.success(`Produk ${!product.is_active ? "diaktifkan" : "dinonaktifkan"}`);
       fetchProducts();
     }
+  };
+
+  const toggleCustomerApp = async (product: Product) => {
+    const next = !(product.show_in_customer_app ?? true);
+    const { error } = await supabase.from("products").update({ show_in_customer_app: next }).eq("id", product.id);
+    if (error) return toast.error("Gagal update: " + error.message);
+    toast.success(next ? "Ditampilkan di app customer" : "Disembunyikan dari app customer");
+    fetchProducts();
   };
 
   const handleDelete = async (product: Product) => {
@@ -276,6 +288,7 @@ const ProductManagement = () => {
                     <TableHead className="text-right">HPP</TableHead>
                     <TableHead className="text-right">HPP CK</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>App Customer</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -307,6 +320,9 @@ const ProductManagement = () => {
                         >
                           {p.is_active ? "Aktif" : "Nonaktif"}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Switch checked={p.show_in_customer_app ?? true} onCheckedChange={() => toggleCustomerApp(p)} aria-label="Tampil di app customer" />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
@@ -439,6 +455,10 @@ const ProductManagement = () => {
             <div className="flex items-center gap-3">
               <Switch checked={form.is_active} onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))} />
               <Label>Produk Aktif</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.show_in_customer_app} onCheckedChange={(v) => setForm((f) => ({ ...f, show_in_customer_app: v }))} />
+              <Label>Tampilkan di Aplikasi Customer</Label>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

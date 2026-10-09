@@ -19,6 +19,7 @@ export default {
 		},
 		extend: {
 			colors: {
+				zeger: { DEFAULT: "hsl(var(--zeger))", dark: "hsl(var(--zeger-dark))", soft: "hsl(var(--zeger-soft))", cream: "hsl(var(--zeger-cream))", gold: "hsl(var(--zeger-gold))", foreground: "hsl(var(--zeger-foreground))" },
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',

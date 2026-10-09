@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/shared/ImageUpload';
 
-interface Plan { id: string; name: string; description: string | null; price: number; quota: number; period_days: number; image_url: string | null; is_active: boolean; }
+interface Plan { id: string; name: string; description: string | null; price: number; quota: number; period_days: number; image_url: string | null; is_active: boolean; is_best?: boolean; benefits?: { title: string; subtitle?: string; qty?: number }[]; }
 
 export default function SubscriptionPlans() {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ export default function SubscriptionPlans() {
 
   const save = async () => {
     if (!edit?.name) return toast.error('Nama wajib');
-    const payload = { name: edit.name, description: edit.description || null, price: edit.price || 0, quota: edit.quota || 0, period_days: edit.period_days || 30, image_url: edit.image_url || null, is_active: edit.is_active ?? true };
+    const payload = { name: edit.name, description: edit.description || null, price: edit.price || 0, quota: edit.quota || 0, period_days: edit.period_days || 30, image_url: edit.image_url || null, is_active: edit.is_active ?? true, is_best: edit.is_best ?? false, benefits: (edit.benefits || []).filter(b => b.title?.trim()) };
     const { error } = edit.id
       ? await supabase.from('subscription_plans').update(payload).eq('id', edit.id)
       : await supabase.from('subscription_plans').insert(payload);
@@ -82,6 +82,21 @@ export default function SubscriptionPlans() {
               <div><Label>Hari</Label><Input type="number" value={edit?.period_days || 30} onChange={e => setEdit(x => ({ ...x, period_days: parseInt(e.target.value) || 30 }))} /></div>
             </div>
             <div><Label>Gambar</Label><ImageUpload value={edit?.image_url || ''} onChange={url => setEdit(x => ({ ...x, image_url: url }))} bucket="product-images" folder="subscription" /></div>
+            <div>
+              <Label>Benefit (tampil di app customer)</Label>
+              <div className="space-y-2 mt-1">
+                {(edit?.benefits || []).map((b, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1fr_4rem_auto] gap-1">
+                    <Input placeholder="Free 1 Cup" value={b.title} onChange={e => setEdit(x => ({ ...x, benefits: (x?.benefits || []).map((y, j) => j === i ? { ...y, title: e.target.value } : y) }))} />
+                    <Input placeholder="1x transaksi/bulan" value={b.subtitle || ''} onChange={e => setEdit(x => ({ ...x, benefits: (x?.benefits || []).map((y, j) => j === i ? { ...y, subtitle: e.target.value } : y) }))} />
+                    <Input type="number" value={b.qty ?? 1} onChange={e => setEdit(x => ({ ...x, benefits: (x?.benefits || []).map((y, j) => j === i ? { ...y, qty: parseInt(e.target.value) || 0 } : y) }))} />
+                    <Button size="icon" variant="ghost" onClick={() => setEdit(x => ({ ...x, benefits: (x?.benefits || []).filter((_, j) => j !== i) }))}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+                <Button size="sm" variant="outline" onClick={() => setEdit(x => ({ ...x, benefits: [...(x?.benefits || []), { title: '', subtitle: '', qty: 1 }] }))}><Plus className="h-3 w-3 mr-1" />Tambah benefit</Button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between"><Label>Tandai "Best"</Label><Switch checked={edit?.is_best ?? false} onCheckedChange={v => setEdit(x => ({ ...x, is_best: v }))} /></div>
             <div className="flex items-center justify-between"><Label>Aktif</Label><Switch checked={edit?.is_active ?? true} onCheckedChange={v => setEdit(x => ({ ...x, is_active: v }))} /></div>
           </div>
           <DialogFooter><Button onClick={save}>Simpan</Button></DialogFooter>

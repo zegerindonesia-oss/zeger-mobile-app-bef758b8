@@ -20,6 +20,12 @@
 
 @layer base {
   :root {
+    --zeger: 357 82% 54%;
+    --zeger-dark: 355 75% 34%;
+    --zeger-soft: 0 86% 96%;
+    --zeger-cream: 43 96% 94%;
+    --zeger-gold: 42 92% 52%;
+    --zeger-foreground: 0 0% 100%;
     --gradient-sidebar: linear-gradient(160deg, hsl(354 70% 18%) 0%, hsl(354 72% 30%) 40%, hsl(354 77% 46%) 75%, hsl(355 100% 62%) 100%);
     /* Zeger Brand Colors */
     --background: 0 0% 98%;
