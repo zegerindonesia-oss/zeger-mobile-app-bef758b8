@@ -154,13 +154,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: Props) {
               return (
                 <article key={p.id} className="cx-card overflow-hidden rounded-[26px]">
                   <div className="relative">
-                    <img
-                      src={normalizeImageUrl(p.image_url) || zegerPromo.url}
-                      onError={onArtError(zegerPromo.url)}
-                      alt={p.title}
-                      loading="lazy"
-                      className="h-44 w-full object-cover"
-                    />
+                    <CxPromoImage src={p.image_url} title={p.title} className="h-44 w-full" />
                     {left !== null && left <= 7 && (
                       <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-zeger px-2.5 py-1 text-[11px] font-bold text-zeger-foreground shadow-lg">
                         <Clock className="h-3 w-3" /> {left > 0 ? `${left} hari lagi` : 'Berakhir hari ini'}
