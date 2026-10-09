@@ -84,6 +84,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+            {import.meta.env.DEV && <Route path="/cx-lab" element={<CxLab />} />}
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/landing" element={<FlowLanding />} />
