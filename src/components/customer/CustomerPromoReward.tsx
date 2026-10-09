@@ -22,7 +22,7 @@ export function CustomerPromoReward({ customerUser, onNavigate }: Props) {
     (async () => {
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
       const [{ data: rw }, { data: pb }] = await Promise.all([
-        supabase.from('loyalty_rewards').select('id, name, description, points_required, image_url, is_active').eq('is_active', true).order('points_required'),
+        supabase.from('loyalty_rewards').select('id, reward_name, description, points_required, image_url').eq('is_active', true).order('points_required'),
         supabase.from('promo_banners').select('id, title, description, image_url, link_url, valid_until, placement').eq('is_active', true).order('display_order'),
       ]);
       if (!alive) return;
