@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, Minus, Flame, Snowflake, Milk, ShoppingCart } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, Minus, Plus, ShoppingBag, Flame, Snowflake, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { normalizeImageUrl } from '@/lib/image-url';
+import { artworkFor, cxArt, formatRupiah, onArtError } from '@/lib/customer-art';
+import { SIZE_UPCHARGE, TOPPING_PRICES, pointsFor } from '@/lib/customer-pricing';
 
 interface Product {
   id: string;
@@ -24,305 +24,226 @@ interface CustomerProductDetailProps {
   onViewCart: () => void;
 }
 
-export function CustomerProductDetail({ 
-  product, 
-  orderType,
-  onBack, 
-  onAddToCart,
-  cartItemCount,
-  onViewCart
-}: CustomerProductDetailProps) {
+const SIZES = [
+  { id: '200ml', label: '200 ml', hint: 'Standar' },
+  { id: '1lt', label: '1 Liter', hint: 'Botol' },
+  { id: 'small', label: 'Small', hint: 'Reguler' },
+  { id: 'large', label: 'Large', hint: 'Lebih banyak' },
+] as const;
+
+const ICE = [
+  { id: 'normal', label: 'Normal' },
+  { id: 'less', label: 'Sedikit' },
+  { id: 'no-ice', label: 'Tanpa Es' },
+] as const;
+
+const SUGAR = [
+  { id: 'normal', label: 'Normal' },
+  { id: 'less', label: 'Sedikit' },
+  { id: 'no-sugar', label: 'Tanpa Gula' },
+] as const;
+
+const TOPPINGS = [
+  { id: 'espresso', name: 'Extra Espresso Shot' },
+  { id: 'oreo', name: 'Oreo Crumb' },
+  { id: 'cheese', name: 'Cheese Cream' },
+  { id: 'jelly', name: 'Jelly Pearl' },
+  { id: 'icecream', name: 'Ice Cream' },
+];
+
+export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCount, onViewCart }: CustomerProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
   const [temperature, setTemperature] = useState<'hot' | 'cold'>('cold');
-  const [size, setSize] = useState<'small' | 'large' | '200ml' | '1lt'>('200ml');
-  const [iceLevel, setIceLevel] = useState<'normal' | 'less' | 'no-ice'>('normal');
-  const [sugarLevel, setSugarLevel] = useState<'normal' | 'less' | 'no-sugar'>('normal');
+  const [size, setSize] = useState<string>('200ml');
+  const [iceLevel, setIceLevel] = useState<string>('normal');
+  const [sugarLevel, setSugarLevel] = useState<string>('normal');
   const [toppings, setToppings] = useState<string[]>([]);
-  const [notes, setNotes] = useState<string>('');
+  const [notes, setNotes] = useState('');
 
-  const toppingOptions = [
-    { id: 'espresso', name: 'Espresso Shot', price: 5000, icon: <Flame className="h-4 w-4" /> },
-    { id: 'oreo', name: 'Oreo Crumb', price: 4000, icon: <Snowflake className="h-4 w-4" /> },
-    { id: 'cheese', name: 'Cheese', price: 5000, icon: <Milk className="h-4 w-4" /> },
-    { id: 'jelly', name: 'Jelly Pearl', price: 5000, icon: <Snowflake className="h-4 w-4" /> },
-    { id: 'icecream', name: 'Ice Cream', price: 5000, icon: <Snowflake className="h-4 w-4" /> },
-  ];
+  const unit = useMemo(() => {
+    let p = product.price + (SIZE_UPCHARGE[size] || 0);
+    toppings.forEach((t) => { p += TOPPING_PRICES[t] || 0; });
+    return p;
+  }, [product.price, size, toppings]);
 
-  const getCustomPrice = () => {
-    let price = product.price; // Base price includes default size
-    
-    // Only add upcharge for size UPGRADES (not default sizes)
-    if (size === 'large') price += 5000;
-    if (size === '1lt') price += 15000;
-    // '200ml' and 'small' are default sizes, no extra charge
-    
-    // Add toppings
-    toppings.forEach(toppingId => {
-      const topping = toppingOptions.find(t => t.id === toppingId);
-      if (topping) {
-        price += topping.price;
-      }
-    });
-    
-    return price * quantity;
-  };
+  const total = unit * quantity;
+  const artFallback = temperature === 'hot' ? cxArt.cupHot : artworkFor(product);
+  const hero = normalizeImageUrl(product.image_url) || artFallback;
 
-  const toggleTopping = (toppingId: string) => {
-    setToppings(prev => 
-      prev.includes(toppingId) 
-        ? prev.filter(id => id !== toppingId)
-        : [...prev, toppingId]
-    );
-  };
-
-  const handleAddToCart = () => {
-    onAddToCart(product, quantity, {
-      temperature,
-      size,
-      iceLevel,
-      sugarLevel,
-      toppings,
-      notes
-    });
-  };
+  const toggleTopping = (id: string) =>
+    setToppings((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
 
   return (
-    <div className="min-h-screen bg-white pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shadow-sm">
-        <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <h1 className="text-base font-bold text-gray-900">{product.name}</h1>
-        <button onClick={onViewCart} className="p-2 hover:bg-gray-100 rounded-full transition-colors relative">
-          <ShoppingCart className="h-4 w-4" />
-          {cartItemCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#EA2831] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-              {cartItemCount}
+    <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-44">
+      {/* Hero */}
+      <div className="cx-stage relative h-[300px] overflow-hidden rounded-b-[34px]">
+        <img
+          key={hero}
+          src={hero}
+          onError={onArtError(artFallback)}
+          alt={product.name}
+          className="cx-art cx-float absolute left-1/2 top-1/2 h-[220px] w-[220px] -translate-x-1/2 -translate-y-1/2 object-contain"
+        />
+        <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
+          <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-11 w-11">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button onClick={onViewCart} aria-label="Keranjang" className="cx-icon-btn relative h-11 w-11">
+            <ShoppingBag className="h-[18px] w-[18px]" />
+            {cartItemCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-zeger px-1 text-[10px] font-bold text-zeger-foreground ring-2 ring-white">
+                {cartItemCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Title */}
+      <section className="px-4 pt-5">
+        <h1 className="text-2xl font-extrabold leading-tight">{product.name}</h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+          {product.description || 'Racikan kopi berkualitas khas Zeger, diseduh segar untukmu.'}
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="cx-num text-xl font-extrabold text-zeger">{formatRupiah(unit)}</span>
+          {pointsFor(total) > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-zeger-cream px-3 py-1 text-[11px] font-bold text-[hsl(30_60%_26%)]">
+              <img src={cxArt.coin} alt="" aria-hidden className="h-4 w-4 object-contain" width={640} height={640} />
+              Dapat {pointsFor(total)} Zeger Poin
             </span>
           )}
-        </button>
-      </div>
-
-      {/* Product Image */}
-      <div className="relative">
-        <img
-          src={product.image_url || '/placeholder.svg'}
-          alt={product.name}
-          className="w-full h-48 object-cover"
-        />
-      </div>
-
-      {/* Product Info */}
-      <div className="p-4 space-y-3">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">{product.name}</h2>
-          <p className="text-base font-bold text-[#EA2831] mb-2">
-            Rp{getCustomPrice().toLocaleString('id-ID')}
-          </p>
-          <p className="text-gray-600 text-xs leading-relaxed">
-            {product.description || 'Minuman kopi berkualitas dengan cita rasa yang istimewa'}
-          </p>
         </div>
+      </section>
 
+      <div className="space-y-5 px-4 pt-6">
         {/* Temperature */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Suhu</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setTemperature('hot')}
-              className={cn(
-                "p-4 rounded-full transition-all flex flex-col items-center justify-center gap-2 shadow-md",
-                temperature === 'hot'
-                  ? 'bg-[#EA2831] shadow-lg shadow-red-200'
-                  : 'bg-white border border-gray-300'
-              )}
-            >
-              <Flame className={cn(
-                "h-6 w-6",
-                temperature === 'hot' ? 'text-white' : 'text-gray-400'
-              )} />
-              <span className={cn(
-                "text-sm font-bold",
-                temperature === 'hot' ? 'text-white' : 'text-gray-600'
-              )}>
-                Panas
-              </span>
+        <Group title="Suhu" required>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button onClick={() => setTemperature('cold')} data-active={temperature === 'cold'} className="cx-opt flex items-center justify-center gap-2 py-3.5 text-sm">
+              <Snowflake className="h-[18px] w-[18px]" /> Iced
             </button>
-            <button
-              onClick={() => setTemperature('cold')}
-              className={cn(
-                "p-4 rounded-full transition-all flex flex-col items-center justify-center gap-2 shadow-md",
-                temperature === 'cold'
-                  ? 'bg-[#EA2831] shadow-lg shadow-red-200'
-                  : 'bg-white border border-gray-300'
-              )}
-            >
-              <Snowflake className={cn(
-                "h-6 w-6",
-                temperature === 'cold' ? 'text-white' : 'text-gray-400'
-              )} />
-              <span className={cn(
-                "text-sm font-bold",
-                temperature === 'cold' ? 'text-white' : 'text-gray-600'
-              )}>
-                Dingin
-              </span>
+            <button onClick={() => setTemperature('hot')} data-active={temperature === 'hot'} className="cx-opt flex items-center justify-center gap-2 py-3.5 text-sm">
+              <Flame className="h-[18px] w-[18px]" /> Hot
             </button>
           </div>
-        </div>
+        </Group>
 
         {/* Size */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Ukuran</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {(['200ml', '1lt', 'small', 'large'] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSize(s)}
-                className={cn(
-                  "p-4 rounded-full transition-all shadow-md",
-                  size === s
-                    ? 'bg-[#EA2831] shadow-lg shadow-red-200'
-                    : 'bg-white border border-gray-300'
-                )}
-              >
-                <span className={cn(
-                  "text-base font-bold",
-                  size === s ? 'text-white' : 'text-gray-700'
-                )}>
-                  {s === 'small' ? 'Small' : s === 'large' ? 'Large' : s}
+        <Group title="Ukuran" required>
+          <div className="grid grid-cols-2 gap-2.5">
+            {SIZES.map((s) => (
+              <button key={s.id} onClick={() => setSize(s.id)} data-active={size === s.id} className="cx-opt px-3 py-3 text-left">
+                <span className="block text-sm font-bold leading-tight">{s.label}</span>
+                <span className={cn('mt-0.5 block text-[11px] leading-tight', size === s.id ? 'text-white/80' : 'text-muted-foreground')}>
+                  {SIZE_UPCHARGE[s.id] ? `+${formatRupiah(SIZE_UPCHARGE[s.id])}` : s.hint}
                 </span>
               </button>
             ))}
           </div>
-        </div>
+        </Group>
 
-        {/* Ice Level */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Level Es</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {(['normal', 'less', 'no-ice'] as const).map((level) => (
-              <button
-                key={level}
-                onClick={() => setIceLevel(level)}
-                className={cn(
-                  "p-3 rounded-full transition-all shadow-md",
-                  iceLevel === level
-                    ? 'bg-[#EA2831] shadow-lg shadow-red-200'
-                    : 'bg-white border border-gray-300'
-                )}
-              >
-                <span className={cn(
-                  "text-sm font-bold",
-                  iceLevel === level ? 'text-white' : 'text-gray-700'
-                )}>
-                  {level === 'normal' ? 'Normal' : level === 'less' ? 'Sedikit' : 'Tanpa Es'}
-                </span>
+        {/* Ice */}
+        {temperature === 'cold' && (
+          <Group title="Level Es">
+            <div className="grid grid-cols-3 gap-2.5">
+              {ICE.map((o) => (
+                <button key={o.id} onClick={() => setIceLevel(o.id)} data-active={iceLevel === o.id} className="cx-opt py-3 text-xs">
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </Group>
+        )}
+
+        {/* Sugar */}
+        <Group title="Level Gula">
+          <div className="grid grid-cols-3 gap-2.5">
+            {SUGAR.map((o) => (
+              <button key={o.id} onClick={() => setSugarLevel(o.id)} data-active={sugarLevel === o.id} className="cx-opt py-3 text-xs">
+                {o.label}
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Sugar Level */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Level Gula</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {(['normal', 'less', 'no-sugar'] as const).map((level) => (
-              <button
-                key={level}
-                onClick={() => setSugarLevel(level)}
-                className={cn(
-                  "p-3 rounded-full transition-all shadow-md",
-                  sugarLevel === level
-                    ? 'bg-[#EA2831] shadow-lg shadow-red-200'
-                    : 'bg-white border border-gray-300'
-                )}
-              >
-                <span className={cn(
-                  "text-sm font-bold",
-                  sugarLevel === level ? 'text-white' : 'text-gray-700'
-                )}>
-                  {level === 'normal' ? 'Normal' : level === 'less' ? 'Sedikit' : 'Tanpa Gula'}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
+        </Group>
 
         {/* Toppings */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Topping</h3>
-          <div className="space-y-2">
-            {toppingOptions.map((topping) => (
-              <label
-                key={topping.id}
-                className="flex items-center justify-between p-2 rounded-xl border-2 border-gray-200 hover:border-gray-300 cursor-pointer transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={toppings.includes(topping.id)}
-                    onCheckedChange={() => toggleTopping(topping.id)}
-                  />
-                  <div className="flex items-center gap-2">
-                    {topping.icon}
-                    <span className="text-xs font-medium text-gray-700">{topping.name}</span>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold text-gray-900">
-                  +Rp{topping.price.toLocaleString('id-ID')}
-                </span>
-              </label>
-            ))}
+        <Group title="Topping" hint="Opsional, bisa pilih lebih dari satu">
+          <div className="space-y-2.5">
+            {TOPPINGS.map((t) => {
+              const on = toppings.includes(t.id);
+              return (
+                <button key={t.id} onClick={() => toggleTopping(t.id)} data-active={on} className="cx-opt flex w-full items-center gap-3 px-3.5 py-3 text-left">
+                  <span
+                    className={cn(
+                      'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border-2 transition-colors',
+                      on ? 'border-white bg-white text-zeger' : 'border-[hsl(var(--cx-line))] bg-white',
+                    )}
+                  >
+                    {on && <Check className="h-3.5 w-3.5" strokeWidth={3.5} />}
+                  </span>
+                  <span className="flex-1 text-sm font-semibold">{t.name}</span>
+                  <span className={cn('cx-num text-xs font-bold', on ? 'text-white' : 'text-zeger')}>
+                    +{formatRupiah(TOPPING_PRICES[t.id])}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </Group>
 
         {/* Notes */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Catatan Tambahan</h3>
-          <Textarea
+        <Group title="Catatan untuk barista" hint="Opsional">
+          <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Contoh: Gula extra, es batu banyak"
-            className="w-full min-h-[60px] text-xs resize-none focus:border-[#EA2831]"
+            rows={3}
+            placeholder="Contoh: gula sedikit saja, es terpisah"
+            className="w-full resize-none rounded-2xl border border-[hsl(var(--cx-line))] bg-white p-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground focus:border-zeger focus:shadow-[0_0_0_4px_hsl(var(--zeger)/0.12)]"
           />
-        </div>
+        </Group>
       </div>
 
-      {/* Footer - Add to Cart */}
-      <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3 shadow-lg">
-        <div className="max-w-sm mx-auto space-y-2">
-          {/* Quantity Selector */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-700">Jumlah</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-              >
-                <Minus className="h-3 w-3" />
-              </button>
-              <span className="text-base font-bold min-w-[2rem] text-center">{quantity}</span>
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-              </button>
-            </div>
+      {/* Sticky footer */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[hsl(var(--cx-line))] bg-white/92 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-md items-center gap-3">
+          <div className="flex items-center gap-2.5 rounded-full bg-[hsl(var(--cx-rail))] p-1">
+            <button
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1}
+              aria-label="Kurangi"
+              className="cx-icon-btn h-9 w-9 disabled:opacity-40"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="cx-num min-w-[1.25rem] text-center text-base font-extrabold">{quantity}</span>
+            <button onClick={() => setQuantity((q) => Math.min(99, q + 1))} aria-label="Tambah" className="cx-icon-btn h-9 w-9">
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
-
-          {/* Add to Cart Button */}
-          <Button
-            onClick={handleAddToCart}
-            className="w-full h-12 bg-[#EA2831] hover:bg-red-600 text-white rounded-full text-sm font-bold shadow-lg"
+          <button
+            onClick={() => onAddToCart(product, quantity, { temperature, size, iceLevel, sugarLevel, toppings, notes })}
+            className="cx-btn cx-btn-primary flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-sm"
           >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Tambah ke Keranjang - Rp{getCustomPrice().toLocaleString('id-ID')}
-          </Button>
+            Tambah · <span className="cx-num">{formatRupiah(total)}</span>
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
+function Group({ title, hint, required, children }: { title: string; hint?: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <section>
+      <div className="mb-2.5 flex items-baseline gap-2">
+        <h2 className="text-sm font-extrabold">{title}</h2>
+        {required && <span className="rounded-full bg-zeger-soft px-2 py-0.5 text-[10px] font-bold text-zeger">Wajib</span>}
+        {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export default CustomerProductDetail;

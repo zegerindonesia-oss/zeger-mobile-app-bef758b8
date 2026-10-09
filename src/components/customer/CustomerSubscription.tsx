@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Crown, Gift, Percent, Coffee, Cake, Package } from 'lucide-react';
+import { Cake, ChevronLeft, Coffee, Gift, Package, Percent } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cxArt, formatRupiah } from '@/lib/customer-art';
 
-interface Props { customerUser: any; onBack: () => void; }
-interface Benefit { title: string; subtitle?: string; qty?: number; }
-interface Plan { id: string; name: string; description: string | null; price: number; quota: number; period_days: number; image_url: string | null; tier: string; is_best: boolean; benefits: Benefit[]; }
-interface Sub { id: string; plan_id: string; status: string; ends_at: string; remaining_quota: number; plan?: Plan; }
+interface Props { customerUser: any; onBack: () => void }
+interface Benefit { title: string; subtitle?: string; qty?: number }
+interface Plan {
+  id: string; name: string; description: string | null; price: number; quota: number;
+  period_days: number; image_url: string | null; tier: string; is_best: boolean; benefits: Benefit[];
+}
+interface Sub { id: string; plan_id: string; status: string; ends_at: string; remaining_quota: number; plan?: Plan }
 
 const iconFor = (t: string) => {
-  const s = t.toLowerCase();
+  const s = (t || '').toLowerCase();
   if (s.includes('birthday') || s.includes('ulang')) return Cake;
   if (s.includes('diskon') || s.includes('%')) return Percent;
   if (s.includes('buy') || s.includes('gratis') || s.includes('free')) return Coffee;
@@ -25,69 +28,102 @@ export function CustomerSubscription({ customerUser, onBack }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: p }, { data: s }] = await Promise.all([
-        supabase.from('subscription_plans').select('*').eq('is_active', true).order('price', { ascending: false }),
-        supabase.from('customer_subscriptions').select('*, plan:plan_id(*)').eq('user_id', customerUser?.id).eq('status', 'active').gte('ends_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1),
-      ]);
-      const list = ((p as any) || []).map((x: any) => ({ ...x, benefits: Array.isArray(x.benefits) ? x.benefits : [] })) as Plan[];
-      setPlans(list);
-      setSelected((list.find((x) => x.is_best) || list[0])?.id || null);
-      setMySub(s && s.length ? (s[0] as any) : null);
-      setLoading(false);
-    })();
-  }, [customerUser?.id]);
+  const load = async () => {
+    const [{ data: p }, { data: s }] = await Promise.all([
+      supabase.from('subscription_plans').select('*').eq('is_active', true).order('price', { ascending: false }),
+      customerUser?.id
+        ? supabase.from('customer_subscriptions').select('*, plan:plan_id(*)').eq('user_id', customerUser.id).eq('status', 'active')
+            .gte('ends_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const list = ((p as any[]) || []).map((x) => ({ ...x, benefits: Array.isArray(x.benefits) ? x.benefits : [] })) as Plan[];
+    setPlans(list);
+    setSelected((prev) => prev || (list.find((x) => x.is_best) || list[0])?.id || null);
+    setMySub(s && s.length ? (s[0] as any) : null);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [customerUser?.id]);
 
   const plan = useMemo(() => plans.find((p) => p.id === selected) || null, [plans, selected]);
   const renewDate = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() + (plan?.period_days || 30));
-    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    const d = new Date();
+    d.setDate(d.getDate() + (plan?.period_days || 30));
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
   }, [plan]);
+
+  const benefits: Benefit[] = plan?.benefits?.length
+    ? plan.benefits
+    : plan
+      ? [{ title: `${plan.quota} Voucher`, subtitle: plan.description || `Berlaku ${plan.period_days} hari`, qty: plan.quota }]
+      : [];
 
   const subscribe = async () => {
     if (!plan || !customerUser?.id) return;
     setBusy(true);
-    const ends = new Date(); ends.setDate(ends.getDate() + plan.period_days);
+    const ends = new Date();
+    ends.setDate(ends.getDate() + plan.period_days);
     const { error } = await supabase.from('customer_subscriptions').insert({
       user_id: customerUser.id, plan_id: plan.id, status: 'active', ends_at: ends.toISOString(), remaining_quota: plan.quota,
     });
     setBusy(false);
-    if (error) toast({ title: 'Gagal berlangganan', description: error.message, variant: 'destructive' });
-    else { toast({ title: 'Selamat! Kamu member MyZeger Plan', description: plan.name }); onBack(); }
+    if (error) { toast({ title: 'Gagal berlangganan', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Selamat, kamu member MyZeger Plan!', description: plan.name });
+    load();
   };
 
-  const benefits: Benefit[] = plan?.benefits.length ? plan.benefits : plan ? [{ title: `${plan.quota} Voucher`, subtitle: plan.description || `Berlaku ${plan.period_days} hari`, qty: plan.quota }] : [];
-
   return (
-    <div className="min-h-screen max-w-md mx-auto bg-gradient-to-b from-card via-zeger-cream to-zeger-soft pb-48">
-      <header className="flex items-center justify-between p-4">
-        <button onClick={onBack} aria-label="Kembali"><ChevronLeft className="h-6 w-6" /></button>
-        <p className="text-2xl font-black italic text-zeger"><span className="text-sm align-top text-zeger-dark">my</span>Zeger <span className="rounded-md bg-zeger px-1.5 text-base text-zeger-foreground">Plan</span></p>
-        <span className="w-6" />
+    <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-56">
+      <header className="cx-stage-dark relative overflow-hidden rounded-b-[34px] px-4 pb-10 pt-4 text-white">
+        <div className="flex items-center justify-between">
+          <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-10 w-10">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <p className="text-lg font-black italic">
+            <span className="align-top text-xs opacity-80">my</span>Zeger
+            <span className="ml-1 rounded-lg bg-white px-1.5 text-base not-italic text-zeger">Plan</span>
+          </p>
+          <span className="w-10" />
+        </div>
+        <div className="mt-4 flex flex-col items-center text-center">
+          <img src={cxArt.crown} alt="" aria-hidden className="cx-art cx-float h-24 w-24 object-contain" width={640} height={640} />
+          <h1 className="mt-3 px-4 text-lg font-extrabold leading-snug">
+            Nikmati beragam keuntungan hanya dengan sekali bayar tiap bulan
+          </h1>
+        </div>
       </header>
 
-      <h1 className="px-6 text-center text-xl font-bold leading-snug">Nikmati beragam keuntungan hanya dengan sekali beli setiap bulannya.</h1>
-      <div className="mx-auto my-6 flex h-32 w-32 items-center justify-center rounded-full bg-zeger text-zeger-foreground shadow-xl"><Crown className="h-16 w-16" /></div>
-
       {mySub && (
-        <div className="mx-4 mb-4 rounded-2xl bg-zeger p-4 text-zeger-foreground shadow-lg">
-          <p className="text-xs opacity-90">Paket aktif</p>
-          <p className="text-lg font-bold">{mySub.plan?.name}</p>
-          <p className="text-sm opacity-90">Sisa {mySub.remaining_quota} voucher · s/d {new Date(mySub.ends_at).toLocaleDateString('id-ID')}</p>
-        </div>
+        <section className="px-4 pt-4">
+          <div className="cx-card cx-sheen rounded-[26px] bg-gradient-to-br from-zeger to-zeger-dark p-4 text-zeger-foreground">
+            <p className="text-[11px] uppercase tracking-wide opacity-85">Paket aktif</p>
+            <p className="text-lg font-extrabold">{mySub.plan?.name || 'MyZeger Plan'}</p>
+            <p className="mt-0.5 text-xs opacity-90">
+              Sisa {mySub.remaining_quota} voucher · berlaku s/d {new Date(mySub.ends_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+        </section>
       )}
 
-      {loading ? <p className="text-center text-sm text-muted-foreground">Memuat...</p> : plans.length === 0 ? (
-        <div className="py-12 text-center text-muted-foreground"><Package className="mx-auto mb-2 h-12 w-12" />Paket segera hadir</div>
+      {loading ? (
+        <div className="space-y-3 p-4">{[0, 1, 2].map((i) => <div key={i} className="cx-shimmer h-[86px] rounded-[22px]" />)}</div>
+      ) : plans.length === 0 ? (
+        <div className="cx-card mx-4 mt-6 flex flex-col items-center rounded-[26px] px-6 py-12 text-center">
+          <Package className="h-10 w-10 text-muted-foreground" />
+          <p className="mt-3 text-sm font-extrabold">Paket langganan segera hadir</p>
+          <p className="mt-1 text-xs text-muted-foreground">Tim Zeger sedang menyiapkan paket terbaik untukmu.</p>
+        </div>
       ) : (
         <>
-          <div className="mx-4 flex rounded-full bg-card p-1.5 shadow-md">
-            {plans.map((p) => (
-              <button key={p.id} onClick={() => setSelected(p.id)}
-                className={cn('relative flex-1 rounded-full py-3 font-bold transition-all', selected === p.id ? 'bg-zeger text-zeger-foreground' : 'text-foreground')}>
+          <div className="cx-seg mx-4 mt-5 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(plans.length, 3)}, minmax(0,1fr))` }}>
+            {plans.slice(0, 3).map((p) => (
+              <button key={p.id} onClick={() => setSelected(p.id)} data-active={selected === p.id} className="cx-seg-item relative py-3 text-sm">
                 {p.name}
-                {p.is_best && <span className="absolute -top-2 right-3 rounded-full bg-zeger-gold px-2 py-0.5 text-xs text-foreground">Best</span>}
+                {p.is_best && (
+                  <span className="absolute -top-2 right-1.5 rounded-full bg-zeger-gold px-2 py-0.5 text-[10px] font-extrabold text-[hsl(30_60%_18%)] shadow-sm">
+                    Best
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -96,35 +132,48 @@ export function CustomerSubscription({ customerUser, onBack }: Props) {
             {benefits.map((b, i) => {
               const Icon = iconFor(b.title);
               return (
-                <div key={i} className="relative flex items-center rounded-2xl border border-border bg-card shadow-sm">
-                  <span className="m-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zeger-gold/30 text-zeger-dark"><Icon className="h-7 w-7" /></span>
-                  <div className="flex-1 py-4">
-                    <p className="font-bold">{b.title}</p>
-                    {b.subtitle && <p className="text-sm text-muted-foreground">{b.subtitle}</p>}
+                <article key={i} className="cx-ticket flex items-stretch overflow-hidden">
+                  <div className="flex flex-1 items-center gap-3 p-3.5">
+                    <span className="cx-stage flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-zeger">
+                      <Icon className="h-6 w-6" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-extrabold leading-tight">{b.title}</p>
+                      {b.subtitle && <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{b.subtitle}</p>}
+                    </div>
                   </div>
-                  <div className="relative w-24 self-stretch border-l border-dashed border-border py-4 text-center">
-                    <span className="absolute -left-2.5 -top-2.5 h-5 w-5 rounded-full bg-zeger-cream" />
-                    <span className="absolute -bottom-2.5 -left-2.5 h-5 w-5 rounded-full bg-zeger-cream" />
-                    <p className="text-xl font-bold">{b.qty ?? 1}</p>
-                    <p className="text-sm">Voucher</p>
+                  <div className="cx-dash relative flex w-[84px] shrink-0 flex-col items-center justify-center">
+                    <span className="cx-notch -left-2.5 -top-2.5" />
+                    <span className="cx-notch -bottom-2.5 -left-2.5" />
+                    <p className="cx-num text-xl font-extrabold">{b.qty ?? 1}</p>
+                    <p className="text-[11px] text-muted-foreground">Voucher</p>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
+
+          <p className="px-5 pt-5 text-center text-[11px] leading-relaxed text-muted-foreground">
+            Voucher terbit otomatis setiap periode dan bisa dipakai di seluruh outlet, booth, maupun rider Zeger.
+          </p>
         </>
       )}
 
       {plan && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md bg-card px-4 pb-6 pt-4 shadow-[0_-8px_24px_-12px_hsl(var(--foreground)/0.2)]">
-          <p className="text-2xl font-bold">Rp {plan.price.toLocaleString('id-ID')} <span className="text-base font-normal">/ bulan</span></p>
-          <p className="text-sm font-semibold">Diperpanjang otomatis seharga Rp {plan.price.toLocaleString('id-ID')} di {renewDate}</p>
-          <button disabled={!!mySub || busy} onClick={subscribe}
-            className="mt-3 w-full rounded-full bg-zeger py-4 text-lg font-bold text-zeger-foreground disabled:opacity-50">
-            {mySub ? 'Kamu sudah berlangganan' : busy ? 'Memproses...' : 'Langganan Sekarang'}
+        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-[hsl(var(--cx-line))] bg-white/93 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-xl">
+          <p className="cx-num text-2xl font-extrabold">
+            {formatRupiah(plan.price)} <span className="text-sm font-semibold text-muted-foreground">/ {plan.period_days} hari</span>
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            Diperpanjang otomatis seharga {formatRupiah(plan.price)} pada {renewDate}
+          </p>
+          <button onClick={subscribe} disabled={!!mySub || busy} className="cx-btn cx-btn-primary mt-3 w-full py-3.5 text-base">
+            {mySub ? 'Kamu sudah berlangganan' : busy ? 'Memproses…' : 'Langganan Sekarang'}
           </button>
         </div>
       )}
     </div>
   );
 }
+
+export default CustomerSubscription;
