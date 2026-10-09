@@ -5139,6 +5139,7 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_rider_id: string }
         Returns: undefined
       }
+      is_customer_member: { Args: { _member_id: string }; Returns: boolean }
       is_customer_user_owner: {
         Args: { customer_user_id: string }
         Returns: boolean
