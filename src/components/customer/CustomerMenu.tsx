@@ -1,10 +1,9 @@
-import { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Store, Plus, Coffee, Sandwich, IceCream, Pizza, Salad, Cake, ShoppingCart } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, Plus, Search, ShoppingBag, Store, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { normalizeImageUrl } from '@/lib/image-url';
+import { artworkFor, formatRupiah, onArtError } from '@/lib/customer-art';
+import { cartItemCount as countItems, cartSubtotal } from '@/lib/customer-pricing';
 
 interface Product {
   id: string;
@@ -23,339 +22,201 @@ interface CustomerMenuProps {
   outletName?: string;
   outletAddress?: string;
   onChangeOutlet?: () => void;
+  onBack?: () => void;
+  orderMode?: 'pickup' | 'delivery';
   cartItemCount: number;
   onViewCart: () => void;
   cart: any[];
 }
 
-type OrderType = 'dine-in' | 'take-away' | 'delivery';
-
-export function CustomerMenu({ 
-  products, 
+export function CustomerMenu({
+  products,
   onAddToCart,
-  outletId,
   outletName,
   outletAddress,
   onChangeOutlet,
-  cartItemCount,
+  onBack,
+  orderMode = 'pickup',
   onViewCart,
-  cart = []
+  cart = [],
 }: CustomerMenuProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [orderType, setOrderType] = useState<OrderType>('take-away');
-  
-  // Get featured products for Daily Special
-  const featuredProducts = useMemo(() => {
-    return products.filter(p => p.image_url).slice(0, 5);
-  }, [products]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    );
-  }, [products, searchTerm]);
-
-  const groupedProducts = useMemo(() => {
-    const groups: { [key: string]: Product[] } = {};
-    filteredProducts.forEach(product => {
-      const category = product.category || 'Other';
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-      groups[category].push(product);
-    });
-    return groups;
-  }, [filteredProducts]);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
 
   const categories = useMemo(() => {
-    return ['all', ...Object.keys(groupedProducts)];
-  }, [groupedProducts]);
+    const seen: string[] = [];
+    products.forEach((p) => {
+      const c = (p.category || 'Lainnya').trim();
+      if (!seen.includes(c)) seen.push(c);
+    });
+    return ['all', ...seen];
+  }, [products]);
 
-  const getCategoryIcon = (category: string) => {
-    const iconMap: { [key: string]: any } = {
-      'all': Store,
-      'Coffee': Coffee,
-      'Kopi': Coffee,
-      'Food': Sandwich,
-      'Makanan': Sandwich,
-      'Dessert': IceCream,
-      'Minuman': Coffee,
-      'Snack': Cake,
-      'Pastry': Cake,
-      'Pizza': Pizza,
-      'Salad': Salad
-    };
-    
-    // Try exact match first
-    const exactMatch = iconMap[category];
-    if (exactMatch) return exactMatch;
-    
-    // Try partial match
-    const lowerCategory = category.toLowerCase();
-    if (lowerCategory.includes('kopi') || lowerCategory.includes('coffee')) return Coffee;
-    if (lowerCategory.includes('makan') || lowerCategory.includes('food')) return Sandwich;
-    if (lowerCategory.includes('dessert') || lowerCategory.includes('manis')) return IceCream;
-    
-    return Coffee; // Default
-  };
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products.filter((p) => {
+      const inCat = category === 'all' || (p.category || 'Lainnya').trim() === category;
+      const inSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
+      return inCat && inSearch;
+    });
+  }, [products, search, category]);
 
-  const displayProducts = activeCategory === 'all' 
-    ? filteredProducts 
-    : groupedProducts[activeCategory] || [];
+  const featured = useMemo(() => products.find((p) => p.image_url) || products[0], [products]);
+  const totalItems = countItems(cart);
+  const totalPrice = cartSubtotal(cart);
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Order Type Tabs */}
-      <div className="bg-white px-4 py-3 shadow-sm sticky top-0 z-10">
-        <div className="flex gap-2 bg-gray-100 p-1 rounded-full">
+    <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-40">
+      {/* Header */}
+      <header className="cx-bar sticky top-0 z-20 px-4 pb-3 pt-3">
+        <div className="flex items-center gap-2">
+          {onBack && (
+            <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-10 w-10 shrink-0">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          )}
           <button
-            onClick={() => setOrderType('dine-in')}
-            className={cn(
-              "flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-1",
-              orderType === 'dine-in' 
-                ? "bg-red-500 text-white shadow-md" 
-                : "text-gray-600 hover:text-gray-900"
-            )}
+            onClick={onChangeOutlet}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl bg-white px-3 py-2 text-left shadow-[0_1px_2px_hsl(var(--cx-shadow)/0.06)] transition-transform active:scale-[0.98]"
           >
-            <span className="text-lg">🍽️</span>
-            Dine In
-          </button>
-          <button
-            onClick={() => setOrderType('take-away')}
-            className={cn(
-              "flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-1",
-              orderType === 'take-away' 
-                ? "bg-red-500 text-white shadow-md" 
-                : "text-gray-600 hover:text-gray-900"
-            )}
-          >
-            <span className="text-lg">🚶</span>
-            Take Away
-          </button>
-          <button
-            onClick={() => setOrderType('delivery')}
-            className={cn(
-              "flex-1 py-2 px-3 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-1",
-              orderType === 'delivery' 
-                ? "bg-red-500 text-white shadow-md" 
-                : "text-gray-600 hover:text-gray-900"
-            )}
-          >
-            <span className="text-lg">🏍️</span>
-            Delivery
+            <Store className="h-[18px] w-[18px] shrink-0 text-zeger" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-extrabold leading-tight">{outletName || 'Pilih outlet'}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {orderMode === 'delivery' ? 'Delivery' : 'Pick Up'}{outletAddress ? ` · ${outletAddress}` : ''}
+              </span>
+            </span>
+            <span className="shrink-0 text-[11px] font-bold text-zeger">Ubah</span>
           </button>
         </div>
-      </div>
 
-      {/* Outlet Selection Card */}
-      {outletName && (
-        <div className="px-4 py-3 bg-white border-b">
-          <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Store className="h-6 w-6 text-red-500" />
-              <div>
-                <p className="text-sm font-bold text-gray-900">{outletName}</p>
-                {outletAddress && <p className="text-xs text-gray-500">{outletAddress}</p>}
-              </div>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="text-red-500 hover:text-red-600 hover:bg-red-50 font-semibold"
-              onClick={onChangeOutlet}
-            >
-              Ubah
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Search Bar */}
-      <div className="px-4 py-3 bg-white border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search menu"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-3 rounded-lg bg-gray-100 border-none focus:ring-2 focus:ring-red-500"
+        <div className="relative mt-3">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari menu favoritmu"
+            className="h-11 w-full rounded-2xl border border-[hsl(var(--cx-line))] bg-white pl-11 pr-4 text-sm outline-none transition-shadow placeholder:text-muted-foreground focus:border-zeger focus:shadow-[0_0_0_4px_hsl(var(--zeger)/0.12)]"
           />
         </div>
-      </div>
 
-      {/* Daily Special Carousel */}
-      {featuredProducts.length > 0 && (
-        <div className="px-4 py-3 bg-white">
-          <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-            Daily Special <span className="text-orange-500">✨</span>
+        <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategory(c)}
+              data-active={category === c}
+              className="cx-chip shrink-0 px-4 py-2 text-xs"
+            >
+              {c === 'all' ? 'Semua' : c}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* Daily special */}
+      {featured && category === 'all' && !search && (
+        <section className="px-4 pt-4">
+          <h2 className="flex items-center gap-1.5 text-base font-extrabold">
+            Pilihan Hari Ini <Sparkles className="h-4 w-4 text-zeger-gold" />
           </h2>
-          
-          <div className="relative h-56 rounded-2xl overflow-hidden shadow-lg">
-            <div className="absolute inset-0">
-              <img
-                src={featuredProducts[0].image_url || ''}
-                alt={featuredProducts[0].name}
-                className="w-full h-full object-cover"
-              />
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              
-              {/* Product Info */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <h3 className="font-bold text-lg mb-1">{featuredProducts[0].name}</h3>
-                <p className="text-sm opacity-90 mb-3">
-                  {featuredProducts[0].description || 'Produk spesial hari ini!'}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold">
-                    Rp {featuredProducts[0].price.toLocaleString('id-ID')}
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => onAddToCart(featuredProducts[0])}
-                    className="bg-green-500 hover:bg-green-600 rounded-full text-white px-4"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Tambah
-                  </Button>
-                </div>
+          <div className="cx-card cx-stage-dark cx-rise mt-2.5 flex items-center gap-3 overflow-hidden rounded-[26px] p-4">
+            <div className="min-w-0 flex-1 text-white">
+              <p className="truncate text-lg font-extrabold leading-tight">{featured.name}</p>
+              <p className="mt-1 line-clamp-2 text-xs leading-snug text-white/80">
+                {featured.description || 'Racikan spesial Zeger, nikmat disajikan kapan saja.'}
+              </p>
+              <div className="mt-3 flex items-center gap-2.5">
+                <span className="cx-num text-base font-extrabold">{formatRupiah(featured.price)}</span>
+                <button onClick={() => onAddToCart(featured)} className="cx-btn cx-btn-gold px-4 py-1.5 text-xs">
+                  Pesan
+                </button>
               </div>
             </div>
+            <img
+              src={normalizeImageUrl(featured.image_url) || artworkFor(featured)}
+              onError={onArtError(artworkFor(featured))}
+              alt={featured.name}
+              loading="lazy"
+              className="cx-art cx-float h-[104px] w-[86px] shrink-0 object-contain"
+            />
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Content Area with Sidebar */}
-      <div className="flex h-[calc(100vh-280px)]">
-        {/* Category Sidebar */}
-        <div className="w-24 bg-white border-r">
-          <ScrollArea className="h-full">
-            <div className="py-2">
-              {categories.map((category) => {
-                const Icon = getCategoryIcon(category);
-                return (
-                  <button
-                    key={category}
-                    onClick={() => setActiveCategory(category)}
-                    className={cn(
-                      "w-full py-4 px-2 flex flex-col items-center gap-1 transition-all",
-                      activeCategory === category
-                        ? "bg-red-50 border-r-4 border-red-500"
-                        : "hover:bg-gray-50"
-                    )}
-                  >
-                    <Icon className={cn(
-                      "h-6 w-6",
-                      activeCategory === category ? "text-red-500" : "text-gray-400"
-                    )} />
-                    <span className={cn(
-                      "text-xs font-medium text-center",
-                      activeCategory === category ? "text-red-500" : "text-gray-600"
-                    )}>
-                      {category === 'all' ? 'Semua' : category}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </ScrollArea>
+      {/* Grid */}
+      <section className="px-4 pt-5">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-base font-extrabold">{category === 'all' ? 'Semua Menu' : category}</h2>
+          <span className="text-xs text-muted-foreground">{visible.length} item</span>
         </div>
 
-        {/* Product Grid */}
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="p-4 grid grid-cols-2 gap-3 pb-20">
-              {displayProducts.length === 0 ? (
-                <div className="col-span-2 text-center py-12">
-                  <p className="text-gray-500">Tidak ada produk ditemukan</p>
-                </div>
-              ) : (
-                displayProducts.map((product) => (
-      <Card 
-        key={product.id} 
-        className="overflow-hidden rounded-2xl shadow-[0_4px_20px_rgba(234,40,49,0.15)] hover:shadow-[0_8px_30px_rgba(234,40,49,0.25)] transition-all border border-gray-100 bg-white"
-      >
-                    {/* Product Image */}
-                    <div className="aspect-square relative bg-gray-50">
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
-                          <Coffee className="h-16 w-16 text-gray-300" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Product Info */}
-                    <div className="p-3">
-                      <h3 className="text-xs font-bold text-gray-900 mb-1 line-clamp-2 min-h-[2rem]">
-                        {product.name}
-                      </h3>
-                      
-                      <div className="flex items-center justify-between mt-2">
-                        <p className="text-sm font-bold text-red-500">
-                          Rp {product.price.toLocaleString('id-ID')}
-                        </p>
-                        <button
-                          onClick={() => onAddToCart(product)}
-                          className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md hover:scale-110 transition-all"
-                        >
-                          <Plus className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
-
-      {/* Cart Summary Bottom Bar */}
-      {cartItemCount > 0 && (
-        <div className="fixed bottom-24 left-0 right-0 z-50 bg-white px-3 py-3 shadow-2xl rounded-t-2xl border-t-2 border-[#EA2831] mb-safe">
-          <div className="max-w-sm mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="bg-[#EA2831] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
-                {cartItemCount}
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 font-medium">Total Harga</p>
-                <p className="text-base font-bold text-gray-900">
-                  Rp{cart.reduce((sum, item) => {
-                    let price = item.price;
-                    if (item.customizations?.size === 'large') price += 5000;
-                    if (item.customizations?.size === '1lt') price += 15000;
-                    if (item.customizations?.toppings && Array.isArray(item.customizations.toppings)) {
-                      const toppingPrices: Record<string, number> = {
-                        'espresso': 5000, 'oreo': 4000, 'cheese': 5000, 'jelly': 5000, 'icecream': 5000
-                      };
-                      item.customizations.toppings.forEach((t: string) => {
-                        price += toppingPrices[t] || 0;
-                      });
-                    }
-                    return sum + (price * item.quantity);
-                  }, 0).toLocaleString('id-ID')}
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={onViewCart}
-              className="bg-[#EA2831] hover:bg-red-600 text-white px-4 py-2 text-sm rounded-full font-semibold shadow-lg"
-            >
-              Lihat Pesanan
-            </Button>
+        {visible.length === 0 ? (
+          <div className="cx-card mt-3 flex flex-col items-center rounded-[26px] px-6 py-12 text-center">
+            <Search className="h-10 w-10 text-muted-foreground" />
+            <p className="mt-3 text-sm font-bold">Menu tidak ditemukan</p>
+            <p className="mt-1 text-xs text-muted-foreground">Coba kata kunci atau kategori lain.</p>
           </div>
+        ) : (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {visible.map((p) => (
+              <article key={p.id} className="cx-card flex flex-col overflow-hidden rounded-[22px]">
+                <button onClick={() => onAddToCart(p)} className="cx-stage block aspect-square overflow-hidden text-left">
+                  <img
+                    src={normalizeImageUrl(p.image_url) || artworkFor(p)}
+                    onError={onArtError(artworkFor(p))}
+                    alt={p.name}
+                    loading="lazy"
+                    className="cx-art cx-tilt h-full w-full object-contain p-3"
+                  />
+                </button>
+                <div className="flex flex-1 flex-col p-3">
+                  <button onClick={() => onAddToCart(p)} className="text-left">
+                    <h3 className="line-clamp-2 min-h-[2.2rem] text-[13px] font-extrabold leading-snug">{p.name}</h3>
+                  </button>
+                  {p.description && (
+                    <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{p.description}</p>
+                  )}
+                  <div className="mt-auto flex items-center justify-between pt-2.5">
+                    <span className="cx-num text-sm font-extrabold text-zeger">{formatRupiah(p.price)}</span>
+                    <button
+                      onClick={() => onAddToCart(p)}
+                      aria-label={`Tambah ${p.name}`}
+                      className="cx-btn cx-btn-primary flex h-9 w-9 items-center justify-center"
+                    >
+                      <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Floating cart bar */}
+      {totalItems > 0 && (
+        <div className="fixed inset-x-0 bottom-[78px] z-30 px-4 pb-[env(safe-area-inset-bottom)]">
+          <button
+            onClick={onViewCart}
+            className="cx-btn cx-btn-primary cx-pop-in mx-auto flex w-full max-w-md items-center gap-3 rounded-[22px] px-4 py-3 text-left"
+          >
+            <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/18">
+              <ShoppingBag className="h-5 w-5" />
+              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-extrabold text-zeger">
+                {totalItems}
+              </span>
+            </span>
+            <span className="flex-1">
+              <span className="block text-[11px] font-semibold opacity-85">Total belanja</span>
+              <span className="cx-num block text-base font-extrabold">{formatRupiah(totalPrice)}</span>
+            </span>
+            <span className="rounded-full bg-white/18 px-4 py-2 text-xs font-extrabold">Lihat Pesanan</span>
+          </button>
         </div>
       )}
     </div>
   );
 }
+
+export default CustomerMenu;
