@@ -300,25 +300,31 @@ export default function CustomerCheckout({
             )}
             {vouchers.map((uv) => {
               const v = uv.voucher!;
-              const eligible = (v.min_order || 0) <= subtotal;
+              const blocked = voucherBlockedReason(v, { subtotal, shippingDue });
+              const value = voucherDiscountFor(v, { subtotal, shippingDue });
               const active = selectedVoucher?.id === uv.id;
               return (
                 <button
                   key={uv.id}
                   type="button"
-                  disabled={!eligible}
+                  disabled={!!blocked}
                   onClick={() => setSelectedVoucher(active ? null : uv)}
                   data-active={active}
-                  className={cn('cx-opt w-full px-4 py-3 flex items-center gap-3 text-left', !eligible && 'opacity-50')}
+                  className={cn('cx-opt w-full px-4 py-3 flex items-center gap-3 text-left', blocked && 'opacity-50')}
                 >
-                  <Ticket className="h-4 w-4 shrink-0" />
+                  {voucherKind(v) === 'shipping' ? <Bike className="h-4 w-4 shrink-0" /> : <Ticket className="h-4 w-4 shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate">{v.code}</p>
                     <p className="text-[11px] opacity-80 truncate">
-                      {v.description || (v.discount_type === 'percentage' ? `Diskon ${v.discount_value}%` : `Potongan ${formatRupiah(v.discount_value)}`)}
+                      {voucherHeadline(v)}
                       {(v.min_order || 0) > 0 ? ` • Min. ${formatRupiah(v.min_order || 0)}` : ''}
                     </p>
                   </div>
+                  {blocked ? (
+                    <span className="shrink-0 text-[10px] font-bold opacity-70">{blocked}</span>
+                  ) : (
+                    <span className="cx-num shrink-0 text-[11px] font-extrabold">-{formatRupiah(value)}</span>
+                  )}
                   {active && <Check className="h-4 w-4 shrink-0" />}
                 </button>
               );
