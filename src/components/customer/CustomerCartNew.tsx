@@ -1,45 +1,28 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  ArrowLeft, 
-  MapPin, 
-  Clock, 
-  Plus, 
-  Minus,
-  User,
-  ShoppingBag,
-  Bike,
-  Pencil,
-  Trash2
-} from 'lucide-react';
+import React from 'react';
+import { ChevronLeft, MapPin, Plus, Minus, ShoppingBag, Pencil, Trash2, Store, Bike } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { cxArt, artworkFor, onArtError, formatRupiah } from '@/lib/customer-art';
+import { unitPrice, cartSubtotal, cartItemCount, describeCustomizations, pointsFor } from '@/lib/customer-pricing';
 
 interface CartItem {
   id: string;
   name: string;
   price: number;
   quantity: number;
-  image_url: string;
-  customizations: {
-    temperature?: 'hot' | 'ice' | 'cold';
-    size?: 'regular' | 'large' | 'ultimate' | 'small' | '200ml' | '1lt';
-    blend?: 'senja' | 'pagi';
-    milk?: 'regular' | 'oat';
-    iceLevel?: 'normal' | 'less' | 'no-ice';
-    sugarLevel?: 'normal' | 'less' | 'no-sugar';
-    toppings?: string[];
-    extraShot?: boolean;
-    notes?: string;
-  };
+  image_url?: string;
+  category?: string;
+  customizations: Record<string, any>;
 }
+
+export type CustomerOrderMode = 'outlet_pickup' | 'outlet_delivery';
 
 interface CustomerCartNewProps {
   cart: CartItem[];
   outletName?: string;
   outletAddress?: string;
   outletDistance?: string;
+  orderMode?: CustomerOrderMode;
+  onOrderModeChange?: (mode: CustomerOrderMode) => void;
   onUpdateQuantity: (productId: string, customizations: any, newQuantity: number) => void;
   onNavigate: (view: string) => void;
   onChangeOutlet: () => void;
@@ -48,320 +31,201 @@ interface CustomerCartNewProps {
   onDeleteItem?: (item: CartItem) => void;
 }
 
-export function CustomerCartNew({ 
-  cart, 
+export function CustomerCartNew({
+  cart,
   outletName,
   outletAddress,
-  outletDistance = "0.01 km",
-  onUpdateQuantity, 
+  outletDistance,
+  orderMode = 'outlet_pickup',
+  onOrderModeChange,
+  onUpdateQuantity,
   onNavigate,
   onChangeOutlet,
   onAddMenu,
   onEditItem,
-  onDeleteItem
+  onDeleteItem,
 }: CustomerCartNewProps) {
-  const [orderType, setOrderType] = useState<'dine_in' | 'take_away' | 'delivery'>('take_away');
-  const [pickupTime, setPickupTime] = useState('now');
-
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => {
-      const itemPrice = getItemPrice(item);
-      return total + (itemPrice * item.quantity);
-    }, 0);
-  };
-
-  const getItemPrice = (item: CartItem) => {
-    let price = item.price; // Base price includes default size
-    
-    // Only add upcharge for size UPGRADES (not default sizes)
-    if (item.customizations.size === 'large') price += 5000;
-    if (item.customizations.size === '1lt') price += 15000;
-    // '200ml' and 'small' are default sizes, no extra charge
-    
-    // Add toppings
-    if (item.customizations.toppings && Array.isArray(item.customizations.toppings)) {
-      const toppingPrices: Record<string, number> = {
-        'espresso': 5000,
-        'oreo': 4000,
-        'cheese': 5000,
-        'jelly': 5000,
-        'icecream': 5000
-      };
-      item.customizations.toppings.forEach((t: string) => {
-        price += toppingPrices[t] || 0;
-      });
-    }
-    
-    return price;
-  };
-
-  const formatCustomization = (item: CartItem) => {
-    const customs = [];
-    if (item.customizations.temperature) {
-      customs.push(`${item.customizations.temperature === 'hot' ? 'Hot' : 'Ice'}`);
-    }
-    if (item.customizations.size) {
-      customs.push(`Size: ${item.customizations.size}`);
-    }
-    if (item.customizations.iceLevel) {
-      customs.push(`Es: ${item.customizations.iceLevel === 'normal' ? 'Normal' : 'Sedikit'}`);
-    }
-    if (item.customizations.sugarLevel) {
-      customs.push(`Gula: ${item.customizations.sugarLevel === 'normal' ? 'Normal' : 'Sedikit'}`);
-    }
-    if (item.customizations.toppings && Array.isArray(item.customizations.toppings) && item.customizations.toppings.length > 0) {
-      const toppingMap: Record<string, string> = {
-        'espresso': 'Espresso Shot',
-        'oreo': 'Oreo Crumb',
-        'cheese': 'Cheese',
-        'jelly': 'Jelly Pearl',
-        'icecream': 'Ice Cream'
-      };
-      const toppingNames = item.customizations.toppings.map((t: string) => 
-        toppingMap[t] || t
-      );
-      customs.push(`Topping: ${toppingNames.join(', ')}`);
-    }
-    if (item.customizations.notes) {
-      customs.push(`Catatan: ${item.customizations.notes}`);
-    }
-    return customs.join(' • ');
-  };
+  const subtotal = cartSubtotal(cart as any);
+  const totalItems = cartItemCount(cart as any);
 
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
-        <ShoppingBag className="h-24 w-24 text-gray-300 mb-4" />
-        <h2 className="text-xl font-bold mb-2">Keranjang Kosong</h2>
-        <p className="text-gray-500 mb-6 text-center">Belum ada item di keranjang</p>
-        <Button 
-          className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8"
-          onClick={() => onNavigate('menu')}
-        >
-          Mulai Belanja
-        </Button>
+      <div className="cx-app min-h-screen flex flex-col">
+        <header className="cx-bar sticky top-0 z-20 px-4 py-3 flex items-center gap-3">
+          <button onClick={() => onNavigate('home')} className="cx-icon-btn h-10 w-10" aria-label="Kembali">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <h1 className="text-lg font-bold">Keranjang</h1>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+          <div className="cx-stage h-40 w-40 rounded-[2rem] flex items-center justify-center mb-6">
+            <img src={cxArt.bag} alt="" className="cx-art cx-float h-28 w-28 object-contain" />
+          </div>
+          <h2 className="text-xl font-bold mb-1">Keranjang masih kosong</h2>
+          <p className="text-sm text-muted-foreground mb-6">Yuk pilih minuman favoritmu dulu.</p>
+          <button onClick={onAddMenu} className="cx-btn cx-btn-primary px-8 py-3.5 text-sm">
+            Lihat Menu
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white pb-32">
+    <div className="cx-app min-h-screen pb-44">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b z-10 p-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onNavigate('menu')}
-            className="rounded-full"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">Detail Pesanan</h1>
+      <header className="cx-bar sticky top-0 z-20 px-4 py-3 flex items-center gap-3">
+        <button onClick={() => onNavigate('menu')} className="cx-icon-btn h-10 w-10" aria-label="Kembali">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold leading-tight">Detail Pesanan</h1>
+          <p className="text-xs text-muted-foreground">{totalItems} item</p>
         </div>
-      </div>
+      </header>
 
-      <div className="p-4 space-y-4">
-        {/* Order Type Pills */}
-        <div className="flex gap-2">
-          <Button
-            variant={orderType === 'dine_in' ? 'default' : 'outline'}
-            className={cn(
-              "flex-1 rounded-full font-medium",
-              orderType === 'dine_in' 
-                ? "bg-red-500 hover:bg-red-600 text-white" 
-                : "border-gray-300 text-gray-700 hover:bg-gray-50"
-            )}
-            onClick={() => setOrderType('dine_in')}
+      <div className="px-4 pt-4 space-y-4">
+        {/* Pickup / Delivery */}
+        <div className="cx-seg grid grid-cols-2 gap-1 cx-rise">
+          <button
+            type="button"
+            data-active={orderMode === 'outlet_pickup'}
+            onClick={() => onOrderModeChange?.('outlet_pickup')}
+            className="cx-seg-item flex items-center justify-center gap-2 py-2.5 text-sm"
           >
-            <User className="h-4 w-4 mr-2" />
-            Dine In
-          </Button>
-          <Button
-            variant={orderType === 'take_away' ? 'default' : 'outline'}
-            className={cn(
-              "flex-1 rounded-full font-medium",
-              orderType === 'take_away' 
-                ? "bg-red-500 hover:bg-red-600 text-white" 
-                : "border-gray-300 text-gray-700 hover:bg-gray-50"
-            )}
-            onClick={() => setOrderType('take_away')}
+            <ShoppingBag className="h-4 w-4" /> Ambil Sendiri
+          </button>
+          <button
+            type="button"
+            data-active={orderMode === 'outlet_delivery'}
+            onClick={() => onOrderModeChange?.('outlet_delivery')}
+            className="cx-seg-item flex items-center justify-center gap-2 py-2.5 text-sm"
           >
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            Take Away
-          </Button>
-          <Button
-            variant={orderType === 'delivery' ? 'default' : 'outline'}
-            className={cn(
-              "flex-1 rounded-full font-medium",
-              orderType === 'delivery' 
-                ? "bg-red-500 hover:bg-red-600 text-white" 
-                : "border-gray-300 text-gray-700 hover:bg-gray-50"
-            )}
-            onClick={() => setOrderType('delivery')}
-          >
-            <Bike className="h-4 w-4 mr-2" />
-            Delivery
-          </Button>
+            <Bike className="h-4 w-4" /> Diantar
+          </button>
         </div>
 
-        {/* Outlet Info Card */}
+        {/* Outlet */}
         {outletName && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-bold text-base mb-1">{outletName}</h3>
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    <span>{outletDistance}</span>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-red-500 text-red-500 hover:bg-red-50 rounded-full"
-                  onClick={onChangeOutlet}
-                >
-                  Ubah
-                </Button>
+          <div className="cx-card rounded-3xl p-4 cx-rise">
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-zeger-soft flex items-center justify-center shrink-0">
+                <Store className="h-5 w-5 text-zeger" />
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">{outletName}</p>
+                {outletAddress && <p className="text-xs text-muted-foreground line-clamp-2">{outletAddress}</p>}
+                {outletDistance && (
+                  <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-zeger">
+                    <MapPin className="h-3 w-3" /> {outletDistance}
+                  </p>
+                )}
+              </div>
+              <button onClick={onChangeOutlet} className="cx-btn cx-btn-ghost px-4 py-2 text-xs shrink-0">
+                Ubah
+              </button>
+            </div>
+          </div>
         )}
 
-        {/* Pickup Time */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-gray-600" />
-                <select 
-                  value={pickupTime}
-                  onChange={(e) => setPickupTime(e.target.value)}
-                  className="font-medium text-base border-none outline-none bg-transparent"
-                >
-                  <option value="now">Ambil Sekarang</option>
-                  <option value="15">15 Menit</option>
-                  <option value="30">30 Menit</option>
-                  <option value="60">1 Jam</option>
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Items */}
+        <div className="flex items-center justify-between pt-1">
+          <h2 className="text-base font-bold">Daftar Pesanan</h2>
+          <button onClick={onAddMenu} className="cx-btn cx-btn-ghost px-4 py-2 text-xs inline-flex items-center gap-1">
+            <Plus className="h-3.5 w-3.5" /> Tambah Menu
+          </button>
+        </div>
 
-        {/* Order List */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-lg">Daftar Pesanan</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-red-500 text-red-500 hover:bg-red-50 rounded-full"
-              onClick={onAddMenu}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Tambah Menu
-            </Button>
-          </div>
-
-          {/* Cart Items */}
-          <div className="space-y-3">
-            {cart.map((item) => {
-              const itemPrice = getItemPrice(item);
-              const itemTotal = itemPrice * item.quantity;
-              
-              return (
-          <Card key={`${item.id}-${JSON.stringify(item.customizations)}`}>
-                  <CardContent className="p-3">
-                    <div className="flex gap-3">
-                      {/* Product Image */}
-                      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                        {item.image_url ? (
-                          <img 
-                            src={item.image_url} 
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <ShoppingBag className="h-6 w-6 text-gray-400" />
-                          </div>
+          {cart.map((item, idx) => {
+            const perUnit = unitPrice(item as any);
+            const detail = describeCustomizations(item.customizations);
+            return (
+              <div
+                key={`${item.id}-${idx}`}
+                className="cx-card rounded-3xl p-3 cx-rise"
+                style={{ animationDelay: `${Math.min(idx, 6) * 40}ms` }}
+              >
+                <div className="flex gap-3">
+                  <div className="cx-stage h-20 w-20 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center">
+                    <img
+                      src={item.image_url || artworkFor(item)}
+                      alt={item.name}
+                      onError={onArtError(artworkFor(item))}
+                      className={cn('object-cover h-full w-full', !item.image_url && 'cx-art object-contain p-1.5')}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-sm leading-snug line-clamp-2">{item.name}</p>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {onEditItem && (
+                          <button onClick={() => onEditItem(item)} className="cx-icon-btn h-7 w-7" aria-label="Ubah">
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                        {onDeleteItem && (
+                          <button onClick={() => onDeleteItem(item)} className="cx-icon-btn h-7 w-7" aria-label="Hapus">
+                            <Trash2 className="h-3 w-3 text-zeger" />
+                          </button>
                         )}
                       </div>
-
-                      {/* Product Info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-xs mb-1">{item.name}</h3>
-                        <p className="text-[10px] text-gray-600 mb-1 line-clamp-2">
-                          {formatCustomization(item)}
-                        </p>
-                        
-                        <div className="flex items-center justify-between mt-2">
-                          <p className="text-xs font-bold text-[#EA2831]">
-                            Rp{itemPrice.toLocaleString('id-ID')}
-                          </p>
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => onEditItem?.(item)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                            >
-                              <Pencil className="h-3 w-3 text-gray-500" />
-                            </button>
-                            <button 
-                              onClick={() => onDeleteItem?.(item)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                            >
-                              <Trash2 className="h-3 w-3 text-red-500" />
-                            </button>
-                            <div className="flex items-center gap-2 ml-2">
-                              <button
-                                onClick={() => onUpdateQuantity(item.id, item.customizations, item.quantity - 1)}
-                                className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                              >
-                                <Minus className="h-3 w-3" />
-                              </button>
-                              <span className="text-xs font-semibold min-w-[1.5rem] text-center">
-                                {item.quantity}
-                              </span>
-                              <button
-                                onClick={() => onUpdateQuantity(item.id, item.customizations, item.quantity + 1)}
-                                className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+                    </div>
+                    {detail && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{detail}</p>}
+                    <div className="flex items-end justify-between mt-2.5">
+                      <p className="cx-num text-sm font-extrabold text-zeger">{formatRupiah(perUnit * item.quantity)}</p>
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          onClick={() => onUpdateQuantity(item.id, item.customizations, item.quantity - 1)}
+                          className="cx-icon-btn h-8 w-8"
+                          aria-label="Kurangi"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="cx-num text-sm font-bold w-5 text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => onUpdateQuantity(item.id, item.customizations, item.quantity + 1)}
+                          className="cx-icon-btn h-8 w-8"
+                          aria-label="Tambah"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Points preview */}
+        <div className="cx-card rounded-3xl p-4 flex items-center gap-3">
+          <img src={cxArt.coin} alt="" className="cx-coin cx-coin-spin h-9 w-9 object-contain" />
+          <div className="flex-1">
+            <p className="text-sm font-bold">Dapat {pointsFor(subtotal)} Zeger Point</p>
+            <p className="text-[11px] text-muted-foreground">Berlaku di semua channel Zeger.</p>
           </div>
         </div>
       </div>
 
-      {/* Sticky Bottom Section */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-[100] pb-safe">
-        {/* Terms Banner */}
-        <div className="bg-purple-600 text-white text-xs px-4 py-2 text-center">
-          Dengan membayar pesanan, anda telah menyetujui{' '}
-          <span className="font-bold">Syarat Dan Ketentuan</span> Kami
-        </div>
-        
-        {/* CTA Button */}
-        <div className="p-4">
-          <Button
-            className="w-full h-14 bg-[#EA2831] hover:bg-red-700 text-white rounded-full text-base font-bold shadow-2xl"
+      {/* Sticky CTA */}
+      <div className="fixed bottom-0 inset-x-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 bg-gradient-to-t from-[hsl(var(--cx-canvas))] via-[hsl(var(--cx-canvas))] to-transparent">
+        <div className="mx-auto max-w-md">
+          <p className="text-[10px] text-center text-muted-foreground mb-2">
+            Dengan melanjutkan, kamu menyetujui Syarat &amp; Ketentuan Zeger.
+          </p>
+          <button
             onClick={() => onNavigate('checkout')}
+            className="cx-btn cx-btn-primary w-full px-5 py-4 flex items-center justify-between"
           >
-            Lanjut Pembayaran • Rp {getTotalPrice().toLocaleString('id-ID')}
-          </Button>
+            <span className="text-sm">Lanjut Pembayaran</span>
+            <span className="cx-num text-base font-extrabold">{formatRupiah(subtotal)}</span>
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
+export default CustomerCartNew;

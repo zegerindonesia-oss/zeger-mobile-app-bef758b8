@@ -1,11 +1,10 @@
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, Store, Share2, Star } from "lucide-react";
+import { Check, Clock, MapPin, Navigation, Receipt, Share2, Store } from 'lucide-react';
+import { cxArt } from '@/lib/customer-art';
 
 interface CustomerOrderSuccessProps {
   orderId: string;
   orderNumber: string;
-  orderType: "outlet_pickup" | "outlet_delivery";
+  orderType: 'outlet_pickup' | 'outlet_delivery';
   outletName?: string;
   outletAddress?: string;
   deliveryAddress?: string;
@@ -23,99 +22,123 @@ export default function CustomerOrderSuccess({
   estimatedTime,
   onNavigate,
 }: CustomerOrderSuccessProps) {
+  const isDelivery = orderType === 'outlet_delivery';
+
+  const share = async () => {
+    const text = `Pesanan Zeger ${orderNumber} lagi disiapkan ☕`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'Zeger Coffee', text });
+      else await navigator.clipboard.writeText(text);
+    } catch {
+      /* dibatalkan pengguna */
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#f8f6f6] flex items-center justify-center p-4">
-      <div className="w-full max-w-sm mx-auto text-center space-y-6">
-        {/* Delivery Illustration */}
-        <div className="mb-8">
-          <div className="relative w-64 h-64 mx-auto">
-            {/* Animated delivery illustration */}
-            <svg viewBox="0 0 300 300" fill="none" className="w-full h-full">
-              {/* Motorcycle wheels */}
-              <circle cx="90" cy="210" r="25" fill="#F59E0B" stroke="#1F2937" strokeWidth="4" />
-              <circle cx="210" cy="210" r="25" fill="#F59E0B" stroke="#1F2937" strokeWidth="4" />
-              
-              {/* Motorcycle body */}
-              <path 
-                d="M75 180 L120 180 L135 150 L195 150 L210 180 L225 180" 
-                stroke="#1F2937" 
-                strokeWidth="12" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                fill="none"
-              />
-              
-              {/* Rider */}
-              <circle cx="142" cy="120" r="18" fill="#FDE68A" stroke="#1F2937" strokeWidth="3" />
-              <path d="M142 138 L142 165" stroke="#1F2937" strokeWidth="10" strokeLinecap="round" />
-              <path d="M120 155 L142 165 L164 155" stroke="#1F2937" strokeWidth="8" strokeLinecap="round" />
-              
-              {/* Delivery box */}
-              <rect x="180" y="140" width="40" height="35" rx="5" fill="#EA2831" stroke="#1F2937" strokeWidth="3" />
-              <path d="M185 140 L200 157 L215 140" stroke="#FEF3C7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              
-              {/* Motion lines */}
-              <path d="M30 150 L50 150 M20 170 L45 170 M35 190 L60 190" stroke="#F59E0B" strokeWidth="4" strokeLinecap="round" opacity="0.5">
-                <animate attributeName="opacity" values="0.3;0.7;0.3" dur="1.5s" repeatCount="indefinite" />
-              </path>
-            </svg>
+    <div className="cx-app min-h-screen bg-[hsl(var(--cx-canvas))]">
+      <div className="mx-auto w-full max-w-md px-5 pb-10 pt-8">
+        {/* Hero */}
+        <div className="cx-stage cx-rise relative overflow-hidden rounded-[32px] bg-gradient-to-br from-zeger-dark to-zeger px-6 pb-8 pt-9 text-center text-white">
+          <div className="pointer-events-none absolute -left-10 top-8 h-36 w-36 rounded-full bg-white/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-8 bottom-0 h-32 w-32 rounded-full bg-zeger-gold/25 blur-3xl" />
+
+          <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/18 backdrop-blur-sm cx-pulse-ring">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-zeger shadow-lg">
+              <Check className="h-6 w-6" strokeWidth={3} />
+            </span>
+          </div>
+
+          <h1 className="relative text-2xl font-extrabold tracking-tight">Pesanan berhasil!</h1>
+          <p className="relative mt-1.5 text-sm text-white/85">
+            {isDelivery
+              ? 'Pesananmu sedang disiapkan dan akan segera diantar.'
+              : 'Pesananmu sedang disiapkan, tinggal diambil di outlet.'}
+          </p>
+
+          <div className="relative mt-5 cx-ride-track mx-auto w-full max-w-[16rem]">
+            <img
+              src={isDelivery ? cxArt.scooter : cxArt.bag}
+              alt=""
+              className={`cx-art mx-auto h-28 w-auto ${isDelivery ? 'cx-ride' : 'cx-float'}`}
+            />
+          </div>
+
+          <div className="relative mt-5 inline-flex items-center gap-2 rounded-full bg-white/18 px-4 py-2 backdrop-blur-sm">
+            <Receipt className="h-4 w-4" />
+            <span className="cx-num text-sm font-bold tracking-wide">{orderNumber}</span>
           </div>
         </div>
 
-        {/* Success Message */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Order Placed Successfully</h1>
-          <p className="text-gray-600 mb-8">Your meal is being processed to be delivered at your doorstep shortly</p>
-        </div>
+        {/* Detail */}
+        <div className="cx-card cx-rise mt-4 space-y-3.5 rounded-[26px] p-5">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-zeger-soft text-zeger">
+              <Clock className="h-4.5 w-4.5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Estimasi</p>
+              <p className="text-sm font-bold">{estimatedTime}</p>
+            </div>
+          </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-4 mb-8">
-          <Button
-            className="w-full bg-[#EA2831] hover:bg-red-600 text-white font-semibold py-4 rounded-lg shadow-md"
-            onClick={() => onNavigate("order-tracking", orderId)}
-          >
-            Track Order
-          </Button>
-          <Button
-            className="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-600 font-semibold py-4 rounded-lg"
-            onClick={() => onNavigate("home")}
-          >
-            Back to home
-          </Button>
-        </div>
-
-        {/* What's Next Section */}
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 mb-4">What's Next?</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Reorder */}
-            <div className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 transition-colors cursor-pointer">
-              <RefreshCw className="h-8 w-8 text-[#EA2831]" />
-              <p className="font-medium text-sm text-gray-800 text-center">Reorder last meal</p>
-            </div>
-            
-            {/* Explore */}
-            <div 
-              className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 transition-colors cursor-pointer"
-              onClick={() => onNavigate("menu")}
-            >
-              <Store className="h-8 w-8 text-[#EA2831]" />
-              <p className="font-medium text-sm text-gray-800 text-center">Explore new restaurants</p>
-            </div>
-            
-            {/* Share */}
-            <div className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 transition-colors cursor-pointer">
-              <Share2 className="h-8 w-8 text-[#EA2831]" />
-              <p className="font-medium text-sm text-gray-800 text-center">Share your order</p>
-            </div>
-            
-            {/* Rate */}
-            <div className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 transition-colors cursor-pointer">
-              <Star className="h-8 w-8 text-[#EA2831]" />
-              <p className="font-medium text-sm text-gray-800 text-center">Rate your experience</p>
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-zeger-soft text-zeger">
+              {isDelivery ? <Navigation className="h-4.5 w-4.5" /> : <Store className="h-4.5 w-4.5" />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {isDelivery ? 'Diantar ke' : 'Ambil di'}
+              </p>
+              <p className="text-sm font-bold">{isDelivery ? deliveryAddress || 'Alamat tersimpan' : outletName || 'Outlet Zeger'}</p>
+              {!isDelivery && outletAddress && (
+                <p className="mt-0.5 flex items-start gap-1 text-xs leading-snug text-muted-foreground">
+                  <MapPin className="mt-0.5 h-3 w-3 shrink-0" /> {outletAddress}
+                </p>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Actions */}
+        <div className="mt-5 space-y-2.5">
+          <button onClick={() => onNavigate('order-tracking', orderId)} className="cx-btn cx-btn-primary w-full py-4 text-sm">
+            Lacak pesanan
+          </button>
+          <button onClick={() => onNavigate('orders')} className="cx-btn cx-btn-ghost w-full py-3.5 text-sm">
+            Lihat semua pesanan
+          </button>
+        </div>
+
+        {/* Next */}
+        <div className="mt-7">
+          <h2 className="mb-3 pl-1 text-sm font-extrabold">Selanjutnya</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => onNavigate('menu')} className="cx-card cx-rise flex flex-col items-center gap-2 rounded-[22px] p-4 text-center transition active:scale-95">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zeger-soft text-zeger">
+                <Store className="h-5 w-5" />
+              </span>
+              <span className="text-xs font-bold leading-snug">Jelajahi menu lain</span>
+            </button>
+            <button onClick={() => onNavigate('vouchers')} className="cx-card cx-rise flex flex-col items-center gap-2 rounded-[22px] p-4 text-center transition active:scale-95">
+              <img src={cxArt.gift} alt="" className="h-11 w-11 object-contain cx-art" />
+              <span className="text-xs font-bold leading-snug">Klaim voucher baru</span>
+            </button>
+            <button onClick={() => onNavigate('loyalty')} className="cx-card cx-rise flex flex-col items-center gap-2 rounded-[22px] p-4 text-center transition active:scale-95">
+              <img src={cxArt.coin} alt="" className="h-11 w-11 object-contain cx-coin cx-coin-spin" />
+              <span className="text-xs font-bold leading-snug">Cek poin kamu</span>
+            </button>
+            <button onClick={share} className="cx-card cx-rise flex flex-col items-center gap-2 rounded-[22px] p-4 text-center transition active:scale-95">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zeger-soft text-zeger">
+                <Share2 className="h-5 w-5" />
+              </span>
+              <span className="text-xs font-bold leading-snug">Bagikan pesanan</span>
+            </button>
+          </div>
+        </div>
+
+        <button onClick={() => onNavigate('home')} className="mx-auto mt-6 block text-xs font-bold text-muted-foreground underline-offset-4 hover:underline">
+          Kembali ke beranda
+        </button>
       </div>
     </div>
   );

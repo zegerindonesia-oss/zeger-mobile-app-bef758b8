@@ -1,18 +1,54 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ZegerLogo } from '@/components/ui/zeger-logo';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff } from 'lucide-react';
+import { cxArt } from '@/lib/customer-art';
+import { cn } from '@/lib/utils';
+import {
+  Eye, EyeOff, Mail, Lock, User, Phone, MapPin, ArrowLeft, Loader2,
+  Coffee, Gift, Crown, ShieldCheck,
+} from 'lucide-react';
 
 interface CustomerAuthProps {
   onAuthSuccess: () => void;
 }
 
-type AuthMode = 'login' | 'register' | 'complete-profile';
+type AuthMode = 'login' | 'register' | 'complete-profile' | 'forgot';
+
+const PERKS = [
+  { icon: Coffee, label: 'Pesan di semua kanal Zeger' },
+  { icon: Gift, label: 'Poin & voucher berlaku di mana saja' },
+  { icon: Crown, label: 'Benefit MyZeger Plan' },
+];
+
+/** Shared text field with the soft inset look used across the customer app. */
+function Field({
+  id, label, icon: Icon, trailing, ...rest
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  id: string; label: string; icon: React.ElementType; trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block pl-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </label>
+      <div className="relative">
+        <Icon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zeger" />
+        <input
+          id={id}
+          {...rest}
+          className={cn(
+            'h-12 w-full rounded-2xl border border-[hsl(var(--cx-line))] bg-white pl-11 pr-11 text-sm font-semibold text-foreground',
+            'shadow-[inset_0_2px_4px_hsl(var(--cx-shadow)/0.08)] outline-none transition',
+            'placeholder:font-medium placeholder:text-muted-foreground/70',
+            'focus:border-zeger focus:shadow-[inset_0_2px_4px_hsl(var(--cx-shadow)/0.06),0_0_0_4px_hsl(var(--zeger)/0.14)]',
+          )}
+        />
+        {trailing}
+      </div>
+    </div>
+  );
+}
 
 export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
   const { toast } = useToast();
@@ -20,15 +56,16 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState('');
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     name: '',
     phone: '',
-    address: ''
+    address: '',
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -41,18 +78,17 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
+        email: formData.email.trim(),
+        password: formData.password,
       });
 
       if (error) {
-        // Check if it's an email not confirmed error
         if (error.message.includes('Email not confirmed')) {
           toast({
-            title: "❌ Email Belum Diverifikasi",
-            description: "Silakan cek email Anda dan klik link verifikasi terlebih dahulu.",
-            variant: "destructive",
-            duration: 8000
+            title: 'Email belum diverifikasi',
+            description: 'Buka email dari Zeger lalu klik tautan verifikasi.',
+            variant: 'destructive',
+            duration: 8000,
           });
           setLoading(false);
           return;
@@ -61,7 +97,6 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
       }
 
       if (data.user) {
-        // Check if customer profile exists
         const { data: profile, error: profileError } = await supabase
           .from('customer_users')
           .select('*')
@@ -69,19 +104,21 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
           .single();
 
         if (profileError && profileError.code === 'PGRST116') {
-          // No profile exists, need to complete registration
           setMode('complete-profile');
         } else if (profileError) {
           throw profileError;
         } else {
+          void profile;
           onAuthSuccess();
         }
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Gagal login",
-        variant: "destructive"
+        title: 'Gagal masuk',
+        description: error.message === 'Invalid login credentials'
+          ? 'Email atau kata sandi salah.'
+          : error.message || 'Silakan coba lagi.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -90,13 +127,13 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Password tidak cocok",
-        variant: "destructive"
-      });
+      toast({ title: 'Kata sandi tidak sama', description: 'Ulangi konfirmasi kata sandi.', variant: 'destructive' });
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast({ title: 'Kata sandi terlalu pendek', description: 'Minimal 6 karakter.', variant: 'destructive' });
       return;
     }
 
@@ -104,38 +141,29 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/customer-app`
-        }
+          emailRedirectTo: `${window.location.origin}/customer-app`,
+        },
       });
 
       if (error) throw error;
 
-      // Check if email confirmation is required
       if (data.user && !data.session) {
-        // Email confirmation required
         setUnconfirmedEmail(formData.email);
         setEmailSent(true);
-        toast({
-          title: "📧 Cek Email Anda!",
-          description: "Kami telah mengirim link verifikasi ke email Anda. Silakan cek inbox atau folder spam.",
-          duration: 8000
-        });
       } else if (data.user && data.session) {
-        // Auto-login enabled, proceed to complete profile
         setMode('complete-profile');
-        toast({
-          title: "✅ Berhasil Daftar!",
-          description: "Silakan lengkapi profil Anda",
-        });
+        toast({ title: 'Akun dibuat', description: 'Lengkapi profil untuk mulai memesan.' });
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Gagal mendaftar",
-        variant: "destructive"
+        title: 'Gagal mendaftar',
+        description: error.message?.includes('already registered')
+          ? 'Email ini sudah terdaftar. Silakan masuk.'
+          : error.message || 'Silakan coba lagi.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -148,10 +176,8 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Sesi berakhir, silakan masuk ulang');
 
-      // Only upsert to customer_users - profiles will be auto-created by trigger
       const { error } = await supabase
         .from('customer_users')
         .upsert({
@@ -161,77 +187,80 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
           phone: formData.phone,
           address: formData.address,
           role: 'customer',
-          points: 0
+          points: 0,
         }, { onConflict: 'user_id' });
 
       if (error) throw error;
 
-      toast({
-        title: "Berhasil!",
-        description: "Profil Anda berhasil dibuat",
-      });
-
+      toast({ title: 'Selamat datang di Zeger!', description: 'Profil kamu sudah siap.' });
       onAuthSuccess();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal melengkapi profil",
-        variant: "destructive"
-      });
+      toast({ title: 'Gagal menyimpan profil', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+    } catch (error: any) {
+      toast({ title: 'Gagal mengirim tautan', description: error.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const passwordToggle = (
+    <button
+      type="button"
+      onClick={() => setShowPassword(v => !v)}
+      aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+      className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground transition active:scale-90"
+    >
+      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    </button>
+  );
+
+  const submitLabel = (busy: string, idle: string) =>
+    loading ? (<span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />{busy}</span>) : idle;
+
   const renderLogin = () => (
     <form onSubmit={handleLogin} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => handleInputChange('email', e.target.value)}
-          placeholder="Masukkan email Anda"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={(e) => handleInputChange('password', e.target.value)}
-            placeholder="Masukkan password"
-            required
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
+      <Field
+        id="email" label="Email" icon={Mail} type="email" inputMode="email" autoComplete="email"
+        value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)}
+        placeholder="nama@email.com" required
+      />
+      <Field
+        id="password" label="Kata sandi" icon={Lock} type={showPassword ? 'text' : 'password'}
+        autoComplete="current-password" value={formData.password}
+        onChange={(e) => handleInputChange('password', e.target.value)}
+        placeholder="••••••••" required trailing={passwordToggle}
+      />
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Loading...' : 'Masuk'}
-      </Button>
-      
-      <p className="text-center text-sm text-muted-foreground">
+      <button
+        type="button"
+        onClick={() => { setResetSent(false); setMode('forgot'); }}
+        className="block w-full text-right text-xs font-bold text-zeger"
+      >
+        Lupa kata sandi?
+      </button>
+
+      <button type="submit" disabled={loading} className="cx-btn cx-btn-primary w-full py-3.5 text-sm">
+        {submitLabel('Memproses…', 'Masuk')}
+      </button>
+
+      <p className="text-center text-xs text-muted-foreground">
         Belum punya akun?{' '}
-        <button
-          type="button"
-          onClick={() => setMode('register')}
-          className="text-primary hover:underline"
-        >
-          Daftar di sini
+        <button type="button" onClick={() => setMode('register')} className="font-bold text-zeger">
+          Daftar sekarang
         </button>
       </p>
     </form>
@@ -239,64 +268,30 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
   const renderRegister = () => (
     <form onSubmit={handleRegister} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => handleInputChange('email', e.target.value)}
-          placeholder="Masukkan email Anda"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={(e) => handleInputChange('password', e.target.value)}
-            placeholder="Masukkan password"
-            required
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          value={formData.confirmPassword}
-          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-          placeholder="Konfirmasi password"
-          required
-        />
-      </div>
+      <Field
+        id="reg-email" label="Email" icon={Mail} type="email" inputMode="email" autoComplete="email"
+        value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)}
+        placeholder="nama@email.com" required
+      />
+      <Field
+        id="reg-password" label="Kata sandi" icon={Lock} type={showPassword ? 'text' : 'password'}
+        autoComplete="new-password" value={formData.password}
+        onChange={(e) => handleInputChange('password', e.target.value)}
+        placeholder="Minimal 6 karakter" required trailing={passwordToggle}
+      />
+      <Field
+        id="reg-confirm" label="Ulangi kata sandi" icon={ShieldCheck} type="password" autoComplete="new-password"
+        value={formData.confirmPassword} onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+        placeholder="••••••••" required
+      />
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Loading...' : 'Daftar'}
-      </Button>
-      
-      <p className="text-center text-sm text-muted-foreground">
+      <button type="submit" disabled={loading} className="cx-btn cx-btn-primary w-full py-3.5 text-sm">
+        {submitLabel('Mendaftarkan…', 'Buat akun')}
+      </button>
+
+      <p className="text-center text-xs text-muted-foreground">
         Sudah punya akun?{' '}
-        <button
-          type="button"
-          onClick={() => setMode('login')}
-          className="text-primary hover:underline"
-        >
+        <button type="button" onClick={() => setMode('login')} className="font-bold text-zeger">
           Masuk di sini
         </button>
       </p>
@@ -305,114 +300,180 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
   const renderCompleteProfile = () => (
     <form onSubmit={handleCompleteProfile} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Nama Lengkap</Label>
-        <Input
-          id="name"
-          type="text"
-          value={formData.name}
-          onChange={(e) => handleInputChange('name', e.target.value)}
-          placeholder="Masukkan nama lengkap"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="phone">Nomor Telepon</Label>
-        <Input
-          id="phone"
-          type="tel"
-          value={formData.phone}
-          onChange={(e) => handleInputChange('phone', e.target.value)}
-          placeholder="Masukkan nomor telepon"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="address">Alamat</Label>
-        <Input
-          id="address"
-          type="text"
-          value={formData.address}
-          onChange={(e) => handleInputChange('address', e.target.value)}
-          placeholder="Masukkan alamat lengkap"
-          required
-        />
-      </div>
+      <Field
+        id="name" label="Nama lengkap" icon={User} type="text" autoComplete="name"
+        value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)}
+        placeholder="Nama kamu" required
+      />
+      <Field
+        id="phone" label="Nomor WhatsApp" icon={Phone} type="tel" inputMode="tel" autoComplete="tel"
+        value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)}
+        placeholder="08xxxxxxxxxx" required
+      />
+      <Field
+        id="address" label="Alamat" icon={MapPin} type="text" autoComplete="street-address"
+        value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)}
+        placeholder="Alamat pengantaran" required
+      />
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Loading...' : 'Lengkapi Profil'}
-      </Button>
+      <button type="submit" disabled={loading} className="cx-btn cx-btn-primary w-full py-3.5 text-sm">
+        {submitLabel('Menyimpan…', 'Mulai pesan')}
+      </button>
     </form>
   );
 
-  const renderEmailSent = () => (
-    <div className="space-y-6 text-center py-4">
-      <div className="text-6xl">📧</div>
-      <div className="space-y-3">
-        <h3 className="font-semibold text-lg">Cek Email Anda!</h3>
-        <p className="text-sm text-muted-foreground">
-          Kami telah mengirim link verifikasi ke:
+  const renderForgot = () => (
+    resetSent ? (
+      <div className="space-y-5 text-center">
+        <img src={cxArt.gift} alt="" className="cx-art mx-auto h-24 w-24" />
+        <div className="space-y-2">
+          <h3 className="text-lg font-extrabold">Tautan terkirim</h3>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Kami kirim tautan ganti kata sandi ke <span className="font-bold text-foreground">{formData.email}</span>.
+            Cek inbox atau folder spam, lalu buka tautannya dari HP ini.
+          </p>
+        </div>
+        <button type="button" onClick={() => { setResetSent(false); setMode('login'); }} className="cx-btn cx-btn-primary w-full py-3.5 text-sm">
+          Kembali ke halaman masuk
+        </button>
+      </div>
+    ) : (
+      <form onSubmit={handleForgot} className="space-y-4">
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Masukkan email akunmu. Kami kirim tautan untuk membuat kata sandi baru.
         </p>
-        <p className="font-medium text-primary">{unconfirmedEmail}</p>
-        <p className="text-sm text-muted-foreground px-4">
-          Silakan buka email Anda dan klik link verifikasi untuk melanjutkan. Jangan lupa cek folder spam jika tidak menemukannya di inbox.
+        <Field
+          id="forgot-email" label="Email" icon={Mail} type="email" inputMode="email"
+          value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)}
+          placeholder="nama@email.com" required
+        />
+        <button type="submit" disabled={loading} className="cx-btn cx-btn-primary w-full py-3.5 text-sm">
+          {submitLabel('Mengirim…', 'Kirim tautan')}
+        </button>
+        <button type="button" onClick={() => setMode('login')} className="cx-btn cx-btn-ghost w-full py-3 text-sm">
+          Batal
+        </button>
+      </form>
+    )
+  );
+
+  const renderEmailSent = () => (
+    <div className="space-y-5 text-center">
+      <div className="cx-stage mx-auto flex h-24 w-24 items-center justify-center rounded-[28px]">
+        <Mail className="h-10 w-10 text-zeger" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-lg font-extrabold">Cek email kamu</h3>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Tautan verifikasi dikirim ke
+        </p>
+        <p className="text-sm font-extrabold text-zeger">{unconfirmedEmail}</p>
+        <p className="px-2 text-xs leading-relaxed text-muted-foreground">
+          Buka tautan itu untuk mengaktifkan akun. Kalau tidak ada di inbox, cek folder spam.
         </p>
       </div>
-      
-      <div className="space-y-2 pt-4">
-        <Button 
-          onClick={() => {
-            setEmailSent(false);
-            setMode('login');
-          }}
-          variant="outline"
-          className="w-full"
-        >
-          Kembali ke Login
-        </Button>
-        
-        <Button 
+
+      <div className="space-y-2 pt-1">
+        <button onClick={() => { setEmailSent(false); setMode('login'); }} className="cx-btn cx-btn-primary w-full py-3.5 text-sm">
+          Kembali ke halaman masuk
+        </button>
+        <button
           onClick={() => {
             setEmailSent(false);
             setMode('register');
             setFormData(prev => ({ ...prev, email: '', password: '', confirmPassword: '' }));
           }}
-          variant="ghost"
-          className="w-full"
+          className="cx-btn cx-btn-ghost w-full py-3 text-sm"
         >
-          Daftar dengan Email Lain
-        </Button>
+          Daftar dengan email lain
+        </button>
       </div>
     </div>
   );
 
+  const heading =
+    emailSent ? 'Verifikasi email'
+      : mode === 'login' ? 'Selamat datang kembali'
+      : mode === 'register' ? 'Gabung Zeger'
+      : mode === 'forgot' ? 'Lupa kata sandi'
+      : 'Lengkapi profil';
+
+  const subheading =
+    emailSent ? 'Satu langkah lagi'
+      : mode === 'login' ? 'Masuk untuk pesan & kumpulkan poin'
+      : mode === 'register' ? 'Buat akun dalam satu menit'
+      : mode === 'forgot' ? 'Kami bantu pulihkan akunmu'
+      : 'Supaya pesananmu sampai dengan tepat';
+
+  const canGoBack = !emailSent && (mode === 'register' || mode === 'forgot');
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-4">
-          <ZegerLogo size="md" className="mx-auto" />
-          <div>
-            <h1 className="text-2xl font-bold text-primary">Zeger Coffee</h1>
-            <p className="text-muted-foreground">
-              {mode === 'login' && 'Masuk ke akun Anda'}
-              {mode === 'register' && 'Buat akun baru'}
-              {mode === 'complete-profile' && 'Lengkapi profil Anda'}
-            </p>
-          </div>
-        </CardHeader>
-        
-        <CardContent>
-          {emailSent ? renderEmailSent() : (
-            <>
-              {mode === 'login' && renderLogin()}
-              {mode === 'register' && renderRegister()}
-              {mode === 'complete-profile' && renderCompleteProfile()}
-            </>
+    <div className="cx-app min-h-screen bg-[hsl(var(--cx-canvas))]">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col">
+        {/* Brand header */}
+        <header className="relative overflow-hidden rounded-b-[34px] bg-gradient-to-br from-zeger-dark via-zeger to-[hsl(355_72%_52%)] px-6 pb-16 pt-10 text-white">
+          <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-black/20 blur-2xl" />
+
+          {canGoBack && (
+            <button
+              onClick={() => setMode('login')}
+              aria-label="Kembali"
+              className="relative mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm transition active:scale-90"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
           )}
-        </CardContent>
-      </Card>
+
+          <div className="relative flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white shadow-[0_12px_24px_-10px_rgba(0,0,0,.5)]">
+              <ZegerLogo size="sm" className="w-11" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="cx-display text-2xl font-extrabold leading-tight">{heading}</h1>
+              <p className="mt-0.5 text-xs text-white/85">{subheading}</p>
+            </div>
+          </div>
+
+          <img
+            src={cxArt.cupIced}
+            alt=""
+            aria-hidden
+            className="cx-art cx-float pointer-events-none absolute -bottom-2 right-3 h-28 w-28 opacity-95"
+          />
+        </header>
+
+        {/* Form card */}
+        <main className="-mt-10 flex-1 px-5 pb-10">
+          <div className="cx-card cx-rise rounded-[28px] p-5">
+            {emailSent ? renderEmailSent() : (
+              <>
+                {mode === 'login' && renderLogin()}
+                {mode === 'register' && renderRegister()}
+                {mode === 'complete-profile' && renderCompleteProfile()}
+                {mode === 'forgot' && renderForgot()}
+              </>
+            )}
+          </div>
+
+          {!emailSent && mode !== 'complete-profile' && (
+            <ul className="mt-6 space-y-2.5">
+              {PERKS.map(({ icon: Icon, label }) => (
+                <li key={label} className="flex items-center gap-3 text-xs font-semibold text-muted-foreground">
+                  <span className="cx-stage flex h-9 w-9 items-center justify-center rounded-2xl text-zeger">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  {label}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground">
+            Dengan melanjutkan kamu setuju pada Syarat Layanan & Kebijakan Privasi Zeger.
+          </p>
+        </main>
+      </div>
     </div>
   );
 }

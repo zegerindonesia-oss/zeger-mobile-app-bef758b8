@@ -46,6 +46,7 @@ import { CustomerReferral } from '@/components/customer/CustomerReferral';
 import { CustomerCare } from '@/components/customer/CustomerCare';
 import { CustomerNotifications } from '@/components/customer/CustomerNotifications';
 import { useToast } from '@/hooks/use-toast';
+import { cartSubtotal, cartItemCount, unitPrice } from '@/lib/customer-pricing';
 
 interface CustomerUser {
   id: string;
@@ -76,6 +77,9 @@ interface CartItem extends Product {
 
 type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'street' | 'subscription' | 'referral' | 'care' | 'notifications';
 
+/** Screens that keep the floating bottom dock visible. */
+const DOCK_VIEWS: View[] = ['home', 'vouchers', 'promo-reward', 'orders', 'profile', 'loyalty', 'map'];
+
 export default function CustomerApp() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -97,6 +101,7 @@ export default function CustomerApp() {
     id: string;
     name: string;
     address: string;
+    distance?: string;
   } | null>(null);
   
   // Order success state
@@ -440,6 +445,43 @@ export default function CustomerApp() {
     setActiveView('menu');
   };
 
+  /** Refills the cart from a past order so "Pesan lagi" is one tap. */
+  const handleReorder = (items: { product_id: string; quantity: number; custom_options: any }[]) => {
+    const next = [...cart];
+    let added = 0;
+    let missing = 0;
+
+    items.forEach(({ product_id, quantity, custom_options }) => {
+      const product = products.find(p => p.id === product_id);
+      if (!product) { missing += 1; return; }
+      const customizations = custom_options && typeof custom_options === 'object' ? custom_options : {};
+      const key = `${product.id}-${JSON.stringify(customizations)}`;
+      const existing = next.find(i => `${i.id}-${JSON.stringify(i.customizations)}` === key);
+      if (existing) existing.quantity += quantity;
+      else next.push({ ...product, quantity, customizations });
+      added += 1;
+    });
+
+    if (!added) {
+      toast({
+        title: "Menu tidak tersedia",
+        description: "Semua menu pesanan ini sedang tidak dijual.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCart(next);
+    setSearchParams({});
+    setActiveView('cart');
+    toast({
+      title: "Keranjang terisi",
+      description: missing > 0
+        ? `${added} menu ditambahkan, ${missing} menu sudah tidak tersedia.`
+        : `${added} menu dari pesanan sebelumnya ditambahkan.`,
+    });
+  };
+
   const updateCartQuantity = (productId: string, customizations: any, newQuantity: number) => {
     const cartKey = `${productId}-${JSON.stringify(customizations)}`;
     
@@ -484,13 +526,10 @@ export default function CustomerApp() {
     }
   };
 
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
+  // Prices always come from the shared helper so menu, cart and checkout agree.
+  const getTotalPrice = () => cartSubtotal(cart as any);
 
-  const getTotalItems = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
-  };
+  const getTotalItems = () => cartItemCount(cart as any);
 
   const handleProceedToPayment = async (orderData: any) => {
     try {
@@ -522,12 +561,12 @@ export default function CustomerApp() {
 
       console.log('✅ Order created:', order.id);
 
-      // 2. Insert order items
+      // 2. Insert order items — price stored per unit including size & toppings
       const orderItems = cart.map(item => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price,
+        price: unitPrice(item as any),
         custom_options: item.customizations
       }));
 
@@ -597,6 +636,15 @@ export default function CustomerApp() {
         console.log('✅ Points updated:', newPointsBalance);
       }
 
+      // Burn the voucher that was applied at checkout
+      if (pendingOrderData.userVoucherId) {
+        const { error: voucherError } = await supabase
+          .from('customer_user_vouchers')
+          .update({ is_used: true, used_at: new Date().toISOString() })
+          .eq('id', pendingOrderData.userVoucherId);
+        if (voucherError) console.error('Voucher update error:', voucherError);
+      }
+
       // Clear cart and show success
       setCart([]);
       setLastOrderId(pendingOrderData.orderId);
@@ -628,10 +676,18 @@ export default function CustomerApp() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <div className="cx-app min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4 cx-pop-in">
           <ZegerLogo size="lg" />
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="flex items-center justify-center gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="h-2 w-2 rounded-full bg-zeger animate-bounce"
+                style={{ animationDelay: `${i * 140}ms` }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -645,9 +701,9 @@ export default function CustomerApp() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="cx-app min-h-screen">
       {/* Main Content */}
-      <div className={cn("pb-20", activeView === 'home' && "pt-0")}>
+      <div className={cn(activeView === 'home' && "pt-0")}>
         {tab === 'order-detail' && orderId ? (
           <OrderDetail 
             orderId={orderId} 
@@ -691,28 +747,40 @@ export default function CustomerApp() {
             {activeView === 'referral' && <CustomerReferral customerUser={customerUser} onBack={() => setActiveView('home')} />}
             {activeView === 'care' && <CustomerCare onBack={() => setActiveView('home')} />}
             {activeView === 'notifications' && <CustomerNotifications customerUser={customerUser} onBack={() => setActiveView('home')} />}
-            {activeView === 'orders' && <CustomerOrders customerUser={customerUser} />}
-            {activeView === 'profile' && <CustomerProfile customerUser={customerUser} onUpdateProfile={() => fetchCustomerProfile()} />}
-            {activeView === 'map' && (
-              <CustomerMap 
+            {activeView === 'orders' && (
+              <CustomerOrders customerUser={customerUser} onReorder={handleReorder} />
+            )}
+            {activeView === 'profile' && (
+              <CustomerProfile
                 customerUser={customerUser}
-                onCallRider={(orderId, rider) => {
-                  setPendingOrderId(orderId);
-                  setPendingRider(rider);
-                  localStorage.setItem('zeger-last-pending-order', orderId);
-                  setActiveView('waiting');
-                }}
+                onUpdateProfile={() => fetchCustomerProfile()}
+                onNavigate={(view) => setActiveView(view as View)}
               />
+            )}
+            {activeView === 'map' && (
+              <div className="pb-28">
+                <CustomerMap 
+                  customerUser={customerUser}
+                  onCallRider={(orderId, rider) => {
+                    setPendingOrderId(orderId);
+                    setPendingRider(rider);
+                    localStorage.setItem('zeger-last-pending-order', orderId);
+                    setActiveView('waiting');
+                  }}
+                />
+              </div>
             )}
             {activeView === 'outlets' && (
               <CustomerOutletList 
                 channel={orderChannel}
+                orderMode={orderMode}
                 onNavigate={(view: string) => setActiveView(view as View)}
                 onSelectOutlet={(outlet: any) => {
                   setSelectedOutlet({
                     id: outlet.id,
                     name: outlet.name,
-                    address: outlet.address
+                    address: outlet.address,
+                    distance: outlet.distance,
                   });
                   setActiveView('menu');
                 }}
@@ -734,7 +802,9 @@ export default function CustomerApp() {
                 outletName={selectedOutlet?.name}
                 outletAddress={selectedOutlet?.address}
                 onChangeOutlet={() => setActiveView('outlets')}
-                cartItemCount={cart.length}
+                onBack={() => setActiveView('home')}
+                orderMode={orderMode}
+                cartItemCount={getTotalItems()}
                 onViewCart={() => setActiveView('cart')}
                 cart={cart}
               />
@@ -742,13 +812,13 @@ export default function CustomerApp() {
             {activeView === 'product-detail' && selectedProduct && (
               <CustomerProductDetail
                 product={selectedProduct}
-                orderType="take-away"
+                orderType={orderMode === 'delivery' ? 'delivery' : 'take-away'}
                 onBack={() => {
                   setSelectedProduct(null);
                   setActiveView('menu');
                 }}
                 onAddToCart={addToCart}
-                cartItemCount={cart.length}
+                cartItemCount={getTotalItems()}
                 onViewCart={() => {
                   setSelectedProduct(null);
                   setActiveView('cart');
@@ -760,7 +830,9 @@ export default function CustomerApp() {
                 cart={cart}
                 outletName={selectedOutlet?.name}
                 outletAddress={selectedOutlet?.address}
-                outletDistance="0.01 km"
+                outletDistance={selectedOutlet?.distance}
+                orderMode={orderMode === 'delivery' ? 'outlet_delivery' : 'outlet_pickup'}
+                onOrderModeChange={(mode) => setOrderMode(mode === 'outlet_delivery' ? 'delivery' : 'pickup')}
                 onUpdateQuantity={updateCartQuantity}
                 onNavigate={(view: string) => {
                   if (view === 'checkout' && !selectedOutlet) {
@@ -785,9 +857,11 @@ export default function CustomerApp() {
                 outletId={selectedOutlet.id}
                 outletName={selectedOutlet.name}
                 outletAddress={selectedOutlet.address}
+                outletDistance={selectedOutlet.distance}
                 customerUser={customerUser}
                 onConfirm={handleProceedToPayment}
                 onBack={() => setActiveView('cart')}
+                onChangeOutlet={() => setActiveView('outlets')}
                 initialOrderType={orderMode === 'delivery' ? 'outlet_delivery' : 'outlet_pickup'}
               />
             )}
@@ -883,8 +957,8 @@ export default function CustomerApp() {
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      {!['waiting', 'order-success'].includes(activeView) && tab !== 'order-detail' && (
+      {/* Bottom Navigation — only on the main tabs, never over a sticky checkout bar */}
+      {DOCK_VIEWS.includes(activeView) && tab !== 'order-detail' && (
         <BottomNavigation
           activeView={activeView}
           activeOrdersCount={activeOrdersCount}

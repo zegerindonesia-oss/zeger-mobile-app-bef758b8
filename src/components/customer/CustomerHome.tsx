@@ -91,7 +91,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
   const swipe = (dir: 1 | -1) => setSlide((s) => (s + dir + banners.length) % banners.length);
 
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))]">
+    <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-28">
       {/* ---------- Hero banner (managed in Back Office → Promo Banner) ---------- */}
       <header className="relative">
         <div
