@@ -643,13 +643,13 @@ function RiderDetailSheet({
 function FlavorDots({ label, level }: { label: string; level: number }) {
   return (
     <tr>
-      <td className="py-1 pr-2 text-[11px] text-gray-700 whitespace-nowrap">{label}</td>
+      <td className="whitespace-nowrap py-1 pr-2 text-[11px] font-semibold text-muted-foreground">{label}</td>
       <td className="py-1">
-        <div className="flex gap-1 justify-end">
+        <div className="flex justify-end gap-1">
           {[1, 2, 3, 4, 5].map(i => (
             <span
               key={i}
-              className={`w-2 h-2 rounded-full border ${i <= level ? 'bg-[#EA2831] border-[#EA2831]' : 'bg-white border-gray-300'}`}
+              className={`h-2 w-2 rounded-full border ${i <= level ? 'border-zeger bg-zeger' : 'border-[hsl(var(--cx-line))] bg-white'}`}
             />
           ))}
         </div>
