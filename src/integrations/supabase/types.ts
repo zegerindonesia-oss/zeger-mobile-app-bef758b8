@@ -153,6 +153,7 @@ export type Database = {
           branch_type: string | null
           code: string
           created_at: string | null
+          customer_channel: string
           description: string | null
           id: string
           is_active: boolean | null
@@ -174,6 +175,7 @@ export type Database = {
           branch_type?: string | null
           code: string
           created_at?: string | null
+          customer_channel?: string
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -195,6 +197,7 @@ export type Database = {
           branch_type?: string | null
           code?: string
           created_at?: string | null
+          customer_channel?: string
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -2664,6 +2667,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           price: number
+          show_in_customer_app: boolean
           sub_category: string | null
           tenant_id: string
           updated_at: string | null
@@ -2682,6 +2686,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price: number
+          show_in_customer_app?: boolean
           sub_category?: string | null
           tenant_id?: string
           updated_at?: string | null
@@ -2700,6 +2705,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          show_in_customer_app?: boolean
           sub_category?: string | null
           tenant_id?: string
           updated_at?: string | null
@@ -3999,42 +4005,51 @@ export type Database = {
       }
       subscription_plans: {
         Row: {
+          benefits: Json
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           image_url: string | null
           is_active: boolean
+          is_best: boolean
           name: string
           period_days: number
           price: number
           quota: number
+          tier: string
           updated_at: string
         }
         Insert: {
+          benefits?: Json
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_best?: boolean
           name: string
           period_days?: number
           price?: number
           quota?: number
+          tier?: string
           updated_at?: string
         }
         Update: {
+          benefits?: Json
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_best?: boolean
           name?: string
           period_days?: number
           price?: number
           quota?: number
+          tier?: string
           updated_at?: string
         }
         Relationships: []
