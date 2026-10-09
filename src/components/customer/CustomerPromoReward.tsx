@@ -8,7 +8,7 @@ import zegerPromo from '@/assets/flow/zeger-promo.png.asset.json';
 
 interface Props { customerUser: any; onNavigate: (view: string) => void }
 
-interface Reward { id: string; name: string; description: string | null; points_required: number; image_url: string | null; is_active: boolean }
+interface Reward { id: string; reward_name: string; description: string | null; points_required: number; image_url: string | null }
 interface Promo { id: string; title: string; description: string | null; image_url: string; link_url: string | null; valid_until: string | null; placement: string | null }
 
 export function CustomerPromoReward({ customerUser, onNavigate }: Props) {
