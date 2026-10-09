@@ -120,6 +120,8 @@ export default function CustomerApp() {
   
   // Product detail state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [orderChannel, setOrderChannel] = useState<'branch' | 'street'>('branch');
+  const [orderMode, setOrderMode] = useState<'pickup' | 'delivery'>('pickup');
   
   // Pending order data for payment flow
   const [pendingOrderData, setPendingOrderData] = useState<any>(null);
@@ -392,7 +394,8 @@ export default function CustomerApp() {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('show_in_customer_app', true);
 
       if (error) throw error;
       setProducts(data || []);
@@ -662,6 +665,12 @@ export default function CustomerApp() {
                 onNavigate={setActiveView}
                 recentProducts={products.slice(0, 6)}
                 onAddToCart={addToCart}
+                onChooseChannel={(ch, mode) => {
+                  if (ch === 'wheels') { setActiveView('map'); return; }
+                  setOrderChannel(ch);
+                  setOrderMode(mode);
+                  setActiveView('outlets');
+                }}
               />
             )}
             {activeView === 'loyalty' && (
@@ -697,6 +706,7 @@ export default function CustomerApp() {
             )}
             {activeView === 'outlets' && (
               <CustomerOutletList 
+                channel={orderChannel}
                 onNavigate={(view: string) => setActiveView(view as View)}
                 onSelectOutlet={(outlet: any) => {
                   setSelectedOutlet({
@@ -778,6 +788,7 @@ export default function CustomerApp() {
                 customerUser={customerUser}
                 onConfirm={handleProceedToPayment}
                 onBack={() => setActiveView('cart')}
+                initialOrderType={orderMode === 'delivery' ? 'outlet_delivery' : 'outlet_pickup'}
               />
             )}
             {activeView === 'payment' && pendingOrderData && pendingOrderData.orderId && (

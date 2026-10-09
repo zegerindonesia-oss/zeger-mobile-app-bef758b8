@@ -32,13 +32,14 @@ interface CustomerCheckoutProps {
   customerUser: CustomerUser;
   onConfirm: (orderData: any) => void;
   onBack: () => void;
+  initialOrderType?: "outlet_pickup" | "outlet_delivery";
 }
 
 export default function CustomerCheckout({
-  cart, outletId, outletName, outletAddress, customerUser, onConfirm, onBack
+  cart, outletId, outletName, outletAddress, customerUser, onConfirm, onBack, initialOrderType = "outlet_pickup"
 }: CustomerCheckoutProps) {
   const { toast } = useToast();
-  const [orderType, setOrderType] = useState<"outlet_pickup" | "outlet_delivery">("outlet_pickup");
+  const [orderType, setOrderType] = useState<"outlet_pickup" | "outlet_delivery">(initialOrderType);
   const [deliveryAddress, setDeliveryAddress] = useState(customerUser.address || "");
   const [loading, setLoading] = useState(false);
   const [useZegerPoints, setUseZegerPoints] = useState(false);

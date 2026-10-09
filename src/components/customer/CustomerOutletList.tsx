@@ -19,9 +19,10 @@ interface Branch {
 interface CustomerOutletListProps {
   onNavigate: (view: string) => void;
   onSelectOutlet?: (outletId: string) => void;
+  channel?: 'branch' | 'street';
 }
 
-export function CustomerOutletList({ onNavigate, onSelectOutlet }: CustomerOutletListProps) {
+export function CustomerOutletList({ onNavigate, onSelectOutlet, channel = 'branch' }: CustomerOutletListProps) {
   const [outlets, setOutlets] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -29,7 +30,7 @@ export function CustomerOutletList({ onNavigate, onSelectOutlet }: CustomerOutle
   useEffect(() => {
     fetchUserLocation();
     fetchOutlets();
-  }, []);
+  }, [channel]);
 
   const fetchUserLocation = () => {
     if (navigator.geolocation) {
@@ -54,6 +55,7 @@ export function CustomerOutletList({ onNavigate, onSelectOutlet }: CustomerOutle
         .from('branches')
         .select('*')
         .in('branch_type', ['hub', 'small'])
+        .eq('customer_channel', channel)
         .eq('is_active', true);
 
       if (error) throw error;
