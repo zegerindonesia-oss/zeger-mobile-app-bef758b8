@@ -15,7 +15,7 @@ import CustomerCheckout from '@/components/customer/CustomerCheckout';
 import { CustomerProfile } from '@/components/customer/CustomerProfile';
 import { CustomerPromoReward } from '@/components/customer/CustomerPromoReward';
 import { CustomerOutletList } from '@/components/customer/CustomerOutletList';
-import { CustomerOrderSuccess } from '@/components/customer/CustomerOrderSuccess';
+import CustomerOrderSuccess from '@/components/customer/CustomerOrderSuccess';
 import { CustomerStreetComingSoon } from '@/components/customer/CustomerStreetComingSoon';
 import { CustomerCare } from '@/components/customer/CustomerCare';
 import { CustomerReferral } from '@/components/customer/CustomerReferral';
@@ -96,7 +96,7 @@ const SCREENS: Record<string, () => JSX.Element> = {
       outletName="Zeger Soekarno Hatta"
       outletAddress="Jl. Soekarno Hatta No. 12, Malang"
       outletDistance="1.2 km"
-      orderMode="delivery"
+      orderMode="outlet_delivery"
       onOrderModeChange={() => {}}
       onUpdateQuantity={() => {}}
       onNavigate={() => {}}
@@ -132,12 +132,12 @@ const SCREENS: Record<string, () => JSX.Element> = {
       onNavigate={() => {}}
     />
   ),
-  street: () => <CustomerStreetComingSoon onBack={() => {}} />,
+  street: () => <CustomerStreetComingSoon onNavigate={() => {}} />,
   care: () => <CustomerCare onBack={() => {}} />,
   referral: () => <CustomerReferral customerUser={MOCK_USER} onBack={() => {}} />,
   dock: () => (
     <div className="min-h-screen bg-[hsl(var(--cx-canvas))]">
-      <BottomNavigation activeView="home" onViewChange={() => {}} cartItemCount={3} />
+      <BottomNavigation activeView="home" onNavigate={() => {}} activeOrdersCount={2} />
     </div>
   ),
 };
