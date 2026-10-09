@@ -1,343 +1,235 @@
 import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Store, Bike, Truck, Gift, Star, Bell, Users, CreditCard, ChevronRight, ShoppingBag, Flame, Coins, MapPin } from 'lucide-react';
+import { Bell, ChevronRight, Store, MapPinned, Bike, ShoppingBag, Truck, Share2, Crown, Gift, MessageCircle, ShieldCheck, BadgeCheck, Percent, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import PromoBannerCarousel from './PromoBannerCarousel';
 import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
+import { normalizeImageUrl } from '@/lib/image-url';
+import zegerPromo from '@/assets/flow/zeger-promo.png.asset.json';
+import { cn } from '@/lib/utils';
+
+export type CustomerChannel = 'branch' | 'street' | 'wheels';
+export type CustomerOrderMode = 'pickup' | 'delivery';
 
 interface CustomerHomeProps {
   customerUser: any;
-  onNavigate: any;
+  onNavigate: (view: any) => void;
   recentProducts?: any[];
   onAddToCart?: (product: any) => void;
+  onChooseChannel?: (channel: CustomerChannel, mode: CustomerOrderMode) => void;
 }
 
-interface Voucher {
-  id: string;
-  code: string;
-  discount_type: string;
-  discount_value: number;
-  valid_until: string;
-}
+interface Banner { id: string; title: string; image_url: string; link_url: string | null }
 
-export function CustomerHome({ customerUser, onNavigate, recentProducts = [], onAddToCart }: CustomerHomeProps) {
-  const cfg = useCustomerAppConfig();
-  const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
-  const [myVoucherCount, setMyVoucherCount] = useState(0);
-  const [subActive, setSubActive] = useState(false);
-  const [unreadNotif, setUnreadNotif] = useState(0);
-  const [bigOrderBanner, setBigOrderBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
-  const [zegerCareBanner, setZegerCareBanner] = useState<{ image_url: string; link_url: string | null } | null>(null);
+const CHANNELS: { id: CustomerChannel; title: string; desc: string; icon: any }[] = [
+  { id: 'branch', title: 'Zeger Branch', desc: 'Kedai Zeger terdekat', icon: Store },
+  { id: 'street', title: 'On The Street', desc: 'Booth & gerai jalanan', icon: MapPinned },
+  { id: 'wheels', title: 'On The Wheels', desc: 'Rider keliling dekatmu', icon: Bike },
+];
+
+export function CustomerHome({ customerUser, onNavigate, onChooseChannel }: CustomerHomeProps) {
+  const { config } = useCustomerAppConfig();
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [slide, setSlide] = useState(0);
+  const [channel, setChannel] = useState<CustomerChannel>('branch');
+  const [sheet, setSheet] = useState<CustomerChannel | null>(null);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    if (customerUser) {
-      fetchActiveVouchers();
-      (async () => {
-        const { count: vc } = await supabase.from('customer_user_vouchers').select('*', { count: 'exact', head: true }).eq('user_id', customerUser.id).eq('is_used', false);
-        setMyVoucherCount(vc || 0);
-        const { data: sub } = await supabase.from('customer_subscriptions').select('id').eq('user_id', customerUser.id).eq('status', 'active').gte('ends_at', new Date().toISOString()).limit(1);
-        setSubActive(!!(sub && sub.length));
-        const { count: nc } = await supabase.from('customer_notifications').select('*', { count: 'exact', head: true }).or(`user_id.is.null,user_id.eq.${customerUser.id}`).is('read_at', null);
-        setUnreadNotif(nc || 0);
-      })();
-    }
-    fetchSectionBanners();
-  }, [customerUser]);
-
-  const fetchActiveVouchers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('customer_vouchers')
-        .select('*')
-        .eq('is_active', true)
-        .gte('valid_until', new Date().toISOString())
-        .limit(3);
-
-      if (error) throw error;
-      setActiveVouchers(data as any || []);
-    } catch (error: any) {
-      console.error('Error fetching vouchers:', error);
-    }
-  };
-
-  const fetchSectionBanners = async () => {
-    try {
-      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-      const { data, error } = await supabase
+    (async () => {
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+      const { data } = await supabase
         .from('promo_banners')
-        .select('image_url, link_url, placement, display_order')
+        .select('id, title, image_url, link_url, valid_until')
         .eq('is_active', true)
-        .in('placement', ['big_order', 'zeger_care'])
-        .or(`valid_until.is.null,valid_until.gte.${today}`)
+        .eq('placement', 'carousel')
         .order('display_order');
-      if (error) throw error;
-      const big = (data || []).find((b: any) => b.placement === 'big_order');
-      const care = (data || []).find((b: any) => b.placement === 'zeger_care');
-      if (big) setBigOrderBanner({ image_url: big.image_url, link_url: big.link_url });
-      if (care) setZegerCareBanner({ image_url: care.image_url, link_url: care.link_url });
-    } catch (error: any) {
-      console.error('Error fetching section banners:', error);
-    }
-  };
+      const list = (data || []).filter((b: any) => !b.valid_until || b.valid_until >= today) as Banner[];
+      setBanners(list.length ? list : [{ id: 'default', title: 'Zeger Coffee', image_url: zegerPromo.url, link_url: null }]);
+    })();
+  }, []);
 
-  const getMembershipBadge = () => {
-    const points = customerUser?.points || 0;
-    if (points >= 1000) return { level: 'Gold', color: 'bg-yellow-500', icon: '👑' };
-    if (points >= 500) return { level: 'Silver', color: 'bg-gray-400', icon: '⭐' };
-    return { level: 'Bronze', color: 'bg-orange-600', icon: '🔥' };
-  };
+  useEffect(() => {
+    if (banners.length < 2) return;
+    const t = setInterval(() => setSlide((s) => (s + 1) % banners.length), 4000);
+    return () => clearInterval(t);
+  }, [banners.length]);
 
-  const membershipInfo = getMembershipBadge();
+  useEffect(() => {
+    if (!customerUser?.id) return;
+    supabase.from('customer_notifications').select('id', { count: 'exact', head: true })
+      .eq('customer_user_id', customerUser.id).eq('is_read', false)
+      .then(({ count }) => setUnread(count || 0));
+  }, [customerUser?.id]);
+
+  const firstName = (customerUser?.name || customerUser?.full_name || 'Sobat Zeger').split(' ').slice(0, 3).join(' ');
+  const points = customerUser?.points || 0;
+  const waNumber = config.care.whatsapp_number || '6281330886182';
+  const waDisplay = waNumber.replace(/^62/, '0').replace(/(\d{4})(\d{4})(\d+)/, '$1-$2-$3');
+
+  const startOrder = (mode: CustomerOrderMode) => {
+    if (channel === 'wheels') { onNavigate('map'); return; }
+    onChooseChannel?.(channel, mode);
+  };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Banner - Clean without overlay */}
-      <div className="relative h-64 overflow-hidden">
-        <PromoBannerCarousel />
-      </div>
-
-      {/* Member Card */}
-      <div className="bg-white rounded-t-3xl -mt-8 p-4 relative z-10">
-        {/* Greeting & Notification */}
-        <div className="flex justify-between items-center mb-6 pt-2">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Hi, {customerUser?.name?.toUpperCase() || 'GUEST'}
-          </h2>
-          <button className="relative" onClick={() => cfg.features.notifications && onNavigate('notifications')}>
-            <Bell className="h-7 w-7 text-gray-500" />
-            {unreadNotif > 0 && (
-              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
-                {unreadNotif}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Membership Info - Material Style */}
-        <div className="grid grid-cols-3 gap-4 text-center mb-8">
-          {/* Level / Jiwa */}
-            <button 
-              onClick={() => onNavigate('loyalty')}
-              className="p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer active:scale-95"
-            >
-              <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
-                <Flame className="h-7 w-7 text-white" />
-              </div>
-              <p className="font-semibold text-gray-900 text-sm">Zeger Loyalty</p>
-              <p className="text-xs text-gray-500 font-light">
-                {customerUser?.points || 0} /100 Exp
-              </p>
+    <div className="min-h-screen bg-background text-foreground max-w-md mx-auto">
+      {/* Hero */}
+      <div className="relative">
+        <div className="relative h-[300px] overflow-hidden rounded-b-[28px] bg-zeger-dark">
+          {banners.map((b, i) => (
+            <img
+              key={b.id}
+              src={normalizeImageUrl(b.image_url)}
+              alt={b.title}
+              onClick={() => b.link_url && window.open(b.link_url, '_blank')}
+              className={cn('absolute inset-0 h-full w-full object-cover transition-opacity duration-700', i === slide ? 'opacity-100' : 'opacity-0')}
+            />
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-b from-zeger-dark/40 via-transparent to-zeger-dark/60" />
+          {config.features.notifications && (
+            <button onClick={() => onNavigate('notifications')} aria-label="Notifikasi"
+              className="absolute right-4 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-zeger text-zeger-foreground shadow-lg">
+              <Bell className="h-5 w-5" />
+              {unread > 0 && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-zeger-gold ring-2 ring-zeger" />}
             </button>
-
-          {/* Points */}
-          <div className="p-2">
-            <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
-              <Coins className="h-7 w-7 text-white" />
-            </div>
-            <p className="font-semibold text-gray-900 text-sm">Zeger Point</p>
-            <p className="text-xs text-gray-500 font-light">
-              {customerUser?.points || 0} Points
-            </p>
-          </div>
-
-          {/* Subscription */}
-          <button onClick={() => cfg.features.subscription && onNavigate('subscription')} className="p-2 hover:bg-gray-50 rounded-lg transition-colors active:scale-95">
-            <div className="bg-[#EA2831] rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(234,40,49,0.4)]">
-              <Gift className="h-7 w-7 text-white" />
-            </div>
-            <p className="font-semibold text-gray-900 text-sm">Subscription</p>
-            <p className="text-xs text-gray-500 font-light">{subActive ? 'Aktif' : '0 Subscription'}</p>
-          </button>
-        </div>
-
-        {/* Voucher & Referral Cards */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div 
-            className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md cursor-pointer hover:shadow-xl transition-shadow"
-            onClick={() => onNavigate('vouchers')}
-          >
-            <div>
-              <p className="font-semibold text-gray-900">Voucher Kamu</p>
-              <p className="text-xs text-gray-500 font-light">{myVoucherCount} Voucher</p>
-            </div>
-            <div className="bg-gray-100 p-2 rounded-full">
-              <Gift className="h-5 w-5 text-[#EA2831]" />
-            </div>
-          </div>
-          
-          <div 
-            className="bg-white p-4 rounded-lg flex justify-between items-center shadow-md hover:shadow-xl transition-shadow cursor-pointer"
-            onClick={() => cfg.features.referral && onNavigate('referral')}
-          >
-            <div>
-              <p className="font-semibold text-gray-900">Referral</p>
-              <p className="text-xs text-gray-500 font-light">Undang Temanmu</p>
-            </div>
-            <div className="bg-gray-100 p-2 rounded-full">
-              <Users className="h-5 w-5 text-[#EA2831]" />
-            </div>
-          </div>
-        </div>
-
-        {/* Outlet Selection */}
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Buat Pesanan Sekarang</h2>
-        
-        <div className="bg-white p-4 rounded-lg flex justify-between items-center mb-6 shadow-lg">
-          <div className="flex items-center space-x-3">
-            <Store className="h-8 w-8 text-gray-500" />
-            <div>
-              <p className="text-sm text-gray-500 font-light">SULAWESI SURABAYA</p>
-              <p className="font-semibold text-gray-900">zeger kemiri</p>
-            </div>
-          </div>
-          <button 
-            className="font-semibold text-[#EA2831] text-sm"
-            onClick={() => onNavigate('outlets')}
-          >
-            Ubah
-          </button>
-        </div>
-
-        {/* Order Type Buttons - Material Design Style */}
-        <div className="grid grid-cols-3 gap-3">
-          <button
-            onClick={() => onNavigate('outlets')}
-            className="bg-[#EA2831] text-white rounded-2xl p-4 text-center shadow-xl relative overflow-hidden hover:shadow-2xl active:scale-95 transition-all"
-          >
-            <div className="absolute inset-0 bg-white/5" />
-            <div className="relative flex flex-col items-center justify-center gap-2">
-              <Store className="h-8 w-8" strokeWidth={1.5} />
-              <p className="font-bold text-xs leading-tight">Zeger<br/>Branch</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onNavigate('street')}
-            className="bg-[#EA2831] text-white rounded-2xl p-4 text-center shadow-xl relative overflow-hidden hover:shadow-2xl active:scale-95 transition-all"
-          >
-            <div className="absolute inset-0 bg-white/5" />
-            <div className="relative flex flex-col items-center justify-center gap-2">
-              <Truck className="h-8 w-8" strokeWidth={1.5} />
-              <p className="font-bold text-xs leading-tight">On The<br/>Street</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onNavigate('map')}
-            className="bg-[#EA2831] text-white rounded-2xl p-4 text-center shadow-xl relative overflow-hidden hover:shadow-2xl active:scale-95 transition-all"
-          >
-            <div className="absolute inset-0 bg-white/5" />
-            <div className="relative flex flex-col items-center justify-center gap-2">
-              <Bike className="h-8 w-8" strokeWidth={1.5} />
-              <p className="font-bold text-xs leading-tight">On The<br/>Wheels</p>
-            </div>
-          </button>
-        </div>
-
-        {/* Nearby Rider shortcut */}
-        <button
-          onClick={() => onNavigate('map')}
-          className="mt-4 w-full bg-white rounded-2xl p-4 flex items-center justify-between shadow-md hover:shadow-lg transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-[#EA2831]/10 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-[#EA2831]" />
-            </div>
-            <div className="text-left">
-              <p className="font-semibold text-gray-900 text-sm">Rider di Sekitarmu</p>
-              <p className="text-xs text-gray-500">Temukan rider Zeger terdekat</p>
-            </div>
-          </div>
-          <ChevronRight className="h-5 w-5 text-gray-400" />
-        </button>
-      </div>
-
-      {/* Active Promotions */}
-      {activeVouchers.length > 0 && (
-        <div className="px-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-gray-900">Promo Aktif</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-red-500 hover:text-red-600"
-              onClick={() => onNavigate('vouchers')}
-            >
-              Lihat Semua
-            </Button>
-          </div>
-          <div className="space-y-3">
-            {activeVouchers.map((voucher) => (
-              <Card key={voucher.id} className="p-4 rounded-2xl shadow-lg border-2 border-red-100 hover:border-[#EA2831] transition-all cursor-pointer">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <Gift className="h-6 w-6 text-[#EA2831]" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-900">{voucher.code}</h4>
-                    <p className="text-sm text-gray-600">
-                      {voucher.discount_type === 'percentage' 
-                        ? `${voucher.discount_value}% OFF` 
-                        : `Rp ${voucher.discount_value.toLocaleString('id-ID')} OFF`}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-              </Card>
+          )}
+          <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-2">
+            {banners.map((_, i) => (
+              <span key={i} className={cn('h-2 rounded-full transition-all', i === slide ? 'w-5 bg-zeger-foreground' : 'w-2 bg-zeger-foreground/50')} />
             ))}
           </div>
         </div>
+
+        {/* Points card */}
+        {config.features.loyalty && (
+          <div className="relative -mt-12 mx-4 rounded-3xl bg-card shadow-[0_10px_30px_-12px_hsl(var(--zeger)/0.35)] border border-border">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-2 rounded-full border-2 border-zeger/30 bg-zeger-cream px-2 py-1.5 pr-5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zeger text-zeger-foreground font-black">Z</span>
+                <span className="text-2xl font-bold">{points.toLocaleString('id-ID')} Poin</span>
+              </div>
+              <div className="flex gap-1">
+                {[0, 1, 2].map((i) => <span key={i} className="h-6 w-6 rounded-full bg-zeger-gold/80 shadow-inner" style={{ transform: `translateY(${i % 2 ? -6 : 4}px)` }} />)}
+              </div>
+            </div>
+            <button onClick={() => onNavigate('loyalty')} className="flex w-full items-center justify-between border-t border-dashed border-border px-4 py-3.5 text-left font-semibold">
+              Tukarkan poinmu dengan hadiah menarik <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Subscribe teaser */}
+      {config.features.subscription && (
+        <button onClick={() => onNavigate('subscription')} className="mx-4 mt-4 flex w-[calc(100%-2rem)] items-center overflow-hidden rounded-full border border-border bg-card shadow-sm">
+          <span className="flex h-16 w-20 shrink-0 items-center justify-center rounded-r-full bg-zeger">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-zeger-foreground text-zeger"><Percent className="h-5 w-5" /></span>
+          </span>
+          <span className="flex-1 px-3 text-left font-semibold">Berlangganan, lebih untung!</span>
+          <span className="mr-3 rounded-full border-2 border-zeger px-4 py-1.5 text-sm font-bold text-zeger">Lihat</span>
+        </button>
       )}
 
-      {/* Big Order Section */}
-      <div className="bg-white px-4 pt-6 pb-4">
-        <h3 className="text-2xl font-bold text-gray-900 mb-3">Big Order</h3>
-        <button
-          onClick={() => bigOrderBanner?.link_url && window.open(bigOrderBanner.link_url, '_blank')}
-          className="block w-full rounded-2xl overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.25)] hover:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99] bg-gradient-to-br from-red-500 to-red-600"
-          style={{ aspectRatio: '16 / 7' }}
-        >
-          {bigOrderBanner ? (
-            <img
-              src={bigOrderBanner.image_url}
-              alt="Big Order"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-white p-4">
-              <ShoppingBag className="h-10 w-10 mb-2 opacity-80" />
-              <p className="font-bold text-lg">Big Order Banner</p>
-              <p className="text-xs opacity-80">Upload dari backoffice (rasio 16:7)</p>
-            </div>
-          )}
-        </button>
-      </div>
+      {/* Order */}
+      {config.sections.order_types && (
+        <section className="px-4 pt-6">
+          <h2 className="text-xl font-bold">Hi {firstName}, Pesan Sekarang?</h2>
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1">
+            {CHANNELS.map((c) => (
+              <button key={c.id} onClick={() => setChannel(c.id)}
+                className={cn('flex flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-xs font-semibold transition-all',
+                  channel === c.id ? 'bg-card text-zeger shadow' : 'text-muted-foreground')}>
+                <c.icon className="h-5 w-5" />{c.title}
+              </button>
+            ))}
+          </div>
 
-      {/* Zeger Care Section */}
-      <div className="bg-white px-4 pt-4 pb-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-3">Zeger Care</h3>
-        <button
-          onClick={() => zegerCareBanner?.link_url && window.open(zegerCareBanner.link_url, '_blank')}
-          className="block w-full rounded-2xl overflow-hidden shadow-[0_12px_32px_-8px_rgba(0,0,0,0.25)] hover:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99] bg-gradient-to-br from-amber-100 to-amber-200"
-          style={{ aspectRatio: '16 / 7' }}
-        >
-          {zegerCareBanner ? (
-            <img
-              src={zegerCareBanner.image_url}
-              alt="Zeger Care"
-              className="w-full h-full object-cover"
-            />
+          {channel === 'wheels' ? (
+            <button onClick={() => onNavigate('map')}
+              className="mt-3 flex w-full items-center gap-4 rounded-3xl border-2 border-zeger/40 bg-gradient-to-br from-zeger-soft to-card p-5 text-left">
+              <div className="flex-1">
+                <p className="text-2xl font-bold text-zeger">Cari Rider</p>
+                <p className="mt-1 text-sm text-muted-foreground">Temukan rider Zeger terdekat, datangi atau panggil lewat WhatsApp</p>
+              </div>
+              <span className="flex h-20 w-20 items-center justify-center rounded-full bg-zeger/10 text-zeger"><Bike className="h-10 w-10" /></span>
+            </button>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-red-600 p-4">
-              <Bell className="h-10 w-10 mb-2" />
-              <p className="font-bold text-lg">Zeger Care Banner</p>
-              <p className="text-xs opacity-80">Upload dari backoffice (rasio 16:7)</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button onClick={() => startOrder('pickup')} className="relative flex min-h-[150px] flex-col rounded-3xl border-2 border-zeger-gold/50 bg-gradient-to-br from-zeger-cream to-card p-4 text-left">
+                <p className="text-2xl font-bold text-zeger-dark">Pick Up</p>
+                <p className="mt-1 text-sm text-muted-foreground">Ambil di {channel === 'street' ? 'booth' : 'store'} tanpa antri</p>
+                <span className="absolute bottom-3 right-3 flex h-14 w-14 items-center justify-center rounded-full bg-zeger-gold/25 text-zeger-dark"><ShoppingBag className="h-7 w-7" /></span>
+              </button>
+              <button onClick={() => startOrder('delivery')} className="relative flex min-h-[150px] flex-col rounded-3xl border-2 border-zeger/50 bg-gradient-to-br from-zeger-soft to-card p-4 text-left">
+                <p className="text-2xl font-bold text-zeger">Delivery</p>
+                <p className="mt-1 text-sm text-muted-foreground">Segera diantar ke lokasimu</p>
+                <span className="absolute bottom-3 right-3 flex h-14 w-14 items-center justify-center rounded-full bg-zeger/15 text-zeger"><Truck className="h-7 w-7" /></span>
+              </button>
             </div>
           )}
-        </button>
-      </div>
+        </section>
+      )}
+
+      <div className="mt-6 h-2 bg-muted" />
+
+      {/* Highlights */}
+      <section className="px-4 pt-6">
+        <h2 className="text-xl font-bold">Yang Menarik di Zeger</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {config.features.referral && (
+            <Feature icon={Share2} title="Share The Sip" desc="Bagikan kode referral, dapatkan hadiah" onClick={() => onNavigate('referral')} />
+          )}
+          {config.features.subscription && (
+            <Feature icon={Crown} title="MyZeger Plan" desc="Berlangganan, jauh lebih untung" onClick={() => onNavigate('subscription')} />
+          )}
+          {config.features.vouchers && (
+            <Feature icon={Gift} title="Zeger Gift" desc="Rayakan momen spesial bareng Zeger" onClick={() => onNavigate('vouchers')} />
+          )}
+        </div>
+      </section>
+
+      <div className="mt-6 h-2 bg-muted" />
+
+      {config.features.care && (
+        <section className="px-4 pt-6">
+          <h2 className="text-xl font-bold">Perlu Bantuan?</h2>
+          <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noreferrer"
+            className="mt-3 flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <MessageCircle className="h-10 w-10 text-zeger" />
+            <div>
+              <p className="text-sm">Zeger Customer Service (chat only)</p>
+              <p className="text-xl font-bold text-zeger">{waDisplay}</p>
+            </div>
+          </a>
+        </section>
+      )}
+
+      <section className="mx-4 mt-6 divide-y divide-dashed divide-border border-y border-dashed border-border pb-2">
+        <div className="flex items-center gap-4 py-4 text-sm text-muted-foreground"><BadgeCheck className="h-8 w-8 shrink-0 text-zeger" />Zeger Coffee sudah tersertifikasi halal oleh MUI</div>
+        <div className="flex items-start gap-4 py-4 text-sm text-muted-foreground"><ShieldCheck className="h-8 w-8 shrink-0 text-zeger" />
+          <div>Dirjen Perlindungan Konsumen dan Tata Tertib Niaga, Kementerian Perdagangan Republik Indonesia.<p className="mt-1 font-semibold">WhatsApp Dirjen PKTN: 0853-1111-1010</p></div>
+        </div>
+      </section>
+      <div className="h-8" />
+
+      {sheet && (
+        <div className="fixed inset-0 z-50 bg-foreground/40" onClick={() => setSheet(null)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-md rounded-t-3xl bg-card p-5" onClick={(e) => e.stopPropagation()}>
+            <button className="ml-auto block" onClick={() => setSheet(null)}><X className="h-5 w-5" /></button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+function Feature({ icon: Icon, title, desc, onClick }: { icon: any; title: string; desc: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center rounded-3xl border border-border bg-card p-4 text-center shadow-sm transition-transform active:scale-95">
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-zeger-soft text-zeger"><Icon className="h-9 w-9" /></span>
+      <p className="mt-3 font-bold">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
+    </button>
+  );
+}
+
+export default CustomerHome;
