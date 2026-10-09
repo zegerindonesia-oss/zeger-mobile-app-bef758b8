@@ -516,75 +516,72 @@ function RiderDetailSheet({
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header with back */}
-      <div className="relative bg-white h-40 flex-shrink-0">
+    <div className="flex h-full flex-col bg-[hsl(var(--cx-canvas))]">
+      {/* Header */}
+      <div className="cx-stage relative h-32 flex-shrink-0 overflow-hidden bg-gradient-to-br from-zeger-dark to-zeger">
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-[#EA2831] text-white flex items-center justify-center shadow-lg"
+          className="cx-icon-btn absolute left-4 top-4 z-10 h-10 w-10"
           aria-label="Kembali"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="w-full h-full flex items-center justify-center">
-          <MapPin className="h-16 w-16 text-[#EA2831]" />
-        </div>
+        <img src={cxArt.scooter} alt="" className="cx-art cx-float absolute right-4 top-3 h-24 w-auto" />
       </div>
 
       {/* Rider info card */}
-      <div className="mx-4 -mt-14 relative z-10 bg-white rounded-2xl border-2 border-[#EA2831]/30 p-4 shadow-lg">
-        <div className="flex items-start gap-3">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-white ring-1 ring-black/5 shadow-lg flex-shrink-0">
-            {rider.photo_url ? (
-              <img src={rider.photo_url} alt={rider.full_name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-[#EA2831] font-bold text-2xl">
-                {rider.full_name.charAt(0)}
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-extrabold text-gray-900 uppercase">{rider.full_name}</p>
-                <p className="text-sm text-gray-500 leading-tight">{subtitle}</p>
-              </div>
-              <button onClick={onToggleFav} aria-label="Favorit">
-                <Heart className={`h-6 w-6 ${isFav ? 'fill-[#EA2831] text-[#EA2831]' : 'text-gray-400'}`} />
-              </button>
+      <div className="relative z-10 mx-4 -mt-12">
+        <div className="cx-card cx-rise rounded-[26px] p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-zeger-soft shadow-lg ring-2 ring-white">
+              {rider.photo_url ? (
+                <img src={rider.photo_url} alt={rider.full_name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-2xl font-extrabold text-zeger">{rider.full_name.charAt(0)}</span>
+              )}
             </div>
-            {rider.lat !== null && rider.lng !== null && (
-              <span className="inline-block mt-1 px-3 py-1 bg-green-50 text-green-700 text-sm font-semibold rounded">
-                {rider.distance_km.toFixed(2)} km
-              </span>
-            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-extrabold">{rider.full_name}</p>
+                  <p className="text-[11px] leading-tight text-muted-foreground">{subtitle}</p>
+                </div>
+                <button onClick={onToggleFav} aria-label="Favorit" className="transition active:scale-90">
+                  <Heart className={`h-6 w-6 ${isFav ? 'fill-zeger text-zeger' : 'text-muted-foreground/50'}`} />
+                </button>
+              </div>
+              {rider.lat !== null && rider.lng !== null && (
+                <span className="cx-num mt-1.5 inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                  {rider.distance_km.toFixed(2)} km dari kamu
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex gap-2 mt-4">
-          <Button
-            onClick={onWhatsApp}
-            className="rounded-full bg-green-500 hover:bg-green-600 h-12 w-12 p-0 flex-shrink-0"
-            aria-label="WhatsApp"
-          >
-            <Phone className="h-5 w-5 text-white" />
-          </Button>
-          <Button
-            onClick={onDirection}
-            disabled={rider.lat === null || rider.lng === null}
-            className="flex-1 rounded-full bg-[#EA2831] hover:bg-[#c92028] h-12 font-bold"
-          >
-            <Navigation className="h-4 w-4 mr-2" />
-            Direction
-          </Button>
+          <div className="mt-4 flex gap-2.5">
+            <button
+              onClick={onWhatsApp}
+              className="cx-btn cx-btn-ghost h-12 w-12 flex-shrink-0 rounded-full p-0 text-emerald-600"
+              aria-label="WhatsApp"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onDirection}
+              disabled={rider.lat === null || rider.lng === null}
+              className="cx-btn cx-btn-primary h-12 flex-1 text-xs"
+            >
+              <Navigation className="h-4 w-4" /> Lihat rute
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stock list */}
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-6">
-        <h3 className="text-xl font-extrabold text-gray-900 mb-3">Stok Rider</h3>
+      <div className="flex-1 overflow-y-auto px-4 pb-8 pt-5">
+        <h3 className="mb-3 text-base font-extrabold">Stok rider</h3>
         {stock.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-500 bg-gray-50 rounded-xl">
+          <div className="rounded-[22px] bg-[hsl(var(--cx-rail))] py-8 text-center text-xs font-semibold text-muted-foreground">
             Belum ada data stok dari rider ini.
           </div>
         ) : (
@@ -593,41 +590,34 @@ function RiderDetailSheet({
               const qty = item.stock_quantity;
               const outOfStock = qty <= 0;
               const low = qty > 0 && qty < 5;
+              const art = artworkFor({ name: item.name, category: item.category });
               return (
                 <button
                   key={item.product_id}
                   onClick={() => setSelectedProduct(item)}
-                  className={`w-full text-left flex gap-3 p-3 rounded-2xl border transition-transform active:scale-[0.99] ${outOfStock ? 'bg-white border-gray-100 opacity-70' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}
+                  className={`cx-card flex w-full gap-3 rounded-[24px] p-3 text-left transition active:scale-[0.98] ${outOfStock ? 'opacity-65' : ''}`}
                 >
-                  <div className="w-20 h-20 rounded-xl bg-white overflow-hidden flex-shrink-0 flex items-center justify-center">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                    ) : null}
+                  <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-[18px] bg-[hsl(var(--cx-rail))]">
+                    <img
+                      src={item.image_url || art}
+                      onError={onArtError(art)}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-bold text-gray-900 leading-tight">{item.name}</p>
-                      <Heart className="h-5 w-5 text-gray-300 flex-shrink-0" />
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-extrabold leading-tight">{item.name}</p>
                     {item.description && (
-                      <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{item.description}</p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{item.description}</p>
                     )}
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-sm font-semibold text-gray-700">
-                        Rp {item.price.toLocaleString('id-ID')}
-                      </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="cx-num text-sm font-bold text-zeger">{formatRupiah(item.price)}</p>
                       {outOfStock ? (
-                        <span className="px-3 py-1 bg-gray-200 text-gray-600 text-xs font-semibold rounded-full">
-                          Stok Habis
-                        </span>
+                        <span className="rounded-full bg-[hsl(var(--cx-rail))] px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground">Stok habis</span>
                       ) : low ? (
-                        <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
-                          Stok &lt; 5
-                        </span>
+                        <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">Sisa {qty}</span>
                       ) : (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                          Stok {qty}
-                        </span>
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">Stok {qty}</span>
                       )}
                     </div>
                   </div>
@@ -640,7 +630,7 @@ function RiderDetailSheet({
 
       {/* Product Detail Sheet */}
       <Sheet open={!!selectedProduct} onOpenChange={(o) => !o && setSelectedProduct(null)}>
-        <SheetContent side="bottom" className="p-0 h-[90vh] rounded-t-3xl overflow-hidden !bg-white">
+        <SheetContent side="bottom" className="cx-app h-[92vh] overflow-hidden rounded-t-[30px] p-0">
           {selectedProduct && (
             <ProductDetailView product={selectedProduct} onClose={() => setSelectedProduct(null)} />
           )}
