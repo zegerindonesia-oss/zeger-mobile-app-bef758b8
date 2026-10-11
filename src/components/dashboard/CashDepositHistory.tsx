@@ -269,11 +269,12 @@ export const CashDepositHistory = () => {
         const deposit = depositMap.get(key)!;
         deposit.total_sales += tx.final_amount;
 
-        if (tx.payment_method === 'cash') {
+        const pm = (tx.payment_method || '').toLowerCase().trim();
+        if (pm === 'cash' || pm === 'tunai') {
           deposit.cash_sales += tx.final_amount;
-        } else if (tx.payment_method === 'qris') {
+        } else if (pm === 'qris') {
           deposit.qris_sales += tx.final_amount;
-        } else if (tx.payment_method === 'bank_transfer') {
+        } else if (pm === 'transfer' || pm === 'bank_transfer' || pm === 'bank') {
           deposit.transfer_sales += tx.final_amount;
         }
       });
