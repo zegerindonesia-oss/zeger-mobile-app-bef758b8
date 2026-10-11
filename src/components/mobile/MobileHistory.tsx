@@ -190,7 +190,7 @@ const MobileHistory = () => {
             .reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
           const qrisSales = shiftTransactions?.filter(t => t.payment_method === 'qris')
             .reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
-          const transferSales = shiftTransactions?.filter(t => t.payment_method === 'bank_transfer')
+          const transferSales = shiftTransactions?.filter(t => ['transfer', 'bank_transfer', 'bank'].includes((t.payment_method || '').toLowerCase()))
             .reduce((sum, t) => sum + Number(t.final_amount), 0) || 0;
           
           const totalSales = cashSales + qrisSales + transferSales;

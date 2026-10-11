@@ -108,9 +108,10 @@ const MobileCashDeposit = ({ userProfile }: MobileCashDepositProps) => {
         }
         const row = dayMap.get(date)!;
         row.total_sales += tx.final_amount;
-        if (tx.payment_method === 'cash') row.cash_sales += tx.final_amount;
-        else if (tx.payment_method === 'qris') row.qris_sales += tx.final_amount;
-        else if (tx.payment_method === 'bank_transfer') row.transfer_sales += tx.final_amount;
+        const pm = (tx.payment_method || '').toLowerCase().trim();
+        if (pm === 'cash' || pm === 'tunai') row.cash_sales += tx.final_amount;
+        else if (pm === 'qris') row.qris_sales += tx.final_amount;
+        else if (pm === 'transfer' || pm === 'bank_transfer' || pm === 'bank') row.transfer_sales += tx.final_amount;
       });
 
       expRes.data?.forEach(exp => {
