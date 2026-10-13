@@ -21,6 +21,7 @@ interface Product {
   image_url: string | null;
   is_active: boolean;
   custom_options?: any;
+  track_stock?: boolean | null;
 }
 
 interface InventoryRow {
@@ -58,7 +59,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
       const [prodRes, bundleRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, code, name, category, price, image_url, is_active, custom_options')
+          .select('id, code, name, category, price, image_url, is_active, custom_options, track_stock')
           .eq('is_active', true)
           .order('name'),
         supabase
@@ -208,7 +209,8 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
             ))}
             {filteredProducts.map((p) => {
               const qty = inventory[p.id] ?? 0;
-              const disabled = branchId ? qty <= 0 : false;
+              const unlimited = p.track_stock === false;
+              const disabled = branchId && !unlimited ? qty <= 0 : false;
               return (
                 <Card
                   key={p.id}
@@ -236,7 +238,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
                       <Plus className="h-3.5 w-3.5" />
                     </div>
                   </div>
-                  {branchId && <div className="mt-1">{stockBadge(qty)}</div>}
+                  {branchId && <div className="mt-1">{unlimited ? <span className="text-[10px] font-semibold text-muted-foreground">∞ Unlimited</span> : stockBadge(qty)}</div>}
                 </Card>
               );
             })}

@@ -31,6 +31,7 @@ interface Product {
   custom_options: any;
   is_active: boolean | null;
   show_in_customer_app?: boolean | null;
+  track_stock?: boolean | null;
   created_at: string | null;
 }
 
@@ -48,6 +49,7 @@ const emptyForm = {
   custom_options: "",
   is_active: true,
   show_in_customer_app: true,
+  track_stock: true,
 };
 
 const ProductManagement = () => {
@@ -128,6 +130,7 @@ const ProductManagement = () => {
       custom_options: product.custom_options ? JSON.stringify(product.custom_options, null, 2) : "",
       is_active: product.is_active ?? true,
       show_in_customer_app: product.show_in_customer_app ?? true,
+      track_stock: product.track_stock ?? true,
     });
     setDialogOpen(true);
   };
@@ -164,6 +167,7 @@ const ProductManagement = () => {
       custom_options: customOpts,
       is_active: form.is_active,
       show_in_customer_app: form.show_in_customer_app,
+      track_stock: form.track_stock,
     };
 
     if (editingProduct) {
@@ -459,6 +463,13 @@ const ProductManagement = () => {
             <div className="flex items-center gap-3">
               <Switch checked={form.show_in_customer_app} onCheckedChange={(v) => setForm((f) => ({ ...f, show_in_customer_app: v }))} />
               <Label>Tampilkan di Aplikasi Customer</Label>
+            </div>
+            <div className="flex items-start gap-3">
+              <Switch checked={form.track_stock} onCheckedChange={(v) => setForm((f) => ({ ...f, track_stock: v }))} />
+              <div>
+                <Label>Lacak Stok</Label>
+                <p className="text-xs text-muted-foreground">{form.track_stock ? "Menu diblokir di kasir saat stok cabang habis." : "Unlimited — tetap bisa dijual walau stok kosong/minus."}</p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
