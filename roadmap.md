@@ -6,8 +6,9 @@
 - [x] Hero pakai foto model upload user (background dihapus)
 
 ## Integrasi workspace baru (Okt 2026)
-- [ ] Koneksi ulang Google Maps Platform (dibuka di chat, menunggu pilihan user)
-- [ ] Pastikan Supabase tetap aktif + Edge Functions ter-deploy di workspace baru
+- [x] Google Maps Platform terhubung (Managed by Lovable) — browser key diverifikasi lewat get-maps-key
+- [x] Supabase tetap aktif (87 tabel terbaca) — Edge Function get-maps-key di-deploy ulang
+- [ ] Maps di domain custom flowfnb.flowsstack.com — perlu API key milik sendiri (managed key hanya untuk *.lovable.app)
 
 ## Mobile apps (Oct 2026)
 - [x] POS kasir fit HP & tablet (bottom cart drawer, compact header)

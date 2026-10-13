@@ -155,7 +155,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
         };
       });
       const script = document.createElement('script');
-      script.src = buildMapsScriptUrl({ libraries: 'places', callback: callbackName });
+      script.src = buildMapsScriptUrl({ callback: callbackName });
       script.async = true;
       script.defer = true;
       script.dataset.zegerGoogleMaps = 'true';
@@ -191,6 +191,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       streetViewControl: false,
       fullscreenControl: false,
       zoomControl: false,
+      clickableIcons: false,
       styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
     });
     new google.maps.Marker({
