@@ -15,6 +15,7 @@ import {
   PrintSettings, PrinterConfig, PrinterRole, loadPrintSettings, savePrintSettings, newPrinter,
   printHtml, renderKitchenTicket, renderReceipt, renderStickers,
 } from '@/lib/pos-printing';
+import { ReceiptDesigner } from './ReceiptDesigner';
 
 interface Props {
   open: boolean;
@@ -24,6 +25,9 @@ interface Props {
   onSaved?: (s: PrintSettings) => void;
   /** Render as a full-page section instead of a dialog. */
   inline?: boolean;
+  /** Show the receipt designer with live preview instead of the printer list. */
+  designer?: boolean;
+  branchName?: string;
 }
 
 const roleMeta: Record<PrinterRole, { label: string; icon: any }> = {
@@ -32,7 +36,7 @@ const roleMeta: Record<PrinterRole, { label: string; icon: any }> = {
   sticker: { label: 'Stiker Cup', icon: Sticker },
 };
 
-export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSaved, inline }: Props) => {
+export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSaved, inline, designer, branchName }: Props) => {
   const [s, setS] = useState<PrintSettings | null>(null);
   const [products, setProducts] = useState<{ id: string; name: string; category: string | null }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -78,10 +82,9 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
 
   return (
     <Shell inline={inline} open={open} onOpenChange={onOpenChange}>
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label>Teks atas struk</Label><Input value={s.receiptHeader} placeholder="Alamat / No. WA" onChange={(e) => setS({ ...s, receiptHeader: e.target.value })} /></div>
-          <div><Label>Teks bawah struk</Label><Input value={s.receiptFooter} onChange={(e) => setS({ ...s, receiptFooter: e.target.value })} /></div>
-        </div>
+        {designer && <ReceiptDesigner settings={s} onChange={setS} branchName={branchName} />}
+        {!designer && <>
+
 
         <div className="space-y-3">
           {s.printers.map((p) => {
@@ -151,10 +154,11 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
         <p className="text-xs text-muted-foreground">
           Setiap printer dicetak sebagai pekerjaan terpisah. Untuk cetak tanpa dialog, jalankan Chrome dengan mode kiosk-printing dan atur printer default.
         </p>
+        </>}
 
         <div className="flex justify-end gap-2 pt-2">
           {!inline && <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>}
-          <Button onClick={save} disabled={saving} className="h-11 px-6">{saving ? 'Menyimpan...' : 'Simpan Pengaturan Printer'}</Button>
+          <Button onClick={save} disabled={saving} className="h-11 px-6">{saving ? 'Menyimpan...' : designer ? 'Simpan Desain Struk' : 'Simpan Pengaturan Printer'}</Button>
         </div>
     </Shell>
   );
