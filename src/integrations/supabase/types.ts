@@ -2819,6 +2819,7 @@ export type Database = {
           show_in_customer_app: boolean
           sub_category: string | null
           tenant_id: string
+          track_stock: boolean
           updated_at: string | null
         }
         Insert: {
@@ -2838,6 +2839,7 @@ export type Database = {
           show_in_customer_app?: boolean
           sub_category?: string | null
           tenant_id?: string
+          track_stock?: boolean
           updated_at?: string | null
         }
         Update: {
@@ -2857,6 +2859,7 @@ export type Database = {
           show_in_customer_app?: boolean
           sub_category?: string | null
           tenant_id?: string
+          track_stock?: boolean
           updated_at?: string | null
         }
         Relationships: [
@@ -3392,6 +3395,7 @@ export type Database = {
           min_stock: number
           name: string
           tenant_id: string
+          track_stock: boolean
           unit: string
           updated_at: string
           yield_quantity: number
@@ -3407,6 +3411,7 @@ export type Database = {
           min_stock?: number
           name: string
           tenant_id?: string
+          track_stock?: boolean
           unit?: string
           updated_at?: string
           yield_quantity?: number
@@ -3422,6 +3427,7 @@ export type Database = {
           min_stock?: number
           name?: string
           tenant_id?: string
+          track_stock?: boolean
           unit?: string
           updated_at?: string
           yield_quantity?: number
