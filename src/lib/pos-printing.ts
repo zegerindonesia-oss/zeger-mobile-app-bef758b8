@@ -17,10 +17,31 @@ export interface PrinterConfig {
   productIds: string[];
 }
 
+export interface ReceiptLayout {
+  showLogo: boolean; logoUrl: string; brandName: string;
+  address: string; phone: string; instagram: string; taxId: string;
+  showQueue: boolean; showCashier: boolean; showOrderType: boolean; showCustomer: boolean;
+  showItemDetails: boolean; showUnitPrice: boolean; showNotes: boolean;
+  showDiscount: boolean; showTaxService: boolean; showPayment: boolean; showItemCount: boolean;
+  wifiName: string; wifiPass: string;
+  showQr: boolean; qrUrl: string; qrCaption: string;
+  policy: string; showPoweredBy: boolean;
+}
+
+export const DEFAULT_LAYOUT: ReceiptLayout = {
+  showLogo: false, logoUrl: '', brandName: '', address: '', phone: '', instagram: '', taxId: '',
+  showQueue: true, showCashier: true, showOrderType: true, showCustomer: true,
+  showItemDetails: true, showUnitPrice: true, showNotes: true,
+  showDiscount: true, showTaxService: true, showPayment: true, showItemCount: true,
+  wifiName: '', wifiPass: '', showQr: false, qrUrl: '', qrCaption: 'Scan untuk beri ulasan',
+  policy: '', showPoweredBy: true,
+};
+
 export interface PrintSettings {
   printers: PrinterConfig[];
   receiptHeader: string;
   receiptFooter: string;
+  layout?: Partial<ReceiptLayout>;
 }
 
 export const newPrinter = (role: PrinterRole, name: string): PrinterConfig => ({
@@ -36,6 +57,7 @@ export const DEFAULT_SETTINGS: PrintSettings = {
   ],
   receiptHeader: '',
   receiptFooter: 'Terima kasih atas kunjungan Anda!',
+  layout: DEFAULT_LAYOUT,
 };
 
 const cacheKey = (branchId: string) => `zeger_print_settings_${branchId}`;
@@ -107,24 +129,58 @@ export interface ReceiptPrint {
   payment_method_1: string; amount_1: number; payment_method_2?: string | null; amount_2?: number; change_amount: number;
 }
 
-export const renderReceipt = (d: ReceiptPrint, s: PrintSettings, paper: PaperWidth) => doc(paper, `Struk ${d.transaction_number}`, `
-<div class="c"><div class="big">${esc(d.branch_name)}</div>${s.receiptHeader ? `<div>${esc(s.receiptHeader)}</div>` : ''}</div>
+export const renderReceiptBody = (d: ReceiptPrint, s: PrintSettings) => {
+  const L: ReceiptLayout = { ...DEFAULT_LAYOUT, ...(s.layout || {}) };
+  const qty = d.items.reduce((a, i) => a + i.qty, 0);
+  const row = (a: string, b: string, cls = '') => `<div class="row ${cls}"><span>${a}</span><span>${b}</span></div>`;
+  return `
+${L.showLogo && L.logoUrl ? `<div class="c"><img src="${esc(L.logoUrl)}" style="max-width:60%;max-height:60px;filter:grayscale(1) contrast(1.4)"/></div>` : ''}
+<div class="c"><div class="big">${esc(L.brandName || d.branch_name)}</div>${L.brandName ? `<div>${esc(d.branch_name)}</div>` : ''}
+${L.address ? `<div>${esc(L.address)}</div>` : ''}${L.phone ? `<div>${esc(L.phone)}</div>` : ''}${L.instagram ? `<div>${esc(L.instagram)}</div>` : ''}
+${L.taxId ? `<div>NPWP: ${esc(L.taxId)}</div>` : ''}${s.receiptHeader ? `<div>${esc(s.receiptHeader)}</div>` : ''}</div>
+${L.showQueue ? `<div class="hr"></div><div class="c">No. Antrean</div><div class="c" style="font-size:2.2em;font-weight:bold">${esc(d.transaction_number.slice(-3))}</div>` : ''}
 <div class="hr"></div>
-<div>No: ${esc(d.transaction_number)}</div><div>${jkt(d.created_at)}</div><div>Kasir: ${esc(d.kasir_name)}</div>
-<div>Tipe: ${esc(d.order_type.replace('_', ' ').toUpperCase())}${d.table_number ? ` · Meja ${esc(d.table_number)}` : ''}</div>
-${d.customer_name ? `<div>Customer: ${esc(d.customer_name)}</div>` : ''}
+<div>No: ${esc(d.transaction_number)}</div><div>${jkt(d.created_at)}</div>
+${L.showCashier ? `<div>Kasir: ${esc(d.kasir_name)}</div>` : ''}
+${L.showOrderType ? `<div>Tipe: ${esc(d.order_type.replace('_', ' ').toUpperCase())}${d.table_number ? ` · Meja ${esc(d.table_number)}` : ''}</div>` : ''}
+${L.showCustomer && d.customer_name ? `<div>Customer: ${esc(d.customer_name)}</div>` : ''}
 <div class="hr"></div>
-${d.items.map((i) => `<div>${esc(i.product_name)}</div><div class="row"><span>${i.qty} x ${rp(i.price || 0)}</span><span>${rp(i.subtotal || 0)}</span></div>${i.notes ? `<div class="n">${esc(i.notes)}</div>` : ''}`).join('')}
+${L.showItemDetails
+  ? d.items.map((i) => L.showUnitPrice
+      ? `<div>${esc(i.product_name)}</div>${row(`${i.qty} x ${rp(i.price || 0)}`, rp(i.subtotal || 0))}${L.showNotes && i.notes ? `<div class="n">${esc(i.notes)}</div>` : ''}`
+      : `${row(`${i.qty}x ${esc(i.product_name)}`, rp(i.subtotal || 0))}${L.showNotes && i.notes ? `<div class="n">${esc(i.notes)}</div>` : ''}`).join('')
+  : row(`${qty} item`, rp(d.subtotal))}
+${L.showItemCount ? `<div class="c" style="margin-top:3px">Total item: ${qty}</div>` : ''}
 <div class="hr"></div>
-<div class="row"><span>Subtotal</span><span>${rp(d.subtotal)}</span></div>
-${d.discount > 0 ? `<div class="row"><span>Diskon</span><span>-${rp(d.discount)}</span></div>` : ''}
-${d.service_charge > 0 ? `<div class="row"><span>Service</span><span>${rp(d.service_charge)}</span></div>` : ''}
-${d.tax > 0 ? `<div class="row"><span>Pajak</span><span>${rp(d.tax)}</span></div>` : ''}
+${row('Subtotal', rp(d.subtotal))}
+${L.showDiscount && d.discount > 0 ? row('Diskon', `-${rp(d.discount)}`) : ''}
+${L.showTaxService && d.service_charge > 0 ? row('Service', rp(d.service_charge)) : ''}
+${L.showTaxService && d.tax > 0 ? row('Pajak', rp(d.tax)) : ''}
 <div class="row b" style="font-size:1.25em"><span>TOTAL</span><span>${rp(d.total)}</span></div>
-<div class="row"><span>${esc(d.payment_method_1.toUpperCase())}</span><span>${rp(d.amount_1)}</span></div>
-${d.payment_method_2 ? `<div class="row"><span>${esc(d.payment_method_2.toUpperCase())}</span><span>${rp(d.amount_2 || 0)}</span></div>` : ''}
-${d.change_amount > 0 ? `<div class="row"><span>Kembalian</span><span>${rp(d.change_amount)}</span></div>` : ''}
-<div class="hr"></div><div class="c">${esc(s.receiptFooter)}</div>`);
+${L.showPayment ? `${row(esc(d.payment_method_1.toUpperCase()), rp(d.amount_1))}
+${d.payment_method_2 ? row(esc(d.payment_method_2.toUpperCase()), rp(d.amount_2 || 0)) : ''}
+${d.change_amount > 0 ? row('Kembalian', rp(d.change_amount)) : ''}` : ''}
+<div class="hr"></div><div class="c">${esc(s.receiptFooter)}</div>
+${L.wifiName ? `<div class="c" style="margin-top:4px">WiFi: ${esc(L.wifiName)}${L.wifiPass ? ` · Pass: ${esc(L.wifiPass)}` : ''}</div>` : ''}
+${L.showQr && L.qrUrl ? `<div class="c" style="margin-top:6px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(L.qrUrl)}" style="width:90px;height:90px"/><div>${esc(L.qrCaption)}</div></div>` : ''}
+${L.policy ? `<div class="c" style="margin-top:4px;font-size:.9em">${esc(L.policy)}</div>` : ''}
+${L.showPoweredBy ? `<div class="c" style="margin-top:6px;font-size:.85em">Powered by Flow F&amp;B</div>` : ''}`;
+};
+
+export const renderReceipt = (d: ReceiptPrint, s: PrintSettings, paper: PaperWidth) =>
+  doc(paper, `Struk ${d.transaction_number}`, renderReceiptBody(d, s));
+
+export const SAMPLE_RECEIPT: ReceiptPrint = {
+  transaction_number: 'TRX-20261013-042', branch_name: 'Zeger Branch Malang', kasir_name: 'Nia', created_at: new Date().toISOString(),
+  order_type: 'dine_in', table_number: '7', customer_name: 'Budi Santoso',
+  items: [
+    { product_name: 'Aren Latte (Large)', qty: 2, price: 23000, subtotal: 46000, notes: 'Ice, Less Sugar, +Extra Shot' },
+    { product_name: 'Americano', qty: 1, price: 15000, subtotal: 15000 },
+    { product_name: 'Croissant Butter', qty: 1, price: 22000, subtotal: 22000, notes: 'Dipanaskan' },
+  ],
+  subtotal: 83000, discount: 8300, service_charge: 0, tax: 7470, total: 82170,
+  payment_method_1: 'cash', amount_1: 100000, change_amount: 17830,
+};
 
 export interface KitchenPrint {
   station: string; ref: string; order_type: string; table_number?: string | null;
