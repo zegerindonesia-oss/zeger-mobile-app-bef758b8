@@ -275,7 +275,7 @@ function JournalTab({ accounts }: { accounts: Account[] }) {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-xs text-muted-foreground mb-3">"Posting Otomatis" menjurnal penjualan (tunai/QRIS/transfer, tanpa transaksi void) dan pengeluaran operasional outlet & rider pada periode di atas. Aman diklik berulang — tidak akan dobel.</p>
+        <p className="text-xs text-muted-foreground mb-3">"Posting Otomatis" menjurnal penjualan (tunai/QRIS/transfer, tanpa transaksi void), HPP bahan baku (dari resep × harga bahan, atau harga modal produk), pembelian bahan dari PO yang diterima, dan pengeluaran operasional outlet & rider pada periode di atas. Aman diklik berulang — tidak akan dobel.</p>
         <Table>
           <TableHeader><TableRow><TableHead>No. Jurnal</TableHead><TableHead>Tanggal</TableHead><TableHead>Keterangan</TableHead><TableHead>Sumber</TableHead><TableHead className="text-right">Total</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
           <TableBody>
