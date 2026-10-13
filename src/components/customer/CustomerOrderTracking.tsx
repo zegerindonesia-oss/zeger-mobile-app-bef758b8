@@ -62,7 +62,7 @@ export default function CustomerOrderTracking({
       }
 
       const script = document.createElement('script');
-      script.src = buildMapsScriptUrl({ libraries: 'places' });
+      script.src = buildMapsScriptUrl();
       script.async = true;
       script.defer = true;
       script.onload = initializeMap;
@@ -90,6 +90,7 @@ export default function CustomerOrderTracking({
         fullscreenControl: false,
         streetViewControl: false,
         zoomControl: false,
+        clickableIcons: false,
       });
 
       // Customer marker (blue)
