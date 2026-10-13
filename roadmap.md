@@ -5,6 +5,10 @@
 - [ ] Full multi-tenant provisioning (tenants table, tenant_id on data) — follows docs/saas-blueprint.md
 - [x] Hero pakai foto model upload user (background dihapus)
 
+## Integrasi workspace baru (Okt 2026)
+- [ ] Koneksi ulang Google Maps Platform (dibuka di chat, menunggu pilihan user)
+- [ ] Pastikan Supabase tetap aktif + Edge Functions ter-deploy di workspace baru
+
 ## Mobile apps (Oct 2026)
 - [x] POS kasir fit HP & tablet (bottom cart drawer, compact header)
 - [x] Kasir, Rider, Customer installable on Android/iOS home screen (manifest + icons)
