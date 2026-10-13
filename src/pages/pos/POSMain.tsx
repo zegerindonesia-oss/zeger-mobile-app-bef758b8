@@ -642,7 +642,7 @@ const POSMain = () => {
         onSelect={handleSelectTable}
         onRecall={handleRecallTable}
       />
-      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)}
+      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} branchId={userProfile?.branch_id || null}
         onPrint={() => receipt && safePrint(() => printReceipt(printSettings, receipt, false))} />
       <POSPrinterSettings open={printerOpen} onOpenChange={setPrinterOpen} branchId={userProfile?.branch_id || null}
         userId={userProfile?.id} onSaved={setPrintSettings} />
