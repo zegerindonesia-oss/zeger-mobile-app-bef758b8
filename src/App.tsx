@@ -221,27 +221,9 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
-            <Route path="/finance/profit-loss" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
-                <ModernLayout>
-                  <ProfitLoss />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
-            <Route path="/finance/cash-flow" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
-                <ModernLayout>
-                  <CashFlow />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
-            <Route path="/finance/balance-sheet" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
-                <ModernLayout>
-                  <BalanceSheet />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
+            <Route path="/finance/profit-loss" element={<Navigate to="/accounting/profit-loss" replace />} />
+            <Route path="/finance/cash-flow" element={<Navigate to="/accounting/profit-loss" replace />} />
+            <Route path="/finance/balance-sheet" element={<Navigate to="/accounting/trial-balance" replace />} />
             <Route path="/finance/operational-expenses" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>

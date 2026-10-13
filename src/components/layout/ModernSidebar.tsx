@@ -140,9 +140,6 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     module: "finance",
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "finance", "bh_report"],
     children: [
-      { id: "profit-loss", label: "Laba Rugi", icon: FileText, path: "/finance/profit-loss" },
-      { id: "cash-flow", label: "Arus Kas", icon: PieChart, path: "/finance/cash-flow" },
-      { id: "balance-sheet", label: "Neraca", icon: FileText, path: "/finance/balance-sheet" },
       { id: "operational-expenses", label: "Beban Operasional", icon: FileText, path: "/finance/operational-expenses", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "bh_report"] },
       { id: "rider-income", label: "Pendapatan Rider", icon: Calculator, path: "/finance/rider-income", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager", "finance"] }
     ]
