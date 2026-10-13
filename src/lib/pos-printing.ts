@@ -189,13 +189,13 @@ ${d.payment_method_2 ? row(esc(d.payment_method_2.toUpperCase()), rp(d.amount_2 
 ${d.change_amount > 0 ? row('Kembalian', rp(d.change_amount)) : ''}` : ''}
 ${barcodeHtml(d.transaction_number)}<div class="hr2"></div><div class="c" style="font-size:1.15em;margin:4px 0">${esc(s.receiptFooter)}</div>
 ${L.wifiName ? `<div class="c" style="margin-top:4px">WiFi: ${esc(L.wifiName)}${L.wifiPass ? ` · Pass: ${esc(L.wifiPass)}` : ''}</div>` : ''}
-${L.showQr && L.qrUrl ? `<div class="c" style="margin-top:6px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(L.qrUrl)}" style="width:90px;height:90px"/><div>${esc(L.qrCaption)}</div></div>` : ''}
+${L.showQr && L.qrUrl ? `<div class="c qr" style="margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:3px">${qrSvg(L.qrUrl)}<div class="b">${esc(L.qrCaption)}</div></div>` : ''}
 ${L.policy ? `<div class="c" style="margin-top:4px;font-size:.9em">${esc(L.policy)}</div>` : ''}
 ${L.showPoweredBy ? `<div class="c" style="margin-top:6px;font-size:.85em">Powered by Flow F&amp;B</div>` : ''}`;
 };
 
 export const renderReceipt = (d: ReceiptPrint, s: PrintSettings, paper: PaperWidth) =>
-  doc(paper, `Struk ${d.transaction_number}`, renderReceiptBody(d, s));
+  doc(paper, `Struk ${d.transaction_number}`, renderReceiptBody(d, s), layoutOf(s).fontScale, layoutOf(s).lineSpacing);
 
 export const SAMPLE_RECEIPT: ReceiptPrint = {
   transaction_number: 'TRX-20261013-042', branch_name: 'Zeger Branch Malang', kasir_name: 'Nia', created_at: new Date().toISOString(),
@@ -251,7 +251,7 @@ export interface ShiftReportPrint {
   closing_cash?: number | null; difference?: number | null; notes?: string | null;
 }
 
-export const renderShiftReport = (r: ShiftReportPrint, paper: PaperWidth) => doc(paper, `${r.kind}-Report`, `
+export const renderShiftReport = (r: ShiftReportPrint, paper: PaperWidth, s?: PrintSettings) => doc(paper, `${r.kind}-Report`, `
 <div class="c big">${r.kind}-REPORT</div>
 <div class="c">${r.kind === 'X' ? 'Laporan Sementara (shift masih buka)' : 'Laporan Tutup Shift'}</div>
 <div class="c b">${esc(r.branch_name)}</div><div class="hr"></div>
@@ -282,7 +282,7 @@ ${r.kind === 'Z' ? `<div class="row"><span>Fisik Dihitung</span><span>${rp(r.clo
 <div class="row b"><span>Selisih</span><span>${(r.difference || 0) >= 0 ? '+' : ''}${rp(r.difference || 0)}</span></div>
 ${r.notes ? `<div>Catatan: ${esc(r.notes)}</div>` : ''}
 <div style="height:30px"></div><div class="row"><span>Kasir</span><span>Supervisor</span></div><div style="height:30px"></div><div class="row"><span>(________)</span><span>(________)</span></div>` : ''}
-`);
+`, s ? layoutOf(s).fontScale : 100, s ? layoutOf(s).lineSpacing : 1.45);
 
 // ---------- Print engine ----------
 /** Prints HTML via a hidden iframe. Each call is one print job; browser picks the printer
@@ -326,7 +326,7 @@ export const printKitchen = async (s: PrintSettings, k: Omit<KitchenPrint, 'stat
 
 export const printShiftReport = async (s: PrintSettings, r: ShiftReportPrint) => {
   const p = enabled(s, 'receipt')[0];
-  await printHtml(renderShiftReport(r, p?.paper || '80'));
+  await printHtml(renderShiftReport(r, p?.paper || '80', s));
 };
 
 // ---------- Shift report data ----------
