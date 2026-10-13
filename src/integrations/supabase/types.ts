@@ -6045,6 +6045,10 @@ export type Database = {
         Args: { _from: string; _to: string }
         Returns: Json
       }
+      sync_accounting_inventory: {
+        Args: { _from: string; _to: string }
+        Returns: Json
+      }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
         Args: {
