@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface ReceiptData {
+  id?: string;
   transaction_number: string;
   branch_name: string;
   kasir_name: string;
@@ -62,6 +63,7 @@ export const POSReceipt = ({ open, data, onClose, onPrint, branchId }: Props) =>
     const { data: c } = await supabase.from('customers').select('name,email').eq('phone', wa).limit(1).maybeSingle();
     if (c) { if (!cName) setCName(c.name || ''); if (!email && (c as any).email) setEmail((c as any).email); toast.success('Customer lama ditemukan'); }
   };
+  const link = data.id ? `${window.location.origin}/r/${data.id}` : '';
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
 
   const handlePrint = () => {
@@ -84,6 +86,8 @@ export const POSReceipt = ({ open, data, onClose, onPrint, branchId }: Props) =>
       `Bayar: ${data.payment_method_1.toUpperCase()} ${fmt(data.amount_1)}`,
       data.change_amount > 0 ? `Kembalian: ${fmt(data.change_amount)}` : '',
       '',
+      link ? `🧾 Struk digital: ${link}` : '',
+      '',
       'Terima kasih!',
     ].filter(Boolean).join('\n');
     const wa = toWa(phone);
@@ -94,7 +98,7 @@ export const POSReceipt = ({ open, data, onClose, onPrint, branchId }: Props) =>
     data.branch_name, `Struk: ${data.transaction_number}`, new Date(data.created_at).toLocaleString('id-ID'), `Kasir: ${data.kasir_name}`, '',
     ...data.items.map((i) => `${i.qty}x ${i.product_name}  ${fmt(i.subtotal)}`), '',
     `Subtotal: ${fmt(data.subtotal)}`, data.discount > 0 ? `Diskon: -${fmt(data.discount)}` : '', `TOTAL: ${fmt(data.total)}`,
-    `Bayar: ${data.payment_method_1.toUpperCase()} ${fmt(data.amount_1)}`, '', 'Terima kasih atas kunjungan Anda!',
+    `Bayar: ${data.payment_method_1.toUpperCase()} ${fmt(data.amount_1)}`, '', link ? `Lihat struk digital: ${link}` : '', 'Terima kasih atas kunjungan Anda!',
   ].filter(Boolean).join('\n');
   const handleEmail = () => {
     if (!email.trim()) return toast.error('Isi email customer dulu');
@@ -163,6 +167,7 @@ export const POSReceipt = ({ open, data, onClose, onPrint, branchId }: Props) =>
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-3 w-3" /> Print
           </Button>
+          {link && <Button variant="outline" onClick={() => window.open(link, '_blank')}>Struk Digital</Button>}
           <Button onClick={() => { saveCustomer(); onClose(); }}>Selesai</Button>
         </DialogFooter>
       </DialogContent>

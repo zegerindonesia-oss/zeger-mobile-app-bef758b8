@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Upload, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -18,6 +21,23 @@ export const ReceiptDesigner = ({ settings, onChange, branchName }: Props) => {
   const L: ReceiptLayout = { ...DEFAULT_LAYOUT, ...(settings.layout || {}) };
   const set = (p: Partial<ReceiptLayout>) => onChange({ ...settings, layout: { ...L, ...p } });
   const [paper, setPaper] = useState<PaperWidth>((settings.printers.find((p) => p.role === 'receipt')?.paper as PaperWidth) || '80');
+  const fileRef = useRef<HTMLInputElement>(null);
+  // Resize to max 384px wide (thermal print width) and keep as data URL so it prints offline.
+  const onLogo = (f?: File) => {
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return toast.error('File harus berupa gambar');
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 384 / img.width, 160 / img.height);
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      const ctx = c.getContext('2d')!; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      set({ logoUrl: c.toDataURL('image/png'), showLogo: true });
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(f);
+  };
   const [scenario, setScenario] = useState<'dine' | 'take'>('dine');
 
   const sample = scenario === 'dine' ? { ...SAMPLE_RECEIPT, branch_name: branchName || SAMPLE_RECEIPT.branch_name }
@@ -32,7 +52,19 @@ export const ReceiptDesigner = ({ settings, onChange, branchName }: Props) => {
         <section className="space-y-2">
           <h3 className="font-semibold">Header & Branding</h3>
           <Toggle label="Tampilkan logo" checked={L.showLogo} onChange={(v) => set({ showLogo: v })} />
-          {L.showLogo && <Input placeholder="Link logo (PNG/JPG, Google Drive bisa)" value={L.logoUrl} onChange={(e) => set({ logoUrl: e.target.value })} />}
+          {L.showLogo && <div className="flex items-center gap-3 rounded-lg border border-dashed bg-background p-3">
+            <div className="h-16 w-24 rounded-md bg-muted flex items-center justify-center overflow-hidden">
+              {L.logoUrl ? <img src={L.logoUrl} alt="Logo struk" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-muted-foreground" />}
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {L.logoUrl ? 'Ganti logo' : 'Upload logo'}</Button>
+                {L.logoUrl && <Button type="button" size="sm" variant="ghost" onClick={() => set({ logoUrl: '' })}><Trash2 className="h-4 w-4" /></Button>}
+              </div>
+              <p className="text-xs text-muted-foreground">PNG/JPG, latar putih/transparan terbaik. Dicetak hitam-putih.</p>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0]); e.target.value = ''; }} />
+          </div>}
           <div className="grid sm:grid-cols-2 gap-2">
             <div><Label>Nama brand</Label><Input placeholder="Kosongkan = nama cabang" value={L.brandName} onChange={(e) => set({ brandName: e.target.value })} /></div>
             <div><Label>No. telepon / WA</Label><Input value={L.phone} onChange={(e) => set({ phone: e.target.value })} /></div>
