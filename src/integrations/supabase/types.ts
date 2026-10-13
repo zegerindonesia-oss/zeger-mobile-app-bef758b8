@@ -122,6 +122,8 @@ export type Database = {
           journal_date: string
           journal_number: string
           reference: string | null
+          source: string
+          source_key: string | null
           status: string
           tenant_id: string
           total_amount: number
@@ -136,6 +138,8 @@ export type Database = {
           journal_date?: string
           journal_number: string
           reference?: string | null
+          source?: string
+          source_key?: string | null
           status?: string
           tenant_id?: string
           total_amount?: number
@@ -150,6 +154,8 @@ export type Database = {
           journal_date?: string
           journal_number?: string
           reference?: string | null
+          source?: string
+          source_key?: string | null
           status?: string
           tenant_id?: string
           total_amount?: number
@@ -6034,6 +6040,10 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      sync_accounting_auto: {
+        Args: { _from: string; _to: string }
+        Returns: Json
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
