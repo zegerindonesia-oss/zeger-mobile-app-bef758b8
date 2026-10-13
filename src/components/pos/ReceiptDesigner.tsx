@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { DEFAULT_LAYOUT, PaperWidth, PrintSettings, ReceiptLayout, SAMPLE_RECEIPT, renderReceipt } from '@/lib/pos-printing';
 
@@ -49,6 +50,20 @@ export const ReceiptDesigner = ({ settings, onChange, branchName }: Props) => {
   return (
     <div className="grid lg:grid-cols-[1fr_auto] gap-6 items-start">
       <div className="space-y-5 min-w-0">
+        <section className="space-y-3">
+          <h3 className="font-semibold">Ukuran Tulisan & Spasi</h3>
+          <div className="rounded-lg border bg-background p-3 space-y-2">
+            <div className="flex justify-between text-sm"><span>Ukuran tulisan</span><b>{L.fontScale}%</b></div>
+            <Slider min={80} max={140} step={5} value={[L.fontScale]} onValueChange={([v]) => set({ fontScale: v })} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>A Kecil</span><span>Besar A</span></div>
+          </div>
+          <div className="rounded-lg border bg-background p-3 space-y-2">
+            <div className="flex justify-between text-sm"><span>Jarak antar baris</span><b>{L.lineSpacing.toFixed(2)}</b></div>
+            <Slider min={1.1} max={2} step={0.05} value={[L.lineSpacing]} onValueChange={([v]) => set({ lineSpacing: v })} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>Rapat (hemat kertas)</span><span>Lega</span></div>
+          </div>
+          <Button type="button" size="sm" variant="ghost" onClick={() => set({ fontScale: 100, lineSpacing: 1.45 })}>Kembalikan standar</Button>
+        </section>
         <section className="space-y-2">
           <h3 className="font-semibold">Header & Branding</h3>
           <Toggle label="Tampilkan logo" checked={L.showLogo} onChange={(v) => set({ showLogo: v })} />
@@ -103,9 +118,16 @@ export const ReceiptDesigner = ({ settings, onChange, branchName }: Props) => {
             <div><Label>Password WiFi</Label><Input value={L.wifiPass} onChange={(e) => set({ wifiPass: e.target.value })} /></div>
           </div>
           <Toggle label="QR code di bawah struk" checked={L.showQr} onChange={(v) => set({ showQr: v })} />
-          {L.showQr && <div className="grid sm:grid-cols-2 gap-2">
-            <Input placeholder="Link (Google Review, member, survei)" value={L.qrUrl} onChange={(e) => set({ qrUrl: e.target.value })} />
-            <Input placeholder="Keterangan QR" value={L.qrCaption} onChange={(e) => set({ qrCaption: e.target.value })} />
+          {L.showQr && <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => set({ qrUrl: `${window.location.origin}/customer`, qrCaption: 'Download app Zeger & dapatkan FREE cup!' })}>Download App Zeger</Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => set({ qrCaption: 'Scan untuk beri ulasan' })}>Ulasan Google</Button>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <Input placeholder="https://… (link tujuan QR)" value={L.qrUrl} onChange={(e) => set({ qrUrl: e.target.value })} />
+              <Input placeholder="Keterangan QR" value={L.qrCaption} onChange={(e) => set({ qrCaption: e.target.value })} />
+            </div>
+            {!L.qrUrl && <p className="text-xs text-muted-foreground">Isi link dulu agar QR code muncul.</p>}
           </div>}
           <div><Label>Kebijakan komplain (opsional)</Label><Input placeholder="Komplain maks. 1 jam dengan struk" value={L.policy} onChange={(e) => set({ policy: e.target.value })} /></div>
           <Toggle label='Tulisan "Powered by Flow F&B"' checked={L.showPoweredBy} onChange={(v) => set({ showPoweredBy: v })} />

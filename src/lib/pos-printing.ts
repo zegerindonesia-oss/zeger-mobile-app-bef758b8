@@ -1,4 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { QRCodeSVG } from 'qrcode.react';
 
 export type PrinterRole = 'receipt' | 'kitchen' | 'sticker';
 export type PaperWidth = '58' | '80' | 'label';
@@ -26,6 +29,10 @@ export interface ReceiptLayout {
   wifiName: string; wifiPass: string;
   showQr: boolean; qrUrl: string; qrCaption: string;
   policy: string; showPoweredBy: boolean;
+  /** Overall text size in percent (80–140). */
+  fontScale: number;
+  /** Line height multiplier (1.1–2.0); also scales gaps between sections. */
+  lineSpacing: number;
 }
 
 export const DEFAULT_LAYOUT: ReceiptLayout = {
@@ -34,8 +41,9 @@ export const DEFAULT_LAYOUT: ReceiptLayout = {
   showItemDetails: true, showUnitPrice: true, showNotes: true,
   showDiscount: true, showTaxService: true, showPayment: true, showItemCount: true,
   wifiName: '', wifiPass: '', showQr: false, qrUrl: '', qrCaption: 'Scan untuk beri ulasan',
-  policy: '', showPoweredBy: true,
+  policy: '', showPoweredBy: true, fontScale: 100, lineSpacing: 1.45,
 };
+const layoutOf = (s: PrintSettings): ReceiptLayout => ({ ...DEFAULT_LAYOUT, ...(s.layout || {}) });
 
 export interface PrintSettings {
   printers: PrinterConfig[];
@@ -112,15 +120,24 @@ const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&
 export const rp = (n: number) => `Rp${Math.round(n || 0).toLocaleString('id-ID')}`;
 export const jkt = (iso: string) => new Date(iso).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' });
 
-const pageCss = (paper: PaperWidth) => {
+const pageCss = (paper: PaperWidth, scale = 100, spacing = 1.45) => {
   const w = paper === '58' ? '58mm' : paper === '80' ? '80mm' : '50mm';
   const size = paper === 'label' ? '50mm 30mm' : `${w} auto`;
-  return `@page{size:${size};margin:0}*{box-sizing:border-box}body{margin:0;width:${w};padding:${paper === 'label' ? '1.5mm' : '3mm'};font-family:'Helvetica Neue',Helvetica,Arial,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;font-size:${paper === '58' ? '10.5px' : paper === 'label' ? '9px' : '12.5px'};color:#111;line-height:1.45;-webkit-font-smoothing:antialiased}
-.c{text-align:center}.b{font-weight:700}.big{font-size:1.65em;font-weight:800;letter-spacing:.02em}.hr{border-top:1px solid #222;margin:7px 0}.hr2{border-top:1px solid #222;border-bottom:1px solid #222;height:3px;margin:8px 0}.mut{color:#555}.ttl{font-size:1.15em;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.row{display:flex;justify-content:space-between;gap:8px}.row span:last-child{text-align:right;white-space:nowrap}.it{margin:3px 0}.bars{display:flex;justify-content:center;align-items:stretch;height:38px;margin-top:6px}.bars i{display:block;background:#111}.n{padding-left:10px;font-style:italic}.lbl{page-break-after:always;height:27mm;overflow:hidden}.lbl:last-child{page-break-after:auto}`;
+  const base = paper === '58' ? 10.5 : paper === 'label' ? 9 : 12.5;
+  const fs = +(base * scale / 100).toFixed(2);
+  const gap = +(spacing / 1.45).toFixed(2);
+  return `@page{size:${size};margin:0}*{box-sizing:border-box}body{margin:0;width:${w};padding:${paper === 'label' ? '1.5mm' : '3mm'};font-family:'Helvetica Neue',Helvetica,Arial,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;font-size:${fs}px;color:#111;line-height:${spacing};-webkit-font-smoothing:antialiased}
+.c{text-align:center}.b{font-weight:700}.big{font-size:1.65em;font-weight:800;letter-spacing:.02em}.hr{border-top:1px solid #222;margin:${7 * gap}px 0}.hr2{border-top:1px solid #222;border-bottom:1px solid #222;height:3px;margin:${8 * gap}px 0}.mut{color:#555}.ttl{font-size:1.15em;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.row{display:flex;justify-content:space-between;gap:8px}.row span:last-child{text-align:right;white-space:nowrap}.it{margin:${3 * gap}px 0}.bars{display:flex;justify-content:center;align-items:stretch;height:38px;margin-top:6px}.bars i{display:block;background:#111}.n{padding-left:10px;font-style:italic}.lbl{page-break-after:always;height:27mm;overflow:hidden}.lbl:last-child{page-break-after:auto}.qr svg{width:${Math.round(96 * scale / 100)}px;height:${Math.round(96 * scale / 100)}px}`;
 };
 
-const doc = (paper: PaperWidth, title: string, body: string) =>
-  `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${pageCss(paper)}</style></head><body>${body}</body></html>`;
+const doc = (paper: PaperWidth, title: string, body: string, scale?: number, spacing?: number) =>
+  `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${pageCss(paper, scale, spacing)}</style></head><body>${body}</body></html>`;
+
+/** Offline QR code as inline SVG (no external service, works in previews and printers). */
+export const qrSvg = (text: string) => {
+  try { return renderToStaticMarkup(createElement(QRCodeSVG, { value: text, size: 140, level: 'M', marginSize: 1 })); }
+  catch { return ''; }
+};
 
 export interface ReceiptPrint {
   transaction_number: string; branch_name: string; kasir_name: string; created_at: string;
@@ -172,13 +189,13 @@ ${d.payment_method_2 ? row(esc(d.payment_method_2.toUpperCase()), rp(d.amount_2 
 ${d.change_amount > 0 ? row('Kembalian', rp(d.change_amount)) : ''}` : ''}
 ${barcodeHtml(d.transaction_number)}<div class="hr2"></div><div class="c" style="font-size:1.15em;margin:4px 0">${esc(s.receiptFooter)}</div>
 ${L.wifiName ? `<div class="c" style="margin-top:4px">WiFi: ${esc(L.wifiName)}${L.wifiPass ? ` · Pass: ${esc(L.wifiPass)}` : ''}</div>` : ''}
-${L.showQr && L.qrUrl ? `<div class="c" style="margin-top:6px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(L.qrUrl)}" style="width:90px;height:90px"/><div>${esc(L.qrCaption)}</div></div>` : ''}
+${L.showQr && L.qrUrl ? `<div class="c qr" style="margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:3px">${qrSvg(L.qrUrl)}<div class="b">${esc(L.qrCaption)}</div></div>` : ''}
 ${L.policy ? `<div class="c" style="margin-top:4px;font-size:.9em">${esc(L.policy)}</div>` : ''}
 ${L.showPoweredBy ? `<div class="c" style="margin-top:6px;font-size:.85em">Powered by Flow F&amp;B</div>` : ''}`;
 };
 
 export const renderReceipt = (d: ReceiptPrint, s: PrintSettings, paper: PaperWidth) =>
-  doc(paper, `Struk ${d.transaction_number}`, renderReceiptBody(d, s));
+  doc(paper, `Struk ${d.transaction_number}`, renderReceiptBody(d, s), layoutOf(s).fontScale, layoutOf(s).lineSpacing);
 
 export const SAMPLE_RECEIPT: ReceiptPrint = {
   transaction_number: 'TRX-20261013-042', branch_name: 'Zeger Branch Malang', kasir_name: 'Nia', created_at: new Date().toISOString(),
@@ -234,7 +251,7 @@ export interface ShiftReportPrint {
   closing_cash?: number | null; difference?: number | null; notes?: string | null;
 }
 
-export const renderShiftReport = (r: ShiftReportPrint, paper: PaperWidth) => doc(paper, `${r.kind}-Report`, `
+export const renderShiftReport = (r: ShiftReportPrint, paper: PaperWidth, s?: PrintSettings) => doc(paper, `${r.kind}-Report`, `
 <div class="c big">${r.kind}-REPORT</div>
 <div class="c">${r.kind === 'X' ? 'Laporan Sementara (shift masih buka)' : 'Laporan Tutup Shift'}</div>
 <div class="c b">${esc(r.branch_name)}</div><div class="hr"></div>
@@ -265,7 +282,7 @@ ${r.kind === 'Z' ? `<div class="row"><span>Fisik Dihitung</span><span>${rp(r.clo
 <div class="row b"><span>Selisih</span><span>${(r.difference || 0) >= 0 ? '+' : ''}${rp(r.difference || 0)}</span></div>
 ${r.notes ? `<div>Catatan: ${esc(r.notes)}</div>` : ''}
 <div style="height:30px"></div><div class="row"><span>Kasir</span><span>Supervisor</span></div><div style="height:30px"></div><div class="row"><span>(________)</span><span>(________)</span></div>` : ''}
-`);
+`, s ? layoutOf(s).fontScale : 100, s ? layoutOf(s).lineSpacing : 1.45);
 
 // ---------- Print engine ----------
 /** Prints HTML via a hidden iframe. Each call is one print job; browser picks the printer
@@ -309,7 +326,7 @@ export const printKitchen = async (s: PrintSettings, k: Omit<KitchenPrint, 'stat
 
 export const printShiftReport = async (s: PrintSettings, r: ShiftReportPrint) => {
   const p = enabled(s, 'receipt')[0];
-  await printHtml(renderShiftReport(r, p?.paper || '80'));
+  await printHtml(renderShiftReport(r, p?.paper || '80', s));
 };
 
 // ---------- Shift report data ----------
