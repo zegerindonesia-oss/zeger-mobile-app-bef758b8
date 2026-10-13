@@ -200,7 +200,11 @@ function AccountPicker({ accounts, value, onChange }: { accounts: Account[]; val
 function JournalTab({ accounts }: { accounts: Account[] }) {
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(today());
-  const [list, setList] = useState<any[]>([]);
+  const [all, setList] = useState<any[]>([]);
+  const [src, setSrc] = useState("all");
+  const [st, setSt] = useState("all");
+  const [syncing, setSyncing] = useState(false);
+  const list = all.filter((j) => (src === "all" || (j.source || "manual") === src) && (st === "all" || j.status === st));
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<any | null>(null);
   const [form, setForm] = useState({ date: today(), description: "", reference: "" });
@@ -208,10 +212,24 @@ function JournalTab({ accounts }: { accounts: Account[] }) {
   const accName = (id: string) => { const a = accounts.find((x) => x.id === id); return a ? `${a.code} ${a.name}` : "-"; };
 
   const load = async () => {
-    const { data, error } = await db.from("accounting_journals").select("*, accounting_journal_lines(*)").gte("journal_date", from).lte("journal_date", to).order("journal_date", { ascending: false }).order("created_at", { ascending: false });
-    if (error) toast.error(error.message); else setList(data || []);
+    const out: any[] = [];
+    for (let p = 0; ; p++) {
+      const { data, error } = await db.from("accounting_journals").select("*, accounting_journal_lines(*)").gte("journal_date", from).lte("journal_date", to).order("journal_date", { ascending: false }).order("created_at", { ascending: false }).range(p * 1000, p * 1000 + 999);
+      if (error) { toast.error(error.message); break; }
+      out.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    setList(out);
   };
   useEffect(() => { load(); }, [from, to]);
+  const sync = async () => {
+    setSyncing(true);
+    const { data, error } = await db.rpc("sync_accounting_auto", { _from: from, _to: to });
+    setSyncing(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Terjurnal: ${data.sales} penjualan, ${data.opex} beban outlet, ${data.rider_opex} beban rider`);
+    load();
+  };
 
   const td = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
   const tc = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
@@ -327,49 +345,113 @@ async function fetchLines(to: string, from?: string) {
 
 /* ---------------- Buku Besar ---------------- */
 function LedgerTab({ accounts }: { accounts: Account[] }) {
-  const [acc, setAcc] = useState("");
+  const [acc, setAcc] = useState("all");
+  const [q, setQ] = useState("");
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(today());
-  const [rows, setRows] = useState<any[]>([]);
-  const [opening, setOpening] = useState(0);
-  const a = accounts.find((x) => x.id === acc);
+  const [lines, setLines] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!acc || !a) return;
-    (async () => {
-      const lines = (await fetchLines(to)).filter((l) => l.account_id === acc);
-      const sign = a.normal_balance === "credit" ? -1 : 1;
-      const before = lines.filter((l) => l.accounting_journals.journal_date < from).reduce((s, l) => s + sign * (l.debit - l.credit), 0);
-      setOpening(Number(a.opening_balance) + before);
-      setRows(lines.filter((l) => l.accounting_journals.journal_date >= from).sort((x, y) => x.accounting_journals.journal_date.localeCompare(y.accounting_journals.journal_date)));
-    })();
-  }, [acc, from, to, a]);
+    setLoading(true);
+    fetchLines(to).then((l) => { setLines(l); setLoading(false); });
+  }, [to]);
 
-  let bal = opening;
-  const sign = a?.normal_balance === "credit" ? -1 : 1;
+  const groups = useMemo(() => {
+    const leafs = accounts.filter((a) => a.parent_id && (acc === "all" || a.id === acc))
+      .filter((a) => !q || `${a.code} ${a.name}`.toLowerCase().includes(q.toLowerCase()));
+    return leafs.map((a) => {
+      const sign = a.normal_balance === "credit" ? -1 : 1;
+      const mine = lines.filter((l) => l.account_id === a.id);
+      const before = mine.filter((l) => l.accounting_journals.journal_date < from).reduce((s, l) => s + sign * (l.debit - l.credit), 0);
+      const opening = Number(a.opening_balance || 0) + before;
+      const rows = mine.filter((l) => l.accounting_journals.journal_date >= from)
+        .sort((x, y) => x.accounting_journals.journal_date.localeCompare(y.accounting_journals.journal_date) || String(x.accounting_journals.journal_number).localeCompare(String(y.accounting_journals.journal_number)));
+      let bal = opening;
+      const withBal = rows.map((l) => { bal += sign * (l.debit - l.credit); return { ...l, bal }; });
+      const td = rows.reduce((s, l) => s + Number(l.debit), 0), tc = rows.reduce((s, l) => s + Number(l.credit), 0);
+      return { a, opening, rows: withBal, closing: bal, td, tc };
+    }).filter((g) => acc !== "all" || g.rows.length || g.opening);
+  }, [accounts, lines, acc, q, from]);
+
   return (
     <Card>
       <CardHeader className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
         <CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4" />Buku Besar</CardTitle>
         <div className="flex flex-wrap gap-2">
-          <AccountPicker accounts={accounts} value={acc} onChange={setAcc} />
+          <Select value={acc} onValueChange={setAcc}>
+            <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Akun</SelectItem>
+              {accounts.filter((a) => a.parent_id).map((a) => <SelectItem key={a.id} value={a.id}>{a.code} {a.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="relative"><Search className="h-4 w-4 absolute left-2 top-3 text-muted-foreground" /><Input className="pl-8 w-48" placeholder="Cari akun" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <Input type="date" className="w-40" value={from} onChange={(e) => setFrom(e.target.value)} />
           <Input type="date" className="w-40" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </CardHeader>
+      <CardContent className="space-y-6">
+        {loading && <p className="text-center text-muted-foreground py-6">Memuat…</p>}
+        {!loading && groups.length === 0 && <p className="text-center text-muted-foreground py-8">Belum ada mutasi pada periode ini</p>}
+        {!loading && groups.map((g) => (
+          <div key={g.a.id} className="rounded-lg border">
+            <div className="flex flex-wrap justify-between gap-2 px-3 py-2 bg-muted/40 font-semibold text-sm">
+              <span><span className="font-mono">{g.a.code}</span> · {g.a.name}</span>
+              <span className="text-muted-foreground font-normal">Saldo normal {g.a.normal_balance === "credit" ? "Kredit" : "Debit"}</span>
+            </div>
+            <Table>
+              <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>No. Jurnal</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-right">Debit</TableHead><TableHead className="text-right">Kredit</TableHead><TableHead className="text-right">Saldo</TableHead></TableRow></TableHeader>
+              <TableBody>
+                <TableRow><TableCell colSpan={5} className="italic">Saldo Awal</TableCell><TableCell className="text-right">{rp(g.opening)}</TableCell></TableRow>
+                {g.rows.map((l: any, i: number) => (
+                  <TableRow key={i}><TableCell>{l.accounting_journals.journal_date}</TableCell><TableCell className="font-mono text-xs">{l.accounting_journals.journal_number}</TableCell><TableCell>{l.memo ? `${l.accounting_journals.description} — ${l.memo}` : l.accounting_journals.description}</TableCell><TableCell className="text-right">{l.debit ? rp(l.debit) : ""}</TableCell><TableCell className="text-right">{l.credit ? rp(l.credit) : ""}</TableCell><TableCell className="text-right">{rp(l.bal)}</TableCell></TableRow>
+                ))}
+                <TableRow className="font-semibold bg-muted/40"><TableCell colSpan={3}>Saldo Akhir</TableCell><TableCell className="text-right">{rp(g.td)}</TableCell><TableCell className="text-right">{rp(g.tc)}</TableCell><TableCell className="text-right">{rp(g.closing)}</TableCell></TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ---------------- Laba Rugi ---------------- */
+function ProfitLossTab({ accounts }: { accounts: Account[] }) {
+  const [from, setFrom] = useState(monthStart());
+  const [to, setTo] = useState(today());
+  const [lines, setLines] = useState<any[]>([]);
+  useEffect(() => { fetchLines(to, from).then(setLines); }, [from, to]);
+  const sec = (type: string, credit: boolean) => {
+    const rows = accounts.filter((a) => a.parent_id && a.account_type === type).map((a) => {
+      const v = lines.filter((l) => l.account_id === a.id).reduce((s, l) => s + (credit ? l.credit - l.debit : l.debit - l.credit), 0);
+      return { a, v };
+    }).filter((r) => r.v);
+    return { rows, total: rows.reduce((s, r) => s + r.v, 0) };
+  };
+  const rev = sec("revenue", true), cogs = sec("cogs", false), exp = sec("expense", false), oth = sec("other", true);
+  const gross = rev.total - cogs.total, net = gross - exp.total + oth.total;
+  const Block = ({ title, s }: { title: string; s: ReturnType<typeof sec> }) => (<>
+    <TableRow className="bg-muted/40 font-semibold"><TableCell colSpan={2}>{title}</TableCell></TableRow>
+    {s.rows.map((r) => <TableRow key={r.a.id}><TableCell className="pl-6">{r.a.code} {r.a.name}</TableCell><TableCell className="text-right">{rp(r.v)}</TableCell></TableRow>)}
+    <TableRow><TableCell className="font-medium">Total {title}</TableCell><TableCell className="text-right font-medium">{rp(s.total)}</TableCell></TableRow>
+  </>);
+  return (
+    <Card>
+      <CardHeader className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
+        <CardTitle className="text-base">Laba Rugi</CardTitle>
+        <div className="flex gap-2"><Input type="date" className="w-40" value={from} onChange={(e) => setFrom(e.target.value)} /><Input type="date" className="w-40" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+      </CardHeader>
       <CardContent>
-        {!acc ? <p className="text-center text-muted-foreground py-8">Pilih akun untuk melihat mutasi</p> : (
-          <Table>
-            <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>No. Jurnal</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-right">Debit</TableHead><TableHead className="text-right">Kredit</TableHead><TableHead className="text-right">Saldo</TableHead></TableRow></TableHeader>
-            <TableBody>
-              <TableRow className="bg-muted/40"><TableCell colSpan={5} className="font-semibold">Saldo Awal</TableCell><TableCell className="text-right font-semibold">{rp(opening)}</TableCell></TableRow>
-              {rows.map((l, i) => { bal += sign * (l.debit - l.credit); return (
-                <TableRow key={i}><TableCell>{l.accounting_journals.journal_date}</TableCell><TableCell className="font-mono text-xs">{l.accounting_journals.journal_number}</TableCell><TableCell>{l.memo || l.accounting_journals.description}</TableCell><TableCell className="text-right">{l.debit ? rp(l.debit) : ""}</TableCell><TableCell className="text-right">{l.credit ? rp(l.credit) : ""}</TableCell><TableCell className="text-right">{rp(bal)}</TableCell></TableRow>
-              ); })}
-              <TableRow className="bg-muted/40"><TableCell colSpan={5} className="font-semibold">Saldo Akhir</TableCell><TableCell className="text-right font-semibold">{rp(bal)}</TableCell></TableRow>
-            </TableBody>
-          </Table>
-        )}
+        <Table><TableBody>
+          <Block title="Pendapatan" s={rev} />
+          <Block title="Harga Pokok Penjualan" s={cogs} />
+          <TableRow className="font-semibold"><TableCell>Laba Kotor</TableCell><TableCell className="text-right">{rp(gross)}</TableCell></TableRow>
+          <Block title="Beban Operasional" s={exp} />
+          <Block title="Pendapatan / Beban Lain (bersih)" s={oth} />
+          <TableRow className="font-bold bg-muted/60"><TableCell>Laba Bersih</TableCell><TableCell className={`text-right ${net < 0 ? "text-destructive" : "text-primary"}`}>{rp(net)}</TableCell></TableRow>
+        </TableBody></Table>
       </CardContent>
     </Card>
   );
