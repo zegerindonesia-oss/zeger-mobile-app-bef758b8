@@ -78,10 +78,8 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
 
   return (
     <Shell inline={inline} open={open} onOpenChange={onOpenChange}>
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label>Teks atas struk</Label><Input value={s.receiptHeader} placeholder="Alamat / No. WA" onChange={(e) => setS({ ...s, receiptHeader: e.target.value })} /></div>
-          <div><Label>Teks bawah struk</Label><Input value={s.receiptFooter} onChange={(e) => setS({ ...s, receiptFooter: e.target.value })} /></div>
-        </div>
+        {designer ? <ReceiptDesigner settings={s} onChange={setS} /> : <></>}
+        {!designer && <></>}
 
         <div className="space-y-3">
           {s.printers.map((p) => {

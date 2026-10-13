@@ -864,3 +864,9 @@
 .cx-app .text-3xl { font-size: 1.75rem; line-height: 2.1rem; }
 .cx-app .text-4xl { font-size: 2.125rem; line-height: 2.4rem; }
 .cx-app .text-5xl { font-size: 2.75rem; line-height: 3rem; }
+
+/* Thermal receipt preview paper with torn edges */
+.receipt-paper{position:relative;background:hsl(0 0% 100%);padding:6px 0}
+.receipt-paper::before,.receipt-paper::after{content:"";position:absolute;left:0;right:0;height:8px;background:linear-gradient(-45deg,transparent 4px,hsl(0 0% 100%) 0) 0 0/8px 8px repeat-x,linear-gradient(45deg,transparent 4px,hsl(0 0% 100%) 0) 0 0/8px 8px repeat-x}
+.receipt-paper::before{top:-8px;transform:rotate(180deg)}
+.receipt-paper::after{bottom:-8px}
