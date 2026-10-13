@@ -1,3 +1,4 @@
+import Accounting from "@/pages/accounting/Accounting";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -245,6 +246,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>
                   <OperationalExpenses />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/accounting/:tab?" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'ho_staff', 'branch_manager', 'sb_branch_manager', 'finance']}>
+                <ModernLayout>
+                  <Accounting />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

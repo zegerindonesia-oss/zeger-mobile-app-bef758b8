@@ -1,0 +1,1 @@
+ALTER FUNCTION public.create_accounting_journal(date,text,text,uuid,jsonb) SECURITY INVOKER;

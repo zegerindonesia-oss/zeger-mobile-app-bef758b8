@@ -14,6 +14,149 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_accounts: {
+        Row: {
+          account_type: string
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          normal_balance: string
+          opening_balance: number
+          parent_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_type: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          normal_balance?: string
+          opening_balance?: number
+          parent_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          account_type?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          normal_balance?: string
+          opening_balance?: number
+          parent_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounting_journal_lines: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          debit: number
+          id: string
+          journal_id: string
+          memo: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_id: string
+          memo?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_id?: string
+          memo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_journal_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_journal_lines_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_journals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounting_journals: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          journal_date: string
+          journal_number: string
+          reference: string | null
+          status: string
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          journal_date?: string
+          journal_number: string
+          reference?: string | null
+          status?: string
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          journal_date?: string
+          journal_number?: string
+          reference?: string | null
+          status?: string
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string | null
@@ -4906,6 +5049,16 @@ export type Database = {
       confirm_rider_stock_receipt: {
         Args: { _movement_ids: string[] }
         Returns: number
+      }
+      create_accounting_journal: {
+        Args: {
+          _branch_id: string
+          _date: string
+          _description: string
+          _lines: Json
+          _reference: string
+        }
+        Returns: string
       }
       current_tenant_id: { Args: never; Returns: string }
       decrement_rider_stock: {
