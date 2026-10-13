@@ -120,9 +120,9 @@ const POSSettings = () => {
             </div>
           )}
           {tab === 'cetakan' && (
-            <div className="space-y-3"><h2 className="text-lg font-bold">Pengaturan Cetakan</h2>
-              <p className="text-sm text-muted-foreground">Format struk, lebar kertas, logo, footer dan auto-print diatur per stasiun printer.</p>
-              <POSPrinterSettings inline open onOpenChange={() => undefined} branchId={branchId} userId={userProfile?.id} />
+            <div className="space-y-3"><h2 className="text-lg font-bold">Desain Struk</h2>
+              <p className="text-sm text-muted-foreground">Atur isi struk dan lihat hasilnya langsung di preview kertas.</p>
+              <POSPrinterSettings inline designer open onOpenChange={() => undefined} branchId={branchId} branchName={branchName} userId={userProfile?.id} />
             </div>
           )}
           {tab === 'kas' && <POSCashPage branchId={branchId} />}
