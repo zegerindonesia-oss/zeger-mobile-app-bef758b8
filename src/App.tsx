@@ -18,6 +18,7 @@ import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
 import CxLab from "./pages/dev/CxLab";
 import NotFound from "./pages/NotFound";
+import DigitalReceipt from "./pages/DigitalReceipt";
 import FlowLanding from "./pages/flow/FlowLanding";
 import FlowOnboarding from "./pages/flow/FlowOnboarding";
 import FlowSignup from "./pages/flow/FlowSignup";
@@ -87,6 +88,7 @@ const App = () => (
         <Sonner />
         <Routes>
             {import.meta.env.DEV && <Route path="/cx-lab" element={<CxLab />} />}
+            <Route path="/r/:id" element={<DigitalReceipt />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/landing" element={<FlowLanding />} />
