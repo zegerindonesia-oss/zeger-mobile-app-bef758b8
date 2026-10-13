@@ -43,8 +43,8 @@ export default function DigitalReceipt() {
         <div ref={ref} className="dr-paper">
           <div className="dr-head">
             {L.showLogo && L.logoUrl
-              ? <div className="mx-auto mb-3 h-16 w-16 rounded-2xl bg-card grid place-items-center overflow-hidden shadow-lg"><img src={L.logoUrl} alt={brand} className="max-h-12 max-w-12 object-contain" /></div>
-              : <div className="mx-auto mb-3 h-16 w-16 rounded-2xl bg-card grid place-items-center text-2xl font-extrabold text-primary shadow-lg">{brand.charAt(0)}</div>}
+              ? <div className="mx-auto mb-3 h-16 w-16 rounded-2xl bg-background grid place-items-center overflow-hidden shadow-lg"><img src={L.logoUrl} alt={brand} className="max-h-12 max-w-12 object-contain" /></div>
+              : <div className="mx-auto mb-3 h-16 w-16 rounded-2xl bg-background grid place-items-center text-2xl font-extrabold text-primary shadow-lg">{brand.charAt(0)}</div>}
             <h1 className="text-xl font-extrabold tracking-tight">{brand}</h1>
             {L.brandName && <p className="text-sm opacity-85">{r.branch_name}</p>}
             <div className={`dr-badge ${voided ? 'dr-badge-void' : ''}`}><CheckCircle2 className="h-4 w-4" /> {voided ? 'Dibatalkan' : 'Lunas'}</div>
