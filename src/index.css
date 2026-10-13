@@ -870,3 +870,20 @@
 .receipt-paper::before,.receipt-paper::after{content:"";position:absolute;left:0;right:0;height:8px;background:linear-gradient(-45deg,transparent 4px,hsl(0 0% 100%) 0) 0 0/8px 8px repeat-x,linear-gradient(45deg,transparent 4px,hsl(0 0% 100%) 0) 0 0/8px 8px repeat-x}
 .receipt-paper::before{top:-8px;transform:rotate(180deg)}
 .receipt-paper::after{bottom:-8px}
+
+/* Digital customer receipt (/r/:id) */
+.dr-bg{background:radial-gradient(120% 60% at 50% 0%,hsl(var(--primary) / .95),hsl(var(--primary) / .75) 45%,hsl(var(--foreground) / .9))}
+.dr-paper{position:relative;background:hsl(0 0% 100%);color:hsl(var(--foreground));border-radius:4px;box-shadow:0 30px 60px -20px hsl(var(--foreground) / .5);animation:dr-in .6s cubic-bezier(.2,.8,.2,1)}
+.dr-paper::before,.dr-paper::after{content:"";position:absolute;left:0;right:0;height:12px;background:radial-gradient(circle at 8px 0,transparent 7px,hsl(0 0% 100%) 7.5px) 0 0/16px 12px repeat-x}
+.dr-paper::before{top:-11px;transform:rotate(180deg)}
+.dr-paper::after{bottom:-11px}
+.dr-head{text-align:center;padding:28px 24px 34px;color:hsl(var(--primary-foreground));background:linear-gradient(160deg,hsl(var(--primary)),hsl(var(--primary) / .8));border-radius:4px 4px 0 0;position:relative}
+.dr-head::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:14px;background:radial-gradient(circle at 7px 14px,hsl(0 0% 100%) 6px,transparent 6.5px) 0 0/14px 14px repeat-x}
+.dr-badge{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;background:hsl(var(--success));color:hsl(var(--success-foreground, 0 0% 100%))}
+.dr-badge-void{background:hsl(var(--destructive));color:hsl(var(--destructive-foreground))}
+.dr-perf{height:2px;background:repeating-linear-gradient(90deg,hsl(var(--border)) 0 8px,transparent 8px 14px);margin:0 -24px;position:relative}
+.dr-perf::before,.dr-perf::after{content:"";position:absolute;top:-9px;width:20px;height:20px;border-radius:50%;background:hsl(var(--primary) / .85)}
+.dr-perf::before{left:-10px}.dr-perf::after{right:-10px}
+.dr-bars{display:flex;justify-content:center;height:46px}.dr-bars i{display:block;background:hsl(var(--foreground))}
+@keyframes dr-in{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+@media print{.dr-bg{background:none}.dr-paper{box-shadow:none}}

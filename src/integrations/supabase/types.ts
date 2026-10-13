@@ -5249,6 +5249,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_public_receipt: { Args: { _id: string }; Returns: Json }
       get_queue_display: { Args: { _branch_id: string }; Returns: Json }
       get_staff_emails: {
         Args: never

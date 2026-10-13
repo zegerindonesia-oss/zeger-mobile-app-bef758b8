@@ -115,8 +115,8 @@ export const jkt = (iso: string) => new Date(iso).toLocaleString('id-ID', { time
 const pageCss = (paper: PaperWidth) => {
   const w = paper === '58' ? '58mm' : paper === '80' ? '80mm' : '50mm';
   const size = paper === 'label' ? '50mm 30mm' : `${w} auto`;
-  return `@page{size:${size};margin:0}*{box-sizing:border-box}body{margin:0;width:${w};padding:${paper === 'label' ? '1.5mm' : '3mm'};font-family:'Courier New',monospace;font-size:${paper === '58' ? '10px' : paper === 'label' ? '9px' : '12px'};color:#000;line-height:1.25}
-.c{text-align:center}.b{font-weight:bold}.big{font-size:1.6em;font-weight:bold}.hr{border-top:1px dashed #000;margin:4px 0}.row{display:flex;justify-content:space-between;gap:6px}.n{padding-left:10px;font-style:italic}.lbl{page-break-after:always;height:27mm;overflow:hidden}.lbl:last-child{page-break-after:auto}`;
+  return `@page{size:${size};margin:0}*{box-sizing:border-box}body{margin:0;width:${w};padding:${paper === 'label' ? '1.5mm' : '3mm'};font-family:'Helvetica Neue',Helvetica,Arial,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;font-size:${paper === '58' ? '10.5px' : paper === 'label' ? '9px' : '12.5px'};color:#111;line-height:1.45;-webkit-font-smoothing:antialiased}
+.c{text-align:center}.b{font-weight:700}.big{font-size:1.65em;font-weight:800;letter-spacing:.02em}.hr{border-top:1px solid #222;margin:7px 0}.hr2{border-top:1px solid #222;border-bottom:1px solid #222;height:3px;margin:8px 0}.mut{color:#555}.ttl{font-size:1.15em;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.row{display:flex;justify-content:space-between;gap:8px}.row span:last-child{text-align:right;white-space:nowrap}.it{margin:3px 0}.bars{display:flex;justify-content:center;align-items:stretch;height:38px;margin-top:6px}.bars i{display:block;background:#111}.n{padding-left:10px;font-style:italic}.lbl{page-break-after:always;height:27mm;overflow:hidden}.lbl:last-child{page-break-after:auto}`;
 };
 
 const doc = (paper: PaperWidth, title: string, body: string) =>
@@ -129,6 +129,16 @@ export interface ReceiptPrint {
   payment_method_1: string; amount_1: number; payment_method_2?: string | null; amount_2?: number; change_amount: number;
 }
 
+/** Decorative Code-128-look barcode built from the transaction number (CSS bars, printer-safe). */
+export const barcodeHtml = (code: string) => {
+  let bars = '';
+  for (let i = 0; i < code.length * 3; i++) {
+    const c = code.charCodeAt(i % code.length) + i * 7;
+    bars += `<i style="width:${(c % 3) + 1}px;margin-right:${((c >> 2) % 2) + 1}px"></i>`;
+  }
+  return `<div class="bars">${bars}</div><div class="c mut" style="font-size:.85em;letter-spacing:.15em">#${esc(code)}#</div>`;
+};
+
 export const renderReceiptBody = (d: ReceiptPrint, s: PrintSettings) => {
   const L: ReceiptLayout = { ...DEFAULT_LAYOUT, ...(s.layout || {}) };
   const qty = d.items.reduce((a, i) => a + i.qty, 0);
@@ -139,15 +149,15 @@ ${L.showLogo && L.logoUrl ? `<div class="c"><img src="${esc(L.logoUrl)}" style="
 ${L.address ? `<div>${esc(L.address)}</div>` : ''}${L.phone ? `<div>${esc(L.phone)}</div>` : ''}${L.instagram ? `<div>${esc(L.instagram)}</div>` : ''}
 ${L.taxId ? `<div>NPWP: ${esc(L.taxId)}</div>` : ''}${s.receiptHeader ? `<div>${esc(s.receiptHeader)}</div>` : ''}</div>
 ${L.showQueue ? `<div class="hr"></div><div class="c">No. Antrean</div><div class="c" style="font-size:2.2em;font-weight:bold">${esc(d.transaction_number.slice(-3))}</div>` : ''}
-<div class="hr"></div>
-<div>No: ${esc(d.transaction_number)}</div><div>${jkt(d.created_at)}</div>
-${L.showCashier ? `<div>Kasir: ${esc(d.kasir_name)}</div>` : ''}
-${L.showOrderType ? `<div>Tipe: ${esc(d.order_type.replace('_', ' ').toUpperCase())}${d.table_number ? ` · Meja ${esc(d.table_number)}` : ''}</div>` : ''}
-${L.showCustomer && d.customer_name ? `<div>Customer: ${esc(d.customer_name)}</div>` : ''}
-<div class="hr"></div>
+<div class="hr2"></div>
+${row('<span class="mut">No. Struk</span>', esc(d.transaction_number))}${row('<span class="mut">Tanggal</span>', jkt(d.created_at))}
+${L.showCashier ? row('<span class="mut">Kasir</span>', esc(d.kasir_name)) : ''}
+${L.showOrderType ? row('<span class="mut">Tipe</span>', `${esc(d.order_type.replace('_', ' ').toUpperCase())}${d.table_number ? ` · Meja ${esc(d.table_number)}` : ''}`) : ''}
+${L.showCustomer && d.customer_name ? row('<span class="mut">Customer</span>', esc(d.customer_name)) : ''}
+<div class="hr2"></div>${row('<b>Item</b>', '<b>Harga</b>')}<div style="height:3px"></div>
 ${L.showItemDetails
   ? d.items.map((i) => L.showUnitPrice
-      ? `<div>${esc(i.product_name)}</div>${row(`${i.qty} x ${rp(i.price || 0)}`, rp(i.subtotal || 0))}${L.showNotes && i.notes ? `<div class="n">${esc(i.notes)}</div>` : ''}`
+      ? `<div class="it"><div>${esc(i.product_name)}</div>${row(`<span class="mut">${i.qty} x ${rp(i.price || 0)}</span>`, rp(i.subtotal || 0))}</div>${L.showNotes && i.notes ? `<div class="n">${esc(i.notes)}</div>` : ''}`
       : `${row(`${i.qty}x ${esc(i.product_name)}`, rp(i.subtotal || 0))}${L.showNotes && i.notes ? `<div class="n">${esc(i.notes)}</div>` : ''}`).join('')
   : row(`${qty} item`, rp(d.subtotal))}
 ${L.showItemCount ? `<div class="c" style="margin-top:3px">Total item: ${qty}</div>` : ''}
@@ -156,11 +166,11 @@ ${row('Subtotal', rp(d.subtotal))}
 ${L.showDiscount && d.discount > 0 ? row('Diskon', `-${rp(d.discount)}`) : ''}
 ${L.showTaxService && d.service_charge > 0 ? row('Service', rp(d.service_charge)) : ''}
 ${L.showTaxService && d.tax > 0 ? row('Pajak', rp(d.tax)) : ''}
-<div class="row b" style="font-size:1.25em"><span>TOTAL</span><span>${rp(d.total)}</span></div>
+<div class="row" style="font-size:1.45em;font-weight:800;margin:4px 0"><span>Total</span><span>${rp(d.total)}</span></div><div class="hr"></div>
 ${L.showPayment ? `${row(esc(d.payment_method_1.toUpperCase()), rp(d.amount_1))}
 ${d.payment_method_2 ? row(esc(d.payment_method_2.toUpperCase()), rp(d.amount_2 || 0)) : ''}
 ${d.change_amount > 0 ? row('Kembalian', rp(d.change_amount)) : ''}` : ''}
-<div class="hr"></div><div class="c">${esc(s.receiptFooter)}</div>
+${barcodeHtml(d.transaction_number)}<div class="hr2"></div><div class="c" style="font-size:1.15em;margin:4px 0">${esc(s.receiptFooter)}</div>
 ${L.wifiName ? `<div class="c" style="margin-top:4px">WiFi: ${esc(L.wifiName)}${L.wifiPass ? ` · Pass: ${esc(L.wifiPass)}` : ''}</div>` : ''}
 ${L.showQr && L.qrUrl ? `<div class="c" style="margin-top:6px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(L.qrUrl)}" style="width:90px;height:90px"/><div>${esc(L.qrCaption)}</div></div>` : ''}
 ${L.policy ? `<div class="c" style="margin-top:4px;font-size:.9em">${esc(L.policy)}</div>` : ''}
