@@ -214,13 +214,7 @@ const App = () => (
                   </ModernLayout>
                 </RoleBasedRoute>
               } />
-            <Route path="/finance" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
-                <ModernLayout>
-                  <ProfitLoss />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
+            <Route path="/finance" element={<Navigate to="/accounting/profit-loss" replace />} />
             <Route path="/finance/profit-loss" element={<Navigate to="/accounting/profit-loss" replace />} />
             <Route path="/finance/cash-flow" element={<Navigate to="/accounting/profit-loss" replace />} />
             <Route path="/finance/balance-sheet" element={<Navigate to="/accounting/trial-balance" replace />} />
@@ -501,13 +495,7 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
-            <Route path="/reports/financial" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
-                <ModernLayout>
-                  <ProfitLoss />
-                </ModernLayout>
-              </RoleBasedRoute>
-            } />
+            <Route path="/reports/financial" element={<Navigate to="/accounting/profit-loss" replace />} />
             <Route path="/admin/users" element={
               <RoleBasedRoute allowedRoles={['ho_admin']}>
                 <ModernLayout>
