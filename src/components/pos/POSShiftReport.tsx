@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, FileBarChart } from 'lucide-react';
+import { Printer, FileBarChart, Mail } from 'lucide-react';
 import { buildShiftReport, printShiftReport, rp, jkt, type ShiftReportPrint, type PrintSettings } from '@/lib/pos-printing';
 
 interface Props {
@@ -20,6 +22,22 @@ const Row = ({ l, v, b }: { l: string; v: string; b?: boolean }) => (
 
 export const POSShiftReport = ({ open, onOpenChange, shift, kind, branchName, kasirName, settings }: Props) => {
   const [r, setR] = useState<ShiftReportPrint | null>(null);
+  const EMAIL_KEY = 'pos_owner_report_emails';
+  const [emails, setEmails] = useState(() => localStorage.getItem(EMAIL_KEY) || '');
+  const sendEmail = (rep: ShiftReportPrint) => {
+    const to = emails.split(/[,;\s]+/).filter(Boolean).join(',');
+    if (!to) return toast.error('Isi email owner dulu');
+    localStorage.setItem(EMAIL_KEY, emails);
+    const body = [
+      `${kind}-Report ${branchName}`, `Kasir: ${kasirName}`, `Shift ${rep.shift_type} · buka ${jkt(rep.opened_at)}${rep.closed_at ? ` · tutup ${jkt(rep.closed_at)}` : ''}`, '',
+      `Penjualan Kotor: ${rp(rep.gross)}`, `Diskon: -${rp(rep.discount)}`, `Service + Pajak: ${rp(rep.service + rep.tax)}`, `Penjualan Bersih: ${rp(rep.net)}`,
+      `Transaksi / Void: ${rep.tx_count} / ${rep.void_count}`, '', 'Metode Bayar:', ...rep.payments.map((p) => `- ${p.method.toUpperCase()} (${p.count}): ${rp(p.amount)}`), '',
+      'Per Kategori:', ...rep.categories.map((c) => `- ${c.category} (${c.qty}): ${rp(c.amount)}`), '',
+      `Modal Awal: ${rp(rep.opening_cash)}`, `Kas Masuk/Keluar: ${rp(rep.cash_in)} / -${rp(rep.cash_out)}`, `Uang Seharusnya: ${rp(rep.expected_cash)}`,
+      ...(rep.closing_cash != null ? [`Fisik Dihitung: ${rp(rep.closing_cash)}`, `Selisih: ${rp(rep.difference || 0)}`] : []),
+    ].join('\n');
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(`Laporan ${kind} ${branchName} - ${jkt(rep.opened_at)}`)}&body=${encodeURIComponent(body)}`;
+  };
   useEffect(() => {
     if (!open || !shift) return;
     setR(null);
@@ -68,7 +86,14 @@ export const POSShiftReport = ({ open, onOpenChange, shift, kind, branchName, ka
             </div>
           </div>
         )}
-        <DialogFooter>
+        {r && (
+          <div className="rounded-xl border p-3 space-y-2">
+            <div className="text-xs font-semibold text-muted-foreground">Email owner (pisahkan dengan koma)</div>
+            <Input placeholder="owner@email.com" value={emails} onChange={(e) => setEmails(e.target.value)} />
+          </div>
+        )}
+        <DialogFooter className="gap-2 flex-wrap">
+          <Button variant="outline" disabled={!r} onClick={() => r && sendEmail(r)}><Mail className="h-4 w-4" /> Kirim Email</Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Tutup</Button>
           <Button disabled={!r} onClick={() => r && printShiftReport(settings, { ...r, printed_at: new Date().toISOString() })}>
             <Printer className="h-4 w-4" /> Cetak {kind}-Report

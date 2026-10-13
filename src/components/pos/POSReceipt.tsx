@@ -1,6 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, MessageCircle, CheckCircle } from 'lucide-react';
+import { Printer, MessageCircle, CheckCircle, Mail, UserPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface ReceiptData {
   transaction_number: string;
@@ -29,10 +33,35 @@ interface Props {
   data: ReceiptData | null;
   onClose: () => void;
   onPrint?: () => void;
+  branchId?: string | null;
 }
 
-export const POSReceipt = ({ open, data, onClose, onPrint }: Props) => {
+const toWa = (p: string) => { const d = p.replace(/\D/g, ''); return d.startsWith('0') ? '62' + d.slice(1) : d.startsWith('62') ? d : d ? '62' + d : ''; };
+
+export const POSReceipt = ({ open, data, onClose, onPrint, branchId }: Props) => {
+  const [cName, setCName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  useEffect(() => { if (open) { setCName(data?.customer_name || ''); setPhone(''); setEmail(''); } }, [open, data]);
   if (!data) return null;
+
+  // Save/update the customer in CRM so returning customers can be found by phone.
+  const saveCustomer = async () => {
+    const wa = toWa(phone);
+    if (!wa && !email.trim()) return;
+    try {
+      const { data: ex } = wa ? await supabase.from('customers').select('id').eq('phone', wa).limit(1).maybeSingle() : { data: null };
+      const row: any = { name: cName.trim() || 'Customer', phone: wa || null, email: email.trim() || null, branch_id: branchId || null, is_active: true };
+      if (ex?.id) await supabase.from('customers').update({ name: row.name, ...(row.email ? { email: row.email } : {}) }).eq('id', ex.id);
+      else await supabase.from('customers').insert(row);
+    } catch (e) { console.error('save customer failed', e); }
+  };
+  const lookup = async () => {
+    const wa = toWa(phone);
+    if (wa.length < 9) return;
+    const { data: c } = await supabase.from('customers').select('name,email').eq('phone', wa).limit(1).maybeSingle();
+    if (c) { if (!cName) setCName(c.name || ''); if (!email && (c as any).email) setEmail((c as any).email); toast.success('Customer lama ditemukan'); }
+  };
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
 
   const handlePrint = () => {
@@ -57,12 +86,25 @@ export const POSReceipt = ({ open, data, onClose, onPrint }: Props) => {
       '',
       'Terima kasih!',
     ].filter(Boolean).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, '_blank');
+    const wa = toWa(phone);
+    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(lines)}`, '_blank');
+    saveCustomer();
+  };
+  const receiptText = () => [
+    data.branch_name, `Struk: ${data.transaction_number}`, new Date(data.created_at).toLocaleString('id-ID'), `Kasir: ${data.kasir_name}`, '',
+    ...data.items.map((i) => `${i.qty}x ${i.product_name}  ${fmt(i.subtotal)}`), '',
+    `Subtotal: ${fmt(data.subtotal)}`, data.discount > 0 ? `Diskon: -${fmt(data.discount)}` : '', `TOTAL: ${fmt(data.total)}`,
+    `Bayar: ${data.payment_method_1.toUpperCase()} ${fmt(data.amount_1)}`, '', 'Terima kasih atas kunjungan Anda!',
+  ].filter(Boolean).join('\n');
+  const handleEmail = () => {
+    if (!email.trim()) return toast.error('Isi email customer dulu');
+    window.location.href = `mailto:${email.trim()}?subject=${encodeURIComponent(`Struk ${data.branch_name} - ${data.transaction_number}`)}&body=${encodeURIComponent(receiptText())}`;
+    saveCustomer();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-success">
             <CheckCircle className="h-5 w-5 text-primary" /> Pembayaran Berhasil
@@ -105,14 +147,23 @@ export const POSReceipt = ({ open, data, onClose, onPrint }: Props) => {
             Terima kasih atas kunjungan Anda!
           </div>
         </div>
-        <DialogFooter className="gap-2">
+        <div className="rounded-xl border p-3 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><UserPlus className="h-3.5 w-3.5" /> Kirim struk & simpan customer</div>
+          <Input placeholder="Nama customer" value={cName} onChange={(e) => setCName(e.target.value)} />
+          <Input placeholder="No. WhatsApp (08…)" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={lookup} />
+          <Input placeholder="Email (opsional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <DialogFooter className="gap-2 flex-wrap">
           <Button variant="outline" onClick={handleWhatsApp}>
             <MessageCircle className="h-3 w-3" /> WhatsApp
+          </Button>
+          <Button variant="outline" onClick={handleEmail}>
+            <Mail className="h-3 w-3" /> Email
           </Button>
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-3 w-3" /> Print
           </Button>
-          <Button onClick={onClose}>Selesai</Button>
+          <Button onClick={() => { saveCustomer(); onClose(); }}>Selesai</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

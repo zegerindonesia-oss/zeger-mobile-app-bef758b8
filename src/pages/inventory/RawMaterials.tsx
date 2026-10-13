@@ -20,7 +20,7 @@ const rp = (n: number) => `Rp${Math.round(n || 0).toLocaleString('id-ID')}`;
 const num = (n: number) => Number(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
 const jkt = (iso: string) => new Date(iso).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' });
 
-interface Material { id: string; code: string | null; name: string; category: string; unit: string; cost_per_unit: number; min_stock: number; is_active: boolean; material_type?: string; yield_quantity?: number }
+interface Material { id: string; code: string | null; name: string; category: string; unit: string; cost_per_unit: number; min_stock: number; is_active: boolean; material_type?: string; yield_quantity?: number; track_stock?: boolean }
 
 const RawMaterials = () => {
   const { userProfile } = useAuth();
@@ -95,13 +95,13 @@ const RawMaterials = () => {
 };
 
 const MaterialsTab = ({ materials, stock, reload }: { materials: Material[]; stock: Record<string, number>; reload: () => void }) => {
-  const empty = { code: '', name: '', category: 'Umum', unit: 'gr', cost_per_unit: '', min_stock: '', material_type: 'raw', yield_quantity: '' };
+  const empty = { code: '', name: '', category: 'Umum', unit: 'gr', cost_per_unit: '', min_stock: '', material_type: 'raw', yield_quantity: '', track_stock: true };
   const [f, setF] = useState<any>(empty);
   const [editId, setEditId] = useState<string | null>(null);
 
   const save = async () => {
     if (!f.name.trim()) return toast.error('Nama bahan wajib diisi');
-    const row = { code: f.code || null, name: f.name.trim(), category: f.category || 'Umum', unit: f.unit, cost_per_unit: Number(f.cost_per_unit) || 0, min_stock: Number(f.min_stock) || 0, material_type: f.material_type, yield_quantity: Number(f.yield_quantity) || 1 };
+    const row = { code: f.code || null, name: f.name.trim(), category: f.category || 'Umum', unit: f.unit, cost_per_unit: Number(f.cost_per_unit) || 0, min_stock: Number(f.min_stock) || 0, material_type: f.material_type, yield_quantity: Number(f.yield_quantity) || 1, track_stock: f.track_stock !== false };
     const { error } = editId ? await db.from('raw_materials').update(row).eq('id', editId) : await db.from('raw_materials').insert(row);
     if (error) return toast.error(error.message);
     toast.success(editId ? 'Bahan diperbarui' : 'Bahan ditambahkan');
@@ -122,6 +122,10 @@ const MaterialsTab = ({ materials, stock, reload }: { materials: Material[]; sto
           </Select>
           <Input type="number" placeholder="Harga / satuan" value={f.cost_per_unit} onChange={(e) => setF({ ...f, cost_per_unit: e.target.value })} />
           <Input type="number" placeholder="Stok minimum" value={f.min_stock} onChange={(e) => setF({ ...f, min_stock: e.target.value })} />
+          <label className="flex items-center gap-2 text-sm rounded-md border px-3 h-10 cursor-pointer" title="Nonaktif = unlimited, stok boleh minus">
+            <input type="checkbox" checked={f.track_stock !== false} onChange={(e) => setF({ ...f, track_stock: e.target.checked })} />
+            {f.track_stock !== false ? 'Lacak stok' : 'Unlimited'}
+          </label>
           <Select value={f.material_type} onValueChange={(v) => setF({ ...f, material_type: v })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="raw">Bahan Mentah</SelectItem><SelectItem value="wip">WIP (Setengah Jadi)</SelectItem></SelectContent>
@@ -149,7 +153,7 @@ const MaterialsTab = ({ materials, stock, reload }: { materials: Material[]; sto
                   <TableCell className="text-right">{num(m.min_stock)}</TableCell>
                   <TableCell className="text-right">{rp(q * m.cost_per_unit)}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" onClick={() => { setEditId(m.id); setF({ code: m.code || '', name: m.name, category: m.category, unit: m.unit, cost_per_unit: m.cost_per_unit, min_stock: m.min_stock, material_type: m.material_type || 'raw', yield_quantity: m.yield_quantity ?? '' }); }}>Ubah</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditId(m.id); setF({ code: m.code || '', name: m.name, category: m.category, unit: m.unit, cost_per_unit: m.cost_per_unit, min_stock: m.min_stock, material_type: m.material_type || 'raw', yield_quantity: m.yield_quantity ?? '', track_stock: m.track_stock !== false }); }}>Ubah</Button>
                     <Button size="icon" variant="ghost" onClick={async () => {
                       if (!window.confirm(`Nonaktifkan ${m.name}?`)) return;
                       const { error } = await db.from('raw_materials').update({ is_active: false }).eq('id', m.id);
