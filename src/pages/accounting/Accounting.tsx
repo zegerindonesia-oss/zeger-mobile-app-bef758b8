@@ -65,6 +65,7 @@ export default function Accounting() {
       {tab === "journal" && <JournalTab accounts={accounts} />}
       {tab === "ledger" && <LedgerTab accounts={accounts} />}
       {tab === "trial-balance" && <TrialBalanceTab accounts={accounts} />}
+      {tab === "profit-loss" && <ProfitLossTab accounts={accounts} />}
     </div>
   );
 }
