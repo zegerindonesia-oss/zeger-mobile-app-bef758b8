@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, ChevronRight, BookOpen, Search } from "lucide-react";
+import { Plus, Trash2, Pencil, ChevronRight, BookOpen, Search, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -36,7 +36,9 @@ const TABS = [
   { id: "journal", label: "Jurnal Umum" },
   { id: "ledger", label: "Buku Besar" },
   { id: "trial-balance", label: "Neraca Saldo" },
+  { id: "profit-loss", label: "Laba Rugi" },
 ];
+const SOURCES: Record<string, string> = { manual: "Manual", pos_sales: "Penjualan", opex: "Beban Outlet", rider_opex: "Beban Rider" };
 
 export default function Accounting() {
   const { tab = "accounts" } = useParams();
@@ -257,12 +259,22 @@ function JournalTab({ accounts }: { accounts: Account[] }) {
         <div className="flex flex-wrap gap-2 items-center">
           <Input type="date" className="w-40" value={from} onChange={(e) => setFrom(e.target.value)} />
           <Input type="date" className="w-40" value={to} onChange={(e) => setTo(e.target.value)} />
+          <Select value={src} onValueChange={setSrc}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="all">Semua Sumber</SelectItem>{Object.entries(SOURCES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={st} onValueChange={setSt}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="all">Semua Status</SelectItem><SelectItem value="posted">Posted</SelectItem><SelectItem value="void">Dibatalkan</SelectItem></SelectContent>
+          </Select>
+          <Button variant="outline" disabled={syncing} onClick={sync}><RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />Posting Otomatis</Button>
           <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Jurnal Baru</Button>
         </div>
       </CardHeader>
       <CardContent>
+        <p className="text-xs text-muted-foreground mb-3">"Posting Otomatis" menjurnal penjualan (tunai/QRIS/transfer, tanpa transaksi void) dan pengeluaran operasional outlet & rider pada periode di atas. Aman diklik berulang — tidak akan dobel.</p>
         <Table>
-          <TableHeader><TableRow><TableHead>No. Jurnal</TableHead><TableHead>Tanggal</TableHead><TableHead>Keterangan</TableHead><TableHead>Ref</TableHead><TableHead className="text-right">Total</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>No. Jurnal</TableHead><TableHead>Tanggal</TableHead><TableHead>Keterangan</TableHead><TableHead>Sumber</TableHead><TableHead className="text-right">Total</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
           <TableBody>
             {list.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Belum ada jurnal pada periode ini</TableCell></TableRow>}
             {list.map((j) => (
@@ -270,7 +282,7 @@ function JournalTab({ accounts }: { accounts: Account[] }) {
                 <TableCell className="font-mono text-xs">{j.journal_number}</TableCell>
                 <TableCell>{j.journal_date}</TableCell>
                 <TableCell>{j.description}</TableCell>
-                <TableCell>{j.reference}</TableCell>
+                <TableCell><Badge variant="outline">{SOURCES[j.source || "manual"] || j.source}</Badge></TableCell>
                 <TableCell className="text-right">{rp(j.total_amount)}</TableCell>
                 <TableCell><Badge variant={j.status === "void" ? "destructive" : "secondary"}>{j.status === "void" ? "Dibatalkan" : "Posted"}</Badge></TableCell>
               </TableRow>
