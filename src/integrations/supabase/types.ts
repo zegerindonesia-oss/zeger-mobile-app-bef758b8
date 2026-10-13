@@ -1071,6 +1071,7 @@ export type Database = {
           address: string | null
           branch_id: string | null
           created_at: string
+          email: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -1083,6 +1084,7 @@ export type Database = {
           address?: string | null
           branch_id?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -1095,6 +1097,7 @@ export type Database = {
           address?: string | null
           branch_id?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
