@@ -38,7 +38,7 @@ const TABS = [
   { id: "trial-balance", label: "Neraca Saldo" },
   { id: "profit-loss", label: "Laba Rugi" },
 ];
-const SOURCES: Record<string, string> = { manual: "Manual", pos_sales: "Penjualan", opex: "Beban Outlet", rider_opex: "Beban Rider" };
+const SOURCES: Record<string, string> = { manual: "Manual", pos_sales: "Penjualan", pos_cogs: "HPP Bahan Baku", purchase: "Pembelian Bahan", opex: "Beban Outlet", rider_opex: "Beban Rider" };
 
 export default function Accounting() {
   const { tab = "accounts" } = useParams();
@@ -228,9 +228,11 @@ function JournalTab({ accounts }: { accounts: Account[] }) {
   const sync = async () => {
     setSyncing(true);
     const { data, error } = await db.rpc("sync_accounting_auto", { _from: from, _to: to });
+    if (error) { setSyncing(false); return toast.error(error.message); }
+    const inv = await db.rpc("sync_accounting_inventory", { _from: from, _to: to });
     setSyncing(false);
-    if (error) return toast.error(error.message);
-    toast.success(`Terjurnal: ${data.sales} penjualan, ${data.opex} beban outlet, ${data.rider_opex} beban rider`);
+    if (inv.error) toast.error(inv.error.message);
+    toast.success(`Terjurnal: ${data.sales} penjualan, ${inv.data?.cogs ?? 0} HPP bahan baku, ${inv.data?.purchase ?? 0} pembelian, ${data.opex} beban outlet, ${data.rider_opex} beban rider`);
     load();
   };
 
