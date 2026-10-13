@@ -157,7 +157,8 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "acc-accounts", label: "Bagan Akun & Kategori", icon: Database, path: "/accounting/accounts" },
       { id: "acc-journal", label: "Jurnal Umum", icon: FileText, path: "/accounting/journal" },
       { id: "acc-ledger", label: "Buku Besar", icon: ClipboardList, path: "/accounting/ledger" },
-      { id: "acc-trial", label: "Neraca Saldo", icon: BarChart3, path: "/accounting/trial-balance" }
+      { id: "acc-trial", label: "Neraca Saldo", icon: BarChart3, path: "/accounting/trial-balance" },
+      { id: "acc-pl", label: "Laba Rugi", icon: BarChart3, path: "/accounting/profit-loss" }
     ]
   },
   {
