@@ -248,6 +248,13 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
+            <Route path="/accounting/:tab?" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'ho_staff', 'branch_manager', 'sb_branch_manager', 'finance']}>
+                <ModernLayout>
+                  <Accounting />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
             <Route path="/finance/rider-expenses" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>

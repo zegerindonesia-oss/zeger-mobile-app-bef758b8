@@ -148,6 +148,19 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     ]
   },
   {
+    id: "accounting",
+    label: "Accounting",
+    icon: Calculator,
+    module: "finance",
+    roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager", "finance"],
+    children: [
+      { id: "acc-accounts", label: "Bagan Akun & Kategori", icon: Database, path: "/accounting/accounts" },
+      { id: "acc-journal", label: "Jurnal Umum", icon: FileText, path: "/accounting/journal" },
+      { id: "acc-ledger", label: "Buku Besar", icon: ClipboardList, path: "/accounting/ledger" },
+      { id: "acc-trial", label: "Neraca Saldo", icon: BarChart3, path: "/accounting/trial-balance" }
+    ]
+  },
+  {
     id: "reports",
     label: "Reports",
     icon: BarChart3,
