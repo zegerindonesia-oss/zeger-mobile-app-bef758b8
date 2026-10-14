@@ -15,6 +15,8 @@ interface Product {
   name: string;
   code: string;
   category: string | null;
+  brand?: string | null;
+  sub_category?: string | null;
   price: number;
   cost_price: number | null;
   ck_price: number | null;
@@ -27,7 +29,9 @@ interface Product {
 interface ParsedRow {
   name: string;
   code: string;
+  brand: string;
   category: string;
+  sub_category: string;
   price: number;
   cost_price: number;
   ck_price: number;
@@ -45,9 +49,11 @@ interface ProductBulkUploadProps {
 }
 
 const TEMPLATE_COLUMNS = [
-  "name",
-  "code",
+  "brand",
   "category",
+  "sub_category",
+  "code",
+  "name",
   "price",
   "cost_price",
   "ck_price",
@@ -58,9 +64,11 @@ const TEMPLATE_COLUMNS = [
 ];
 
 const TEMPLATE_HEADERS = [
-  "Nama Produk",
+  "Brand",
+  "Kategori Besar",
+  "Sub Kategori",
   "Kode Produk",
-  "Kategori",
+  "Nama Produk",
   "Harga Jual",
   "HPP (Cost Price)",
   "HPP CK",
@@ -81,7 +89,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
     const wb = XLSX.utils.book_new();
 
     if (type === "add") {
-      const data = [TEMPLATE_HEADERS, ["Contoh Kopi Susu", "KS-001", "Coffee", 15000, 8000, 6000, "Kopi susu signature", "https://example.com/foto.jpg", "", "TRUE"]];
+      const data = [TEMPLATE_HEADERS, ["Zeger Coffee", "Minuman", "Espresso Based", "KS-001", "Aren Latte", 15000, 8000, 6000, "Kopi susu signature", "https://example.com/foto.jpg", "", "TRUE"]];
       const ws = XLSX.utils.aoa_to_sheet(data);
       ws["!cols"] = TEMPLATE_HEADERS.map(() => ({ wch: 20 }));
       XLSX.utils.book_append_sheet(wb, ws, "Template Menu Baru");
@@ -89,9 +97,11 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
       const data = [
         TEMPLATE_HEADERS,
         ...products.map((p) => [
-          p.name,
-          p.code,
+          p.brand || "",
           p.category || "",
+          p.sub_category || "",
+          p.code,
+          p.name,
           p.price,
           p.cost_price || 0,
           p.ck_price || 0,
@@ -138,6 +148,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
         TEMPLATE_HEADERS.forEach((h, i) => {
           headerMap[h.toLowerCase()] = TEMPLATE_COLUMNS[i];
         });
+        Object.assign(headerMap, { "kategori": "category", "kategori besar": "category", "sub kategori": "sub_category", "sub-kategori": "sub_category", "nama menu": "name", "kode menu": "code" });
         // Also accept raw column names
         TEMPLATE_COLUMNS.forEach((c) => {
           headerMap[c.toLowerCase()] = c;
@@ -162,7 +173,9 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
           const item: ParsedRow = {
             name,
             code,
+            brand: String(get("brand") || "").trim(),
             category: String(get("category") || "").trim(),
+            sub_category: String(get("sub_category") || "").trim(),
             price: Number(get("price")) || 0,
             cost_price: Number(get("cost_price")) || 0,
             ck_price: Number(get("ck_price")) || 0,
@@ -237,7 +250,9 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
       const payloads = validRows.map((r) => ({
         name: r.name,
         code: r.code,
+        brand: r.brand || null,
         category: r.category || null,
+        sub_category: r.sub_category || null,
         price: r.price,
         cost_price: r.cost_price || null,
         ck_price: r.ck_price || null,
@@ -263,7 +278,9 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
       for (const r of validRows) {
         const payload: any = {
           name: r.name,
+          brand: r.brand || null,
           category: r.category || null,
+          sub_category: r.sub_category || null,
           price: r.price,
           cost_price: r.cost_price || null,
           ck_price: r.ck_price || null,
@@ -367,9 +384,11 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[60px]">Status</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Kategori Besar</TableHead>
+                  <TableHead>Sub Kategori</TableHead>
                   <TableHead>Kode</TableHead>
                   <TableHead>Nama</TableHead>
-                  <TableHead>Kategori</TableHead>
                   <TableHead className="text-right">Harga</TableHead>
                   <TableHead className="text-right">HPP</TableHead>
                   <TableHead className="text-right">HPP CK</TableHead>
@@ -388,9 +407,11 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
                         <AlertCircle className="h-4 w-4 text-destructive" />
                       )}
                     </TableCell>
+                    <TableCell className="text-sm">{row.brand || "-"}</TableCell>
+                    <TableCell className="text-sm">{row.category || "-"}</TableCell>
+                    <TableCell className="text-sm">{row.sub_category || "-"}</TableCell>
                     <TableCell className="font-mono text-xs">{row.code}</TableCell>
                     <TableCell className="text-sm">{row.name}</TableCell>
-                    <TableCell className="text-sm">{row.category || "-"}</TableCell>
                     <TableCell className="text-right text-sm">{row.price.toLocaleString("id-ID")}</TableCell>
                     <TableCell className="text-right text-sm">{row.cost_price.toLocaleString("id-ID")}</TableCell>
                     <TableCell className="text-right text-sm">{row.ck_price.toLocaleString("id-ID")}</TableCell>

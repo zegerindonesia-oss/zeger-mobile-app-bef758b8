@@ -60,6 +60,7 @@ const ProductManagement = () => {
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [brandFilter, setBrandFilter] = useState("all");
   const [saving, setSaving] = useState(false);
 
   const fetchProducts = async () => {
@@ -86,6 +87,9 @@ const ProductManagement = () => {
     return Array.from(cats).sort() as string[];
   }, [products]);
 
+  const brands = useMemo(() => Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort() as string[], [products]);
+  const subCategories = useMemo(() => Array.from(new Set(products.map((p) => p.sub_category).filter(Boolean))).sort() as string[], [products]);
+
   const filtered = useMemo(() => {
     return products.filter((p) => {
       const matchSearch =
@@ -93,9 +97,10 @@ const ProductManagement = () => {
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.code.toLowerCase().includes(search.toLowerCase());
       const matchCat = categoryFilter === "all" || p.category === categoryFilter;
-      return matchSearch && matchCat;
+      const matchBrand = brandFilter === "all" || p.brand === brandFilter;
+      return matchSearch && matchCat && matchBrand;
     });
-  }, [products, search, categoryFilter]);
+  }, [products, search, categoryFilter, brandFilter]);
 
   const generateCode = (name: string) => {
     const prefix = name
@@ -254,6 +259,13 @@ const ProductManagement = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Cari nama atau kode..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
+          <Select value={brandFilter} onValueChange={setBrandFilter}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Semua Brand" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Brand</SelectItem>
+              {brands.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Semua Kategori" />
@@ -287,7 +299,7 @@ const ProductManagement = () => {
                     <TableHead>Foto</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Nama</TableHead>
-                    <TableHead>Kategori</TableHead>
+                    <TableHead>Brand / Kategori</TableHead>
                     <TableHead className="text-right">Harga Jual</TableHead>
                     <TableHead className="text-right">HPP</TableHead>
                     <TableHead className="text-right">HPP CK</TableHead>
@@ -311,7 +323,7 @@ const ProductManagement = () => {
                       <TableCell className="font-mono text-xs">{p.code}</TableCell>
                       <TableCell className="font-medium">{p.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{p.category || "-"}</Badge>{p.sub_category && <span className="block text-xs text-muted-foreground mt-1">{p.brand ? `${p.brand} · ` : ""}{p.sub_category}</span>}
+                        {p.brand && <span className="block text-xs font-semibold text-primary mb-1">{p.brand}</span>}<Badge variant="outline">{p.category || "-"}</Badge>{p.sub_category && <span className="block text-xs text-muted-foreground mt-1">{p.sub_category}</span>}
                       </TableCell>
                       <TableCell className="text-right">{formatRp(p.price)}</TableCell>
                       <TableCell className="text-right">{p.cost_price ? formatRp(p.cost_price) : "-"}</TableCell>
@@ -368,6 +380,24 @@ const ProductManagement = () => {
             <DialogTitle>{editingProduct ? "Edit Produk" : "Tambah Produk Baru"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Brand</Label>
+              <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="Contoh: Zeger Coffee" list="brand-list" />
+              <datalist id="brand-list">{brands.map((b) => <option key={b} value={b} />)}</datalist>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Kategori Besar</Label>
+                <Input value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} placeholder="Contoh: Minuman, Makanan" list="category-list" />
+                <datalist id="category-list">{categories.map((c) => <option key={c} value={c} />)}</datalist>
+              </div>
+              <div className="space-y-2">
+                <Label>Sub Kategori</Label>
+                <Input value={form.sub_category} onChange={(e) => setForm((f) => ({ ...f, sub_category: e.target.value }))} placeholder="Contoh: Espresso Based, Biska" list="subcat-list" />
+                <datalist id="subcat-list">{subCategories.map((c) => <option key={c} value={c} />)}</datalist>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nama Produk *</Label>
@@ -388,31 +418,6 @@ const ProductManagement = () => {
                 <Label>Kode Produk *</Label>
                 <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder="Kode produk" />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Brand</Label>
-                <Input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="Contoh: Zeger Coffee" />
-              </div>
-              <div className="space-y-2">
-                <Label>Sub Kategori</Label>
-                <Input value={form.sub_category} onChange={(e) => setForm((f) => ({ ...f, sub_category: e.target.value }))} placeholder="Contoh: Espresso Based, Non Coffee" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Kategori Besar</Label>
-              <Input
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                placeholder="Contoh: Minuman, Makanan, Snack"
-                list="category-list"
-              />
-              <datalist id="category-list">
-                {categories.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
