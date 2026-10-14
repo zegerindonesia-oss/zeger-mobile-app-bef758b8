@@ -256,6 +256,88 @@ export type Database = {
           },
         ]
       }
+      bank_statement_transactions: {
+        Row: {
+          amount: number
+          balance: number | null
+          bank_account_id: string | null
+          batch_name: string | null
+          branch_id: string | null
+          category_account_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          direction: string
+          id: string
+          journal_id: string | null
+          reference: string | null
+          status: string
+          tenant_id: string
+          txn_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          balance?: number | null
+          bank_account_id?: string | null
+          batch_name?: string | null
+          branch_id?: string | null
+          category_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          direction?: string
+          id?: string
+          journal_id?: string | null
+          reference?: string | null
+          status?: string
+          tenant_id?: string
+          txn_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          balance?: number | null
+          bank_account_id?: string | null
+          batch_name?: string | null
+          branch_id?: string | null
+          category_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          direction?: string
+          id?: string
+          journal_id?: string | null
+          reference?: string | null
+          status?: string
+          tenant_id?: string
+          txn_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statement_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_transactions_category_account_id_fkey"
+            columns: ["category_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_transactions_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_journals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_hub_report_assignments: {
         Row: {
           created_at: string
@@ -5364,6 +5446,7 @@ export type Database = {
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
+      post_bank_statements: { Args: { _ids: string[] }; Returns: number }
       postgis_constraint_dims: {
         Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: number
