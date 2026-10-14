@@ -62,7 +62,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
       const [prodRes, bundleRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, code, name, category, price, image_url, is_active, custom_options, track_stock')
+          .select('id, code, name, category, brand, sub_category, price, image_url, is_active, custom_options, track_stock')
           .eq('is_active', true)
           .order('name'),
         supabase
