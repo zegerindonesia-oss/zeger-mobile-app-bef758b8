@@ -17,6 +17,8 @@ interface Product {
   code: string;
   name: string;
   category: string | null;
+  brand?: string | null;
+  sub_category?: string | null;
   price: number;
   image_url: string | null;
   is_active: boolean;
@@ -49,6 +51,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const [activeCat, setActiveCat] = useState<string>('Semua');
+  const [activeBrand, setActiveBrand] = useState<string>('Semua Brand');
   const [loading, setLoading] = useState(true);
   const [customOpen, setCustomOpen] = useState(false);
   const [modProduct, setModProduct] = useState<Product | null>(null);
@@ -126,26 +129,42 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
     load();
   }, [branchId]);
 
-  const categories = useMemo(() => {
+  const visible = useMemo(
+    () => products.filter((p) => !hiddenProductIds.includes(p.id)),
+    [products, hiddenProductIds]
+  );
+  const catOf = (p: Product) => p.sub_category || p.category || 'Lainnya';
+  const brands = useMemo(() => {
     const set = new Set<string>();
-    products.forEach((p) => p.category && set.add(p.category));
-    const cats = ['Semua', ...Array.from(set)];
-    if (bundles.length > 0) cats.push('Bundle');
+    visible.forEach((p) => p.brand && set.add(p.brand));
+    return Array.from(set).sort();
+  }, [visible]);
+  const brandProducts = useMemo(
+    () => (activeBrand === 'Semua Brand' ? visible : visible.filter((p) => p.brand === activeBrand)),
+    [visible, activeBrand]
+  );
+  const catCounts = useMemo(() => {
+    const m: Record<string, number> = { Semua: brandProducts.length };
+    brandProducts.forEach((p) => { const c = catOf(p); m[c] = (m[c] || 0) + 1; });
+    return m;
+  }, [brandProducts]);
+  const categories = useMemo(() => {
+    const cats = ['Semua', ...Object.keys(catCounts).filter((c) => c !== 'Semua')];
+    if (bundles.length > 0 && activeBrand === 'Semua Brand') cats.push('Bundle');
     return cats;
-  }, [products, bundles]);
+  }, [catCounts, bundles, activeBrand]);
 
   const filteredProducts = useMemo(() => {
     if (activeCat === 'Bundle') return [];
-    return products.filter((p) => {
-      if (hiddenProductIds.includes(p.id)) return false;
-      const matchCat = activeCat === 'Semua' || p.category === activeCat;
-      const matchSearch =
-        !search ||
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.code.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    // Search spans all brands so cashiers can find anything instantly
+    const base = search ? visible : brandProducts;
+    return base.filter((p) => {
+      const matchCat = search || activeCat === 'Semua' || catOf(p) === activeCat;
+      const matchSearch = !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
       return matchCat && matchSearch;
     });
-  }, [products, activeCat, search, hiddenProductIds]);
+  }, [visible, brandProducts, activeCat, search]);
 
   const filteredBundles = useMemo(() => {
     if (activeCat !== 'Semua' && activeCat !== 'Bundle') return [];
@@ -179,6 +198,21 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
             Custom
           </Button>
         </div>
+        {brands.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
+            {['Semua Brand', ...brands].map((b) => (
+              <Button
+                key={b}
+                size="sm"
+                variant={activeBrand === b ? 'default' : 'outline'}
+                onClick={() => { setActiveBrand(b); setActiveCat('Semua'); }}
+                className="flex-shrink-0 px-5 h-10 rounded-full font-semibold"
+              >
+                {b}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
           {categories.map((c) => (
             <Button
@@ -186,9 +220,10 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
               size="sm"
               variant={activeCat === c ? 'default' : 'outline'}
               onClick={() => setActiveCat(c)}
-              className="flex-shrink-0 px-4"
+              className="flex-shrink-0 px-4 rounded-full"
             >
               {c}
+              {catCounts[c] != null && <span className="ml-1.5 text-[10px] opacity-70">{catCounts[c]}</span>}
             </Button>
           ))}
         </div>
