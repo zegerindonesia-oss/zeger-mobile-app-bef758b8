@@ -261,7 +261,7 @@ function JournalTab({ accounts, branch }: { accounts: Account[]; branch: string 
 
   const save = async () => {
     if (!balanced) return toast.error("Debit dan kredit harus seimbang & semua akun dipilih");
-    const { error } = await db.rpc("create_accounting_journal", { _date: form.date, _description: form.description, _reference: form.reference || null, _branch_id: null, _lines: lines.filter((l) => l.debit || l.credit) });
+    const { error } = await db.rpc("create_accounting_journal", { _date: form.date, _description: form.description, _reference: form.reference || null, _branch_id: branch !== "all" ? branch : null, _lines: lines.filter((l) => l.debit || l.credit) });
     if (error) return toast.error(error.message);
     toast.success("Jurnal tersimpan"); setOpen(false);
     setLines([{ account_id: "", debit: 0, credit: 0 }, { account_id: "", debit: 0, credit: 0 }]); setForm({ date: today(), description: "", reference: "" });
