@@ -75,7 +75,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
           .eq('is_active', true),
       ]);
 
-      setProducts((prodRes.data || []) as Product[]);
+      setProducts((prodRes.data || []) as unknown as Product[]);
 
       // Filter bundles for branch + enrich component names
       const allBundles = (bundleRes.data || []) as any[];
