@@ -9,7 +9,7 @@ import { POSCartItem } from '@/hooks/usePOSCart';
 import { POSBundleCard, BundleData } from './POSBundleCard';
 import { POSCustomItemDialog } from './POSCustomItemDialog';
 import { POSModifierDialog } from './POSModifierDialog';
-import { getModifierGroups } from '@/lib/pos-modifiers';
+import { getModifierGroups, loadMasterModifierGroups } from '@/lib/pos-modifiers';
 import type { AddItemOptions } from '@/hooks/usePOSCart';
 import { Star3D } from './Star3D';
 
@@ -63,10 +63,11 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      await loadMasterModifierGroups(supabase).catch(() => null);
       const [prodRes, bundleRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, code, name, category, brand, sub_category, price, image_url, is_active, custom_options, track_stock, is_pos_favorite' as any)
+          .select('id, code, name, category, brand, sub_category, price, image_url, is_active, custom_options, track_stock, is_pos_favorite, modifier_group_ids' as any)
           .eq('is_active', true)
           .order('name'),
         supabase

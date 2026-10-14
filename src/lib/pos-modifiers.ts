@@ -24,9 +24,52 @@ export const DEFAULT_DRINK_MODIFIERS: ModifierGroup[] = [
 
 const FOOD_HINTS = ['food', 'makan', 'snack', 'pastry', 'roti', 'bread', 'cake', 'kue', 'merch', 'bundle', 'custom'];
 
-export const getModifierGroups = (product: { category?: string | null; custom_options?: any }): ModifierGroup[] => {
+/** Master variant groups from Data Master → Varian Menu (menu_modifier_groups). */
+export interface MasterModifierGroup {
+  id: string; name: string; required: boolean; multi: boolean;
+  options: ModifierOption[]; default_option: string | null;
+  scope_type: 'all' | 'brand' | 'category' | 'sub_category' | 'product';
+  scope_values: string[]; sort_order: number; is_active: boolean;
+}
+let MASTER: MasterModifierGroup[] | null = null;
+export const setMasterModifierGroups = (rows: MasterModifierGroup[] | null) => { MASTER = rows; };
+export const loadMasterModifierGroups = async (client: any) => {
+  const { data } = await client.from('menu_modifier_groups').select('*').eq('is_active', true).order('sort_order');
+  setMasterModifierGroups((data || []) as MasterModifierGroup[]);
+  return MASTER!;
+};
+
+type ProductLike = { id?: string; code?: string; brand?: string | null; category?: string | null; sub_category?: string | null; custom_options?: any; modifier_group_ids?: string[] | null };
+const eq = (a?: string | null, b?: string) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+
+export const masterGroupApplies = (g: MasterModifierGroup, p: ProductLike) => {
+  const v = g.scope_values || [];
+  switch (g.scope_type) {
+    case 'all': return true;
+    case 'brand': return v.some((x) => eq(p.brand, x));
+    case 'category': return v.some((x) => eq(p.category, x));
+    case 'sub_category': return v.some((x) => eq(p.sub_category, x));
+    case 'product': return v.some((x) => x === p.id || eq(p.code, x));
+    default: return false;
+  }
+};
+
+const toGroup = (g: MasterModifierGroup): ModifierGroup => ({
+  name: g.name, required: g.required, multi: g.multi,
+  options: (g.options || []).map((o) => ({ name: o.name, price: Number(o.price) || 0 })),
+  default: g.default_option || (g.required && !g.multi ? g.options?.[0]?.name : undefined),
+});
+
+export const getModifierGroups = (product: ProductLike): ModifierGroup[] => {
   const co = product.custom_options;
   if (co && Array.isArray(co.modifier_groups)) return co.modifier_groups as ModifierGroup[];
+  if (MASTER && MASTER.length) {
+    const ids = product.modifier_group_ids;
+    const picked = ids && ids.length
+      ? MASTER.filter((g) => ids.includes(g.id))
+      : MASTER.filter((g) => masterGroupApplies(g, product));
+    return picked.map(toGroup);
+  }
   const cat = (product.category || '').toLowerCase();
   if (FOOD_HINTS.some((h) => cat.includes(h))) return [];
   return DEFAULT_DRINK_MODIFIERS;
