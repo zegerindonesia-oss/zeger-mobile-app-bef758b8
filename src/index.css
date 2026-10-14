@@ -887,3 +887,9 @@
 .dr-bars{display:flex;justify-content:center;height:46px}.dr-bars i{display:block;background:hsl(var(--foreground))}
 @keyframes dr-in{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
 @media print{.dr-bg{background:none}.dr-paper{box-shadow:none}}
+
+/* POS 3D favorite star */
+.pos-star3d { transition: transform .35s cubic-bezier(.34,1.56,.64,1), filter .3s; }
+.pos-star3d.is-active { animation: pos-star-pop .45s cubic-bezier(.34,1.56,.64,1); }
+.pos-fav-pin:hover .pos-star3d, .pos-fav-tab:hover .pos-star3d { transform: scale(1.15) rotate(-8deg); }
+@keyframes pos-star-pop { 0% { transform: scale(.6) rotate(-20deg); } 70% { transform: scale(1.2) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
