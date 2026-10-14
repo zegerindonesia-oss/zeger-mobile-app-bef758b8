@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Pencil, ChevronRight, BookOpen, Search, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import BankTransactionsTab from "./BankTransactionsTab";
 
 const db = supabase as any;
 const rp = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);
@@ -37,8 +38,9 @@ const TABS = [
   { id: "ledger", label: "Buku Besar" },
   { id: "trial-balance", label: "Neraca Saldo" },
   { id: "profit-loss", label: "Laba Rugi" },
+  { id: "transactions", label: "Data Transaksi" },
 ];
-const SOURCES: Record<string, string> = { manual: "Manual", pos_sales: "Penjualan", pos_cogs: "HPP Bahan Baku", purchase: "Pembelian Bahan", opex: "Beban Outlet", rider_opex: "Beban Rider" };
+const SOURCES: Record<string, string> = { manual: "Manual", pos_sales: "Penjualan", pos_cogs: "HPP Bahan Baku", purchase: "Pembelian Bahan", bank: "Mutasi Bank", opex: "Beban Outlet", rider_opex: "Beban Rider" };
 
 export default function Accounting() {
   const { tab = "accounts" } = useParams();
@@ -48,13 +50,27 @@ export default function Accounting() {
     const { data, error } = await db.from("accounting_accounts").select("*").order("code");
     if (error) toast.error(error.message); else setAccounts(data || []);
   };
-  useEffect(() => { loadAccounts(); }, []);
+  const [branch, setBranch] = useState("all");
+  const [branches, setBranches] = useState<{ id: string; name: string; code?: string }[]>([]);
+  useEffect(() => { loadAccounts(); db.from("branches").select("id, name, code").order("name").then(({ data }: any) => setBranches(data || [])); }, []);
 
   return (
     <div className="space-y-4 p-2 md:p-0">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold">Accounting</h1>
-        <p className="text-sm text-muted-foreground">Bagan akun, kategori & sub-kategori, jurnal, buku besar, dan neraca saldo.</p>
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold">Accounting</h1>
+          <p className="text-sm text-muted-foreground">Bagan akun, jurnal, buku besar, laporan keuangan, dan mutasi bank.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="whitespace-nowrap">Cabang</Label>
+          <Select value={branch} onValueChange={setBranch}>
+            <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Cabang (Konsolidasi)</SelectItem>
+              {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.code ? `${b.code} · ` : ""}{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <Tabs value={tab} onValueChange={(v) => nav(`/accounting/${v}`)}>
         <TabsList className="flex w-full overflow-x-auto justify-start">
@@ -62,10 +78,11 @@ export default function Accounting() {
         </TabsList>
       </Tabs>
       {tab === "accounts" && <AccountsTab accounts={accounts} reload={loadAccounts} />}
-      {tab === "journal" && <JournalTab accounts={accounts} />}
-      {tab === "ledger" && <LedgerTab accounts={accounts} />}
-      {tab === "trial-balance" && <TrialBalanceTab accounts={accounts} />}
-      {tab === "profit-loss" && <ProfitLossTab accounts={accounts} />}
+      {tab === "journal" && <JournalTab accounts={accounts} branch={branch} />}
+      {tab === "ledger" && <LedgerTab accounts={accounts} branch={branch} />}
+      {tab === "trial-balance" && <TrialBalanceTab accounts={accounts} branch={branch} />}
+      {tab === "profit-loss" && <ProfitLossTab accounts={accounts} branch={branch} />}
+      {tab === "transactions" && <BankTransactionsTab accounts={accounts} branch={branch} branches={branches} />}
     </div>
   );
 }
@@ -200,7 +217,7 @@ function AccountPicker({ accounts, value, onChange }: { accounts: Account[]; val
   );
 }
 
-function JournalTab({ accounts }: { accounts: Account[] }) {
+function JournalTab({ accounts, branch }: { accounts: Account[]; branch: string }) {
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(today());
   const [all, setList] = useState<any[]>([]);
@@ -217,14 +234,16 @@ function JournalTab({ accounts }: { accounts: Account[] }) {
   const load = async () => {
     const out: any[] = [];
     for (let p = 0; ; p++) {
-      const { data, error } = await db.from("accounting_journals").select("*, accounting_journal_lines(*)").gte("journal_date", from).lte("journal_date", to).order("journal_date", { ascending: false }).order("created_at", { ascending: false }).range(p * 1000, p * 1000 + 999);
+      let q2 = db.from("accounting_journals").select("*, accounting_journal_lines(*)").gte("journal_date", from).lte("journal_date", to).order("journal_date", { ascending: false }).order("created_at", { ascending: false }).range(p * 1000, p * 1000 + 999);
+      if (branch !== "all") q2 = q2.eq("branch_id", branch);
+      const { data, error } = await q2;
       if (error) { toast.error(error.message); break; }
       out.push(...(data || []));
       if (!data || data.length < 1000) break;
     }
     setList(out);
   };
-  useEffect(() => { load(); }, [from, to]);
+  useEffect(() => { load(); }, [from, to, branch]);
   const sync = async () => {
     setSyncing(true);
     const { data, error } = await db.rpc("sync_accounting_auto", { _from: from, _to: to });
@@ -345,11 +364,12 @@ function JournalTab({ accounts }: { accounts: Account[] }) {
 }
 
 /* ---------------- Helpers: posted lines ---------------- */
-async function fetchLines(to: string, from?: string) {
+async function fetchLines(to: string, from?: string, branch = "all") {
   const all: any[] = [];
   for (let p = 0; ; p++) {
     let q = db.from("accounting_journal_lines").select("account_id, debit, credit, memo, accounting_journals!inner(journal_number, journal_date, description, status)").eq("accounting_journals.status", "posted").lte("accounting_journals.journal_date", to).range(p * 1000, p * 1000 + 999);
     if (from) q = q.gte("accounting_journals.journal_date", from);
+    if (branch !== "all") q = q.eq("accounting_journals.branch_id", branch);
     const { data, error } = await q;
     if (error) { toast.error(error.message); break; }
     all.push(...(data || []));
@@ -359,7 +379,7 @@ async function fetchLines(to: string, from?: string) {
 }
 
 /* ---------------- Buku Besar ---------------- */
-function LedgerTab({ accounts }: { accounts: Account[] }) {
+function LedgerTab({ accounts, branch }: { accounts: Account[]; branch: string }) {
   const [acc, setAcc] = useState("all");
   const [q, setQ] = useState("");
   const [from, setFrom] = useState(monthStart());
@@ -369,8 +389,8 @@ function LedgerTab({ accounts }: { accounts: Account[] }) {
 
   useEffect(() => {
     setLoading(true);
-    fetchLines(to).then((l) => { setLines(l); setLoading(false); });
-  }, [to]);
+    fetchLines(to, undefined, branch).then((l) => { setLines(l); setLoading(false); });
+  }, [to, branch]);
 
   const groups = useMemo(() => {
     const leafs = accounts.filter((a) => a.parent_id && (acc === "all" || a.id === acc))
@@ -433,11 +453,11 @@ function LedgerTab({ accounts }: { accounts: Account[] }) {
 }
 
 /* ---------------- Laba Rugi ---------------- */
-function ProfitLossTab({ accounts }: { accounts: Account[] }) {
+function ProfitLossTab({ accounts, branch }: { accounts: Account[]; branch: string }) {
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(today());
   const [lines, setLines] = useState<any[]>([]);
-  useEffect(() => { fetchLines(to, from).then(setLines); }, [from, to]);
+  useEffect(() => { fetchLines(to, from, branch).then(setLines); }, [from, to, branch]);
   const sec = (type: string, credit: boolean) => {
     const rows = accounts.filter((a) => a.parent_id && a.account_type === type).map((a) => {
       const v = lines.filter((l) => l.account_id === a.id).reduce((s, l) => s + (credit ? l.credit - l.debit : l.debit - l.credit), 0);
@@ -473,10 +493,10 @@ function ProfitLossTab({ accounts }: { accounts: Account[] }) {
 }
 
 /* ---------------- Neraca Saldo ---------------- */
-function TrialBalanceTab({ accounts }: { accounts: Account[] }) {
+function TrialBalanceTab({ accounts, branch }: { accounts: Account[]; branch: string }) {
   const [to, setTo] = useState(today());
   const [lines, setLines] = useState<any[]>([]);
-  useEffect(() => { fetchLines(to).then(setLines); }, [to]);
+  useEffect(() => { fetchLines(to, undefined, branch).then(setLines); }, [to, branch]);
 
   const rows = useMemo(() => accounts.filter((a) => a.parent_id).map((a) => {
     const mv = lines.filter((l) => l.account_id === a.id).reduce((s, l) => s + l.debit - l.credit, 0);
