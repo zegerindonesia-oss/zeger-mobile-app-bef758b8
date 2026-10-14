@@ -50,6 +50,7 @@ const emptyForm = {
   is_active: true,
   show_in_customer_app: true,
   track_stock: true,
+  is_pos_favorite: false,
 };
 
 const ProductManagement = () => {
@@ -136,6 +137,7 @@ const ProductManagement = () => {
       is_active: product.is_active ?? true,
       show_in_customer_app: product.show_in_customer_app ?? true,
       track_stock: product.track_stock ?? true,
+      is_pos_favorite: !!(product as any).is_pos_favorite,
     });
     setDialogOpen(true);
   };
@@ -173,6 +175,7 @@ const ProductManagement = () => {
       is_active: form.is_active,
       show_in_customer_app: form.show_in_customer_app,
       track_stock: form.track_stock,
+      is_pos_favorite: form.is_pos_favorite,
     };
 
     if (editingProduct) {
@@ -474,6 +477,13 @@ const ProductManagement = () => {
               <div>
                 <Label>Lacak Stok</Label>
                 <p className="text-xs text-muted-foreground">{form.track_stock ? "Menu diblokir di kasir saat stok cabang habis." : "Unlimited — tetap bisa dijual walau stok kosong/minus."}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Switch checked={form.is_pos_favorite} onCheckedChange={(v) => setForm((f) => ({ ...f, is_pos_favorite: v }))} />
+              <div>
+                <Label>Favorit Kasir ⭐</Label>
+                <p className="text-xs text-muted-foreground">Tampil di tab Favorit paling kiri di layar kasir semua cabang.</p>
               </div>
             </div>
 

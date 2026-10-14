@@ -2899,6 +2899,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          is_pos_favorite: boolean
           name: string
           price: number
           show_in_customer_app: boolean
@@ -2919,6 +2920,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_pos_favorite?: boolean
           name: string
           price: number
           show_in_customer_app?: boolean
@@ -2939,6 +2941,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_pos_favorite?: boolean
           name?: string
           price?: number
           show_in_customer_app?: boolean

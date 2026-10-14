@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,9 @@ import { POSCustomItemDialog } from './POSCustomItemDialog';
 import { POSModifierDialog } from './POSModifierDialog';
 import { getModifierGroups } from '@/lib/pos-modifiers';
 import type { AddItemOptions } from '@/hooks/usePOSCart';
+import { Star3D } from './Star3D';
+
+const FAV = '__favorit__';
 
 interface Product {
   id: string;
@@ -24,6 +27,7 @@ interface Product {
   is_active: boolean;
   custom_options?: any;
   track_stock?: boolean | null;
+  is_pos_favorite?: boolean | null;
 }
 
 interface InventoryRow {
@@ -62,7 +66,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
       const [prodRes, bundleRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, code, name, category, brand, sub_category, price, image_url, is_active, custom_options, track_stock')
+          .select('id, code, name, category, brand, sub_category, price, image_url, is_active, custom_options, track_stock, is_pos_favorite' as any)
           .eq('is_active', true)
           .order('name'),
         supabase
@@ -71,7 +75,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
           .eq('is_active', true),
       ]);
 
-      setProducts((prodRes.data || []) as Product[]);
+      setProducts((prodRes.data || []) as unknown as Product[]);
 
       // Filter bundles for branch + enrich component names
       const allBundles = (bundleRes.data || []) as any[];
@@ -129,6 +133,23 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
     load();
   }, [branchId]);
 
+  // Favorites: master flag from Data Master + per-branch cashier overrides (stored on this device)
+  const favKey = `pos_fav_overrides_${branchId || 'all'}`;
+  const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try { setFavOverrides(JSON.parse(localStorage.getItem(favKey) || '{}')); } catch { setFavOverrides({}); }
+  }, [favKey]);
+  const isFav = useCallback(
+    (p: Product) => (p.id in favOverrides ? favOverrides[p.id] : !!p.is_pos_favorite),
+    [favOverrides]
+  );
+  const toggleFav = (p: Product) => {
+    const next = { ...favOverrides, [p.id]: !isFav(p) };
+    if (next[p.id] === !!p.is_pos_favorite) delete next[p.id];
+    setFavOverrides(next);
+    localStorage.setItem(favKey, JSON.stringify(next));
+  };
+
   const visible = useMemo(
     () => products.filter((p) => !hiddenProductIds.includes(p.id)),
     [products, hiddenProductIds]
@@ -154,17 +175,19 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
     return cats;
   }, [catCounts, bundles, activeBrand]);
 
+  const favCount = useMemo(() => brandProducts.filter(isFav).length, [brandProducts, isFav]);
+
   const filteredProducts = useMemo(() => {
     if (activeCat === 'Bundle') return [];
     const q = search.toLowerCase();
     // Search spans all brands so cashiers can find anything instantly
     const base = search ? visible : brandProducts;
     return base.filter((p) => {
-      const matchCat = search || activeCat === 'Semua' || catOf(p) === activeCat;
+      const matchCat = search || activeCat === 'Semua' || (activeCat === FAV ? isFav(p) : catOf(p) === activeCat);
       const matchSearch = !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
       return matchCat && matchSearch;
     });
-  }, [visible, brandProducts, activeCat, search]);
+  }, [visible, brandProducts, activeCat, search, isFav]);
 
   const filteredBundles = useMemo(() => {
     if (activeCat !== 'Semua' && activeCat !== 'Bundle') return [];
@@ -214,6 +237,16 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
           </div>
         )}
         <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
+          <Button
+            size="sm"
+            variant={activeCat === FAV ? 'default' : 'outline'}
+            onClick={() => setActiveCat(FAV)}
+            className="pos-fav-tab flex-shrink-0 px-4 rounded-full gap-1.5"
+          >
+            <Star3D key={String(activeCat === FAV)} size={18} />
+            Favorit
+            <span className="text-[10px] opacity-70">{favCount}</span>
+          </Button>
           {categories.map((c) => (
             <Button
               key={c}
@@ -249,12 +282,20 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
               return (
                 <Card
                   key={p.id}
-                  className={`pos-product-card group p-2 cursor-pointer rounded-2xl overflow-hidden ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`pos-product-card group relative p-2 cursor-pointer rounded-2xl overflow-hidden ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => {
                     if (getModifierGroups(p).length > 0) return setModProduct(p);
                     onAdd(toCartProduct(p));
                   }}
                 >
+                  <button
+                    type="button"
+                    aria-label={isFav(p) ? 'Hapus dari favorit' : 'Tandai favorit'}
+                    onClick={(e) => { e.stopPropagation(); toggleFav(p); }}
+                    className={`pos-fav-pin pointer-events-auto absolute top-3 right-3 z-10 h-8 w-8 rounded-full flex items-center justify-center bg-card/85 backdrop-blur shadow-md transition-opacity ${isFav(p) ? 'opacity-100' : 'opacity-70 md:opacity-0 group-hover:opacity-100'}`}
+                  >
+                    <Star3D key={String(isFav(p))} size={20} active={isFav(p)} />
+                  </button>
                   {p.image_url ? (
                     <div className="h-20 w-full bg-muted rounded-xl overflow-hidden mb-2">
                       <img src={p.image_url} alt={p.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
