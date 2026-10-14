@@ -1737,6 +1737,54 @@ export type Database = {
           },
         ]
       }
+      menu_modifier_groups: {
+        Row: {
+          created_at: string
+          default_option: string | null
+          id: string
+          is_active: boolean
+          multi: boolean
+          name: string
+          options: Json
+          required: boolean
+          scope_type: string
+          scope_values: string[]
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_option?: string | null
+          id?: string
+          is_active?: boolean
+          multi?: boolean
+          name: string
+          options?: Json
+          required?: boolean
+          scope_type?: string
+          scope_values?: string[]
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_option?: string | null
+          id?: string
+          is_active?: boolean
+          multi?: boolean
+          name?: string
+          options?: Json
+          required?: boolean
+          scope_type?: string
+          scope_values?: string[]
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       operational_expenses: {
         Row: {
           amount: number
@@ -2900,6 +2948,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean | null
           is_pos_favorite: boolean
+          modifier_group_ids: string[] | null
           name: string
           price: number
           show_in_customer_app: boolean
@@ -2921,6 +2970,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           is_pos_favorite?: boolean
+          modifier_group_ids?: string[] | null
           name: string
           price: number
           show_in_customer_app?: boolean
@@ -2942,6 +2992,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           is_pos_favorite?: boolean
+          modifier_group_ids?: string[] | null
           name?: string
           price?: number
           show_in_customer_app?: boolean
