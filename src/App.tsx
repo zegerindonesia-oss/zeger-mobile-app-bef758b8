@@ -73,6 +73,7 @@ import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
 import ProductManagement from "./pages/master/ProductManagement";
+import VariantManagement from "./pages/master/VariantManagement";
 import RiderIncome from "./pages/finance/RiderIncome";
 import PromoManagement from "./pages/settings/PromoManagement";
 import BundleManagement from "./pages/settings/BundleManagement";
@@ -569,6 +570,14 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
                 <ModernLayout>
                   <ProductManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+
+            <Route path="/master/variants" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
+                <ModernLayout>
+                  <VariantManagement />
                 </ModernLayout>
               </RoleBasedRoute>
             } />
