@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { normalizeImageUrl } from "@/lib/image-url";
+import { useEffect } from "react";
+
+interface VariantGroup { id: string; name: string; required: boolean; multi: boolean; options: { name: string; price: number }[]; scope_type: string; scope_values: string[] }
 
 interface Product {
   id: string;
@@ -23,6 +26,7 @@ interface Product {
   description: string | null;
   image_url: string | null;
   custom_options: any;
+  modifier_group_ids?: string[] | null;
   is_active: boolean | null;
 }
 
@@ -38,6 +42,7 @@ interface ParsedRow {
   description: string;
   image_url: string;
   custom_options: string;
+  modifier_groups: string;
   is_active: boolean;
   _status?: "ok" | "error" | "duplicate" | "not_found";
   _message?: string;
@@ -59,6 +64,7 @@ const TEMPLATE_COLUMNS = [
   "ck_price",
   "description",
   "image_url",
+  "modifier_groups",
   "custom_options",
   "is_active",
 ];
@@ -74,6 +80,7 @@ const TEMPLATE_HEADERS = [
   "HPP CK",
   "Deskripsi",
   "Link Foto (URL / Google Drive)",
+  "Grup Varian (pisah ;)",
   "Custom Options (JSON)",
   "Aktif (TRUE/FALSE)",
 ];
@@ -84,12 +91,31 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
   const [previewData, setPreviewData] = useState<ParsedRow[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [groups, setGroups] = useState<VariantGroup[]>([]);
+  useEffect(() => {
+    supabase.from("menu_modifier_groups" as any).select("id,name,required,multi,options,scope_type,scope_values").eq("is_active", true).order("sort_order")
+      .then(({ data }) => setGroups((data || []) as any));
+  }, []);
+  const groupNames = (ids?: string[] | null) => (ids || []).map((id) => groups.find((g) => g.id === id)?.name).filter(Boolean).join("; ");
+  const SCOPE_LABEL: Record<string, string> = { all: "Semua Menu", brand: "Brand", category: "Kategori Besar", sub_category: "Sub Kategori", product: "Menu tertentu" };
+  const appendVariantSheet = (wb: XLSX.WorkBook) => {
+    const rows: any[][] = [["Grup Varian", "Jenis", "Wajib", "Pilihan (+harga)", "Otomatis berlaku untuk"]];
+    groups.forEach((g) => rows.push([g.name, g.multi ? "Boleh pilih banyak" : "Pilih satu", g.required ? "Ya" : "Tidak",
+      (g.options || []).map((o) => `${o.name}${Number(o.price) ? ` (+${o.price})` : ""}`).join(", "),
+      g.scope_type === "all" ? "Semua Menu" : `${SCOPE_LABEL[g.scope_type] || g.scope_type}: ${(g.scope_values || []).join(", ")}`]));
+    rows.push([]);
+    rows.push(["Cara isi kolom 'Grup Varian' di sheet menu: tulis nama grup dipisah titik koma, contoh: Size Cup; Sugar Level; Topping"]);
+    rows.push(["Kosongkan kolom itu kalau menu cukup mengikuti aturan otomatis (brand/kategori) di atas."]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 22 }, { wch: 18 }, { wch: 8 }, { wch: 50 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Referensi Varian");
+  };
 
   const downloadTemplate = (type: "add" | "update") => {
     const wb = XLSX.utils.book_new();
 
     if (type === "add") {
-      const data = [TEMPLATE_HEADERS, ["Zeger Coffee", "Minuman", "Espresso Based", "KS-001", "Aren Latte", 15000, 8000, 6000, "Kopi susu signature", "https://example.com/foto.jpg", "", "TRUE"]];
+      const data = [TEMPLATE_HEADERS, ["Zeger Coffee", "Minuman", "Espresso Based", "KS-001", "Aren Latte", 15000, 8000, 6000, "Kopi susu signature", "https://example.com/foto.jpg", groups.slice(0, 2).map((g) => g.name).join("; "), "", "TRUE"]];
       const ws = XLSX.utils.aoa_to_sheet(data);
       ws["!cols"] = TEMPLATE_HEADERS.map(() => ({ wch: 20 }));
       XLSX.utils.book_append_sheet(wb, ws, "Template Menu Baru");
@@ -107,6 +133,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
           p.ck_price || 0,
           p.description || "",
           p.image_url || "",
+          groupNames(p.modifier_group_ids),
           p.custom_options ? JSON.stringify(p.custom_options) : "",
           p.is_active ? "TRUE" : "FALSE",
         ]),
@@ -116,6 +143,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
       XLSX.utils.book_append_sheet(wb, ws, "Data Produk");
     }
 
+    appendVariantSheet(wb);
     const filename = type === "add" ? "Template_Menu_Baru.xlsx" : "Data_Produk_Update.xlsx";
     XLSX.writeFile(wb, filename);
     toast.success(`Template ${filename} berhasil didownload`);
@@ -148,7 +176,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
         TEMPLATE_HEADERS.forEach((h, i) => {
           headerMap[h.toLowerCase()] = TEMPLATE_COLUMNS[i];
         });
-        Object.assign(headerMap, { "kategori": "category", "kategori besar": "category", "sub kategori": "sub_category", "sub-kategori": "sub_category", "nama menu": "name", "kode menu": "code" });
+        Object.assign(headerMap, { "grup varian": "modifier_groups", "varian": "modifier_groups", "kategori": "category", "kategori besar": "category", "sub kategori": "sub_category", "sub-kategori": "sub_category", "nama menu": "name", "kode menu": "code" });
         // Also accept raw column names
         TEMPLATE_COLUMNS.forEach((c) => {
           headerMap[c.toLowerCase()] = c;
@@ -182,6 +210,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
             description: String(get("description") || "").trim(),
             image_url: normalizeImageUrl(get("image_url")) || "",
             custom_options: String(get("custom_options") || "").trim(),
+            modifier_groups: String(get("modifier_groups") || "").trim(),
             is_active: isActiveRaw === "TRUE" || isActiveRaw === "1" || isActiveRaw === "YA",
           };
 
@@ -205,6 +234,12 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
             } else {
               item._status = "ok";
             }
+          }
+
+          if (item.modifier_groups && item._status === "ok") {
+            const unknown = item.modifier_groups.split(/[;,]/).map((x) => x.trim()).filter(Boolean)
+              .filter((n) => !groups.some((g) => g.name.toLowerCase() === n.toLowerCase()));
+            if (unknown.length) { item._status = "error"; item._message = `Grup varian belum ada di Data Master: ${unknown.join(", ")}`; }
           }
 
           // Validate custom_options JSON
@@ -235,6 +270,12 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
     e.target.value = "";
   };
 
+  const toIds = (s: string) => {
+    const ids = s.split(/[;,]/).map((x) => x.trim().toLowerCase()).filter(Boolean)
+      .map((n) => groups.find((g) => g.name.toLowerCase() === n)?.id).filter(Boolean) as string[];
+    return ids.length ? ids : null;
+  };
+
   const handleUpload = async () => {
     const validRows = previewData.filter((r) => r._status === "ok");
     if (validRows.length === 0) {
@@ -259,13 +300,14 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
         description: r.description || null,
         image_url: r.image_url || null,
         custom_options: r.custom_options ? JSON.parse(r.custom_options) : null,
+        modifier_group_ids: toIds(r.modifier_groups),
         is_active: r.is_active,
       }));
 
       // Insert in batches of 50
       for (let i = 0; i < payloads.length; i += 50) {
         const batch = payloads.slice(i, i + 50);
-        const { error } = await supabase.from("products").insert(batch);
+        const { error } = await supabase.from("products").insert(batch as any);
         if (error) {
           errorCount += batch.length;
           console.error("Batch insert error:", error);
@@ -287,6 +329,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
           description: r.description || null,
           image_url: r.image_url || null,
           custom_options: r.custom_options ? JSON.parse(r.custom_options) : null,
+          modifier_group_ids: toIds(r.modifier_groups),
           is_active: r.is_active,
         };
 
