@@ -93,9 +93,12 @@ export default function StockCardRider() {
   });
 
   // Fetch riders based on user role
+  // Depend on stable id only: profile object is re-fetched on token refresh/tab focus,
+  // which previously reset the filter and reloaded the whole page.
   useEffect(() => {
     fetchRiders();
-  }, [userProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id, userProfile?.branch_id, userProfile?.role]);
 
   const fetchRiders = async () => {
     if (!userProfile) return;
@@ -120,7 +123,7 @@ export default function StockCardRider() {
     }
 
     setRiders(data || []);
-    setSelectedRider('all');
+    setSelectedRider(prev => prev || 'all');
   };
 
   // Get date range based on filter - use Jakarta timezone
