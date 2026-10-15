@@ -164,6 +164,11 @@ const App = () => (
                 <POSQueueDisplay />
               </RoleBasedRoute>
             } />
+            <Route path="/pos/rider-orders" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}>
+                <POSRiderOrders />
+              </RoleBasedRoute>
+            } />
             <Route path="/pos/kds" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}>
                 <POSKitchen />
