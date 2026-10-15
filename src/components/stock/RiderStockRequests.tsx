@@ -63,7 +63,12 @@ export function RiderStockRequestForm() {
     db.from("products").select("id,name,category,ck_price").eq("is_active", true).order("name").then(({ data }: any) => setProducts(data || []));
   }, [userProfile?.branch_id]);
 
-  const list = useMemo(() => products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())), [products, search]);
+  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort() as string[], [products]);
+  const [cats, setCats] = useState<string[]>(["Espresso Based", "Milk Based", "Refresher", "Refreshers"]);
+  const list = useMemo(() => products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) && (search || cats.includes(p.category))
+  ), [products, search, cats]);
+  const toggleCat = (c: string) => setCats((s) => s.includes(c) ? s.filter((x) => x !== c) : [...s, c]);
   const picked = Object.entries(qty).filter(([, q]) => q > 0);
   const set = (id: string, d: number) => setQty((s) => ({ ...s, [id]: Math.max(0, (s[id] || 0) + d) }));
 
@@ -89,6 +94,14 @@ export function RiderStockRequestForm() {
             {hubs.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
           </select>
           <Input placeholder="Cari menu…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="grid grid-cols-2 gap-2 rounded-lg border p-2">
+            {categories.map((c) => (
+              <label key={c} className="flex cursor-pointer items-center gap-2 text-xs">
+                <input type="checkbox" className="h-4 w-4 accent-primary" checked={cats.includes(c)} onChange={() => toggleCat(c)} />
+                {c}
+              </label>
+            ))}
+          </div>
           <div className="max-h-80 space-y-1 overflow-y-auto">
             {list.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-lg border p-2">
