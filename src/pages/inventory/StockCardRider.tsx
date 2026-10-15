@@ -823,7 +823,7 @@ export default function StockCardRider() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loadingSummary ? (
+              {loadingSummary && riderSummaries.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={11} className="text-center py-8">Memuat data...</TableCell>
                 </TableRow>
@@ -908,7 +908,7 @@ export default function StockCardRider() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loadingBreakdown ? (
+              {loadingBreakdown && shiftBreakdown.length === 0 ? (
                 <TableRow><TableCell colSpan={10} className="text-center py-8">Memuat data...</TableCell></TableRow>
               ) : (() => {
                 const list = selectedRider === 'all' ? shiftBreakdown : shiftBreakdown.filter(s => s.rider_id === selectedRider);
@@ -1047,7 +1047,7 @@ export default function StockCardRider() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading && stockCardData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-8">
                     Memuat data...
