@@ -2951,6 +2951,8 @@ export type Database = {
           modifier_group_ids: string[] | null
           name: string
           price: number
+          shelf_life_days: number | null
+          short_name: string | null
           show_in_customer_app: boolean
           sub_category: string | null
           tenant_id: string
@@ -2973,6 +2975,8 @@ export type Database = {
           modifier_group_ids?: string[] | null
           name: string
           price: number
+          shelf_life_days?: number | null
+          short_name?: string | null
           show_in_customer_app?: boolean
           sub_category?: string | null
           tenant_id?: string
@@ -2995,6 +2999,8 @@ export type Database = {
           modifier_group_ids?: string[] | null
           name?: string
           price?: number
+          shelf_life_days?: number | null
+          short_name?: string | null
           show_in_customer_app?: boolean
           sub_category?: string | null
           tenant_id?: string

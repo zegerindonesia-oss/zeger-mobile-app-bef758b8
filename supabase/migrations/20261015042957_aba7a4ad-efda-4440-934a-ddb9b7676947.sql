@@ -1,0 +1,4 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS short_name text, ADD COLUMN IF NOT EXISTS shelf_life_days integer;
+UPDATE public.products SET shelf_life_days = 5 WHERE shelf_life_days IS NULL AND (name ILIKE '%americano%' OR name ILIKE '%citrus%' OR name ILIKE '%lychee%' OR name ILIKE '%lemonade%');
+UPDATE public.products SET shelf_life_days = 4 WHERE shelf_life_days IS NULL AND (name ILIKE 'classic latte%' OR name ILIKE '%dolce%' OR name ILIKE '%aren%' OR name ILIKE 'caramel creamy%' OR name ILIKE '%bailey%' OR name ILIKE '%butterscotch%');
+UPDATE public.products SET shelf_life_days = 3 WHERE shelf_life_days IS NULL AND (name ILIKE '%mocha%' OR name ILIKE '%cookies%' OR name ILIKE '%choco%' OR name ILIKE '%matcha%' OR name ILIKE '%thai tea%' OR name ILIKE '%kopi susu%');
