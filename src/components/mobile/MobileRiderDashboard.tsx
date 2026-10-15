@@ -47,6 +47,8 @@ const MobileRiderDashboard = () => {
   const [chartData, setChartData] = useState<{date: string, sales: number}[]>([]);
   const [topProducts, setTopProducts] = useState<{name: string, quantity: number}[]>([]);
   const [loading, setLoading] = useState(true);
+  const profileIdRef = useRef<string | null>(null);
+  const gpsErrorShownRef = useRef(false);
   const [hasActiveShift, setHasActiveShift] = useState(false);
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [gpsStatus, setGpsStatus] = useState<'active' | 'inactive' | 'error'>('inactive');
@@ -203,59 +205,12 @@ const MobileRiderDashboard = () => {
     };
   }, [user]);
 
-  // Request GPS permission on mount
+  // Silent GPS permission check on mount (no duplicate position requests)
   useEffect(() => {
-    const requestGPSPermission = async () => {
-      if (!navigator.geolocation) {
-        toast.error('Perangkat Anda tidak mendukung GPS');
-        setGpsStatus('error');
-        return;
-      }
-
-      try {
-        const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-        
-        if (result.state === 'denied') {
-          toast.error('GPS diblokir. Silakan aktifkan GPS di pengaturan browser');
-          setGpsStatus('error');
-        } else {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              setRiderLocation({
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              });
-              setGpsStatus('active');
-              toast.success('GPS aktif');
-            },
-            (error) => {
-              console.error('GPS error:', error);
-              toast.error('Tidak dapat mengakses GPS');
-              setGpsStatus('error');
-            },
-            { enableHighAccuracy: true }
-          );
-        }
-      } catch (err) {
-        // Browser doesn't support permissions API, request directly
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setRiderLocation({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-            setGpsStatus('active');
-          },
-          (error) => {
-            console.error('GPS error:', error);
-            toast.error('Tidak dapat mengakses GPS');
-            setGpsStatus('error');
-          }
-        );
-      }
-    };
-
-    requestGPSPermission();
+    if (!navigator.geolocation) { setGpsStatus('error'); return; }
+    (navigator as any).permissions?.query({ name: 'geolocation' as PermissionName })
+      .then((r: PermissionStatus) => { if (r.state === 'denied') setGpsStatus('error'); })
+      .catch(() => {});
   }, []);
 
   const startLocationTracking = () => {
@@ -280,7 +235,7 @@ const MobileRiderDashboard = () => {
       },
       (error) => {
         console.error('Error watching position:', error);
-        setGpsStatus('error');
+        if (error.code === error.PERMISSION_DENIED) setGpsStatus('error');
         
         let errorMessage = 'Gagal mengakses GPS';
         switch (error.code) {
@@ -294,12 +249,15 @@ const MobileRiderDashboard = () => {
             errorMessage = 'GPS timeout.';
             break;
         }
-        toast.error(errorMessage);
+        if (error.code === error.PERMISSION_DENIED && !gpsErrorShownRef.current) {
+          gpsErrorShownRef.current = true;
+          toast.error(errorMessage);
+        }
       },
       {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 5000
+        enableHighAccuracy: false,
+        maximumAge: 30000,
+        timeout: 20000
       }
     );
 
@@ -327,20 +285,21 @@ const MobileRiderDashboard = () => {
         console.error('Error getting location:', error);
       },
       {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 30000
       }
     );
   };
 
   const updateLocationToServer = async (coords: GeolocationCoordinates) => {
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
+      let profile: { id: string } | null = profileIdRef.current ? { id: profileIdRef.current } : null;
+      if (!profile) {
+        const { data } = await supabase.from('profiles').select('id').eq('user_id', user?.id).single();
+        profile = data;
+        if (data?.id) profileIdRef.current = data.id;
+      }
 
       if (!profile) return;
 
@@ -386,49 +345,31 @@ const MobileRiderDashboard = () => {
 
       const riderId = profile?.id;
 
-      // Fetch total stock
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from('inventory')
-        .select('stock_quantity')
-        .eq('rider_id', riderId);
-
-      if (inventoryError) {
-        console.error('Error fetching inventory:', inventoryError);
-        toast.error('Gagal memuat data inventori.');
-        return;
-      }
+      if (riderId) profileIdRef.current = riderId;
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const [invRes, salesRes, weekRes] = await Promise.all([
+        supabase.from('inventory').select('stock_quantity').eq('rider_id', riderId),
+        supabase.from('transactions').select('final_amount, transaction_date')
+          .eq('rider_id', riderId).eq('is_voided', false)
+          .gte('transaction_date', `${today}T00:00:00+07:00`)
+          .lte('transaction_date', `${today}T23:59:59+07:00`),
+        supabase.from('transactions').select('id, final_amount, transaction_date')
+          .eq('rider_id', riderId).eq('is_voided', false)
+          .gte('transaction_date', thirtyDaysAgo.toISOString())
+          .order('transaction_date', { ascending: true }),
+      ]);
+      const { data: inventoryData, error: inventoryError } = invRes;
+      const { data: salesData, error: salesError } = salesRes;
+      const { data: weekData } = weekRes;
+      if (inventoryError) console.error('Error fetching inventory:', inventoryError);
+      if (salesError) console.error('Error fetching sales:', salesError);
 
       const totalStock = inventoryData?.reduce((sum, item) => sum + (item.stock_quantity || 0), 0) || 0;
 
-      // Fetch today's sales with Jakarta timezone
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
-      const { data: salesData, error: salesError } = await supabase
-        .from('transactions')
-        .select('final_amount, transaction_date')
-        .eq('rider_id', riderId)
-        .eq('is_voided', false)
-        .gte('transaction_date', `${today}T00:00:00+07:00`)
-        .lte('transaction_date', `${today}T23:59:59+07:00`);
-
-      if (salesError) {
-        console.error('Error fetching sales:', salesError);
-        toast.error('Gagal memuat data penjualan.');
-        return;
-      }
-
       const todaySales = salesData?.reduce((sum, order) => sum + (Number(order.final_amount) || 0), 0) || 0;
       const todayTransactions = salesData?.length || 0;
-
-      // Fetch 30 days transaction data for chart
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const { data: weekData } = await supabase
-        .from('transactions')
-        .select('id, final_amount, transaction_date')
-        .eq('rider_id', riderId)
-        .eq('is_voided', false)
-        .gte('transaction_date', thirtyDaysAgo.toISOString())
-        .order('transaction_date', { ascending: true });
 
       // Group by date for chart
       const chartDataMap: Record<string, number> = {};
@@ -1083,16 +1024,21 @@ const MobileRiderDashboard = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Activity className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto p-4 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border ${
+          gpsStatus === 'active' ? 'bg-primary/10 text-primary border-primary/20'
+          : gpsStatus === 'error' ? 'bg-destructive/10 text-destructive border-destructive/20'
+          : 'bg-muted text-muted-foreground border-border'}`}>
+          <span className={`h-2 w-2 rounded-full ${gpsStatus === 'active' ? 'bg-primary' : gpsStatus === 'error' ? 'bg-destructive' : 'bg-muted-foreground animate-pulse'}`} />
+          {gpsStatus === 'active' ? 'GPS Terhubung' : gpsStatus === 'error' ? 'GPS Nonaktif' : 'Mencari Sinyal GPS...'}
+          {gpsStatus === 'error' && (
+            <button type="button" className="ml-1 underline" onClick={() => { gpsErrorShownRef.current = false; stopLocationTracking(); startLocationTracking(); }}>Aktifkan</button>
+          )}
+        </div>
+        {loading && <span className="text-xs text-muted-foreground animate-pulse">Memuat data...</span>}
+      </div>
       {/* Sound Enable Banner */}
       {showSoundBanner && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
