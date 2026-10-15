@@ -230,7 +230,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
           : await db.from("rider_stock_request_items").insert({ request_id: r.id, product_id: l.product_id, requested_qty: 0, approved_qty: total });
         if (res.error) { setBusy(""); toast.error(res.error.message); return; }
       }
-      await db.from("rider_stock_requests").update({ status: "adjusted", hub_notes: "Termasuk sisa stok shift sebelumnya" }).eq("id", r.id);
+      await db.from("rider_stock_requests").update({ status: "adjusted" }).eq("id", r.id);
     }
     const { error } = await db.rpc("fulfill_rider_stock_request", { _request_id: r.id });
     setBusy("");
