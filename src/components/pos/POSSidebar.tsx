@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ShoppingCart, Monitor, Tv, LayoutDashboard, Package, Users, BarChart3, Tag, Gift,
-  Settings, LogOut, Banknote, DoorClosed, Boxes, Headphones, UserCog, Receipt, Printer, FileBarChart,
+  Settings, LogOut, Banknote, DoorClosed, Boxes, Headphones, UserCog, Receipt, Printer, FileBarChart, Truck,
 } from 'lucide-react';
 import { FlowMark, FlowLogo } from '@/components/flow/FlowLogo';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ const levelOf = (role?: string): Level => {
   return 'kasir';
 };
 
-interface Item { label: string; icon: any; path?: string; action?: () => void; levels: Level[]; module?: string; }
+interface Item { label: string; icon: any; path?: string; action?: () => void; levels: Level[]; module?: string; badge?: boolean; }
 
 interface Props {
   collapsed: boolean;
@@ -32,9 +32,11 @@ interface Props {
   onPrinterSettings?: () => void;
   onXReport?: () => void;
   onLogout: () => void;
+  onRiderOrders?: () => void;
+  riderCount?: number;
 }
 
-export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMovement, onCloseShift, onPrinterSettings, onXReport, onLogout }: Props) => {
+export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMovement, onCloseShift, onPrinterSettings, onXReport, onLogout, onRiderOrders, riderCount = 0 }: Props) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const lvl = levelOf(role);
@@ -50,6 +52,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   const items = ([
     { label: 'Dashboard Kasir', icon: BarChart3, path: '/pos/dashboard', levels: all },
     { label: 'Kasir (POS)', icon: ShoppingCart, path: '/pos', levels: all },
+    ...(onRiderOrders ? [{ label: 'Pesanan Rider', icon: Truck, action: onRiderOrders, levels: all, badge: true }] : []),
     { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all, module: 'kds' },
     { label: 'Layar Antrean TV', icon: Tv, path: '/pos/queue', levels: all, module: 'queue' },
     { label: 'Kas Masuk/Keluar', icon: Banknote, action: onCashMovement, levels: all },
@@ -104,8 +107,12 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
                 active ? 'glass-pill-active' : 'text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground',
               )}
             >
-              <Icon className="h-[18px] w-[18px] shrink-0" />
-              {!collapsed && <span className="truncate">{it.label}</span>}
+              <span className="relative shrink-0">
+                <Icon className="h-[18px] w-[18px]" />
+                {it.badge && riderCount > 0 && collapsed && <span className="absolute -top-2 -right-2 h-4 min-w-4 px-0.5 rounded-full bg-primary-foreground text-primary text-[10px] font-bold grid place-items-center animate-pulse">{riderCount}</span>}
+              </span>
+              {!collapsed && <span className="truncate flex-1 text-left">{it.label}</span>}
+              {!collapsed && it.badge && riderCount > 0 && <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary-foreground text-primary text-[11px] font-bold grid place-items-center animate-pulse">{riderCount}</span>}
             </button>
           );
         })}
