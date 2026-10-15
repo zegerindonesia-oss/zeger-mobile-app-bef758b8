@@ -1,7 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { playAlertBeep, ensureUnlockListeners } from "@/lib/audio";
+import { ensureUnlockListeners } from "@/lib/audio";
+import jingleAsset from "@/assets/notification-jingle.mp3.asset.json";
+
+let jingle: HTMLAudioElement | null = null;
+export function stopRiderJingle() {
+  if (jingle) { jingle.pause(); jingle.currentTime = 0; }
+  toast.dismiss("rider-jingle");
+}
+function playRiderJingle() {
+  if (!jingle) { jingle = new Audio(jingleAsset.url); jingle.loop = true; }
+  jingle.currentTime = 0;
+  jingle.play().catch(() => {});
+  const stop = () => { stopRiderJingle(); window.removeEventListener("pointerdown", stop, true); window.removeEventListener("keydown", stop, true); };
+  setTimeout(() => { window.addEventListener("pointerdown", stop, true); window.addEventListener("keydown", stop, true); }, 300);
+}
 
 export interface PendingRiderRequest {
   id: string;
@@ -46,11 +60,12 @@ export function useRiderRequestAlerts(branchId?: string | null, onOpen?: () => v
     const fresh = list.filter((r) => !seen.has(r.id));
     list.forEach((r) => seen.add(r.id));
     if (!first.current && fresh.length) {
-      try { playAlertBeep({ times: 4, freq: 1000, intervalMs: 700 }); } catch { /* ignore */ }
+      try { playRiderJingle(); } catch { /* ignore */ }
       fresh.forEach((r) =>
         toast.success("🔔 Order Stok Baru dari Rider", {
           description: `${r.rider_name} • ${r.item_count} item`,
           duration: 20000,
+          onDismiss: stopRiderJingle,
           action: { label: "Lihat", onClick: () => (openRef.current ? openRef.current() : (window.location.href = "/inventory/rider-orders")) },
         })
       );
