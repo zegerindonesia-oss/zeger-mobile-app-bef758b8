@@ -59,7 +59,7 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
 
   return (
     <Dialog>
-      <DialogTrigger asChild><Button size="sm" variant="outline" disabled={!total}><Tag className="mr-1 h-4 w-4" />Cetak Stiker ({total})</Button></DialogTrigger>
+      <DialogTrigger asChild><Button size="sm" className="bg-red-600 text-white hover:bg-red-700" disabled={!total}><Tag className="mr-1 h-4 w-4" />Cetak Stiker ({total})</Button></DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader><DialogTitle>Stiker Cup — {rider}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-2 gap-2">

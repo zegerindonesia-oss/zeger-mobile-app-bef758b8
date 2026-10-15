@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CupStickerButton } from "./CupStickerPrint";
-import { Bell, Minus, Plus, Send, Trash2, Truck } from "lucide-react";
+import { Bell, History, Minus, Plus, Send, Trash2, Truck } from "lucide-react";
 
 const db = supabase as any;
 const STATUS: Record<string, { label: string; v: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -188,9 +188,50 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
     await db.from("rider_stock_request_items").update({ approved_qty: 0 }).eq("id", id);
     await db.from("rider_stock_requests").update({ status: "adjusted" }).eq("id", r.id); load();
   };
+  // Sisa stok shift sebelumnya: per request -> { product_id: { qty, name } }
+  const [leftover, setLeftover] = useState<Record<string, Record<string, { qty: number; name: string; product: any }>>>({});
+  const loadLeftover = async (r: any) => {
+    const { data, error } = await db.from("stock_movements")
+      .select("product_id, quantity, created_at, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
+      .eq("rider_id", r.rider_id).eq("movement_type", "return")
+      .lt("created_at", r.created_at).order("created_at", { ascending: false }).limit(300);
+    if (error) { toast.error(error.message); return; }
+    if (!data?.length) { toast.info("Tidak ada sisa stok shift sebelumnya"); setLeftover((s) => ({ ...s, [r.id]: {} })); return; }
+    const day = (d: string) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+    const lastDay = day(data[0].created_at);
+    const map: Record<string, { qty: number; name: string; product: any }> = {};
+    for (const m of data) if (day(m.created_at) === lastDay) {
+      const cur = map[m.product_id] || { qty: 0, name: m.products?.name, product: m.products };
+      cur.qty += Number(m.quantity || 0); map[m.product_id] = cur;
+    }
+    setLeftover((s) => ({ ...s, [r.id]: map }));
+    toast.success(`Sisa stok shift ${lastDay} ditambahkan`);
+  };
+  const lines = (r: any) => {
+    const lo = leftover[r.id] || {};
+    const out: { key: string; product_id: string; name: string; product: any; order: number; sisa: number; item?: any }[] = r.items.map((i: any) => ({
+      key: i.id, product_id: i.product_id, name: i.product?.name, product: i.product, item: i,
+      order: Number(edit[i.id] ?? i.approved_qty ?? i.requested_qty), sisa: lo[i.product_id]?.qty || 0,
+    }));
+    for (const [pid, v] of Object.entries(lo)) if (!out.some((l) => l.product_id === pid)) out.push({ key: pid, product_id: pid, name: v.name, product: v.product, order: 0, sisa: v.qty });
+    return out;
+  };
+
   const fulfill = async (r: any) => {
     setBusy(r.id);
     if (Object.keys(edit).length) await saveQty(r);
+    const lo = leftover[r.id];
+    if (lo && Object.keys(lo).length) {
+      for (const l of lines(r)) {
+        if (!l.sisa) continue;
+        const total = l.order + l.sisa;
+        const res = l.item
+          ? await db.from("rider_stock_request_items").update({ approved_qty: total }).eq("id", l.item.id)
+          : await db.from("rider_stock_request_items").insert({ request_id: r.id, product_id: l.product_id, requested_qty: 0, approved_qty: total });
+        if (res.error) { setBusy(""); toast.error(res.error.message); return; }
+      }
+      await db.from("rider_stock_requests").update({ status: "adjusted" }).eq("id", r.id);
+    }
     const { error } = await db.rpc("fulfill_rider_stock_request", { _request_id: r.id });
     setBusy("");
     if (error) toast.error(error.message); else { toast.success("Stok dikirim ke rider"); load(); }
@@ -218,20 +259,33 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
                 <Badge variant={STATUS[r.status]?.v}>{STATUS[r.status]?.label}</Badge>
               </div>
               {r.notes && <p className="text-xs">Catatan rider: {r.notes}</p>}
-              {r.items.map((i: any) => (
-                <div key={i.id} className="flex items-center justify-between gap-2 text-sm">
-                  <span className={i.approved_qty === 0 ? "line-through text-muted-foreground" : ""}>{i.product?.name} <span className="text-xs text-muted-foreground">(minta {i.requested_qty})</span></span>
-                  {editable ? (
-                    <div className="flex items-center gap-1">
-                      <Input type="number" min={0} className="h-8 w-16" value={edit[i.id] ?? i.approved_qty ?? i.requested_qty} onChange={(e) => setEdit((s) => ({ ...s, [i.id]: Math.max(0, Number(e.target.value)) }))} />
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeItem(r, i.id)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  ) : <span>{i.approved_qty ?? i.requested_qty}</span>}
-                </div>
-              ))}
+              {editable && (
+                <Button size="sm" variant="outline" className="w-full border-dashed" onClick={() => loadLeftover(r)}>
+                  <History className="mr-1 h-4 w-4" />Tambahkan Sisa Stok Shift Sebelumnya
+                </Button>
+              )}
+              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 gap-y-1 text-sm">
+                <span className="text-xs font-semibold text-muted-foreground">Menu</span>
+                <span className="text-xs font-semibold text-muted-foreground text-center">Sisa</span>
+                <span className="text-xs font-semibold text-muted-foreground text-center">Order</span>
+                <span className="text-xs font-semibold text-muted-foreground text-center">Total Kirim</span>
+                {lines(r).map((l) => (
+                  <div key={l.key} className="contents">
+                    <span className={l.item?.approved_qty === 0 && !l.sisa ? "line-through text-muted-foreground" : ""}>{l.name} {l.item && <span className="text-xs text-muted-foreground">(minta {l.item.requested_qty})</span>}</span>
+                    <span className="text-center">{l.sisa || "-"}</span>
+                    {editable && l.item ? (
+                      <div className="flex items-center gap-1">
+                        <Input type="number" min={0} className="h-8 w-16" value={edit[l.item.id] ?? l.item.approved_qty ?? l.item.requested_qty} onChange={(e) => setEdit((s) => ({ ...s, [l.item.id]: Math.max(0, Number(e.target.value)) }))} />
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeItem(r, l.item.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    ) : <span className="text-center">{l.order}</span>}
+                    <span className="text-center font-bold">{l.order + l.sisa}</span>
+                  </div>
+                ))}
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
                 <span className="text-sm">Total HPP Menu: <b>{rp(orderHpp(r))}</b><span className="block text-xs text-muted-foreground">Nilai transfer (harga CK, internal): {rp(r.status === "transferred" ? r.total_transfer_value : total)}</span></span>
-                <CupStickerButton rider={r.rider?.full_name || "Rider"} items={r.items.map((i: any) => ({ name: i.product?.name, short_name: i.product?.short_name, price: i.product?.price, shelf_life_days: i.product?.shelf_life_days, qty: Number(edit[i.id] ?? i.approved_qty ?? i.requested_qty) }))} />
+                <CupStickerButton rider={r.rider?.full_name || "Rider"} items={lines(r).map((l) => ({ name: l.product?.name || l.name, short_name: l.product?.short_name, price: l.product?.price, shelf_life_days: l.product?.shelf_life_days, qty: l.order + l.sisa }))} />
                 {editable && (
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={async () => { await db.from("rider_stock_requests").update({ status: "rejected" }).eq("id", r.id); load(); }}>Tolak</Button>

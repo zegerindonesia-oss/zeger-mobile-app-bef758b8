@@ -51,7 +51,7 @@ export function useRiderRequestAlerts(branchId?: string | null, onOpen?: () => v
         toast.success("🔔 Order Stok Baru dari Rider", {
           description: `${r.rider_name} • ${r.item_count} item`,
           duration: 20000,
-          action: { label: "Lihat", onClick: () => (openRef.current ? openRef.current() : (window.location.href = "/stock-transfer")) },
+          action: { label: "Lihat", onClick: () => (openRef.current ? openRef.current() : (window.location.href = "/inventory/rider-orders")) },
         })
       );
     }
