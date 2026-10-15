@@ -815,6 +815,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                     <TableCell className={`text-right ${totalNilai < 0 ? 'text-red-600' : totalNilai > 0 ? 'text-green-600' : ''}`}>
                                       {totalNilai < 0 ? '-' : ''}Rp {Math.abs(totalNilai).toLocaleString('id-ID')}
                                     </TableCell>
+                                    <TableCell />
                                   </TableRow>
                                 );
                               })()}
