@@ -5281,6 +5281,10 @@ export type Database = {
         Returns: number
       }
       can_access_rider_request: { Args: { _req: string }; Returns: boolean }
+      can_access_rider_row: {
+        Args: { _hub: string; _rider: string }
+        Returns: boolean
+      }
       can_manage_role: {
         Args: {
           manager_role: Database["public"]["Enums"]["user_role"]
@@ -5567,6 +5571,7 @@ export type Database = {
       }
       is_ho_user: { Args: never; Returns: boolean }
       is_material_manager: { Args: never; Returns: boolean }
+      is_own_profile: { Args: { _pid: string }; Returns: boolean }
       is_platform_admin: { Args: { _uid: string }; Returns: boolean }
       is_rider_role: { Args: never; Returns: boolean }
       is_staff_user: { Args: never; Returns: boolean }
