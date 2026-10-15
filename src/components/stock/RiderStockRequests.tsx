@@ -19,11 +19,11 @@ const STATUS: Record<string, { label: string; v: "default" | "secondary" | "dest
 };
 const rp = (n: number) => "Rp" + Math.round(n || 0).toLocaleString("id-ID");
 
-function useRequests(filter: Record<string, string>, deps: any[]) {
+function useRequests(filter: Record<string, string>, deps: any[], productFields = "name, cost_price") {
   const [rows, setRows] = useState<any[]>([]);
   const load = async () => {
     let q = db.from("rider_stock_requests")
-      .select("*, rider:profiles!rider_stock_requests_rider_id_fkey(full_name), items:rider_stock_request_items(*, product:products(name, ck_price, cost_price))")
+      .select(`*, rider:profiles!rider_stock_requests_rider_id_fkey(full_name), items:rider_stock_request_items(*, product:products(${productFields}))`)
       .order("created_at", { ascending: false }).limit(50);
     Object.entries(filter).forEach(([k, v]) => (q = q.eq(k, v)));
     const { data, error } = await q;
@@ -43,6 +43,15 @@ function useRequests(filter: Record<string, string>, deps: any[]) {
   return { rows, load };
 }
 
+const itemQty = (i: any) => Number(i.approved_qty ?? i.requested_qty ?? 0);
+const orderQty = (r: any) => (r.items || []).reduce((s: number, i: any) => s + itemQty(i), 0);
+const orderHpp = (r: any) => (r.items || []).reduce((s: number, i: any) => s + itemQty(i) * Number(i.product?.cost_price || 0), 0);
+function groupByDay(rows: any[]): [string, any[]][] {
+  const m = new Map<string, any[]>();
+  rows.forEach((r) => { const k = new Date(r.created_at).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short", year: "numeric" }); m.set(k, [...(m.get(k) || []), r]); });
+  return Array.from(m.entries());
+}
+
 /** Rider (On The Wheels): order menu jadi ke Branch Hub / Central Kitchen */
 export function RiderStockRequestForm() {
   const { userProfile } = useAuth() as any;
@@ -53,14 +62,14 @@ export function RiderStockRequestForm() {
   const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
-  const { rows, load } = useRequests({ rider_id: userProfile?.id }, [userProfile?.id]);
+  const { rows, load } = useRequests({ rider_id: userProfile?.id }, [userProfile?.id], "name, cost_price");
 
   useEffect(() => {
     db.from("branches").select("id,name,branch_type").eq("branch_type", "hub").eq("is_active", true).then(({ data }: any) => {
       setHubs(data || []);
       setHubId(userProfile?.branch_id && data?.some((b: any) => b.id === userProfile.branch_id) ? userProfile.branch_id : data?.[0]?.id || "");
     });
-    db.from("products").select("id,name,category,ck_price").eq("is_active", true).order("name").then(({ data }: any) => setProducts(data || []));
+    db.from("products").select("id,name,category,cost_price").eq("is_active", true).order("name").then(({ data }: any) => setProducts(data || []));
   }, [userProfile?.branch_id]);
 
   const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort() as string[], [products]);
@@ -105,7 +114,7 @@ export function RiderStockRequestForm() {
           <div className="max-h-80 space-y-1 overflow-y-auto">
             {list.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-lg border p-2">
-                <div className="min-w-0"><p className="truncate text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category}</p></div>
+                <div className="min-w-0"><p className="truncate text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category} • HPP {rp(Number(p.cost_price))}/cup</p>{(qty[p.id] || 0) > 0 && <p className="text-xs font-semibold text-primary">Subtotal HPP {rp((qty[p.id] || 0) * Number(p.cost_price || 0))}</p>}</div>
                 <div className="flex items-center gap-2">
                   <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => set(p.id, -1)}><Minus className="h-4 w-4" /></Button>
                   <span className="w-6 text-center text-sm font-semibold">{qty[p.id] || 0}</span>
@@ -115,21 +124,45 @@ export function RiderStockRequestForm() {
             ))}
           </div>
           <Textarea placeholder="Catatan (opsional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
-          <Button className="w-full" disabled={busy || !picked.length} onClick={submit}><Send className="mr-2 h-4 w-4" />Kirim Order ({picked.reduce((s, [, q]) => s + q, 0)} item)</Button>
+          <Button className="w-full" disabled={busy || !picked.length} onClick={submit}><Send className="mr-2 h-4 w-4" />Kirim Order ({picked.reduce((s, [, q]) => s + q, 0)} item • Total HPP {rp(picked.reduce((s, [id, q]) => s + q * Number(products.find((p) => p.id === id)?.cost_price || 0), 0))})</Button>
         </CardContent>
       </Card>
       <h3 className="font-semibold">Riwayat Order</h3>
-      {rows.map((r) => (
-        <Card key={r.id}><CardContent className="space-y-2 p-3">
-          <div className="flex items-center justify-between"><span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("id-ID")}</span><Badge variant={STATUS[r.status]?.v}>{STATUS[r.status]?.label || r.status}</Badge></div>
-          {r.items.map((i: any) => (
-            <div key={i.id} className="flex justify-between text-sm"><span>{i.product?.name}</span>
-              <span>{i.approved_qty != null && i.approved_qty !== i.requested_qty ? <><s className="text-muted-foreground">{i.requested_qty}</s> → {i.approved_qty}</> : i.requested_qty}</span></div>
-          ))}
-          {r.hub_notes && <p className="text-xs text-muted-foreground">Hub: {r.hub_notes}</p>}
-          {r.status === "pending" && <Button size="sm" variant="outline" onClick={async () => { await db.from("rider_stock_requests").update({ status: "cancelled" }).eq("id", r.id); load(); }}>Batalkan</Button>}
-        </CardContent></Card>
-      ))}
+      {groupByDay(rows).map(([day, list]) => {
+        const valid = list.filter((r: any) => !["cancelled", "rejected"].includes(r.status));
+        const dq = valid.reduce((s: number, r: any) => s + orderQty(r), 0);
+        const dh = valid.reduce((s: number, r: any) => s + orderHpp(r), 0);
+        return (
+          <div key={day} className="space-y-2">
+            <div className="rounded-lg bg-muted p-2 text-xs">
+              <p className="font-semibold">{day}</p>
+              <p>Total order: {valid.length} kali • {dq} cup • Total HPP {rp(dh)}</p>
+            </div>
+            {[...list].reverse().map((r: any, idx: number) => (
+              <Card key={r.id}><CardContent className="space-y-2 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">Order #{idx + 1} — {new Date(r.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB</span>
+                  <Badge variant={STATUS[r.status]?.v}>{STATUS[r.status]?.label || r.status}</Badge>
+                </div>
+                {r.items.map((i: any) => {
+                  const q = itemQty(i); const h = Number(i.product?.cost_price || 0);
+                  return (
+                    <div key={i.id} className="flex justify-between gap-2 text-sm">
+                      <span className={q === 0 ? "line-through text-muted-foreground" : ""}>{i.product?.name}
+                        <span className="block text-xs text-muted-foreground">{i.approved_qty != null && i.approved_qty !== i.requested_qty ? <><s>{i.requested_qty}</s> → </> : null}{q} × {rp(h)}</span>
+                      </span>
+                      <span className="font-medium">{rp(q * h)}</span>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between border-t pt-2 text-sm"><span>{orderQty(r)} cup</span><b>Total HPP {rp(orderHpp(r))}</b></div>
+                {r.hub_notes && <p className="text-xs text-muted-foreground">Hub: {r.hub_notes}</p>}
+                {r.status === "pending" && <Button size="sm" variant="outline" onClick={async () => { await db.from("rider_stock_requests").update({ status: "cancelled" }).eq("id", r.id); load(); }}>Batalkan</Button>}
+              </CardContent></Card>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -139,7 +172,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
   const { userProfile } = useAuth() as any;
   const hub = branchId || userProfile?.branch_id;
   const [tab, setTab] = useState<"open" | "done">("open");
-  const { rows, load } = useRequests({ hub_branch_id: hub }, [hub]);
+  const { rows, load } = useRequests({ hub_branch_id: hub }, [hub], "name, ck_price, cost_price");
   const [edit, setEdit] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState("");
   const open = rows.filter((r) => ["pending", "adjusted"].includes(r.status));
@@ -196,7 +229,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
                 </div>
               ))}
               <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
-                <span className="text-sm">Nilai transfer (harga CK): <b>{rp(r.status === "transferred" ? r.total_transfer_value : total)}</b></span>
+                <span className="text-sm">Total HPP Menu: <b>{rp(orderHpp(r))}</b><span className="block text-xs text-muted-foreground">Nilai transfer (harga CK, internal): {rp(r.status === "transferred" ? r.total_transfer_value : total)}</span></span>
                 {editable && (
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={async () => { await db.from("rider_stock_requests").update({ status: "rejected" }).eq("id", r.id); load(); }}>Tolak</Button>
