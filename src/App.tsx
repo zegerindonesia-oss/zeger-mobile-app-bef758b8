@@ -39,6 +39,7 @@ import Riders from "./pages/Riders";
 import Inventory from "./pages/Inventory";
 import AdminUsers from "./pages/AdminUsers";
 import StockTransfer from "./pages/StockTransfer";
+import RiderOrders from "./pages/inventory/RiderOrders";
 import CustomerManager from "./pages/CustomerManager";
 import RiderPerformance from "./pages/RiderPerformance";
 import { default as InventoryBranchTransfer } from "./pages/inventory/BranchTransfer";
@@ -407,6 +408,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager']}>
                 <ModernLayout>
                   <AdminUsers />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/inventory/rider-orders" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager']}>
+                <ModernLayout>
+                  <RiderOrders />
                 </ModernLayout>
               </RoleBasedRoute>
             } />

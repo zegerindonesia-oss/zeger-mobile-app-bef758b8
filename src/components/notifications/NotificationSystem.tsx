@@ -208,7 +208,7 @@ export const NotificationSystem = () => {
         <DropdownMenuSeparator />
         {rider.pending.map((r) => (
           <DropdownMenuItem key={r.id} className="p-3 cursor-pointer bg-destructive/5 border-l-4 border-l-destructive"
-            onClick={() => (window.location.href = '/stock-transfer')}>
+            onClick={() => (window.location.href = '/inventory/rider-orders')}>
             <div className="flex items-start gap-3 w-full">
               <Package className="h-4 w-4 text-destructive" />
               <div className="flex-1 min-w-0">
