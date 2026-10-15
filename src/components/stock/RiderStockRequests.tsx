@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { CupStickerButton } from "./CupStickerPrint";
 import { Bell, Minus, Plus, Send, Trash2, Truck } from "lucide-react";
 
 const db = supabase as any;
@@ -172,7 +173,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
   const { userProfile } = useAuth() as any;
   const hub = branchId || userProfile?.branch_id;
   const [tab, setTab] = useState<"open" | "done">("open");
-  const { rows, load } = useRequests({ hub_branch_id: hub }, [hub], "name, ck_price, cost_price");
+  const { rows, load } = useRequests({ hub_branch_id: hub }, [hub], "name, ck_price, cost_price, price, short_name, shelf_life_days");
   const [edit, setEdit] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState("");
   const open = rows.filter((r) => ["pending", "adjusted"].includes(r.status));
@@ -230,6 +231,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
               ))}
               <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
                 <span className="text-sm">Total HPP Menu: <b>{rp(orderHpp(r))}</b><span className="block text-xs text-muted-foreground">Nilai transfer (harga CK, internal): {rp(r.status === "transferred" ? r.total_transfer_value : total)}</span></span>
+                <CupStickerButton rider={r.rider?.full_name || "Rider"} items={r.items.map((i: any) => ({ name: i.product?.name, short_name: i.product?.short_name, price: i.product?.price, shelf_life_days: i.product?.shelf_life_days, qty: Number(edit[i.id] ?? i.approved_qty ?? i.requested_qty) }))} />
                 {editable && (
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={async () => { await db.from("rider_stock_requests").update({ status: "rejected" }).eq("id", r.id); load(); }}>Tolak</Button>
