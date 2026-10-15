@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, FileText, Truck, Wallet, Users, Ruler, Network, PackageCheck, MessageCircle, Mail } from 'lucide-react';
+import { Plus, Trash2, FileText, Truck, Wallet, Users, Ruler, Network, PackageCheck, MessageCircle, Mail, Camera, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { waPhone } from '@/pages/invoicing/SalesInvoicing';
 
 const db = supabase as any;
@@ -249,11 +249,13 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
               const opts = unitOptions(m, units);
               return (
                 <TableRow key={i}>
-                  <TableCell className="min-w-48">
-                    <Select value={it.material_id} onValueChange={(v) => { const mm = materials.find((x: any) => x.id === v); set(i, { material_id: v, unit_name: mm?.unit, factor: 1, unit_price: mm?.cost_per_unit || '' }); }}>
-                      <SelectTrigger><SelectValue placeholder="Pilih bahan" /></SelectTrigger>
+                  <TableCell className="min-w-48 space-y-1">
+                    {it.scanned_name && <div className="text-xs text-muted-foreground">Nota: <span className="font-medium text-foreground">{it.scanned_name}</span>{it.category ? <Badge variant="outline" className="ml-1">{it.category}</Badge> : null}</div>}
+                    <Select value={it.material_id} onValueChange={(v) => { const mm = materials.find((x: any) => x.id === v); set(i, { material_id: v, unit_name: mm?.unit, factor: 1, unit_price: it.scanned_name ? it.unit_price : mm?.cost_per_unit || '' }); }}>
+                      <SelectTrigger className={it.scanned_name && !it.material_id ? 'border-destructive' : ''}><SelectValue placeholder="Pilih bahan" /></SelectTrigger>
                       <SelectContent>{materials.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent>
                     </Select>
+                    {it.scanned_name && !it.material_id && <Button size="sm" variant="link" className="h-auto p-0 text-xs" onClick={() => createMaterial(i)}>+ Jadikan bahan baru "{it.scanned_name}"</Button>}
                   </TableCell>
                   <TableCell><Input type="number" className="w-24" value={it.quantity} onChange={(e) => set(i, { quantity: e.target.value })} /></TableCell>
                   <TableCell>
@@ -272,7 +274,9 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
         </Table>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="outline" onClick={add}><Plus className="h-4 w-4 mr-1" />Tambah Bahan</Button>
-          <div className="flex items-center gap-3"><span className="font-bold">Total {rp(total)}</span><Button onClick={submit}><FileText className="h-4 w-4 mr-1" />Kirim PO</Button></div>
+          <div className="flex flex-wrap items-center gap-2"><span className="font-bold">Total {rp(total)}</span>
+            <Button variant="outline" onClick={() => submit(false)}><FileText className="h-4 w-4 mr-1" />Simpan sebagai PO</Button>
+            <Button onClick={() => submit(true)}><PackageCheck className="h-4 w-4 mr-1" />Barang Diterima & Buat Invoice</Button></div>
         </div>
       </CardContent>
     </Card>
