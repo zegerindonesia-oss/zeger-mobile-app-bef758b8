@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import POS from "./pages/POS";
 import POSMain from "./pages/pos/POSMain";
 import POSKitchen from "./pages/pos/POSKitchen";
+import POSRiderOrders from "./pages/pos/POSRiderOrders";
 import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
 import CxLab from "./pages/dev/CxLab";
