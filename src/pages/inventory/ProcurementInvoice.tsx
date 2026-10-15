@@ -101,32 +101,138 @@ export default function ProcurementInvoice({ tab = 'new' }: { tab?: string }) {
 
 const unitOptions = (m: any, units: any[]) => m ? [{ unit_name: m.unit, factor: 1 }, ...units.filter((u) => u.material_id === m.id && u.use_for_purchase)] : [];
 
+const fileToBase64 = (file: File) => new Promise<string>((res, rej) => {
+  const r = new FileReader();
+  r.onload = () => res(String(r.result).split(',')[1] || '');
+  r.onerror = rej;
+  r.readAsDataURL(file);
+});
+const shrinkImage = async (file: File): Promise<{ data: string; mime: string }> => {
+  if (file.type === 'application/pdf' || !file.type.startsWith('image/')) return { data: await fileToBase64(file), mime: file.type || 'application/pdf' };
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const max = 2000; const s = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = img.width * s; c.height = img.height * s;
+    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    return { data: c.toDataURL('image/jpeg', 0.85).split(',')[1], mime: 'image/jpeg' };
+  } finally { URL.revokeObjectURL(url); }
+};
+
 function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
   const [supplierId, setSupplierId] = useState('');
   const [expected, setExpected] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<any[]>([]);
+  const [scan, setScan] = useState<{ preview: string; loading: boolean; invoice_number: string; invoice_date: string; due_date: string; supplier_name: string; total: number | null; file?: File } | null>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
   const add = () => setItems([...items, { material_id: '', quantity: '', unit_name: '', factor: 1, unit_price: '' }]);
   const set = (i: number, patch: any) => setItems(items.map((it, k) => (k === i ? { ...it, ...patch } : it)));
   const total = items.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unit_price || 0), 0);
 
-  const submit = async () => {
+  const onFile = async (file?: File) => {
+    if (!file) return;
+    setScan({ preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '', loading: true, invoice_number: '', invoice_date: today(), due_date: '', supplier_name: '', total: null, file });
+    try {
+      const { data: b64, mime } = await shrinkImage(file);
+      const { data, error } = await supabase.functions.invoke('parse-purchase-invoice', {
+        body: { image: b64, mime, materials: materials.map((m: any) => ({ id: m.id, name: m.name, unit: m.unit, category: m.category })), suppliers: suppliers.map((s: any) => ({ id: s.id, name: s.name })) },
+      });
+      if (error || data?.error) {
+        let msg = data?.error || error?.message;
+        try { msg = (await (error as any)?.context?.json())?.error || msg; } catch { /* */ }
+        throw new Error(msg || 'Gagal membaca nota');
+      }
+      const sup = suppliers.find((s: any) => s.id === data.supplier_match_id);
+      if (sup) setSupplierId(sup.id);
+      setScan((s) => s && ({ ...s, loading: false, invoice_number: data.invoice_number || '', invoice_date: data.invoice_date || today(), due_date: data.due_date || '', supplier_name: data.supplier_name || '', total: data.total ?? null }));
+      setItems((data.items || []).map((it: any) => {
+        const m = materials.find((x: any) => x.id === it.material_id);
+        const o = m ? unitOptions(m, units).find((u: any) => u.unit_name?.toLowerCase() === String(it.unit || '').toLowerCase()) : null;
+        return { material_id: m?.id || '', scanned_name: it.name, scanned_unit: it.unit, category: it.category, quantity: it.quantity || '', unit_name: o?.unit_name || m?.unit || it.unit || '', factor: o?.factor || 1, unit_price: it.unit_price || (it.quantity ? it.subtotal / it.quantity : '') };
+      }));
+      setNotes((n) => n || `Nota ${data.invoice_number || ''} ${data.supplier_name || ''}`.trim());
+      toast.success(`Nota terbaca: ${(data.items || []).length} barang`);
+    } catch (e: any) {
+      toast.error(e.message || 'Gagal membaca nota');
+      setScan((s) => s && ({ ...s, loading: false }));
+    }
+  };
+
+  const createSupplier = async () => {
+    if (!scan?.supplier_name) return;
+    const { data, error } = await db.from('suppliers').insert({ name: scan.supplier_name, default_terms_days: 0 }).select().single();
+    if (error) return toast.error(error.message);
+    toast.success('Supplier ditambahkan'); await reload(); setSupplierId(data.id);
+  };
+  const createMaterial = async (i: number) => {
+    const it = items[i];
+    const { data, error } = await db.from('raw_materials').insert({ name: it.scanned_name, category: it.category || 'Umum', unit: it.scanned_unit || 'pcs', cost_per_unit: Number(it.unit_price) || 0, material_type: 'raw', yield_quantity: 1, track_stock: true }).select().single();
+    if (error) return toast.error(error.message);
+    toast.success(`Bahan "${data.name}" dibuat`); await reload();
+    set(i, { material_id: data.id, unit_name: data.unit, factor: 1 });
+  };
+
+  const submit = async (receiveNow = false) => {
     if (!branchId) return toast.error('Pilih cabang');
     const valid = items.filter((i) => i.material_id && Number(i.quantity) > 0);
     if (!valid.length) return toast.error('Tambahkan minimal 1 bahan');
+    if (valid.length < items.filter((i) => Number(i.quantity) > 0).length && !window.confirm('Ada barang yang belum dicocokkan ke bahan baku dan akan dilewati. Lanjut?')) return;
     const po_number = `PO-${today().replace(/-/g, '')}-${Math.floor(Math.random() * 9000 + 1000)}`;
-    const { data, error } = await db.from('purchase_orders').insert({ po_number, branch_id: branchId, supplier_id: supplierId || null, expected_date: expected || null, notes: notes || null, total_amount: total, created_by: userId, terms_days: suppliers.find((s: any) => s.id === supplierId)?.default_terms_days || 0 }).select().single();
+    const terms = scan?.due_date && scan.invoice_date ? Math.max(0, Math.round((new Date(scan.due_date).getTime() - new Date(scan.invoice_date).getTime()) / 86400000)) : (suppliers.find((s: any) => s.id === supplierId)?.default_terms_days || 0);
+    const { data, error } = await db.from('purchase_orders').insert({ po_number, branch_id: branchId, supplier_id: supplierId || null, expected_date: expected || null, notes: notes || null, total_amount: total, created_by: userId, terms_days: terms }).select().single();
     if (error) return toast.error(error.message);
-    const { error: e2 } = await db.from('purchase_order_items').insert(valid.map((i) => ({ po_id: data.id, material_id: i.material_id, quantity: Number(i.quantity), unit_name: i.unit_name, factor: Number(i.factor) || 1, unit_price: Number(i.unit_price) || 0 })));
+    const { data: rows, error: e2 } = await db.from('purchase_order_items').insert(valid.map((i) => ({ po_id: data.id, material_id: i.material_id, quantity: Number(i.quantity), unit_name: i.unit_name, factor: Number(i.factor) || 1, unit_price: Number(i.unit_price) || 0 }))).select();
     if (e2) return toast.error(e2.message);
-    toast.success(`${po_number} dibuat`);
-    setItems([]); setNotes(''); setExpected(''); reload();
+    if (receiveNow) {
+      const { error: e3 } = await db.rpc('receive_purchase_order', { _po_id: data.id, _items: (rows || []).map((r: any) => ({ id: r.id, received_quantity: Number(r.quantity) })), _invoice_number: scan?.invoice_number || null, _invoice_date: scan?.invoice_date || today(), _terms_days: terms });
+      if (e3) return toast.error(e3.message);
+      toast.success(`${po_number} diterima — stok bertambah & invoice tercatat`);
+    } else toast.success(`${po_number} dibuat`);
+    if (scan?.file) {
+      const ext = scan.file.name.split('.').pop() || 'jpg';
+      await supabase.storage.from('product-images').upload(`purchase-invoices/${data.id}.${ext}`, scan.file, { upsert: true }).catch(() => null);
+    }
+    setItems([]); setNotes(''); setExpected(''); setScan(null); reload();
   };
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Buat Purchase Order</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">Buat Purchase Order / Invoice Pembelian</CardTitle></CardHeader>
       <CardContent className="space-y-3">
+        <div className="rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />Foto Nota — isi otomatis dengan AI</p>
+              <p className="text-xs text-muted-foreground">Barang datang? Foto nota supplier, sistem membaca no. invoice, supplier, barang, qty & harga.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => cameraRef.current?.click()} disabled={scan?.loading}><Camera className="h-4 w-4 mr-1" />Foto Nota</Button>
+              <Button variant="outline" onClick={() => uploadRef.current?.click()} disabled={scan?.loading}><Upload className="h-4 w-4 mr-1" />Upload</Button>
+            </div>
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ''; }} />
+            <input ref={uploadRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ''; }} />
+          </div>
+          {scan && (
+            <div className="flex flex-col md:flex-row gap-3">
+              {scan.preview && <img src={scan.preview} alt="Nota" className="h-40 w-auto rounded-lg border object-contain bg-background" />}
+              {scan.loading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />AI sedang membaca nota…</div>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-2 flex-1 text-sm">
+                  <label className="space-y-1"><span className="text-xs text-muted-foreground">No. Invoice</span><Input value={scan.invoice_number} onChange={(e) => setScan({ ...scan, invoice_number: e.target.value })} /></label>
+                  <label className="space-y-1"><span className="text-xs text-muted-foreground">Supplier di nota</span>
+                    <div className="flex gap-1"><Input value={scan.supplier_name} onChange={(e) => setScan({ ...scan, supplier_name: e.target.value })} />
+                      {!supplierId && scan.supplier_name && <Button size="sm" variant="outline" onClick={createSupplier}>+ Supplier</Button>}</div></label>
+                  <label className="space-y-1"><span className="text-xs text-muted-foreground">Tanggal Invoice</span><Input type="date" value={scan.invoice_date} onChange={(e) => setScan({ ...scan, invoice_date: e.target.value })} /></label>
+                  <label className="space-y-1"><span className="text-xs text-muted-foreground">Jatuh Tempo</span><Input type="date" value={scan.due_date} onChange={(e) => setScan({ ...scan, due_date: e.target.value })} /></label>
+                  {scan.total != null && <p className={`sm:col-span-2 text-xs ${Math.abs((scan.total || 0) - total) > 1 ? 'text-destructive' : 'text-muted-foreground'}`}>Total di nota {rp(scan.total)} · Total terhitung {rp(total)}{Math.abs((scan.total || 0) - total) > 1 ? ' — cek kembali (mungkin ada diskon/pajak/ongkir)' : ' ✓ cocok'}</p>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="grid md:grid-cols-3 gap-2">
           <Select value={supplierId} onValueChange={setSupplierId}>
             <SelectTrigger><SelectValue placeholder="Pilih supplier" /></SelectTrigger>
