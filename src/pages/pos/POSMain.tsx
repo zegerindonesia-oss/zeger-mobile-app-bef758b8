@@ -48,7 +48,7 @@ const POSMain = () => {
   const { activeShift, loading: shiftLoading, openShift, closeShift, addCashMovement } = usePOSShift();
   const cart = usePOSCart();
   const [riderOpen, setRiderOpen] = useState(false);
-  const riderAlerts = useRiderRequestAlerts(userProfile?.branch_id, () => setRiderOpen(true));
+  const riderAlerts = useRiderRequestAlerts(userProfile?.branch_id, () => navigate('/pos/rider-orders'));
   const promo = usePOSPromo();
 
   const [branchName, setBranchName] = useState('Cabang');
@@ -482,7 +482,7 @@ const POSMain = () => {
     onPrinterSettings: () => { setMobileNavOpen(false); navigate('/pos/settings'); },
     onXReport: () => navigate('/pos/settings?tab=shift'),
     onLogout: signOut,
-    onRiderOrders: () => { setMobileNavOpen(false); setRiderOpen(true); },
+    onRiderOrders: () => { setMobileNavOpen(false); navigate('/pos/rider-orders'); },
     riderCount: riderAlerts.count,
   };
   const fmtRp = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
@@ -520,7 +520,7 @@ const POSMain = () => {
           </button>
           <POSVoiceOrder onAdd={cart.addItem} />
           <div className="hidden sm:block"><POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} /></div>
-          <button onClick={() => setRiderOpen(true)} title="Pesanan Rider"
+          <button onClick={() => navigate('/pos/rider-orders')} title="Pesanan Rider"
             className={`pos-raised-control relative h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${riderAlerts.count ? 'text-destructive' : ''}`}>
             <Bell className={`h-5 w-5 ${riderAlerts.count ? 'animate-bounce' : ''}`} />
             {riderAlerts.count > 0 && <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold grid place-items-center">{riderAlerts.count}</span>}

@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import POS from "./pages/POS";
 import POSMain from "./pages/pos/POSMain";
 import POSKitchen from "./pages/pos/POSKitchen";
+import POSRiderOrders from "./pages/pos/POSRiderOrders";
 import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
 import CxLab from "./pages/dev/CxLab";
@@ -162,6 +163,11 @@ const App = () => (
             <Route path="/pos/queue" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir', '1_HO_Admin', '2_Hub_Branch_Manager', '3_SB_Branch_Manager']}>
                 <POSQueueDisplay />
+              </RoleBasedRoute>
+            } />
+            <Route path="/pos/rider-orders" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}>
+                <POSRiderOrders />
               </RoleBasedRoute>
             } />
             <Route path="/pos/kds" element={
