@@ -3655,6 +3655,111 @@ export type Database = {
           },
         ]
       }
+      rider_stock_request_items: {
+        Row: {
+          approved_qty: number | null
+          created_at: string
+          id: string
+          product_id: string
+          request_id: string
+          requested_qty: number
+          transfer_price: number
+        }
+        Insert: {
+          approved_qty?: number | null
+          created_at?: string
+          id?: string
+          product_id: string
+          request_id: string
+          requested_qty: number
+          transfer_price?: number
+        }
+        Update: {
+          approved_qty?: number | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          request_id?: string
+          requested_qty?: number
+          transfer_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_stock_request_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_stock_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "rider_stock_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rider_stock_requests: {
+        Row: {
+          created_at: string
+          hub_branch_id: string
+          hub_notes: string | null
+          id: string
+          notes: string | null
+          processed_by: string | null
+          rider_id: string
+          status: string
+          tenant_id: string
+          total_transfer_value: number
+          transferred_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hub_branch_id: string
+          hub_notes?: string | null
+          id?: string
+          notes?: string | null
+          processed_by?: string | null
+          rider_id: string
+          status?: string
+          tenant_id?: string
+          total_transfer_value?: number
+          transferred_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hub_branch_id?: string
+          hub_notes?: string | null
+          id?: string
+          notes?: string | null
+          processed_by?: string | null
+          rider_id?: string
+          status?: string
+          tenant_id?: string
+          total_transfer_value?: number
+          transferred_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_stock_requests_hub_branch_id_fkey"
+            columns: ["hub_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_stock_requests_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_invoice_items: {
         Row: {
           created_at: string
@@ -5169,6 +5274,7 @@ export type Database = {
         }
         Returns: number
       }
+      can_access_rider_request: { Args: { _req: string }; Returns: boolean }
       can_manage_role: {
         Args: {
           manager_role: Database["public"]["Enums"]["user_role"]
@@ -5258,6 +5364,10 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_old_reservations: { Args: never; Returns: number }
+      fulfill_rider_stock_request: {
+        Args: { _hub_notes?: string; _request_id: string }
+        Returns: number
+      }
       fulfill_stock_reservation: {
         Args: { order_uuid: string }
         Returns: boolean
