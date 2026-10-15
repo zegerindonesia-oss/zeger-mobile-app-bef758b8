@@ -177,6 +177,24 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
   const [edit, setEdit] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState("");
   const open = rows.filter((r) => ["pending", "adjusted"].includes(r.status));
+  const [products, setProducts] = useState<any[]>([]);
+  const [add, setAdd] = useState<Record<string, { pid: string; qty: number }>>({});
+  useEffect(() => {
+    db.from("products").select("id, name, category").eq("is_active", true).order("name").then(({ data }: any) => setProducts(data || []));
+  }, []);
+  const addMenu = async (reqs: any[]) => {
+    const rid = reqs[0].rider_id; const a = add[rid];
+    if (!a?.pid || !(a.qty > 0)) return toast.error("Pilih menu dan jumlahnya");
+    const target = reqs[reqs.length - 1];
+    const it = target.items.find((i: any) => i.product_id === a.pid);
+    const res = it
+      ? await db.from("rider_stock_request_items").update({ approved_qty: q(it) + a.qty }).eq("id", it.id)
+      : await db.from("rider_stock_request_items").insert({ request_id: target.id, product_id: a.pid, requested_qty: 0, approved_qty: a.qty });
+    if (res.error) return toast.error(res.error.message);
+    await db.from("rider_stock_requests").update({ status: "adjusted" }).eq("id", target.id);
+    setAdd((s) => ({ ...s, [rid]: { pid: "", qty: 1 } }));
+    toast.success("Menu ditambahkan"); load();
+  };
   const done = rows.filter((r) => !["pending", "adjusted"].includes(r.status));
   const tm = (d: string) => new Date(d).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
 
@@ -335,6 +353,15 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+                <span className="text-xs font-semibold">Tambah menu (Hub):</span>
+                <select className="h-8 min-w-[180px] flex-1 rounded-md border bg-background px-2 text-sm" value={add[rid]?.pid || ""} onChange={(e) => setAdd((s) => ({ ...s, [rid]: { pid: e.target.value, qty: s[rid]?.qty || 1 } }))}>
+                  <option value="">Pilih menu…</option>
+                  {products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.category ? ` — ${p.category}` : ""}</option>)}
+                </select>
+                <Input type="number" min={1} className="h-8 w-16 text-center" value={add[rid]?.qty ?? 1} onChange={(e) => setAdd((s) => ({ ...s, [rid]: { pid: s[rid]?.pid || "", qty: Math.max(1, Number(e.target.value)) } }))} />
+                <Button size="sm" onClick={() => addMenu(reqs)}><Plus className="mr-1 h-4 w-4" />Tambah</Button>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
                 <span className="text-sm">Total HPP Menu: <b>{rp(hpp)}</b><span className="block text-xs text-muted-foreground">Nilai transfer (harga CK, internal): {rp(ck)}</span></span>
