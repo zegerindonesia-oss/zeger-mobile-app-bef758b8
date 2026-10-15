@@ -16,6 +16,7 @@ import {
   printHtml, renderKitchenTicket, renderReceipt, renderStickers,
 } from '@/lib/pos-printing';
 import { ReceiptDesigner } from './ReceiptDesigner';
+import { StickerPreview } from './StickerPreview';
 
 interface Props {
   open: boolean;
@@ -83,6 +84,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
   return (
     <Shell inline={inline} open={open} onOpenChange={onOpenChange}>
         {designer && <ReceiptDesigner settings={s} onChange={setS} branchName={branchName} />}
+        {designer && <div className="mt-6"><StickerPreview /></div>}
         {!designer && <>
 
 
