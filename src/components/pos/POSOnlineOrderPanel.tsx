@@ -108,7 +108,7 @@ export const POSOnlineOrderPanel = ({ branchId, shiftId }: Props) => {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button size="sm" variant="outline" className="relative">
-            <Globe className="h-3 w-3 mr-1" /> Online
+            <Globe className="h-3 w-3 mr-1" /> Zeger APP
             {count > 0 && (
               <Badge className="absolute -top-2 -right-2 h-5 min-w-[20px] px-1 bg-red-600">{count}</Badge>
             )}
@@ -117,7 +117,7 @@ export const POSOnlineOrderPanel = ({ branchId, shiftId }: Props) => {
         <SheetContent side="right" className="w-full sm:w-[480px] flex flex-col">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-between">
-              <span>Order Online ({count})</span>
+              <span>Order Zeger APP & Online ({count})</span>
               <Button size="sm" onClick={() => setFormOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Baru
               </Button>

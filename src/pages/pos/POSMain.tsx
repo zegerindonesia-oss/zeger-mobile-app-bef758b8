@@ -1,3 +1,5 @@
+import { HubRiderRequestQueue } from '@/components/stock/RiderStockRequests';
+import { Bell } from 'lucide-react';
 import { useRiderRequestAlerts } from '@/hooks/useRiderRequestAlerts';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -45,7 +47,8 @@ const POSMain = () => {
   const navigate = useNavigate();
   const { activeShift, loading: shiftLoading, openShift, closeShift, addCashMovement } = usePOSShift();
   const cart = usePOSCart();
-  useRiderRequestAlerts(userProfile?.branch_id, () => navigate('/stock-transfer'));
+  const [riderOpen, setRiderOpen] = useState(false);
+  const riderAlerts = useRiderRequestAlerts(userProfile?.branch_id, () => setRiderOpen(true));
   const promo = usePOSPromo();
 
   const [branchName, setBranchName] = useState('Cabang');
@@ -479,6 +482,8 @@ const POSMain = () => {
     onPrinterSettings: () => { setMobileNavOpen(false); navigate('/pos/settings'); },
     onXReport: () => navigate('/pos/settings?tab=shift'),
     onLogout: signOut,
+    onRiderOrders: () => { setMobileNavOpen(false); setRiderOpen(true); },
+    riderCount: riderAlerts.count,
   };
   const fmtRp = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
 
@@ -515,6 +520,11 @@ const POSMain = () => {
           </button>
           <POSVoiceOrder onAdd={cart.addItem} />
           <div className="hidden sm:block"><POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} /></div>
+          <button onClick={() => setRiderOpen(true)} title="Pesanan Rider"
+            className={`pos-raised-control relative h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${riderAlerts.count ? 'text-destructive' : ''}`}>
+            <Bell className={`h-5 w-5 ${riderAlerts.count ? 'animate-bounce' : ''}`} />
+            {riderAlerts.count > 0 && <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold grid place-items-center">{riderAlerts.count}</span>}
+          </button>
           <button onClick={() => navigate('/pos/kds')} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl hidden sm:flex items-center gap-1.5 text-sm font-semibold shrink-0" title="KDS">
             <Monitor className="h-4 w-4" /> <span className="hidden lg:inline">KDS</span>
           </button>
@@ -565,6 +575,11 @@ const POSMain = () => {
           <span className="pos-number font-bold text-base">{fmtRp(paymentTotal)} ›</span>
         </button>
       </div>
+      <Sheet open={riderOpen} onOpenChange={(o) => { setRiderOpen(o); if (!o) riderAlerts.reload(); }}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <HubRiderRequestQueue branchId={userProfile?.branch_id || undefined} />
+        </SheetContent>
+      </Sheet>
       <Drawer open={cartOpen} onOpenChange={setCartOpen}>
         <DrawerContent className="h-[92dvh] p-0">
           <div className="flex-1 min-h-0 overflow-hidden">{cartDrawerNode(true)}</div>
