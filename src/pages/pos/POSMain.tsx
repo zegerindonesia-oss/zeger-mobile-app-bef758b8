@@ -30,7 +30,7 @@ import { getLoyaltyEarnSettings, useRedemption, DEFAULT_EARN_SETTINGS, type Loya
 
 import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
 import { POSShiftReport } from '@/components/pos/POSShiftReport';
-import { loadPrintSettings, printReceipt, printKitchen, DEFAULT_SETTINGS, type PrintSettings } from '@/lib/pos-printing';
+import { loadPrintSettings, printReceipt, printKitchen, printStickersOnly, DEFAULT_SETTINGS, type PrintSettings } from '@/lib/pos-printing';
 import { enqueueOfflineSale } from '@/lib/pos-offline';
 import { POSVoiceOrder } from '@/components/pos/POSVoiceOrder';
 import type { POSCartItem } from '@/hooks/usePOSCart';
@@ -644,7 +644,12 @@ const POSMain = () => {
         onRecall={handleRecallTable}
       />
       <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} branchId={userProfile?.branch_id || null}
-        onPrint={() => receipt && safePrint(() => printReceipt(printSettings, receipt, false))} />
+        onPrint={() => receipt && safePrint(() => printReceipt(printSettings, receipt, false))}
+        onPrintStickers={() => receipt && safePrint(() => printStickersOnly(printSettings, {
+          ref: receipt.transaction_number, order_type: receipt.order_type, table_number: receipt.table_number || null,
+          customer_name: receipt.customer_name || null, created_at: receipt.created_at,
+          items: receipt.items.map((i) => ({ product_name: i.product_name, qty: i.qty, notes: i.notes })),
+        }))} />
       <POSPrinterSettings open={printerOpen} onOpenChange={setPrinterOpen} branchId={userProfile?.branch_id || null}
         userId={userProfile?.id} onSaved={setPrintSettings} />
       <POSShiftReport open={!!report} onOpenChange={(o) => !o && setReport(null)} shift={report?.shift || null}

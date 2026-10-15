@@ -13,7 +13,7 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 const DEFAULT_DAYS = 3;
 
-function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string; sd: Date; qr: string }) {
+export function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string; sd: Date; qr: string }) {
   const ed = addDays(sd, it.shelf_life_days || DEFAULT_DAYS);
   return (
     <div className="stk">
@@ -33,7 +33,7 @@ function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string; sd: Da
   );
 }
 
-const CSS = `@page{size:33mm 15mm;margin:0}*{box-sizing:border-box;margin:0}body{font-family:Arial,Helvetica,sans-serif;color:#000}
+export const STICKER_CSS = `@page{size:33mm 15mm;margin:0}*{box-sizing:border-box;margin:0}body{font-family:Arial,Helvetica,sans-serif;color:#000}
 .stk{width:33mm;height:15mm;padding:.6mm 1mm;display:flex;gap:.6mm;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
 .l{flex:1;min-width:0;line-height:1.05}.n{font-weight:900;font-size:7pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .s{font-style:italic;font-size:4.5pt;white-space:nowrap;overflow:hidden}.p{font-weight:900;font-style:italic;font-size:8pt}
@@ -53,7 +53,7 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
     const html = list.flatMap((it) => Array.from({ length: it.qty }, () => renderToStaticMarkup(<Sticker it={it} rider={rider} sd={sd} qr={qr} />))).join("");
     const w = window.open("", "_blank", "width=420,height=600");
     if (!w) return;
-    w.document.write(`<!doctype html><html><head><title>Stiker ${esc(rider)}</title><style>${CSS}</style></head><body>${html}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script></body></html>`);
+    w.document.write(`<!doctype html><html><head><title>Stiker ${esc(rider)}</title><style>${STICKER_CSS}</style></head><body>${html}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script></body></html>`);
     w.document.close();
   };
 
@@ -66,7 +66,7 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
           <label className="text-xs">Tanggal Produksi (SD)<Input type="date" value={sdStr} onChange={(e) => setSdStr(e.target.value)} /></label>
           <label className="text-xs">Link QR Code<Input value={qr} onChange={(e) => setQr(e.target.value)} /></label>
         </div>
-        <style>{`.stk-prev .stk{transform:scale(2.2);transform-origin:top left;margin-bottom:19mm;border:1px dashed hsl(var(--border));border-radius:2mm}${CSS.replace(/@page[^}]*}/, "").replace(/\*\{[^}]*}/, "").replace(/body\{[^}]*}/, "")}`}</style>
+        <style>{`.stk-prev .stk{transform:scale(2.2);transform-origin:top left;margin-bottom:19mm;border:1px dashed hsl(var(--border));border-radius:2mm}${STICKER_CSS.replace(/@page[^}]*}/, "").replace(/\*\{[^}]*}/, "").replace(/body\{[^}]*}/, "")}`}</style>
         <div className="stk-prev space-y-1">
           {list.map((it, i) => (
             <div key={i}>

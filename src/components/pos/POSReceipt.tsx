@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, MessageCircle, CheckCircle, Mail, UserPlus } from 'lucide-react';
+import { Printer, MessageCircle, CheckCircle, Mail, UserPlus, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,12 +34,13 @@ interface Props {
   data: ReceiptData | null;
   onClose: () => void;
   onPrint?: () => void;
+  onPrintStickers?: () => void;
   branchId?: string | null;
 }
 
 const toWa = (p: string) => { const d = p.replace(/\D/g, ''); return d.startsWith('0') ? '62' + d.slice(1) : d.startsWith('62') ? d : d ? '62' + d : ''; };
 
-export const POSReceipt = ({ open, data, onClose, onPrint, branchId }: Props) => {
+export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, branchId }: Props) => {
   const [cName, setCName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -167,6 +168,9 @@ export const POSReceipt = ({ open, data, onClose, onPrint, branchId }: Props) =>
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-3 w-3" /> Print
           </Button>
+          {onPrintStickers && <Button variant="outline" onClick={onPrintStickers}>
+            <Tag className="h-3 w-3" /> Stiker Cup
+          </Button>}
           {link && <Button variant="outline" onClick={() => window.open(link, '_blank')}>Struk Digital</Button>}
           <Button onClick={() => { saveCustomer(); onClose(); }}>Selesai</Button>
         </DialogFooter>

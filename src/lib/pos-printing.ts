@@ -231,9 +231,9 @@ export const renderStickers = (k: KitchenPrint) => {
   k.items.forEach((i) => {
     for (let q = 0; q < i.qty; q++) {
       n++;
-      labels.push(`<div class="lbl"><div class="row b"><span>${k.table_number ? `M${esc(k.table_number)}` : `#${esc(k.ref.slice(-3))}`}</span><span>${n}/${total}</span></div>
-<div class="b" style="font-size:1.25em">${esc(i.product_name)}</div>${i.notes ? `<div>${esc(i.notes)}</div>` : ''}
-<div>${esc(k.customer_name || '')}</div><div>${jkt(k.created_at)}</div></div>`);
+      labels.push(`<div class="lbl"><div class="row b"><span style="font-size:1.3em">${k.table_number ? `MEJA ${esc(k.table_number)}` : `#${esc(k.ref.slice(-3))}`}</span><span>${n}/${total}</span></div>
+<div class="b" style="font-size:1.3em;line-height:1.1">${esc(i.product_name)}</div>${i.notes ? `<div class="b">» ${esc(i.notes)}</div>` : ''}
+<div class="row"><span>${esc(k.customer_name || '-')}</span><span>${esc(k.order_type.replace('_', ' ').toUpperCase())}</span></div><div class="mut">${jkt(k.created_at)}</div></div>`);
     }
   });
   return doc('label', `Stiker ${k.ref}`, labels.join(''));
@@ -321,6 +321,16 @@ export const printKitchen = async (s: PrintSettings, k: Omit<KitchenPrint, 'stat
     if (!items.length) continue;
     const html = p.role === 'sticker' ? renderStickers({ ...k, station: p.name, items }) : renderKitchenTicket({ ...k, station: p.name, items }, p.paper);
     await printHtml(html, p.copies);
+  }
+};
+
+/** Manual 1-click: cup stickers only, for every enabled sticker printer. */
+export const printStickersOnly = async (s: PrintSettings, k: Omit<KitchenPrint, 'station'>) => {
+  const ps = enabled(s, 'sticker');
+  const targets = ps.length ? ps : [newPrinter('sticker', 'Stiker')];
+  for (const p of targets) {
+    const items = routeItems(p, k.items);
+    if (items.length) await printHtml(renderStickers({ ...k, station: p.name, items }), p.copies);
   }
 };
 
