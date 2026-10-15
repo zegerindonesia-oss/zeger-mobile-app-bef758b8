@@ -109,7 +109,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           branch_id,
           status,
           verification_photo_url,
-          products!inner(name, category, price),
+          products!inner(name, category, price, cost_price),
           profiles!stock_movements_rider_id_fkey(full_name)
         `)
         .eq('movement_type', 'return')
@@ -305,6 +305,20 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
     } catch (error: any) {
       console.error('Error updating branch inventory:', error);
     }
+  };
+
+  const [wasteReason, setWasteReason] = useState<Record<string, string>>({});
+  const [wasteDone, setWasteDone] = useState<Record<string, boolean>>({});
+  const recordWaste = async (riderId: string, item: any, qty: number) => {
+    const reason = wasteReason[item.id];
+    if (!reason) { toast.error('Pilih alasan waste dulu'); return; }
+    const { error } = await supabase.from('product_waste').insert({
+      rider_id: riderId, branch_id: branchId, product_id: item.product_id, quantity: qty,
+      waste_reason: reason, notes: 'Dari laporan shift pengembalian', hpp: Number(item.products?.cost_price || 0), created_by: userProfileId,
+    } as any);
+    if (error) { toast.error('Gagal catat waste: ' + error.message); return; }
+    setWasteDone((s) => ({ ...s, [item.id]: true }));
+    toast.success(`${qty} ${item.products?.name} tercatat sebagai waste`);
   };
 
   const handleAcceptRiderReport = async (riderId: string) => {
@@ -727,6 +741,7 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                 <TableHead className="text-center">Stok Fisik</TableHead>
                                 <TableHead className="text-center">Selisih Jumlah Stok</TableHead>
                                 <TableHead className="text-right">Selisih Nilai Stok</TableHead>
+                                <TableHead>Waste</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -762,6 +777,21 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
                                     </TableCell>
                                     <TableCell className={`text-right font-semibold ${selisihNilai < 0 ? 'text-red-600' : selisihNilai > 0 ? 'text-green-600' : ''}`}>
                                       {selisihNilai < 0 ? '-' : ''}Rp {Math.abs(selisihNilai).toLocaleString('id-ID')}
+                                    </TableCell>
+                                    <TableCell>
+                                      {selisih < 0 && (wasteDone[item.id] ? (
+                                        <Badge className="bg-green-600">Waste tercatat</Badge>
+                                      ) : (
+                                        <div className="flex items-center gap-1 min-w-[220px]">
+                                          <Select value={wasteReason[item.id] || ''} onValueChange={(v) => setWasteReason((s) => ({ ...s, [item.id]: v }))}>
+                                            <SelectTrigger className="h-8"><SelectValue placeholder="Alasan waste" /></SelectTrigger>
+                                            <SelectContent>
+                                              {['Tumpah/Pecah', 'Rusak di Jalan', 'Basi/Kualitas Turun', 'Kemasan Bocor/Cacat', 'Kedaluwarsa', 'Lainnya'].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                            </SelectContent>
+                                          </Select>
+                                          <Button size="sm" className="h-8 bg-red-600 hover:bg-red-700" onClick={() => recordWaste(report.riderId, item, -selisih)}>Waste {-selisih}</Button>
+                                        </div>
+                                      ))}
                                     </TableCell>
                                   </TableRow>
                                 );
