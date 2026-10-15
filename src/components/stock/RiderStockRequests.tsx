@@ -86,7 +86,7 @@ export function RiderStockRequestForm() {
     if (!hubId || !picked.length) return toast.error("Pilih hub dan minimal 1 menu");
     setBusy(true);
     const { data: req, error } = await db.from("rider_stock_requests")
-      .insert({ rider_id: userProfile.id, hub_branch_id: hubId, notes: notes || null }).select("id").single();
+      .insert({ rider_id: userProfile.id, hub_branch_id: hubId, status: "pending", notes: notes || null }).select("id").single();
     if (!error) {
       const { error: e2 } = await db.from("rider_stock_request_items")
         .insert(picked.map(([product_id, q]) => ({ request_id: req.id, product_id, requested_qty: q })));

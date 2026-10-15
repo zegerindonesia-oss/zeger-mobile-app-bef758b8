@@ -1,3 +1,4 @@
+import { useRiderRequestAlerts } from "@/hooks/useRiderRequestAlerts";
 import { useState, useEffect } from "react";
 import { Bell, Package, CheckCircle, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ interface Notification {
 
 export const NotificationSystem = () => {
   const { userProfile } = useAuth();
+  useRiderRequestAlerts(userProfile?.role?.toString().includes('rider') ? null : userProfile?.branch_id);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 

@@ -1,3 +1,4 @@
+import { useRiderRequestAlerts } from '@/hooks/useRiderRequestAlerts';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +45,7 @@ const POSMain = () => {
   const navigate = useNavigate();
   const { activeShift, loading: shiftLoading, openShift, closeShift, addCashMovement } = usePOSShift();
   const cart = usePOSCart();
+  useRiderRequestAlerts(userProfile?.branch_id, () => navigate('/stock-transfer'));
   const promo = usePOSPromo();
 
   const [branchName, setBranchName] = useState('Cabang');
