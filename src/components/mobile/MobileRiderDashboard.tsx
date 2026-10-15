@@ -221,7 +221,7 @@ const MobileRiderDashboard = () => {
       return;
     }
 
-    setGpsStatus('active');
+    setGpsStatus('inactive');
 
     // Initial location update
     updateLocation();
