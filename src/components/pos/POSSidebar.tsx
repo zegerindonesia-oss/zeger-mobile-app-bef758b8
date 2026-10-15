@@ -73,8 +73,8 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
   ] as Item[]).filter((i) => i.levels.includes(lvl) && hasModule(i.module));
 
   return (
-    <aside className={cn('glass-sidebar h-[100dvh] flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
-      <div className={cn('flex items-center gap-3 px-4 h-20 border-b border-primary-foreground/10', collapsed && 'justify-center px-0')}>
+    <aside className={cn('glass-sidebar m-2 mr-0 h-[calc(100dvh-1rem)] rounded-[1.75rem] overflow-hidden flex flex-col text-primary-foreground transition-all duration-300 shrink-0 z-20', collapsed ? 'w-[76px]' : 'w-[248px]')}>
+      <div className={cn('flex items-center gap-3 px-4 h-20 shrink-0 border-b border-primary-foreground/10', collapsed && 'justify-center px-0')}>
         {collapsed
           ? <span className="h-11 w-11 rounded-full bg-background grid place-items-center shadow-md"><FlowMark className="h-7 w-7" /></span>
           : <span className="rounded-full bg-background px-4 py-2 shadow-md"><FlowLogo size="sm" /></span>}
@@ -102,8 +102,8 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
               title={it.label}
               onClick={() => (it.action ? it.action() : navigate(it.path!))}
               className={cn(
-                'w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 active:translate-y-px',
-                collapsed && 'justify-center px-0',
+                'w-full flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-semibold transition-all duration-200 active:translate-y-px',
+                collapsed && 'justify-center px-0 h-11 w-11 mx-auto',
                 active ? 'glass-pill-active' : 'text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground',
               )}
             >
