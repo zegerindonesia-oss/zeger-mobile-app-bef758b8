@@ -257,6 +257,9 @@ const StockReturnTab = ({ userProfile, activeShift, onRefresh, onGoToShift }: {
 
   return (
     <div className="space-y-4">
+      <a href="/mobile-seller?tab=stock-request" className="block rounded-xl bg-primary p-3 text-center text-sm font-semibold text-primary-foreground shadow">
+        🚚 Order Stok ke Central Kitchen
+      </a>
       {/* Hidden file input for optional photo */}
       <input
         ref={returnFileInputRef}
