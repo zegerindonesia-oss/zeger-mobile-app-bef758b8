@@ -17,6 +17,7 @@ import MobileCashDeposit from "@/components/mobile/MobileCashDeposit";
 import MobileRiderIncome from "@/components/mobile/MobileRiderIncome";
 import { ZegerLogo } from "@/components/ui/zeger-logo";
 import { Users } from "lucide-react";
+import { RiderStockRequestForm } from "@/components/stock/RiderStockRequests";
 
 export default function MobileSeller() {
   const { user, userProfile, loading } = useAuth();
@@ -62,6 +63,8 @@ export default function MobileSeller() {
         return <MobileSellerEnhanced />;
       case 'stock':
         return <MobileStockManagement />;
+      case 'stock-request':
+        return <RiderStockRequestForm />;
       case 'analytics':
         return <MobileRiderAnalyticsEnhanced />;
       case 'attendance':
