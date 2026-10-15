@@ -18,6 +18,7 @@ import {
   Users,
   User,
   LogOut,
+  Truck,
 } from "lucide-react";
 import {
   Sheet,
@@ -181,6 +182,16 @@ export const MobileBottomDock = () => {
               )}
             >
               <ShoppingCart className="h-7 w-7 text-white" />
+            </button>
+            <button
+              onClick={() => go("stock-request")}
+              aria-label="Order Central Kitchen"
+              className={cn(
+                "-mt-6 flex h-14 w-14 items-center justify-center rounded-full shadow-lg ring-4 ring-white transition-transform",
+                currentTab === "stock-request" ? "bg-amber-600 scale-105" : "bg-amber-500 hover:bg-amber-600"
+              )}
+            >
+              <Truck className="h-7 w-7 text-white" />
             </button>
             <button
               onClick={() => go("checkpoints")}
