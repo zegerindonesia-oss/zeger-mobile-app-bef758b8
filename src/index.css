@@ -893,3 +893,26 @@
 .pos-star3d.is-active { animation: pos-star-pop .45s cubic-bezier(.34,1.56,.64,1); }
 .pos-fav-pin:hover .pos-star3d, .pos-fav-tab:hover .pos-star3d { transform: scale(1.15) rotate(-8deg); }
 @keyframes pos-star-pop { 0% { transform: scale(.6) rotate(-20deg); } 70% { transform: scale(1.2) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
+
+/* Raised glossy red for all solid red buttons (rider app, stock, POS) */
+button[class*="bg-red-5"]:not(:disabled),
+button[class*="bg-red-6"]:not(:disabled),
+button[class*="bg-red-7"]:not(:disabled),
+a[class*="bg-red-6"] {
+  background-image: linear-gradient(180deg, hsl(var(--primary-light)), hsl(var(--primary)) 38%, hsl(var(--primary-dark)));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.48), 0 10px 22px -9px hsl(var(--primary) / 0.68);
+  border-radius: 0.75rem;
+  transition: transform .15s ease, filter .15s ease;
+}
+button[class*="bg-red-"]:not(:disabled):hover { filter: brightness(1.05); }
+button[class*="bg-red-"]:not(:disabled):active { transform: translateY(1px); }
+
+/* Raised rounded red table header */
+.table-head-raised > tr {
+  background: linear-gradient(180deg, hsl(var(--primary-light)), hsl(var(--primary)) 40%, hsl(var(--primary-dark)));
+  color: hsl(var(--primary-foreground));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.45), 0 10px 20px -10px hsl(var(--primary) / 0.7);
+}
+.table-head-raised > tr > th:first-child { border-radius: 0.9rem 0 0 0.9rem; }
+.table-head-raised > tr > th:last-child { border-radius: 0 0.9rem 0.9rem 0; }
+.table-head-raised > tr > th { background: inherit; }

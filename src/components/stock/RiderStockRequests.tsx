@@ -301,9 +301,9 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
               </div>
               {reqs.filter((r) => r.notes).map((r, i) => <p key={r.id} className="text-xs">Catatan order {reqs.indexOf(r) + 1}: {r.notes}</p>)}
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-primary text-xs text-primary-foreground [&>th:first-child]:rounded-tl-lg [&>th:last-child]:rounded-tr-lg">
+                <table className="w-full border-separate border-spacing-0 text-sm [&_tbody_td]:border-b">
+                  <thead className="table-head-raised">
+                    <tr className="text-xs">
                       <th className="p-2 text-left">Menu</th>
                       <th className="p-2 text-center">Sisa Stok{!hasSisa && <span className="block font-normal">(klik tombol)</span>}</th>
                       {reqs.map((r, i) => <th key={r.id} className="p-2 text-center">Order {i + 1}<span className="block font-normal">{tm(r.created_at)} WIB</span></th>)}
