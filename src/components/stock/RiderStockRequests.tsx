@@ -301,7 +301,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
               </div>
               {reqs.filter((r) => r.notes).map((r, i) => <p key={r.id} className="text-xs">Catatan order {reqs.indexOf(r) + 1}: {r.notes}</p>)}
               <div className="overflow-x-auto">
-                <table className="w-full border-separate border-spacing-y-1 text-sm">
+                <table className="w-full border-separate border-spacing-0 text-sm [&_tbody_td]:border-b">
                   <thead className="table-head-raised">
                     <tr className="text-xs">
                       <th className="p-2 text-left">Menu</th>
