@@ -189,28 +189,39 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
 
   // Sisa stok = stok kembali pada shift terakhir rider (sama dengan Rincian Per Shift di Stock Card Rider)
   const [leftover, setLeftover] = useState<Record<string, Record<string, { qty: number; name: string; product: any }>>>({});
-  const loadLeftover = async (riderId: string, before: string) => {
+  const loadLeftover = async (riderId: string, _before: string) => {
+    // Sama dengan Stock Card Rider: shift terakhir = shift_date terbaru, lalu urut jam mulai / nomor shift
     const { data: shifts, error: se } = await db.from("shift_management")
       .select("id, shift_date, shift_number, shift_start_time")
-      .eq("rider_id", riderId).lte("shift_start_time", before)
-      .order("shift_start_time", { ascending: false }).limit(2);
+      .eq("rider_id", riderId).order("shift_date", { ascending: false }).limit(10);
     if (se) return toast.error(se.message);
-    const last = shifts?.[0];
-    let q = db.from("stock_movements")
+    if (!shifts?.length) { setLeftover((s) => ({ ...s, [riderId]: {} })); return toast.info("Rider belum punya shift"); }
+    const day = shifts[0].shift_date;
+    const sameDay = shifts.filter((s: any) => s.shift_date === day).sort((a: any, b: any) => {
+      const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
+      const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
+      return ta - tb;
+    });
+    const last = sameDay[sameDay.length - 1];
+    const { data, error } = await db.from("stock_movements")
       .select("product_id, quantity, created_at, actual_delivery_date, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
-      .eq("rider_id", riderId).in("movement_type", ["return", "out"]).lte("created_at", before)
-      .order("created_at", { ascending: false }).limit(300);
-    if (last?.shift_start_time) q = q.gte("created_at", last.shift_start_time);
-    const { data, error } = await q;
+      .eq("rider_id", riderId).in("movement_type", ["return", "out"])
+      .gte("created_at", `${day}T00:00:00+07:00`).lte("created_at", `${day}T23:59:59+07:00`).limit(500);
     if (error) return toast.error(error.message);
+    const pick = (when: string) => {
+      const t = new Date(when).getTime(); let chosen = sameDay[0];
+      for (const s of sameDay) { const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0; if (st <= t) chosen = s; }
+      return chosen;
+    };
     const map: Record<string, { qty: number; name: string; product: any }> = {};
     (data || []).forEach((m: any) => {
+      if (pick(m.actual_delivery_date || m.created_at)?.id !== last.id) return;
       const cur = map[m.product_id] || { qty: 0, name: m.products?.name, product: m.products };
       cur.qty += Number(m.quantity || 0); map[m.product_id] = cur;
     });
     setLeftover((s) => ({ ...s, [riderId]: map }));
-    if (!Object.keys(map).length) toast.info("Tidak ada stok kembali di shift terakhir");
-    else toast.success(`Sisa stok shift #${last?.shift_number ?? "-"} (${last?.shift_date ?? "terakhir"}) ditambahkan`);
+    if (!Object.keys(map).length) toast.info(`Tidak ada stok kembali di shift #${last.shift_number} (${day})`);
+    else toast.success(`Sisa stok shift #${last.shift_number} (${day}) ditambahkan`);
   };
 
   const q = (i: any) => Number(edit[i.id] ?? i.approved_qty ?? i.requested_qty ?? 0);
@@ -292,7 +303,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-xs text-muted-foreground">
+                    <tr className="bg-primary text-xs text-primary-foreground [&>th:first-child]:rounded-tl-lg [&>th:last-child]:rounded-tr-lg">
                       <th className="p-2 text-left">Menu</th>
                       <th className="p-2 text-center">Sisa Stok{!hasSisa && <span className="block font-normal">(klik tombol)</span>}</th>
                       {reqs.map((r, i) => <th key={r.id} className="p-2 text-center">Order {i + 1}<span className="block font-normal">{tm(r.created_at)} WIB</span></th>)}
