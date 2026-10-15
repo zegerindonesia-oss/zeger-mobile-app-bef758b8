@@ -14,7 +14,7 @@ export function useRiderRequestAlerts(branchId?: string | null, onOpen?: () => v
         { event: "INSERT", schema: "public", table: "rider_stock_requests", filter: `hub_branch_id=eq.${branchId}` },
         async (payload: any) => {
           const { data } = await supabase.from("profiles").select("full_name").eq("id", payload.new.rider_id).maybeSingle();
-          try { playAlertBeep({ times: 3 } as any); } catch { /* ignore */ }
+          try { playAlertBeep({ times: 3 }); } catch { /* ignore */ }
           toast.success("Order Stok Baru dari Rider", {
             description: `${data?.full_name || "Rider"} mengirim order ke Central Kitchen`,
             duration: 15000,
