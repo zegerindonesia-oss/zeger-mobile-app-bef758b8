@@ -23,7 +23,7 @@ function useRequests(filter: Record<string, string>, deps: any[], productFields 
   const [rows, setRows] = useState<any[]>([]);
   const load = async () => {
     let q = db.from("rider_stock_requests")
-      .select(`*, rider:profiles!rider_stock_requests_rider_id_fkey(full_name), items:rider_stock_request_items(*, product:products(${productFields}))")
+      .select(`*, rider:profiles!rider_stock_requests_rider_id_fkey(full_name), items:rider_stock_request_items(*, product:products(${productFields}))`)
       .order("created_at", { ascending: false }).limit(50);
     Object.entries(filter).forEach(([k, v]) => (q = q.eq(k, v)));
     const { data, error } = await q;
