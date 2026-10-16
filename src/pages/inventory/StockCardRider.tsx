@@ -328,8 +328,8 @@ export default function StockCardRider() {
           .select('rider_id, quantity, product_id, products(cost_price)')
           .in('rider_id', riderIds)
           .in('movement_type', ['return', 'out'])
-          .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
-          .lte('actual_delivery_date', `${end}T23:59:59+07:00`),
+          .gte('created_at', `${start}T00:00:00+07:00`)
+          .lte('created_at', `${end}T23:59:59+07:00`),
       ]);
 
       if (sentRes.error) throw sentRes.error;
@@ -511,7 +511,7 @@ export default function StockCardRider() {
           products(name, cost_price)
         `)
         .in('movement_type', ['return', 'out'])
-        .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
+        .gte('created_at', `${start}T00:00:00+07:00`)
         .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
       returnQuery = isAll ? returnQuery.in('rider_id', riderIds) : returnQuery.eq('rider_id', selectedRider);
       const { data: stockReturns, error: returnError } = await returnQuery;
