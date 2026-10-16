@@ -1,0 +1,2 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS show_in_rider_app boolean NOT NULL DEFAULT false;
+UPDATE public.products SET show_in_rider_app = true WHERE brand IS NULL OR brand = '' OR brand ILIKE '%zeger%';
