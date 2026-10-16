@@ -31,6 +31,7 @@ interface Product {
   custom_options: any;
   is_active: boolean | null;
   show_in_customer_app?: boolean | null;
+  show_in_rider_app?: boolean | null;
   track_stock?: boolean | null;
   created_at: string | null;
 }
@@ -49,6 +50,7 @@ const emptyForm = {
   custom_options: "",
   is_active: true,
   show_in_customer_app: true,
+  show_in_rider_app: true,
   track_stock: true,
   is_pos_favorite: false,
 };
@@ -136,6 +138,7 @@ const ProductManagement = () => {
       custom_options: product.custom_options ? JSON.stringify(product.custom_options, null, 2) : "",
       is_active: product.is_active ?? true,
       show_in_customer_app: product.show_in_customer_app ?? true,
+      show_in_rider_app: !!product.show_in_rider_app,
       track_stock: product.track_stock ?? true,
       is_pos_favorite: !!(product as any).is_pos_favorite,
     });
@@ -174,6 +177,7 @@ const ProductManagement = () => {
       custom_options: customOpts,
       is_active: form.is_active,
       show_in_customer_app: form.show_in_customer_app,
+      show_in_rider_app: form.show_in_rider_app,
       track_stock: form.track_stock,
       is_pos_favorite: form.is_pos_favorite,
     };
@@ -211,6 +215,14 @@ const ProductManagement = () => {
       toast.success(`Produk ${!product.is_active ? "diaktifkan" : "dinonaktifkan"}`);
       fetchProducts();
     }
+  };
+
+  const toggleRiderApp = async (product: Product) => {
+    const next = !product.show_in_rider_app;
+    const { error } = await supabase.from("products").update({ show_in_rider_app: next } as any).eq("id", product.id);
+    if (error) return toast.error("Gagal update: " + error.message);
+    toast.success(next ? "Ditampilkan di app rider" : "Disembunyikan dari app rider");
+    fetchProducts();
   };
 
   const toggleCustomerApp = async (product: Product) => {
@@ -308,6 +320,7 @@ const ProductManagement = () => {
                     <TableHead className="text-right">HPP CK</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>App Customer</TableHead>
+                    <TableHead>App Rider</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -342,6 +355,9 @@ const ProductManagement = () => {
                       </TableCell>
                       <TableCell>
                         <Switch checked={p.show_in_customer_app ?? true} onCheckedChange={() => toggleCustomerApp(p)} aria-label="Tampil di app customer" />
+                      </TableCell>
+                      <TableCell>
+                        <Switch checked={!!p.show_in_rider_app} onCheckedChange={() => toggleRiderApp(p)} aria-label="Tampil di app rider" />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
@@ -471,6 +487,10 @@ const ProductManagement = () => {
             <div className="flex items-center gap-3">
               <Switch checked={form.show_in_customer_app} onCheckedChange={(v) => setForm((f) => ({ ...f, show_in_customer_app: v }))} />
               <Label>Tampilkan di Aplikasi Customer</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.show_in_rider_app} onCheckedChange={(v) => setForm((f) => ({ ...f, show_in_rider_app: v }))} />
+              <Label>Tampilkan di App Rider (Zeger On The Wheels)</Label>
             </div>
             <div className="flex items-start gap-3">
               <Switch checked={form.track_stock} onCheckedChange={(v) => setForm((f) => ({ ...f, track_stock: v }))} />
