@@ -310,13 +310,13 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
                 onClick={() => startOrder('pickup')}
                 className="cx-card w-[138px] shrink-0 snap-start overflow-hidden rounded-[22px] text-left transition-transform active:scale-[0.96]"
               >
-                <span className="cx-stage block aspect-square overflow-hidden">
+                <span className="block aspect-square overflow-hidden bg-white">
                   <img
                     src={normalizeImageUrl(p.image_url) || artworkFor(p)}
                     onError={onArtError(artworkFor(p))}
                     alt={p.name}
                     loading="lazy"
-                    className="cx-art h-full w-full object-contain p-2.5"
+                    className="h-full w-full object-cover"
                   />
                 </span>
                 <span className="block p-2.5">

@@ -76,14 +76,15 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
   return (
     <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-44">
       {/* Hero */}
-      <div className="cx-stage relative h-[300px] overflow-hidden rounded-b-[34px]">
+      <div className="relative aspect-square max-h-[420px] w-full overflow-hidden rounded-b-[34px] bg-white">
         <img
           key={hero}
           src={hero}
           onError={onArtError(artFallback)}
           alt={product.name}
-          className="cx-art cx-float absolute left-1/2 top-1/2 h-[220px] w-[220px] -translate-x-1/2 -translate-y-1/2 object-contain"
+          className="absolute inset-0 h-full w-full object-cover"
         />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[hsl(var(--cx-shadow)/0.35)] to-transparent" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
           <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-11 w-11">
             <ChevronLeft className="h-5 w-5" />

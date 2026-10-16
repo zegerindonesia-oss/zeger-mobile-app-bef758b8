@@ -16,8 +16,8 @@ const TABS = [
 
 export function BottomNavigation({ activeView, activeOrdersCount, onNavigate }: BottomNavigationProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
-      <div className="cx-dock mx-auto flex max-w-md items-stretch justify-around rounded-t-[26px] px-1.5 pt-1.5 pb-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+      <div className="cx-dock cx-dock-glass mx-auto flex max-w-md items-stretch justify-around rounded-[30px] p-1.5">
         {TABS.map((t) => {
           const active = (t.match || [t.id]).includes(activeView);
           return (
