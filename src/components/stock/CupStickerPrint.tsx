@@ -18,28 +18,27 @@ export function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string;
   return (
     <div className="stk">
       <div className="l">
-        <div className="n">{it.name}</div>
-        <div className="s">{it.short_name || it.name}</div>
-        <div className="p">{Math.round(it.price || 0)}</div>
+        <div className="n">{it.short_name || it.name}</div>
+        <div className="p">{Math.round(it.price || 0).toLocaleString("id-ID")}</div>
         <div className="d">SD : {fmt(sd)}</div>
         <div className="d">ED : {fmt(ed)}</div>
       </div>
       <div className="r">
         <div className="b">Zeger!<small>COFFEE</small></div>
-        <div className="rd">{rider}</div>
         {qr && <QRCodeSVG value={qr} size={64} level="L" />}
+        <div className="rd">{rider}</div>
       </div>
     </div>
   );
 }
 
 export const STICKER_CSS = `@page{size:33mm 15mm;margin:0}*{box-sizing:border-box;margin:0}body{font-family:Arial,Helvetica,sans-serif;color:#000}
-.stk{width:33mm;height:15mm;padding:.6mm 1mm;display:flex;gap:.6mm;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
-.l{flex:1;min-width:0;line-height:1.05}.n{font-weight:900;font-size:7pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.s{font-style:italic;font-size:4.5pt;white-space:nowrap;overflow:hidden}.p{font-weight:900;font-style:italic;font-size:8pt}
-.d{font-style:italic;font-size:4.2pt}.r{width:11mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
-.b{font-weight:900;font-size:5pt;color:#c00;text-align:center;line-height:1}.b small{display:block;font-size:2.4pt;color:#000;letter-spacing:.5px}
-.rd{font-style:italic;font-size:3.6pt;white-space:nowrap;max-width:11mm;overflow:hidden}.r svg{width:6.5mm;height:6.5mm}`;
+.stk{width:33mm;height:15mm;padding:.4mm .5mm;display:flex;gap:.4mm;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
+.l{flex:1;min-width:0;line-height:1.02;display:flex;flex-direction:column;justify-content:space-between}.n{font-weight:900;font-size:7.5pt;line-height:1;max-height:2em;overflow:hidden;word-break:break-word}
+.p{font-weight:900;font-size:10pt;line-height:1}
+.d{font-weight:700;font-size:5.4pt}.r{width:8.5mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
+.b{font-weight:900;font-size:4.6pt;color:#c00;text-align:center;line-height:1}.b small{display:block;font-size:2.4pt;color:#000;letter-spacing:.3px}
+.rd{font-weight:700;font-size:3.6pt;white-space:nowrap;max-width:8.5mm;overflow:hidden;text-align:center}.r svg{width:7mm;height:7mm}`;
 
 export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider: string }) {
   const [qr, setQr] = useState(() => localStorage.getItem("zeger_sticker_qr") || "https://shorturl.at/d5luh");
