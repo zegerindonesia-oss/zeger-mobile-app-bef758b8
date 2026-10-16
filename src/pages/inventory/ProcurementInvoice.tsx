@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { Plus, Trash2, FileText, Truck, Wallet, Users, Ruler, Network, PackageCheck, MessageCircle, Mail, Camera, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { waPhone } from '@/pages/invoicing/SalesInvoicing';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const db = supabase as any;
 const HO = ['ho_admin', 'ho_owner', 'ho_staff', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', 'finance'];
