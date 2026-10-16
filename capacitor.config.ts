@@ -5,7 +5,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * Each app is a shell that loads the published domain at its own start page,
  * so content updates go live without rebuilding the APK/IPA.
  */
-const DOMAIN = 'https://erp.zegercoffee.com';
+const DOMAIN = 'https://flowfnb.flowsstack.com';
 
 const targets = {
   pos: { appId: 'com.flowfnb.pos', appName: 'Flow F&B POS', path: '/pos', dir: 'native/pos' },
