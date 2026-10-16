@@ -13,6 +13,8 @@
     "cap:rider": "cross-env APP_TARGET=rider npx cap sync",
     "cap:customer": "cross-env APP_TARGET=customer npx cap sync",
     "assets:pos": "npx @capacitor/assets generate --assetPath resources/pos --android-project native/pos/android --ios-project native/pos/ios/App",
+    "assets:rider": "npx @capacitor/assets generate --assetPath resources/rider --android-project native/rider/android --ios-project native/rider/ios/App",
+    "assets:customer": "npx @capacitor/assets generate --assetPath resources/customer --android-project native/customer/android --ios-project native/customer/ios/App",
     "app:pos:add": "cross-env APP_TARGET=pos npx cap add android",
     "app:rider:add": "cross-env APP_TARGET=rider npx cap add android",
     "app:customer:add": "cross-env APP_TARGET=customer npx cap add android",
