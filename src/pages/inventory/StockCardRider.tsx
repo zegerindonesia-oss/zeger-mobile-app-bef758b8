@@ -223,33 +223,7 @@ export default function StockCardRider() {
       if (returnRes.error) throw returnRes.error;
 
       const shifts = shiftsRes.data || [];
-      const jakDate = (d: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(d));
-
-      // Group shifts by rider+date
-      const shiftsByRD: Record<string, any[]> = {};
-      shifts.forEach((s: any) => {
-        const k = `${s.rider_id}-${s.shift_date}`;
-        if (!shiftsByRD[k]) shiftsByRD[k] = [];
-        shiftsByRD[k].push(s);
-      });
-      Object.values(shiftsByRD).forEach(arr => arr.sort((a: any, b: any) => {
-        const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
-        const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
-        return ta - tb;
-      }));
-
-      const pick = (riderId: string, whenISO: string): any | null => {
-        const dk = jakDate(whenISO);
-        const arr = shiftsByRD[`${riderId}-${dk}`];
-        if (!arr || arr.length === 0) return null;
-        const t = new Date(whenISO).getTime();
-        let chosen = arr[0];
-        for (const s of arr) {
-          const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0;
-          if (st <= t) chosen = s;
-        }
-        return chosen;
-      };
+      const pick = buildShiftPicker(shifts as any[]);
 
       const rows = new Map<string, ShiftBreakdownRow>();
       shifts.forEach((s: any) => {
@@ -289,8 +263,8 @@ export default function StockCardRider() {
         if (it.product_id) ensureProduct(r, it.product_id, it.products?.name, it.products?.category).sold += Number(it.quantity || 0);
       });
       (returnRes.data || []).forEach((it: any) => {
-        const when = it.actual_delivery_date || it.created_at;
-        const s = pick(it.rider_id, when);
+        // Rider's return time (created_at), not later verification time, decides the shift
+        const s = pick(it.rider_id, it.created_at);
         if (!s) return;
         const r = rows.get(s.id); if (!r) return;
         r.stock_returned += it.quantity || 0;
