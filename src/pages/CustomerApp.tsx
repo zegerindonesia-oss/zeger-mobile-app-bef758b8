@@ -20,6 +20,7 @@ import {
   Phone,
   Package
 } from 'lucide-react';
+import { CustomerOnboarding, ONBOARDING_KEY } from '@/components/customer/CustomerOnboarding';
 import { cn } from '@/lib/utils';
 import { CustomerAuth } from '@/components/customer/CustomerAuth';
 import { CustomerHome } from '@/components/customer/CustomerHome';
@@ -80,7 +81,7 @@ type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profi
 /** Screens that keep the floating bottom dock visible. */
 const DOCK_VIEWS: View[] = ['home', 'vouchers', 'promo-reward', 'orders', 'profile', 'loyalty', 'map'];
 
-export default function CustomerApp() {
+function CustomerAppInner() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -967,4 +968,11 @@ export default function CustomerApp() {
       )}
     </div>
   );
+}
+export default function CustomerApp() {
+  const [showIntro, setShowIntro] = useState(() => {
+    try { return !localStorage.getItem(ONBOARDING_KEY); } catch { return false; }
+  });
+  if (showIntro) return <CustomerOnboarding onDone={() => setShowIntro(false)} />;
+  return <CustomerAppInner />;
 }
