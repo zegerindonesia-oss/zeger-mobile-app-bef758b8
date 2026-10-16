@@ -12,6 +12,8 @@ interface Product {
   price: number;
   image_url: string | null;
   category: string | null;
+  brand?: string | null;
+  sub_category?: string | null;
   custom_options: any;
 }
 
@@ -29,6 +31,9 @@ interface CustomerMenuProps {
   cart: any[];
 }
 
+const brandOf = (p: Product) => (p.brand || '').trim() || 'Zeger';
+const catOf = (p: Product) => (p.sub_category || p.category || 'Lainnya').trim();
+
 export function CustomerMenu({
   products,
   onAddToCart,
@@ -42,24 +47,33 @@ export function CustomerMenu({
 }: CustomerMenuProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [brand, setBrand] = useState('all');
+
+  const brands = useMemo(() => {
+    const seen: string[] = [];
+    products.forEach((p) => { const b = brandOf(p); if (!seen.includes(b)) seen.push(b); });
+    return ['all', ...seen];
+  }, [products]);
 
   const categories = useMemo(() => {
     const seen: string[] = [];
     products.forEach((p) => {
-      const c = (p.category || 'Lainnya').trim();
+      if (brand !== 'all' && brandOf(p) !== brand) return;
+      const c = catOf(p);
       if (!seen.includes(c)) seen.push(c);
     });
     return ['all', ...seen];
-  }, [products]);
+  }, [products, brand]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
-      const inCat = category === 'all' || (p.category || 'Lainnya').trim() === category;
+      const inBrand = brand === 'all' || brandOf(p) === brand;
+      const inCat = category === 'all' || catOf(p) === category;
       const inSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
-      return inCat && inSearch;
+      return inBrand && inCat && inSearch;
     });
-  }, [products, search, category]);
+  }, [products, search, category, brand]);
 
   const featured = useMemo(() => products.find((p) => p.image_url) || products[0], [products]);
   const totalItems = countItems(cart);
@@ -100,7 +114,21 @@ export function CustomerMenu({
           />
         </div>
 
-        <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {brands.length > 2 && (
+          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {brands.map((b) => (
+              <button
+                key={b}
+                onClick={() => { setBrand(b); setCategory('all'); }}
+                data-active={brand === b}
+                className="cx-chip shrink-0 px-4 py-2 text-xs font-extrabold uppercase tracking-wide"
+              >
+                {b === 'all' ? 'Semua Brand' : b}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {categories.map((c) => (
             <button
               key={c}
@@ -161,13 +189,13 @@ export function CustomerMenu({
           <div className="mt-3 grid grid-cols-2 gap-3">
             {visible.map((p) => (
               <article key={p.id} className="cx-card flex flex-col overflow-hidden rounded-[22px]">
-                <button onClick={() => onAddToCart(p)} className="cx-stage block aspect-square overflow-hidden text-left">
+                <button onClick={() => onAddToCart(p)} className="block aspect-square overflow-hidden bg-white text-left">
                   <img
                     src={normalizeImageUrl(p.image_url) || artworkFor(p)}
                     onError={onArtError(artworkFor(p))}
                     alt={p.name}
                     loading="lazy"
-                    className="cx-art cx-tilt h-full w-full object-contain p-3"
+                    className="cx-tilt h-full w-full object-cover"
                   />
                 </button>
                 <div className="flex flex-1 flex-col p-3">
