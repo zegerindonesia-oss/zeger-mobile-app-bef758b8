@@ -107,16 +107,24 @@ const fileToBase64 = (file: File) => new Promise<string>((res, rej) => {
   r.onerror = rej;
   r.readAsDataURL(file);
 });
-const shrinkImage = async (file: File): Promise<{ data: string; mime: string }> => {
-  if (file.type === 'application/pdf' || !file.type.startsWith('image/')) return { data: await fileToBase64(file), mime: file.type || 'application/pdf' };
+// Compress to ~1400px JPEG q0.72 (typically 150–300 KB) for both AI reading and storage.
+const shrinkImage = async (file: File): Promise<{ data: string; mime: string; blob: Blob }> => {
+  if (file.type === 'application/pdf' || !file.type.startsWith('image/')) return { data: await fileToBase64(file), mime: file.type || 'application/pdf', blob: file };
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
-    const max = 2000; const s = Math.min(1, max / Math.max(img.width, img.height));
-    const c = document.createElement('canvas'); c.width = img.width * s; c.height = img.height * s;
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    return { data: c.toDataURL('image/jpeg', 0.85).split(',')[1], mime: 'image/jpeg' };
+    const max = 1400; const s = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    const ctx = c.getContext('2d')!; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise<Blob>((res) => c.toBlob((b) => res(b!), 'image/jpeg', 0.72));
+    return { data: c.toDataURL('image/jpeg', 0.72).split(',')[1], mime: 'image/jpeg', blob };
   } finally { URL.revokeObjectURL(url); }
+};
+const aliasKey = (s: string) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+const invoiceImageUrl = async (path?: string | null) => {
+  if (!path) return '';
+  const { data } = await supabase.storage.from('product-images').createSignedUrl(path, 3600);
+  return data?.signedUrl || supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
 };
 
 function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
