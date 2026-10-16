@@ -270,11 +270,12 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
               const opts = unitOptions(m, units);
               return (
                 <TableRow key={i}>
-                  <TableCell className="min-w-48 space-y-1">
-                    {it.scanned_name && <div className="text-xs text-muted-foreground">Nota: <span className="font-medium text-foreground">{it.scanned_name}</span>{it.category ? <Badge variant="outline" className="ml-1">{it.category}</Badge> : null}</div>}
-                    <Select value={it.material_id} onValueChange={(v) => { const mm = materials.find((x: any) => x.id === v); set(i, { material_id: v, unit_name: mm?.unit, factor: 1, unit_price: it.scanned_name ? it.unit_price : mm?.cost_per_unit || '' }); }}>
-                      <SelectTrigger className={it.scanned_name && !it.material_id ? 'border-destructive' : ''}><SelectValue placeholder="Pilih bahan" /></SelectTrigger>
-                      <SelectContent>{materials.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent>
+                  <TableCell className="min-w-56 space-y-1">
+                    {it.scanned_name && <div className="text-xs text-muted-foreground">Nama di nota supplier: <span className="font-medium text-foreground">{it.scanned_name}</span>{it.category ? <Badge variant="outline" className="ml-1">{it.category}</Badge> : null}</div>}
+                    {it.scanned_name && <div className="text-[11px] text-muted-foreground">Bahan kita:{it.match === 'alias' ? <Badge className="ml-1">Sudah diingat</Badge> : it.match === 'ai' ? <Badge variant="secondary" className="ml-1">Saran AI — cek</Badge> : null}</div>}
+                    <Select value={it.material_id} onValueChange={(v) => { const mm = materials.find((x: any) => x.id === v); set(i, { material_id: v, match: 'manual', unit_name: mm?.unit, factor: 1, unit_price: it.scanned_name ? it.unit_price : mm?.cost_per_unit || '' }); }}>
+                      <SelectTrigger className={it.scanned_name && !it.material_id ? 'border-destructive' : ''}><SelectValue placeholder="Pilih bahan baku kita" /></SelectTrigger>
+                      <SelectContent>{materials.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.code ? `${x.code} · ` : ''}{x.name} ({x.unit})</SelectItem>)}</SelectContent>
                     </Select>
                     {it.scanned_name && !it.material_id && <Button size="sm" variant="link" className="h-auto p-0 text-xs" onClick={() => createMaterial(i)}>+ Jadikan bahan baru "{it.scanned_name}"</Button>}
                   </TableCell>
