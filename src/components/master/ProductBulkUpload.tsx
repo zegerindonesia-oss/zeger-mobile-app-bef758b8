@@ -28,6 +28,7 @@ interface Product {
   custom_options: any;
   modifier_group_ids?: string[] | null;
   is_active: boolean | null;
+  track_stock?: boolean | null;
 }
 
 interface ParsedRow {
@@ -44,6 +45,7 @@ interface ParsedRow {
   custom_options: string;
   modifier_groups: string;
   is_active: boolean;
+  track_stock: boolean;
   _status?: "ok" | "error" | "duplicate" | "not_found";
   _message?: string;
 }
@@ -67,6 +69,7 @@ const TEMPLATE_COLUMNS = [
   "modifier_groups",
   "custom_options",
   "is_active",
+  "track_stock",
 ];
 
 const TEMPLATE_HEADERS = [
@@ -83,6 +86,7 @@ const TEMPLATE_HEADERS = [
   "Grup Varian (pisah ;)",
   "Custom Options (JSON)",
   "Aktif (TRUE/FALSE)",
+  "Lacak Stok (TRUE/FALSE)",
 ];
 
 export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadProps) => {
@@ -105,6 +109,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
       g.scope_type === "all" ? "Semua Menu" : `${SCOPE_LABEL[g.scope_type] || g.scope_type}: ${(g.scope_values || []).join(", ")}`]));
     rows.push([]);
     rows.push(["Cara isi kolom 'Grup Varian' di sheet menu: tulis nama grup dipisah titik koma, contoh: Size Cup; Sugar Level; Topping"]);
+    rows.push(["Kolom 'Lacak Stok': TRUE = stok dihitung (Habis jika stok 0), FALSE = Unlimited/tanpa stok (selalu bisa dijual). Boleh juga YA/TIDAK atau 1/0."]);
     rows.push(["Kosongkan kolom itu kalau menu cukup mengikuti aturan otomatis (brand/kategori) di atas."]);
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws["!cols"] = [{ wch: 22 }, { wch: 18 }, { wch: 8 }, { wch: 50 }, { wch: 40 }];
@@ -115,7 +120,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
     const wb = XLSX.utils.book_new();
 
     if (type === "add") {
-      const data = [TEMPLATE_HEADERS, ["Zeger Coffee", "Minuman", "Espresso Based", "KS-001", "Aren Latte", 15000, 8000, 6000, "Kopi susu signature", "https://example.com/foto.jpg", groups.slice(0, 2).map((g) => g.name).join("; "), "", "TRUE"]];
+      const data = [TEMPLATE_HEADERS, ["Zeger Coffee", "Minuman", "Espresso Based", "KS-001", "Aren Latte", 15000, 8000, 6000, "Kopi susu signature", "https://example.com/foto.jpg", groups.slice(0, 2).map((g) => g.name).join("; "), "", "TRUE", "TRUE"], ["Sabuba", "Makanan", "Bubur Bakar", "BB-001", "Bubur Ayam", 14000, 7000, 0, "Dibuat saat dipesan", "", "", "", "TRUE", "FALSE"]];
       const ws = XLSX.utils.aoa_to_sheet(data);
       ws["!cols"] = TEMPLATE_HEADERS.map(() => ({ wch: 20 }));
       XLSX.utils.book_append_sheet(wb, ws, "Template Menu Baru");
@@ -136,6 +141,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
           groupNames(p.modifier_group_ids),
           p.custom_options ? JSON.stringify(p.custom_options) : "",
           p.is_active ? "TRUE" : "FALSE",
+          p.track_stock === false ? "FALSE" : "TRUE",
         ]),
       ];
       const ws = XLSX.utils.aoa_to_sheet(data);
@@ -176,7 +182,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
         TEMPLATE_HEADERS.forEach((h, i) => {
           headerMap[h.toLowerCase()] = TEMPLATE_COLUMNS[i];
         });
-        Object.assign(headerMap, { "grup varian": "modifier_groups", "varian": "modifier_groups", "kategori": "category", "kategori besar": "category", "sub kategori": "sub_category", "sub-kategori": "sub_category", "nama menu": "name", "kode menu": "code" });
+        Object.assign(headerMap, { "grup varian": "modifier_groups", "varian": "modifier_groups", "kategori": "category", "kategori besar": "category", "sub kategori": "sub_category", "sub-kategori": "sub_category", "nama menu": "name", "kode menu": "code", "lacak stok": "track_stock", "track stock": "track_stock", "pakai stok": "track_stock" });
         // Also accept raw column names
         TEMPLATE_COLUMNS.forEach((c) => {
           headerMap[c.toLowerCase()] = c;
@@ -198,7 +204,10 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
           const code = String(get("code") || "").trim();
           const isActiveRaw = String(get("is_active") || "TRUE").toUpperCase();
 
+          const tsRaw = String(get("track_stock") ?? "").trim().toUpperCase();
+          const track_stock = tsRaw === "" ? true : !["FALSE", "0", "TIDAK", "NO", "N", "UNLIMITED"].includes(tsRaw);
           const item: ParsedRow = {
+            track_stock,
             name,
             code,
             brand: String(get("brand") || "").trim(),
@@ -302,6 +311,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
         custom_options: r.custom_options ? JSON.parse(r.custom_options) : null,
         modifier_group_ids: toIds(r.modifier_groups),
         is_active: r.is_active,
+        track_stock: r.track_stock,
       }));
 
       // Insert in batches of 50
@@ -331,6 +341,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
           custom_options: r.custom_options ? JSON.parse(r.custom_options) : null,
           modifier_group_ids: toIds(r.modifier_groups),
           is_active: r.is_active,
+          track_stock: r.track_stock,
         };
 
         const { error } = await supabase.from("products").update(payload).eq("code", r.code);
