@@ -1,4 +1,6 @@
-import { buildShiftPicker } from "@/lib/shift-cycle";
+import { buildShiftPicker, shiftTimeMs } from "@/lib/shift-cycle";
+const safeDmy = (d?: string | null) => { if (!d) return "-"; const [y, m, dd] = d.slice(0, 10).split("-"); return y && m && dd ? `${dd}/${m}/${y}` : "-"; };
+const fmtShiftTime = (v: string | null | undefined, date: string) => { const t = shiftTimeMs(v, date); return t === null ? "-" : new Date(t).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" }); };
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -555,7 +557,7 @@ export default function StockCardRider() {
         const costPrice = invItem?.products?.cost_price || productCost.get(productId) || 0;
 
         // Calculate remaining stock = stock_in - stock_sold
-        item.remaining_stock = item.stock_in - item.stock_sold;
+        item.remaining_stock = item.stock_in - item.stock_sold - item.stock_returned;
         
         // Calculate stock value = remaining_stock * cost_price
         item.stock_value = item.remaining_stock * costPrice;
@@ -912,9 +914,9 @@ export default function StockCardRider() {
                           </Button>
                         </TableCell>
                         <TableCell className="font-medium">{r.rider_name}</TableCell>
-                        <TableCell>{format(new Date(r.shift_date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{safeDmy(r.shift_date)}</TableCell>
                         <TableCell>#{r.shift_number}</TableCell>
-                        <TableCell className="text-xs">{r.shift_start_time ? new Date(r.shift_start_time).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                        <TableCell className="text-xs">{fmtShiftTime(r.shift_start_time, r.shift_date)}</TableCell>
                         <TableCell className="text-right">{r.stock_in}</TableCell>
                         <TableCell className="text-right">{r.stock_sold}</TableCell>
                         <TableCell className="text-right">{r.stock_returned}</TableCell>
@@ -978,7 +980,7 @@ export default function StockCardRider() {
                   }), { in: 0, sold: 0, ret: 0, rem: 0, sales: 0 });
                   nodes.push(
                     <TableRow key={`${k}-total`} className="bg-primary/10 font-semibold">
-                      <TableCell colSpan={5}>Total Harian — {arr[0].rider_name} — {format(new Date(arr[0].shift_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell colSpan={5}>Total Harian — {arr[0].rider_name} — {safeDmy(arr[0].shift_date)}</TableCell>
                       <TableCell className="text-right">{t.in}</TableCell>
                       <TableCell className="text-right">{t.sold}</TableCell>
                       <TableCell className="text-right">{t.ret}</TableCell>
