@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { Plus, Trash2, FileText, Truck, Wallet, Users, Ruler, Network, PackageCheck, MessageCircle, Mail, Camera, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { waPhone } from '@/pages/invoicing/SalesInvoicing';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const db = supabase as any;
 const HO = ['ho_admin', 'ho_owner', 'ho_staff', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff', 'finance'];
@@ -107,16 +108,24 @@ const fileToBase64 = (file: File) => new Promise<string>((res, rej) => {
   r.onerror = rej;
   r.readAsDataURL(file);
 });
-const shrinkImage = async (file: File): Promise<{ data: string; mime: string }> => {
-  if (file.type === 'application/pdf' || !file.type.startsWith('image/')) return { data: await fileToBase64(file), mime: file.type || 'application/pdf' };
+// Compress to ~1400px JPEG q0.72 (typically 150–300 KB) for both AI reading and storage.
+const shrinkImage = async (file: File): Promise<{ data: string; mime: string; blob: Blob }> => {
+  if (file.type === 'application/pdf' || !file.type.startsWith('image/')) return { data: await fileToBase64(file), mime: file.type || 'application/pdf', blob: file };
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
-    const max = 2000; const s = Math.min(1, max / Math.max(img.width, img.height));
-    const c = document.createElement('canvas'); c.width = img.width * s; c.height = img.height * s;
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    return { data: c.toDataURL('image/jpeg', 0.85).split(',')[1], mime: 'image/jpeg' };
+    const max = 1400; const s = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    const ctx = c.getContext('2d')!; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise<Blob>((res) => c.toBlob((b) => res(b!), 'image/jpeg', 0.72));
+    return { data: c.toDataURL('image/jpeg', 0.72).split(',')[1], mime: 'image/jpeg', blob };
   } finally { URL.revokeObjectURL(url); }
+};
+const aliasKey = (s: string) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+const invoiceImageUrl = async (path?: string | null) => {
+  if (!path) return '';
+  const { data } = await supabase.storage.from('product-images').createSignedUrl(path, 3600);
+  return data?.signedUrl || supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
 };
 
 function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
@@ -124,20 +133,32 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
   const [expected, setExpected] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<any[]>([]);
-  const [scan, setScan] = useState<{ preview: string; loading: boolean; invoice_number: string; invoice_date: string; due_date: string; supplier_name: string; total: number | null; file?: File } | null>(null);
+  const [scan, setScan] = useState<{ preview: string; loading: boolean; invoice_number: string; invoice_date: string; due_date: string; supplier_name: string; total: number | null; file?: Blob; ext?: string; sizeKb?: number } | null>(null);
+  const [aliases, setAliases] = useState<any[]>([]);
+  useEffect(() => { db.from('supplier_item_aliases').select('*').then(({ data }: any) => setAliases(data || [])); }, []);
   const cameraRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const add = () => setItems([...items, { material_id: '', quantity: '', unit_name: '', factor: 1, unit_price: '' }]);
   const set = (i: number, patch: any) => setItems(items.map((it, k) => (k === i ? { ...it, ...patch } : it)));
   const total = items.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unit_price || 0), 0);
+  const findAlias = (name: string, supId?: string) => {
+    const k = aliasKey(name);
+    return aliases.find((a) => a.alias_key === k && a.supplier_id === (supId || null)) || aliases.find((a) => a.alias_key === k);
+  };
 
   const onFile = async (file?: File) => {
     if (!file) return;
-    setScan({ preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '', loading: true, invoice_number: '', invoice_date: today(), due_date: '', supplier_name: '', total: null, file });
+    setScan({ preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '', loading: true, invoice_number: '', invoice_date: today(), due_date: '', supplier_name: '', total: null });
     try {
-      const { data: b64, mime } = await shrinkImage(file);
+      const { data: b64, mime, blob } = await shrinkImage(file);
+      setScan((s) => s && ({ ...s, file: blob, ext: mime === 'application/pdf' ? 'pdf' : 'jpg', sizeKb: Math.round(blob.size / 1024) }));
       const { data, error } = await supabase.functions.invoke('parse-purchase-invoice', {
-        body: { image: b64, mime, materials: materials.map((m: any) => ({ id: m.id, name: m.name, unit: m.unit, category: m.category })), suppliers: suppliers.map((s: any) => ({ id: s.id, name: s.name })) },
+        body: {
+          image: b64, mime,
+          materials: materials.map((m: any) => ({ id: m.id, code: m.code, name: m.name, unit: m.unit, category: m.category })),
+          suppliers: suppliers.map((s: any) => ({ id: s.id, name: s.name })),
+          aliases: aliases.slice(0, 800).map((a) => ({ name: a.alias_name, material_id: a.material_id })),
+        },
       });
       if (error || data?.error) {
         let msg = data?.error || error?.message;
@@ -148,9 +169,10 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
       if (sup) setSupplierId(sup.id);
       setScan((s) => s && ({ ...s, loading: false, invoice_number: data.invoice_number || '', invoice_date: data.invoice_date || today(), due_date: data.due_date || '', supplier_name: data.supplier_name || '', total: data.total ?? null }));
       setItems((data.items || []).map((it: any) => {
-        const m = materials.find((x: any) => x.id === it.material_id);
-        const o = m ? unitOptions(m, units).find((u: any) => u.unit_name?.toLowerCase() === String(it.unit || '').toLowerCase()) : null;
-        return { material_id: m?.id || '', scanned_name: it.name, scanned_unit: it.unit, category: it.category, quantity: it.quantity || '', unit_name: o?.unit_name || m?.unit || it.unit || '', factor: o?.factor || 1, unit_price: it.unit_price || (it.quantity ? it.subtotal / it.quantity : '') };
+        const al = findAlias(it.name, sup?.id);
+        const m = materials.find((x: any) => x.id === (al?.material_id || it.material_id));
+        const o = m ? unitOptions(m, units).find((u: any) => u.unit_name?.toLowerCase() === String(al?.unit_name || it.unit || '').toLowerCase()) : null;
+        return { material_id: m?.id || '', match: al ? 'alias' : m ? 'ai' : '', scanned_name: it.name, scanned_unit: it.unit, category: it.category, quantity: it.quantity || '', unit_name: o?.unit_name || m?.unit || it.unit || '', factor: o?.factor || 1, unit_price: it.unit_price || (it.quantity ? it.subtotal / it.quantity : '') };
       }));
       setNotes((n) => n || `Nota ${data.invoice_number || ''} ${data.supplier_name || ''}`.trim());
       toast.success(`Nota terbaca: ${(data.items || []).length} barang`);
@@ -183,17 +205,27 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
     const terms = scan?.due_date && scan.invoice_date ? Math.max(0, Math.round((new Date(scan.due_date).getTime() - new Date(scan.invoice_date).getTime()) / 86400000)) : (suppliers.find((s: any) => s.id === supplierId)?.default_terms_days || 0);
     const { data, error } = await db.from('purchase_orders').insert({ po_number, branch_id: branchId, supplier_id: supplierId || null, expected_date: expected || null, notes: notes || null, total_amount: total, created_by: userId, terms_days: terms }).select().single();
     if (error) return toast.error(error.message);
-    const { data: rows, error: e2 } = await db.from('purchase_order_items').insert(valid.map((i) => ({ po_id: data.id, material_id: i.material_id, quantity: Number(i.quantity), unit_name: i.unit_name, factor: Number(i.factor) || 1, unit_price: Number(i.unit_price) || 0 }))).select();
+    const { data: rows, error: e2 } = await db.from('purchase_order_items').insert(valid.map((i) => ({ po_id: data.id, material_id: i.material_id, quantity: Number(i.quantity), unit_name: i.unit_name, factor: Number(i.factor) || 1, unit_price: Number(i.unit_price) || 0, supplier_item_name: i.scanned_name || null }))).select();
     if (e2) return toast.error(e2.message);
+    // Remember supplier item name → our material, so the next scan auto-matches
+    const learn = valid.filter((i) => i.scanned_name && aliasKey(i.scanned_name) !== aliasKey(materials.find((m: any) => m.id === i.material_id)?.name || ''));
+    for (const i of learn) {
+      const ex = findAlias(i.scanned_name, supplierId);
+      if (ex && ex.supplier_id === (supplierId || null)) {
+        if (ex.material_id !== i.material_id || ex.unit_name !== i.unit_name) await db.from('supplier_item_aliases').update({ material_id: i.material_id, unit_name: i.unit_name, factor: Number(i.factor) || 1, updated_at: new Date().toISOString() }).eq('id', ex.id);
+      } else await db.from('supplier_item_aliases').insert({ supplier_id: supplierId || null, alias_name: i.scanned_name, material_id: i.material_id, unit_name: i.unit_name, factor: Number(i.factor) || 1 });
+    }
+    if (learn.length) db.from('supplier_item_aliases').select('*').then(({ data: a }: any) => setAliases(a || []));
+    if (scan?.file) {
+      const path = `purchase-invoices/${data.id}.${scan.ext || 'jpg'}`;
+      const { error: up } = await supabase.storage.from('product-images').upload(path, scan.file, { upsert: true, contentType: scan.ext === 'pdf' ? 'application/pdf' : 'image/jpeg' });
+      if (!up) await db.from('purchase_orders').update({ invoice_image_path: path }).eq('id', data.id);
+    }
     if (receiveNow) {
       const { error: e3 } = await db.rpc('receive_purchase_order', { _po_id: data.id, _items: (rows || []).map((r: any) => ({ id: r.id, received_quantity: Number(r.quantity) })), _invoice_number: scan?.invoice_number || null, _invoice_date: scan?.invoice_date || today(), _terms_days: terms });
       if (e3) return toast.error(e3.message);
       toast.success(`${po_number} diterima — stok bertambah & invoice tercatat`);
     } else toast.success(`${po_number} dibuat`);
-    if (scan?.file) {
-      const ext = scan.file.name.split('.').pop() || 'jpg';
-      await supabase.storage.from('product-images').upload(`purchase-invoices/${data.id}.${ext}`, scan.file, { upsert: true }).catch(() => null);
-    }
     setItems([]); setNotes(''); setExpected(''); setScan(null); reload();
   };
 
@@ -249,11 +281,12 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
               const opts = unitOptions(m, units);
               return (
                 <TableRow key={i}>
-                  <TableCell className="min-w-48 space-y-1">
-                    {it.scanned_name && <div className="text-xs text-muted-foreground">Nota: <span className="font-medium text-foreground">{it.scanned_name}</span>{it.category ? <Badge variant="outline" className="ml-1">{it.category}</Badge> : null}</div>}
-                    <Select value={it.material_id} onValueChange={(v) => { const mm = materials.find((x: any) => x.id === v); set(i, { material_id: v, unit_name: mm?.unit, factor: 1, unit_price: it.scanned_name ? it.unit_price : mm?.cost_per_unit || '' }); }}>
-                      <SelectTrigger className={it.scanned_name && !it.material_id ? 'border-destructive' : ''}><SelectValue placeholder="Pilih bahan" /></SelectTrigger>
-                      <SelectContent>{materials.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent>
+                  <TableCell className="min-w-56 space-y-1">
+                    {it.scanned_name && <div className="text-xs text-muted-foreground">Nama di nota supplier: <span className="font-medium text-foreground">{it.scanned_name}</span>{it.category ? <Badge variant="outline" className="ml-1">{it.category}</Badge> : null}</div>}
+                    {it.scanned_name && <div className="text-[11px] text-muted-foreground">Bahan kita:{it.match === 'alias' ? <Badge className="ml-1">Sudah diingat</Badge> : it.match === 'ai' ? <Badge variant="secondary" className="ml-1">Saran AI — cek</Badge> : null}</div>}
+                    <Select value={it.material_id} onValueChange={(v) => { const mm = materials.find((x: any) => x.id === v); set(i, { material_id: v, match: 'manual', unit_name: mm?.unit, factor: 1, unit_price: it.scanned_name ? it.unit_price : mm?.cost_per_unit || '' }); }}>
+                      <SelectTrigger className={it.scanned_name && !it.material_id ? 'border-destructive' : ''}><SelectValue placeholder="Pilih bahan baku kita" /></SelectTrigger>
+                      <SelectContent>{materials.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.code ? `${x.code} · ` : ''}{x.name} ({x.unit})</SelectItem>)}</SelectContent>
                     </Select>
                     {it.scanned_name && !it.material_id && <Button size="sm" variant="link" className="h-auto p-0 text-xs" onClick={() => createMaterial(i)}>+ Jadikan bahan baru "{it.scanned_name}"</Button>}
                   </TableCell>
@@ -353,6 +386,18 @@ function DebtTab({ pos, reload }: any) {
     toast.success('Pembayaran dicatat'); setPay({ ...pay, [po.id]: '' }); reload();
   };
   const sorted = [...pos].sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
+  const [open, setOpen] = useState<any>(null);
+  const [detail, setDetail] = useState<{ items: any[]; pays: any[]; img: string; loading: boolean }>({ items: [], pays: [], img: '', loading: false });
+  const openInv = async (po: any) => {
+    setOpen(po); setDetail({ items: [], pays: [], img: '', loading: true });
+    const [it, py] = await Promise.all([
+      db.from('purchase_order_items').select('*, raw_materials(code, name, unit)').eq('po_id', po.id),
+      db.from('purchase_payments').select('*').eq('po_id', po.id).order('paid_at'),
+    ]);
+    let path = po.invoice_image_path;
+    if (!path) { const { data: f } = await supabase.storage.from('product-images').list('purchase-invoices', { search: po.id }); path = f?.[0] ? `purchase-invoices/${f[0].name}` : null; }
+    setDetail({ items: it.data || [], pays: py.data || [], img: await invoiceImageUrl(path), loading: false });
+  };
   return (
     <Card><CardContent className="p-3">
       <Table>
@@ -363,21 +408,62 @@ function DebtTab({ pos, reload }: any) {
             const d = po.due_date ? daysTo(po.due_date) : 0;
             const st = rest <= 0 ? <Badge>Lunas</Badge> : d < 0 ? <Badge variant="destructive">Telat {-d} hr</Badge> : po.paid_amount > 0 ? <Badge variant="secondary">Sebagian · {d} hr lagi</Badge> : <Badge variant="outline">{d} hr lagi</Badge>;
             return (
-              <TableRow key={po.id}>
-                <TableCell>{po.invoice_number || po.po_number}</TableCell>
+              <TableRow key={po.id} className="cursor-pointer" onClick={() => openInv(po)}>
+                <TableCell><button className="font-medium text-primary underline-offset-2 hover:underline">{po.invoice_number || po.po_number}</button></TableCell>
                 <TableCell>{po.suppliers?.name || '-'}</TableCell>
                 <TableCell>{po.invoice_date}</TableCell>
                 <TableCell>{po.due_date} <span className="text-xs text-muted-foreground">({po.terms_days} hr)</span></TableCell>
                 <TableCell>{st}</TableCell>
                 <TableCell className="text-right">{rp(po.total_amount)}</TableCell>
                 <TableCell className="text-right font-semibold">{rp(rest)}</TableCell>
-                <TableCell>{rest > 0 && <div className="flex gap-1"><Input type="number" className="w-28" placeholder={String(rest)} value={pay[po.id] || ''} onChange={(e) => setPay({ ...pay, [po.id]: e.target.value })} /><Button size="sm" onClick={() => doPay(po)}>Bayar</Button></div>}</TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>{rest > 0 && <div className="flex gap-1"><Input type="number" className="w-28" placeholder={String(rest)} value={pay[po.id] || ''} onChange={(e) => setPay({ ...pay, [po.id]: e.target.value })} /><Button size="sm" onClick={() => doPay(po)}>Bayar</Button></div>}</TableCell>
               </TableRow>
             );
           })}
           {!sorted.length && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Belum ada invoice.</TableCell></TableRow>}
         </TableBody>
       </Table>
+      <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Invoice {open?.invoice_number || open?.po_number}</DialogTitle></DialogHeader>
+          {open && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div><div className="text-xs text-muted-foreground">Supplier</div><div className="font-medium">{open.suppliers?.name || '-'}</div></div>
+                <div><div className="text-xs text-muted-foreground">No. PO</div><div className="font-medium">{open.po_number}</div></div>
+                <div><div className="text-xs text-muted-foreground">Tgl Invoice</div><div className="font-medium">{open.invoice_date || '-'}</div></div>
+                <div><div className="text-xs text-muted-foreground">Jatuh Tempo</div><div className="font-medium">{open.due_date || '-'}</div></div>
+                <div><div className="text-xs text-muted-foreground">Total</div><div className="font-semibold">{rp(open.total_amount)}</div></div>
+                <div><div className="text-xs text-muted-foreground">Sisa Hutang</div><div className="font-semibold text-primary">{rp(open.total_amount - open.paid_amount)}</div></div>
+              </div>
+              {detail.loading ? <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Memuat rincian…</div> : (
+                <>
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Bahan</TableHead><TableHead className="text-right">Qty</TableHead><TableHead>Satuan</TableHead><TableHead className="text-right">Harga</TableHead><TableHead className="text-right">Subtotal</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {detail.items.map((it) => {
+                        const q = Number(it.received_quantity ?? it.quantity);
+                        return (
+                          <TableRow key={it.id}>
+                            <TableCell><div className="font-medium">{it.raw_materials?.code ? `${it.raw_materials.code} · ` : ''}{it.raw_materials?.name || '-'}</div>{it.supplier_item_name && <div className="text-xs text-muted-foreground">Nota: {it.supplier_item_name}</div>}</TableCell>
+                            <TableCell className="text-right">{q}</TableCell>
+                            <TableCell>{it.unit_name}</TableCell>
+                            <TableCell className="text-right">{rp(it.unit_price)}</TableCell>
+                            <TableCell className="text-right">{rp(q * Number(it.unit_price))}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {!detail.items.length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Tidak ada rincian barang.</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                  {detail.pays.length > 0 && <div><div className="font-medium mb-1">Riwayat Pembayaran</div>{detail.pays.map((p) => <div key={p.id} className="flex justify-between border-b py-1"><span>{p.paid_at} · {p.method}</span><span>{rp(p.amount)}</span></div>)}</div>}
+                  {detail.img && <div><div className="font-medium mb-1">Foto Nota</div><a href={detail.img} target="_blank" rel="noreferrer"><img src={detail.img} alt="Foto nota" className="max-h-96 rounded-lg border" /></a></div>}
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </CardContent></Card>
   );
 }

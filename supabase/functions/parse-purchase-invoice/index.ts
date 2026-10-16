@@ -47,20 +47,24 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "AI belum dikonfigurasi" }, 500);
 
-    const { image, mime, materials, suppliers } = await req.json();
+    const { image, mime, materials, suppliers, aliases } = await req.json();
     if (typeof image !== "string" || image.length < 100 || image.length > 14_000_000) return json({ error: "Foto nota tidak valid / terlalu besar" }, 400);
     const type = typeof mime === "string" ? mime : "image/jpeg";
-    const mats = (Array.isArray(materials) ? materials : []).slice(0, 600).map((m: any) => `${m.id}|${m.name}|${m.unit}|${m.category ?? ""}`).join("\n");
+    const mats = (Array.isArray(materials) ? materials : []).slice(0, 600).map((m: any) => `${m.id}|${m.code ?? ""}|${m.name}|${m.unit}|${m.category ?? ""}`).join("\n");
     const sups = (Array.isArray(suppliers) ? suppliers : []).slice(0, 300).map((s: any) => `${s.id}|${s.name}`).join("\n");
+    const als = (Array.isArray(aliases) ? aliases : []).slice(0, 800).map((a: any) => `${String(a.name).slice(0, 120)}|${a.material_id}`).join("\n");
 
     const prompt = `Kamu membaca foto nota/faktur/invoice pembelian bahan baku F&B Indonesia.
 Ekstrak: nomor invoice, nama supplier/toko/PT, tanggal (YYYY-MM-DD), jatuh tempo bila ada, total, dan SEMUA baris barang (nama persis di nota, qty, satuan, harga satuan, subtotal).
 Angka rupiah tanpa titik ribuan (contoh "Rp 125.000" -> 125000). Jika harga satuan tidak ada, hitung subtotal/qty.
-Cocokkan tiap barang ke master bahan (toleran singkatan/merek), isi material_id dengan id persis atau null jika tidak yakin. Isi category sebagai saran kategori (mis. Dairy, Kopi, Sirup, Packaging).
+Cocokkan tiap barang ke master bahan (toleran singkatan/merek/nama alternatif supplier), isi material_id dengan id persis atau null jika tidak yakin. Utamakan DAFTAR ALIAS bila nama nota mirip. Isi category sebagai saran kategori (mis. Dairy, Kopi, Sirup, Packaging).
 Cocokkan supplier ke master supplier (supplier_match_id atau null).
 
-MASTER BAHAN (id|nama|satuan|kategori):
+MASTER BAHAN (id|kode|nama|satuan|kategori):
 ${mats}
+
+DAFTAR ALIAS nama supplier yang sudah dicocokkan (nama_di_nota|material_id):
+${als}
 
 MASTER SUPPLIER (id|nama):
 ${sups}`;

@@ -3195,6 +3195,7 @@ export type Database = {
           po_id: string
           quantity: number
           received_quantity: number | null
+          supplier_item_name: string | null
           unit_name: string
           unit_price: number
         }
@@ -3206,6 +3207,7 @@ export type Database = {
           po_id: string
           quantity?: number
           received_quantity?: number | null
+          supplier_item_name?: string | null
           unit_name: string
           unit_price?: number
         }
@@ -3217,6 +3219,7 @@ export type Database = {
           po_id?: string
           quantity?: number
           received_quantity?: number | null
+          supplier_item_name?: string | null
           unit_name?: string
           unit_price?: number
         }
@@ -3246,6 +3249,7 @@ export type Database = {
           expected_date: string | null
           id: string
           invoice_date: string | null
+          invoice_image_path: string | null
           invoice_number: string | null
           notes: string | null
           order_date: string
@@ -3267,6 +3271,7 @@ export type Database = {
           expected_date?: string | null
           id?: string
           invoice_date?: string | null
+          invoice_image_path?: string | null
           invoice_number?: string | null
           notes?: string | null
           order_date?: string
@@ -3288,6 +3293,7 @@ export type Database = {
           expected_date?: string | null
           id?: string
           invoice_date?: string | null
+          invoice_image_path?: string | null
           invoice_number?: string | null
           notes?: string | null
           order_date?: string
@@ -4458,6 +4464,67 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      supplier_item_aliases: {
+        Row: {
+          alias_key: string | null
+          alias_name: string
+          created_at: string
+          factor: number
+          id: string
+          material_id: string
+          supplier_id: string | null
+          tenant_id: string
+          unit_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          alias_key?: string | null
+          alias_name: string
+          created_at?: string
+          factor?: number
+          id?: string
+          material_id: string
+          supplier_id?: string | null
+          tenant_id?: string
+          unit_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alias_key?: string | null
+          alias_name?: string
+          created_at?: string
+          factor?: number
+          id?: string
+          material_id?: string
+          supplier_id?: string | null
+          tenant_id?: string
+          unit_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_item_aliases_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_item_aliases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_item_aliases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers: {
         Row: {
