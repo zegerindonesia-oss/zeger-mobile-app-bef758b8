@@ -512,7 +512,7 @@ export default function StockCardRider() {
         `)
         .in('movement_type', ['return', 'out'])
         .gte('created_at', `${start}T00:00:00+07:00`)
-        .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
+        .lte('created_at', `${end}T23:59:59+07:00`);
       returnQuery = isAll ? returnQuery.in('rider_id', riderIds) : returnQuery.eq('rider_id', selectedRider);
       const { data: stockReturns, error: returnError } = await returnQuery;
 
