@@ -385,6 +385,18 @@ function DebtTab({ pos, reload }: any) {
     toast.success('Pembayaran dicatat'); setPay({ ...pay, [po.id]: '' }); reload();
   };
   const sorted = [...pos].sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
+  const [open, setOpen] = useState<any>(null);
+  const [detail, setDetail] = useState<{ items: any[]; pays: any[]; img: string; loading: boolean }>({ items: [], pays: [], img: '', loading: false });
+  const openInv = async (po: any) => {
+    setOpen(po); setDetail({ items: [], pays: [], img: '', loading: true });
+    const [it, py] = await Promise.all([
+      db.from('purchase_order_items').select('*, raw_materials(code, name, unit)').eq('po_id', po.id),
+      db.from('purchase_payments').select('*').eq('po_id', po.id).order('paid_at'),
+    ]);
+    let path = po.invoice_image_path;
+    if (!path) { const { data: f } = await supabase.storage.from('product-images').list('purchase-invoices', { search: po.id }); path = f?.[0] ? `purchase-invoices/${f[0].name}` : null; }
+    setDetail({ items: it.data || [], pays: py.data || [], img: await invoiceImageUrl(path), loading: false });
+  };
   return (
     <Card><CardContent className="p-3">
       <Table>
@@ -395,21 +407,62 @@ function DebtTab({ pos, reload }: any) {
             const d = po.due_date ? daysTo(po.due_date) : 0;
             const st = rest <= 0 ? <Badge>Lunas</Badge> : d < 0 ? <Badge variant="destructive">Telat {-d} hr</Badge> : po.paid_amount > 0 ? <Badge variant="secondary">Sebagian · {d} hr lagi</Badge> : <Badge variant="outline">{d} hr lagi</Badge>;
             return (
-              <TableRow key={po.id}>
-                <TableCell>{po.invoice_number || po.po_number}</TableCell>
+              <TableRow key={po.id} className="cursor-pointer" onClick={() => openInv(po)}>
+                <TableCell><button className="font-medium text-primary underline-offset-2 hover:underline">{po.invoice_number || po.po_number}</button></TableCell>
                 <TableCell>{po.suppliers?.name || '-'}</TableCell>
                 <TableCell>{po.invoice_date}</TableCell>
                 <TableCell>{po.due_date} <span className="text-xs text-muted-foreground">({po.terms_days} hr)</span></TableCell>
                 <TableCell>{st}</TableCell>
                 <TableCell className="text-right">{rp(po.total_amount)}</TableCell>
                 <TableCell className="text-right font-semibold">{rp(rest)}</TableCell>
-                <TableCell>{rest > 0 && <div className="flex gap-1"><Input type="number" className="w-28" placeholder={String(rest)} value={pay[po.id] || ''} onChange={(e) => setPay({ ...pay, [po.id]: e.target.value })} /><Button size="sm" onClick={() => doPay(po)}>Bayar</Button></div>}</TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>{rest > 0 && <div className="flex gap-1"><Input type="number" className="w-28" placeholder={String(rest)} value={pay[po.id] || ''} onChange={(e) => setPay({ ...pay, [po.id]: e.target.value })} /><Button size="sm" onClick={() => doPay(po)}>Bayar</Button></div>}</TableCell>
               </TableRow>
             );
           })}
           {!sorted.length && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Belum ada invoice.</TableCell></TableRow>}
         </TableBody>
       </Table>
+      <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Invoice {open?.invoice_number || open?.po_number}</DialogTitle></DialogHeader>
+          {open && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div><div className="text-xs text-muted-foreground">Supplier</div><div className="font-medium">{open.suppliers?.name || '-'}</div></div>
+                <div><div className="text-xs text-muted-foreground">No. PO</div><div className="font-medium">{open.po_number}</div></div>
+                <div><div className="text-xs text-muted-foreground">Tgl Invoice</div><div className="font-medium">{open.invoice_date || '-'}</div></div>
+                <div><div className="text-xs text-muted-foreground">Jatuh Tempo</div><div className="font-medium">{open.due_date || '-'}</div></div>
+                <div><div className="text-xs text-muted-foreground">Total</div><div className="font-semibold">{rp(open.total_amount)}</div></div>
+                <div><div className="text-xs text-muted-foreground">Sisa Hutang</div><div className="font-semibold text-primary">{rp(open.total_amount - open.paid_amount)}</div></div>
+              </div>
+              {detail.loading ? <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Memuat rincian…</div> : (
+                <>
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Bahan</TableHead><TableHead className="text-right">Qty</TableHead><TableHead>Satuan</TableHead><TableHead className="text-right">Harga</TableHead><TableHead className="text-right">Subtotal</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {detail.items.map((it) => {
+                        const q = Number(it.received_quantity ?? it.quantity);
+                        return (
+                          <TableRow key={it.id}>
+                            <TableCell><div className="font-medium">{it.raw_materials?.code ? `${it.raw_materials.code} · ` : ''}{it.raw_materials?.name || '-'}</div>{it.supplier_item_name && <div className="text-xs text-muted-foreground">Nota: {it.supplier_item_name}</div>}</TableCell>
+                            <TableCell className="text-right">{q}</TableCell>
+                            <TableCell>{it.unit_name}</TableCell>
+                            <TableCell className="text-right">{rp(it.unit_price)}</TableCell>
+                            <TableCell className="text-right">{rp(q * Number(it.unit_price))}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {!detail.items.length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Tidak ada rincian barang.</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                  {detail.pays.length > 0 && <div><div className="font-medium mb-1">Riwayat Pembayaran</div>{detail.pays.map((p) => <div key={p.id} className="flex justify-between border-b py-1"><span>{p.paid_at} · {p.method}</span><span>{rp(p.amount)}</span></div>)}</div>}
+                  {detail.img && <div><div className="font-medium mb-1">Foto Nota</div><a href={detail.img} target="_blank" rel="noreferrer"><img src={detail.img} alt="Foto nota" className="max-h-96 rounded-lg border" /></a></div>}
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </CardContent></Card>
   );
 }
