@@ -50,3 +50,6 @@
 - [x] Ongkir / diskon ongkir / biaya kemasan dapat diatur di Back Office (Customer App Settings → Ongkir & Biaya)
 - [ ] Harga & benefit paket MyZeger Plan masih contoh — menunggu harga final dari owner
 - [ ] 114 temuan linter Supabase lama (SECURITY DEFINER dll) — tunggu persetujuan owner
+- [x] POS 3 printer (Kasir/Kitchen/Label) + Bluetooth langsung ESC/POS & TSPL
+- [ ] Pisah 3 APK Android (POS, Rider, Customer) — lanjutan
+- [ ] Uji cetak fisik Bluetooth XP-420B di tablet
