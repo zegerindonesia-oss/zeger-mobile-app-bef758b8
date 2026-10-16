@@ -132,20 +132,32 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
   const [expected, setExpected] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<any[]>([]);
-  const [scan, setScan] = useState<{ preview: string; loading: boolean; invoice_number: string; invoice_date: string; due_date: string; supplier_name: string; total: number | null; file?: File } | null>(null);
+  const [scan, setScan] = useState<{ preview: string; loading: boolean; invoice_number: string; invoice_date: string; due_date: string; supplier_name: string; total: number | null; file?: Blob; ext?: string; sizeKb?: number } | null>(null);
+  const [aliases, setAliases] = useState<any[]>([]);
+  useEffect(() => { db.from('supplier_item_aliases').select('*').then(({ data }: any) => setAliases(data || [])); }, []);
   const cameraRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const add = () => setItems([...items, { material_id: '', quantity: '', unit_name: '', factor: 1, unit_price: '' }]);
   const set = (i: number, patch: any) => setItems(items.map((it, k) => (k === i ? { ...it, ...patch } : it)));
   const total = items.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unit_price || 0), 0);
+  const findAlias = (name: string, supId?: string) => {
+    const k = aliasKey(name);
+    return aliases.find((a) => a.alias_key === k && a.supplier_id === (supId || null)) || aliases.find((a) => a.alias_key === k);
+  };
 
   const onFile = async (file?: File) => {
     if (!file) return;
-    setScan({ preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '', loading: true, invoice_number: '', invoice_date: today(), due_date: '', supplier_name: '', total: null, file });
+    setScan({ preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '', loading: true, invoice_number: '', invoice_date: today(), due_date: '', supplier_name: '', total: null });
     try {
-      const { data: b64, mime } = await shrinkImage(file);
+      const { data: b64, mime, blob } = await shrinkImage(file);
+      setScan((s) => s && ({ ...s, file: blob, ext: mime === 'application/pdf' ? 'pdf' : 'jpg', sizeKb: Math.round(blob.size / 1024) }));
       const { data, error } = await supabase.functions.invoke('parse-purchase-invoice', {
-        body: { image: b64, mime, materials: materials.map((m: any) => ({ id: m.id, name: m.name, unit: m.unit, category: m.category })), suppliers: suppliers.map((s: any) => ({ id: s.id, name: s.name })) },
+        body: {
+          image: b64, mime,
+          materials: materials.map((m: any) => ({ id: m.id, code: m.code, name: m.name, unit: m.unit, category: m.category })),
+          suppliers: suppliers.map((s: any) => ({ id: s.id, name: s.name })),
+          aliases: aliases.slice(0, 800).map((a) => ({ name: a.alias_name, material_id: a.material_id })),
+        },
       });
       if (error || data?.error) {
         let msg = data?.error || error?.message;
@@ -156,9 +168,10 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
       if (sup) setSupplierId(sup.id);
       setScan((s) => s && ({ ...s, loading: false, invoice_number: data.invoice_number || '', invoice_date: data.invoice_date || today(), due_date: data.due_date || '', supplier_name: data.supplier_name || '', total: data.total ?? null }));
       setItems((data.items || []).map((it: any) => {
-        const m = materials.find((x: any) => x.id === it.material_id);
-        const o = m ? unitOptions(m, units).find((u: any) => u.unit_name?.toLowerCase() === String(it.unit || '').toLowerCase()) : null;
-        return { material_id: m?.id || '', scanned_name: it.name, scanned_unit: it.unit, category: it.category, quantity: it.quantity || '', unit_name: o?.unit_name || m?.unit || it.unit || '', factor: o?.factor || 1, unit_price: it.unit_price || (it.quantity ? it.subtotal / it.quantity : '') };
+        const al = findAlias(it.name, sup?.id);
+        const m = materials.find((x: any) => x.id === (al?.material_id || it.material_id));
+        const o = m ? unitOptions(m, units).find((u: any) => u.unit_name?.toLowerCase() === String(al?.unit_name || it.unit || '').toLowerCase()) : null;
+        return { material_id: m?.id || '', match: al ? 'alias' : m ? 'ai' : '', scanned_name: it.name, scanned_unit: it.unit, category: it.category, quantity: it.quantity || '', unit_name: o?.unit_name || m?.unit || it.unit || '', factor: o?.factor || 1, unit_price: it.unit_price || (it.quantity ? it.subtotal / it.quantity : '') };
       }));
       setNotes((n) => n || `Nota ${data.invoice_number || ''} ${data.supplier_name || ''}`.trim());
       toast.success(`Nota terbaca: ${(data.items || []).length} barang`);
