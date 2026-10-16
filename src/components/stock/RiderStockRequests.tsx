@@ -172,7 +172,10 @@ export function RiderStockRequestForm() {
 export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
   const { userProfile } = useAuth() as any;
   const hub = branchId || userProfile?.branch_id;
-  const [tab, setTab] = useState<"open" | "done">("open");
+  const [tab, setTab] = useState<"open" | "done" | "manual">("open")
+  const [mq, setMq] = useState<Record<string, number>>({});
+  const [mRider, setMRider] = useState("");
+  const [mSearch, setMSearch] = useState("");;
   const { rows, load } = useRequests({ hub_branch_id: hub }, [hub], "name, ck_price, cost_price, price, short_name, shelf_life_days");
   const [edit, setEdit] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState("");
@@ -180,7 +183,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
   const [products, setProducts] = useState<any[]>([]);
   const [add, setAdd] = useState<Record<string, { pid: string; qty: number }>>({});
   useEffect(() => {
-    db.from("products").select("id, name, category").eq("is_active", true).order("name").then(({ data }: any) => setProducts(data || []));
+    db.from("products").select("id, name, category, price, short_name, shelf_life_days").eq("is_active", true).order("name").then(({ data }: any) => setProducts(data || []));
   }, []);
   const addMenu = async (reqs: any[]) => {
     const rid = reqs[0].rider_id; const a = add[rid];
@@ -298,6 +301,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
         <div className="flex gap-1">
           <Button size="sm" variant={tab === "open" ? "default" : "outline"} onClick={() => setTab("open")}>Antrean</Button>
           <Button size="sm" variant={tab === "done" ? "default" : "outline"} onClick={() => setTab("done")}>Riwayat</Button>
+          <Button size="sm" variant={tab === "manual" ? "default" : "outline"} onClick={() => setTab("manual")}>Cetak Manual</Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -313,7 +317,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
             <div key={rid} className="space-y-2 rounded-xl border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><p className="font-semibold">{reqs[0].rider?.full_name}</p><p className="text-xs text-muted-foreground">{reqs.length} order belum dikirim</p></div>
-                <Button size="sm" variant="outline" className="border-dashed" onClick={() => loadLeftover(rid, reqs[0].created_at)}>
+                <Button size="sm" className="btn-glossy-primary" onClick={() => loadLeftover(rid, reqs[0].created_at)}>
                   <History className="mr-1 h-4 w-4" />Tambahkan Sisa Stok Shift Sebelumnya
                 </Button>
               </div>
@@ -384,8 +388,33 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
             </div>
             {r.items.map((i: any) => <div key={i.id} className="flex justify-between"><span>{i.product?.name}</span><span>{itemQty(i)}</span></div>)}
             <div className="flex justify-between border-t pt-1"><span>{orderQty(r)} cup</span><b>Total HPP {rp(orderHpp(r))}</b></div>
+            <div className="flex justify-end pt-1"><CupStickerButton rider={r.rider?.full_name || "Rider"} items={r.items.map((i: any) => ({ name: i.product?.name, short_name: i.product?.short_name, price: i.product?.price, shelf_life_days: i.product?.shelf_life_days, qty: itemQty(i) }))} /></div>
           </div>
         ))}
+        {tab === "manual" && (
+          <div className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input placeholder="Nama rider / label (opsional)" value={mRider} onChange={(e) => setMRider(e.target.value)} />
+              <Input placeholder="Cari menu…" value={mSearch} onChange={(e) => setMSearch(e.target.value)} />
+            </div>
+            <div className="max-h-[50vh] space-y-1 overflow-y-auto">
+              {products.filter((p) => p.name.toLowerCase().includes(mSearch.toLowerCase())).map((p) => (
+                <div key={p.id} className="flex items-center justify-between rounded-lg border p-2">
+                  <div className="min-w-0"><p className="truncate text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category} • {rp(Number(p.price))} • H+{p.shelf_life_days || 3}</p></div>
+                  <div className="flex items-center gap-1">
+                    <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setMq((s) => ({ ...s, [p.id]: Math.max(0, (s[p.id] || 0) - 1) }))}><Minus className="h-4 w-4" /></Button>
+                    <Input type="number" min={0} className="h-8 w-14 text-center" value={mq[p.id] || 0} onChange={(e) => setMq((s) => ({ ...s, [p.id]: Math.max(0, Number(e.target.value)) }))} />
+                    <Button size="icon" className="h-8 w-8" onClick={() => setMq((s) => ({ ...s, [p.id]: (s[p.id] || 0) + 1 }))}><Plus className="h-4 w-4" /></Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 border-t pt-2">
+              <Button size="sm" variant="outline" onClick={() => setMq({})}>Reset</Button>
+              <CupStickerButton rider={mRider || "Zeger"} items={products.filter((p) => (mq[p.id] || 0) > 0).map((p) => ({ name: p.name, short_name: p.short_name, price: p.price, shelf_life_days: p.shelf_life_days, qty: mq[p.id] }))} />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
