@@ -205,7 +205,8 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
           const isActiveRaw = String(get("is_active") || "TRUE").toUpperCase();
 
           const tsRaw = String(get("track_stock") ?? "").trim().toUpperCase();
-          const track_stock = tsRaw === "" ? true : !["FALSE", "0", "TIDAK", "NO", "N", "UNLIMITED"].includes(tsRaw);
+          const existingTs = products.find((p) => p.code.toLowerCase() === code.toLowerCase())?.track_stock;
+          const track_stock = tsRaw === "" ? (mode === "update" ? existingTs !== false : true) : !["FALSE", "0", "TIDAK", "NO", "N", "UNLIMITED"].includes(tsRaw);
           const item: ParsedRow = {
             track_stock,
             name,
