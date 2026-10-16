@@ -2954,6 +2954,7 @@ export type Database = {
           shelf_life_days: number | null
           short_name: string | null
           show_in_customer_app: boolean
+          show_in_rider_app: boolean
           sub_category: string | null
           tenant_id: string
           track_stock: boolean
@@ -2978,6 +2979,7 @@ export type Database = {
           shelf_life_days?: number | null
           short_name?: string | null
           show_in_customer_app?: boolean
+          show_in_rider_app?: boolean
           sub_category?: string | null
           tenant_id?: string
           track_stock?: boolean
@@ -3002,6 +3004,7 @@ export type Database = {
           shelf_life_days?: number | null
           short_name?: string | null
           show_in_customer_app?: boolean
+          show_in_rider_app?: boolean
           sub_category?: string | null
           tenant_id?: string
           track_stock?: boolean
