@@ -61,13 +61,14 @@ export interface PrintSettings {
 export const newPrinter = (role: PrinterRole, name: string): PrinterConfig => ({
   id: crypto.randomUUID(), name, role, paper: role === 'sticker' ? 'label' : '80',
   enabled: true, autoPrint: true, copies: 1, categories: [], productIds: [],
+  connection: 'bluetooth', labelW: 33, labelH: 15,
 });
 
 export const DEFAULT_SETTINGS: PrintSettings = {
   printers: [
     newPrinter('receipt', 'Printer Kasir'),
-    { ...newPrinter('kitchen', 'Printer Dapur A (Minuman)'), categories: [] },
-    { ...newPrinter('kitchen', 'Printer Dapur B (Makanan)'), enabled: false },
+    newPrinter('kitchen', 'Printer Kitchen'),
+    newPrinter('sticker', 'Printer Label Stiker'),
   ],
   receiptHeader: '',
   receiptFooter: 'Terima kasih atas kunjungan Anda!',
