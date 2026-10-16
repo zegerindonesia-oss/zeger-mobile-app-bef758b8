@@ -1,3 +1,4 @@
+import { buildShiftPicker } from "@/lib/shift-cycle";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -431,21 +432,12 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
 
         if (returnsError) throw returnsError;
 
-        // Match returns to shifts by rider and date
-        shiftsData.forEach((shift: any) => {
-          // Use shift_date directly (format: "YYYY-MM-DD")
-          const shiftDateStr = shift.shift_date;
-          const matchingReturns = (returnsRes || []).filter((ret: any) => {
-            // Convert created_at to Jakarta timezone date (YYYY-MM-DD)
-            const returnDateJakarta = new Intl.DateTimeFormat('en-CA', { 
-              timeZone: 'Asia/Jakarta', 
-              year: 'numeric', 
-              month: '2-digit', 
-              day: '2-digit' 
-            }).format(new Date(ret.created_at));
-            return ret.rider_id === shift.rider_id && returnDateJakarta === shiftDateStr;
-          });
-          returnsByShift[shift.id] = matchingReturns;
+        // One shift = one cycle: each return belongs to exactly one shift (by rider's return time, Jakarta)
+        const pickShift = buildShiftPicker(shiftsData as any[]);
+        shiftIds.forEach((sid) => { returnsByShift[sid] = []; });
+        (returnsRes || []).forEach((ret: any) => {
+          const s = pickShift(ret.rider_id, ret.created_at);
+          if (s && returnsByShift[s.id]) returnsByShift[s.id].push(ret);
         });
 
         // Fetch received stock (BH -> rider) partitioned per shift by time window
@@ -466,30 +458,10 @@ export const EnhancedShiftReport = ({ userProfileId, branchId, riders }: Enhance
           .lte('actual_delivery_date', `${endStrRcv}T23:59:59+07:00`);
         if (receivedErr) throw receivedErr;
 
-        // Group shifts by rider+date for partitioning
-        const shiftsByRD: Record<string, any[]> = {};
-        (shiftsData || []).forEach((s: any) => {
-          const k = `${s.rider_id}-${s.shift_date}`;
-          if (!shiftsByRD[k]) shiftsByRD[k] = [];
-          shiftsByRD[k].push(s);
-        });
-        Object.values(shiftsByRD).forEach((arr) => arr.sort((a: any, b: any) => {
-          const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
-          const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
-          return ta - tb;
-        }));
         shiftIds.forEach((sid) => { receivedByShift[sid] = []; });
         (receivedRes || []).forEach((rec: any) => {
-          const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(rec.actual_delivery_date));
-          const dayShifts = shiftsByRD[`${rec.rider_id}-${dateKey}`];
-          if (!dayShifts || dayShifts.length === 0) return;
-          const t = new Date(rec.actual_delivery_date).getTime();
-          let chosen: any = dayShifts[0];
-          for (const s of dayShifts) {
-            const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0;
-            if (st <= t) chosen = s;
-          }
-          if (receivedByShift[chosen.id]) receivedByShift[chosen.id].push(rec);
+          const s = pickShift(rec.rider_id, rec.actual_delivery_date);
+          if (s && receivedByShift[s.id]) receivedByShift[s.id].push(rec);
         });
 
         // Get photos from daily_reports

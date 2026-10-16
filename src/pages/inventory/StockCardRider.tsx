@@ -1,3 +1,6 @@
+import { buildShiftPicker, shiftTimeMs } from "@/lib/shift-cycle";
+const safeDmy = (d?: string | null) => { if (!d) return "-"; const [y, m, dd] = d.slice(0, 10).split("-"); return y && m && dd ? `${dd}/${m}/${y}` : "-"; };
+const fmtShiftTime = (v: string | null | undefined, date: string) => { const t = shiftTimeMs(v, date); return t === null ? "-" : new Date(t).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" }); };
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -223,33 +226,7 @@ export default function StockCardRider() {
       if (returnRes.error) throw returnRes.error;
 
       const shifts = shiftsRes.data || [];
-      const jakDate = (d: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(d));
-
-      // Group shifts by rider+date
-      const shiftsByRD: Record<string, any[]> = {};
-      shifts.forEach((s: any) => {
-        const k = `${s.rider_id}-${s.shift_date}`;
-        if (!shiftsByRD[k]) shiftsByRD[k] = [];
-        shiftsByRD[k].push(s);
-      });
-      Object.values(shiftsByRD).forEach(arr => arr.sort((a: any, b: any) => {
-        const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
-        const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
-        return ta - tb;
-      }));
-
-      const pick = (riderId: string, whenISO: string): any | null => {
-        const dk = jakDate(whenISO);
-        const arr = shiftsByRD[`${riderId}-${dk}`];
-        if (!arr || arr.length === 0) return null;
-        const t = new Date(whenISO).getTime();
-        let chosen = arr[0];
-        for (const s of arr) {
-          const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0;
-          if (st <= t) chosen = s;
-        }
-        return chosen;
-      };
+      const pick = buildShiftPicker(shifts as any[]);
 
       const rows = new Map<string, ShiftBreakdownRow>();
       shifts.forEach((s: any) => {
@@ -289,8 +266,8 @@ export default function StockCardRider() {
         if (it.product_id) ensureProduct(r, it.product_id, it.products?.name, it.products?.category).sold += Number(it.quantity || 0);
       });
       (returnRes.data || []).forEach((it: any) => {
-        const when = it.actual_delivery_date || it.created_at;
-        const s = pick(it.rider_id, when);
+        // Rider's return time (created_at), not later verification time, decides the shift
+        const s = pick(it.rider_id, it.created_at);
         if (!s) return;
         const r = rows.get(s.id); if (!r) return;
         r.stock_returned += it.quantity || 0;
@@ -351,8 +328,8 @@ export default function StockCardRider() {
           .select('rider_id, quantity, product_id, products(cost_price)')
           .in('rider_id', riderIds)
           .in('movement_type', ['return', 'out'])
-          .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
-          .lte('actual_delivery_date', `${end}T23:59:59+07:00`),
+          .gte('created_at', `${start}T00:00:00+07:00`)
+          .lte('created_at', `${end}T23:59:59+07:00`),
       ]);
 
       if (sentRes.error) throw sentRes.error;
@@ -534,8 +511,8 @@ export default function StockCardRider() {
           products(name, cost_price)
         `)
         .in('movement_type', ['return', 'out'])
-        .gte('actual_delivery_date', `${start}T00:00:00+07:00`)
-        .lte('actual_delivery_date', `${end}T23:59:59+07:00`);
+        .gte('created_at', `${start}T00:00:00+07:00`)
+        .lte('created_at', `${end}T23:59:59+07:00`);
       returnQuery = isAll ? returnQuery.in('rider_id', riderIds) : returnQuery.eq('rider_id', selectedRider);
       const { data: stockReturns, error: returnError } = await returnQuery;
 
@@ -580,7 +557,7 @@ export default function StockCardRider() {
         const costPrice = invItem?.products?.cost_price || productCost.get(productId) || 0;
 
         // Calculate remaining stock = stock_in - stock_sold
-        item.remaining_stock = item.stock_in - item.stock_sold;
+        item.remaining_stock = item.stock_in - item.stock_sold - item.stock_returned;
         
         // Calculate stock value = remaining_stock * cost_price
         item.stock_value = item.remaining_stock * costPrice;
@@ -937,9 +914,9 @@ export default function StockCardRider() {
                           </Button>
                         </TableCell>
                         <TableCell className="font-medium">{r.rider_name}</TableCell>
-                        <TableCell>{format(new Date(r.shift_date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{safeDmy(r.shift_date)}</TableCell>
                         <TableCell>#{r.shift_number}</TableCell>
-                        <TableCell className="text-xs">{r.shift_start_time ? new Date(r.shift_start_time).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                        <TableCell className="text-xs">{fmtShiftTime(r.shift_start_time, r.shift_date)}</TableCell>
                         <TableCell className="text-right">{r.stock_in}</TableCell>
                         <TableCell className="text-right">{r.stock_sold}</TableCell>
                         <TableCell className="text-right">{r.stock_returned}</TableCell>
@@ -1003,7 +980,7 @@ export default function StockCardRider() {
                   }), { in: 0, sold: 0, ret: 0, rem: 0, sales: 0 });
                   nodes.push(
                     <TableRow key={`${k}-total`} className="bg-primary/10 font-semibold">
-                      <TableCell colSpan={5}>Total Harian — {arr[0].rider_name} — {format(new Date(arr[0].shift_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell colSpan={5}>Total Harian — {arr[0].rider_name} — {safeDmy(arr[0].shift_date)}</TableCell>
                       <TableCell className="text-right">{t.in}</TableCell>
                       <TableCell className="text-right">{t.sold}</TableCell>
                       <TableCell className="text-right">{t.ret}</TableCell>
