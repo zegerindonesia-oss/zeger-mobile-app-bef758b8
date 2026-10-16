@@ -204,17 +204,27 @@ function NewPO({ branchId, materials, units, suppliers, reload, userId }: any) {
     const terms = scan?.due_date && scan.invoice_date ? Math.max(0, Math.round((new Date(scan.due_date).getTime() - new Date(scan.invoice_date).getTime()) / 86400000)) : (suppliers.find((s: any) => s.id === supplierId)?.default_terms_days || 0);
     const { data, error } = await db.from('purchase_orders').insert({ po_number, branch_id: branchId, supplier_id: supplierId || null, expected_date: expected || null, notes: notes || null, total_amount: total, created_by: userId, terms_days: terms }).select().single();
     if (error) return toast.error(error.message);
-    const { data: rows, error: e2 } = await db.from('purchase_order_items').insert(valid.map((i) => ({ po_id: data.id, material_id: i.material_id, quantity: Number(i.quantity), unit_name: i.unit_name, factor: Number(i.factor) || 1, unit_price: Number(i.unit_price) || 0 }))).select();
+    const { data: rows, error: e2 } = await db.from('purchase_order_items').insert(valid.map((i) => ({ po_id: data.id, material_id: i.material_id, quantity: Number(i.quantity), unit_name: i.unit_name, factor: Number(i.factor) || 1, unit_price: Number(i.unit_price) || 0, supplier_item_name: i.scanned_name || null }))).select();
     if (e2) return toast.error(e2.message);
+    // Remember supplier item name → our material, so the next scan auto-matches
+    const learn = valid.filter((i) => i.scanned_name && aliasKey(i.scanned_name) !== aliasKey(materials.find((m: any) => m.id === i.material_id)?.name || ''));
+    for (const i of learn) {
+      const ex = findAlias(i.scanned_name, supplierId);
+      if (ex && ex.supplier_id === (supplierId || null)) {
+        if (ex.material_id !== i.material_id || ex.unit_name !== i.unit_name) await db.from('supplier_item_aliases').update({ material_id: i.material_id, unit_name: i.unit_name, factor: Number(i.factor) || 1, updated_at: new Date().toISOString() }).eq('id', ex.id);
+      } else await db.from('supplier_item_aliases').insert({ supplier_id: supplierId || null, alias_name: i.scanned_name, material_id: i.material_id, unit_name: i.unit_name, factor: Number(i.factor) || 1 });
+    }
+    if (learn.length) db.from('supplier_item_aliases').select('*').then(({ data: a }: any) => setAliases(a || []));
+    if (scan?.file) {
+      const path = `purchase-invoices/${data.id}.${scan.ext || 'jpg'}`;
+      const { error: up } = await supabase.storage.from('product-images').upload(path, scan.file, { upsert: true, contentType: scan.ext === 'pdf' ? 'application/pdf' : 'image/jpeg' });
+      if (!up) await db.from('purchase_orders').update({ invoice_image_path: path }).eq('id', data.id);
+    }
     if (receiveNow) {
       const { error: e3 } = await db.rpc('receive_purchase_order', { _po_id: data.id, _items: (rows || []).map((r: any) => ({ id: r.id, received_quantity: Number(r.quantity) })), _invoice_number: scan?.invoice_number || null, _invoice_date: scan?.invoice_date || today(), _terms_days: terms });
       if (e3) return toast.error(e3.message);
       toast.success(`${po_number} diterima — stok bertambah & invoice tercatat`);
     } else toast.success(`${po_number} dibuat`);
-    if (scan?.file) {
-      const ext = scan.file.name.split('.').pop() || 'jpg';
-      await supabase.storage.from('product-images').upload(`purchase-invoices/${data.id}.${ext}`, scan.file, { upsert: true }).catch(() => null);
-    }
     setItems([]); setNotes(''); setExpected(''); setScan(null); reload();
   };
 
