@@ -8,13 +8,15 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, TestTube2, ChefHat, Receipt, Sticker } from 'lucide-react';
+import { Bluetooth, Printer, Plus, Trash2, TestTube2, ChefHat, Receipt, Sticker } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   PrintSettings, PrinterConfig, PrinterRole, loadPrintSettings, savePrintSettings, newPrinter,
   printHtml, renderKitchenTicket, renderReceipt, renderStickers,
+  escReceipt, escKitchen, tsplCustomer,
 } from '@/lib/pos-printing';
+import { btPair, btForget, btSavedName, btSupported, btSend } from '@/lib/bt-printer';
 import { ReceiptDesigner } from './ReceiptDesigner';
 import { StickerPreview } from './StickerPreview';
 
@@ -60,9 +62,23 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
     setS({ ...s, printers: s.printers.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-  const testPrint = (p: PrinterConfig) => {
+  const [, rerender] = useState(0);
+  const pair = async (p: PrinterConfig) => {
+    try { const n = await btPair(p.id); upd(p.id, { connection: 'bluetooth' }); toast.success(`Terhubung ke ${n}`); }
+    catch (e: any) { if (e?.name !== 'NotFoundError') toast.error(e.message || 'Gagal menghubungkan'); }
+    rerender((x) => x + 1);
+  };
+  const testPrint = async (p: PrinterConfig) => {
     const now = new Date().toISOString();
     const items = [{ product_name: 'Aren Latte', qty: 1, price: 18000, subtotal: 18000, notes: 'Ice, Less Sugar' }];
+    if (p.connection === 'bluetooth' && btSavedName(p.id)) {
+      const rec = { transaction_number: 'TEST-001', branch_name: 'TES PRINTER', kasir_name: 'Kasir', created_at: now, order_type: 'take_away', items, subtotal: 18000, discount: 0, service_charge: 0, tax: 0, total: 18000, payment_method_1: 'cash', amount_1: 20000, change_amount: 2000 };
+      const k = { station: p.name, ref: 'TEST-001', order_type: 'take_away', created_at: now, customer_name: 'Budi', items };
+      try {
+        await btSend(p.id, p.role === 'receipt' ? escReceipt(rec, s, p) : p.role === 'sticker' ? tsplCustomer(k, p) : escKitchen(k, p));
+        return toast.success('Tes cetak terkirim via Bluetooth');
+      } catch (e: any) { return toast.error(e.message); }
+    }
     if (p.role === 'receipt') printHtml(renderReceipt({ transaction_number: 'TEST-001', branch_name: 'TES PRINTER', kasir_name: 'Kasir', created_at: now, order_type: 'take_away', items, subtotal: 18000, discount: 0, service_charge: 0, tax: 0, total: 18000, payment_method_1: 'cash', amount_1: 20000, change_amount: 2000 }, s, p.paper));
     else if (p.role === 'sticker') printHtml(renderStickers({ station: p.name, ref: 'TEST-001', order_type: 'take_away', created_at: now, customer_name: 'Budi', items }));
     else printHtml(renderKitchenTicket({ station: p.name, ref: 'TEST-001', order_type: 'take_away', created_at: now, items }, p.paper));
@@ -114,6 +130,24 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
                 <div className="flex gap-5 text-sm">
                   <label className="flex items-center gap-2"><Switch checked={p.enabled} onCheckedChange={(v) => upd(p.id, { enabled: v })} /> Aktif</label>
                   <label className="flex items-center gap-2"><Switch checked={p.autoPrint} onCheckedChange={(v) => upd(p.id, { autoPrint: v })} /> Cetak otomatis</label>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2 text-sm">
+                  <Select value={p.connection || 'system'} onValueChange={(v: any) => upd(p.id, { connection: v })}>
+                    <SelectTrigger className="h-8 w-[190px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bluetooth">Bluetooth langsung</SelectItem>
+                      <SelectItem value="system">Dialog cetak (USB/PC)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {p.connection === 'bluetooth' && <>
+                    <Badge variant={btSavedName(p.id) ? 'default' : 'outline'}><Bluetooth className="mr-1 h-3 w-3" />{btSavedName(p.id) || 'Belum terhubung'}</Badge>
+                    <Button size="sm" className="btn-glossy-primary" onClick={() => pair(p)} disabled={!btSupported()}><Bluetooth className="h-3 w-3" /> {btSavedName(p.id) ? 'Ganti' : 'Hubungkan'}</Button>
+                    {btSavedName(p.id) && <Button size="sm" variant="ghost" onClick={() => { btForget(p.id); rerender((x) => x + 1); }}>Putuskan</Button>}
+                    {!btSupported() && <span className="text-xs text-destructive">Browser ini tidak mendukung Bluetooth — pakai Chrome.</span>}
+                  </>}
+                  {p.role === 'sticker' && <span className="flex items-center gap-1 text-xs">Label
+                    <Input type="number" className="h-8 w-14" value={p.labelW || 33} onChange={(e) => upd(p.id, { labelW: Number(e.target.value) || 33 })} />×
+                    <Input type="number" className="h-8 w-14" value={p.labelH || 15} onChange={(e) => upd(p.id, { labelH: Number(e.target.value) || 15 })} />mm</span>}
                 </div>
                 {showFilter && (
                   <div className="space-y-2">

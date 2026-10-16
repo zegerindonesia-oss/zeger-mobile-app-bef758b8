@@ -4,7 +4,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Printer, Tag } from "lucide-react";
+import { Printer, Tag, Bluetooth } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { printRawToSticker } from "@/lib/pos-printing";
+import { toast } from "sonner";
 
 export interface StickerItem { name: string; short_name?: string | null; price?: number | null; shelf_life_days?: number | null; qty: number; }
 
@@ -47,8 +50,23 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
   const list = items.filter((i) => i.qty > 0);
   const total = list.reduce((s, i) => s + i.qty, 0);
 
-  const print = () => {
+  const { userProfile } = useAuth() as any;
+  const [busy, setBusy] = useState(false);
+  const print = async () => {
     localStorage.setItem("zeger_sticker_qr", qr);
+    setBusy(true);
+    try {
+      const labels = list.flatMap((it) => Array.from({ length: it.qty }, () => ({
+        lines: [
+          { text: (it.short_name || it.name).slice(0, 16), bold: true },
+          { text: Math.round(it.price || 0).toLocaleString("id-ID"), big: true },
+          { text: `SD:${fmt(sd)}` },
+          { text: `ED:${fmt(addDays(sd, it.shelf_life_days || DEFAULT_DAYS))}` },
+        ],
+        qr, side: [rider],
+      })));
+      if (await printRawToSticker(userProfile?.branch_id || null, labels)) { toast.success(`${total} stiker terkirim ke printer Bluetooth`); return; }
+    } catch { /* fallback */ } finally { setBusy(false); }
     const html = list.flatMap((it) => Array.from({ length: it.qty }, () => renderToStaticMarkup(<Sticker it={it} rider={rider} sd={sd} qr={qr} />))).join("");
     const w = window.open("", "_blank", "width=420,height=600");
     if (!w) return;
@@ -74,8 +92,8 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
             </div>
           ))}
         </div>
-        <Button onClick={print}><Printer className="mr-2 h-4 w-4" />Cetak {total} Stiker (33×15mm)</Button>
-        <p className="text-xs text-muted-foreground">Pilih printer stiker (mis. Xprinter XP-420B) di dialog cetak, ukuran kertas 33×15mm, margin none.</p>
+        <Button onClick={print} disabled={busy}><Printer className="mr-2 h-4 w-4" />Cetak {total} Stiker (33×15mm)</Button>
+        <p className="text-xs text-muted-foreground"><Bluetooth className="inline h-3 w-3" /> Jika printer stiker Bluetooth sudah dihubungkan di Pengaturan Printer, stiker langsung keluar tanpa dialog. Jika belum: pilih printer stiker (mis. Xprinter XP-420B) di dialog cetak, ukuran kertas 33×15mm, margin none.</p>
       </DialogContent>
     </Dialog>
   );
