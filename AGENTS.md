@@ -13,3 +13,4 @@
 - Invoicing is its own back-office module (/invoicing/*): sales invoices/orders live in sales_invoices(+items, doc_type invoice|order) with business_customers; purchase side reuses the procurement page; access reuses has_procurement_access so cashiers stay excluded.
 - Accounting module (COA tree, journals via create_accounting_journal RPC enforcing debit=credit, ledger, trial balance) lives at /accounting/:tab; access reuses has_procurement_access.
 - Rider stock orders to Central Kitchen live in rider_stock_requests(+items); Hub fulfils only via fulfill_rider_stock_request RPC, which creates 'sent' stock_movements (reference_type rider_request) priced at products.ck_price so the existing rider receive-confirmation flow is reused.
+- Native apps: capacitor.config.ts builds three shells (POS, Rider, Customer) selected by APP_TARGET, each with its own appId and native folder under native/<target>, so the stores see three separate apps from one codebase.
