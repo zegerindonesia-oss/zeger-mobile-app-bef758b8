@@ -70,7 +70,7 @@ export function RiderStockRequestForm() {
       setHubs(data || []);
       setHubId(userProfile?.branch_id && data?.some((b: any) => b.id === userProfile.branch_id) ? userProfile.branch_id : data?.[0]?.id || "");
     });
-    db.from("products").select("id,name,category,cost_price").eq("is_active", true).order("name").then(({ data }: any) => setProducts(data || []));
+    db.from("products").select("id,name,category,cost_price").eq("is_active", true).eq("show_in_rider_app", true).order("name").then(({ data }: any) => setProducts(data || []));
   }, [userProfile?.branch_id]);
 
   const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort() as string[], [products]);
@@ -380,17 +380,68 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
           );
         })}
         {tab === "done" && !done.length && <p className="text-sm text-muted-foreground">Tidak ada order.</p>}
-        {tab === "done" && done.map((r) => (
-          <div key={r.id} className="space-y-1 rounded-xl border p-3 text-sm">
-            <div className="flex items-center justify-between gap-2">
-              <div><p className="font-semibold">{r.rider?.full_name}</p><p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("id-ID")}</p></div>
-              <Badge variant={STATUS[r.status]?.v}>{STATUS[r.status]?.label}</Badge>
-            </div>
-            {r.items.map((i: any) => <div key={i.id} className="flex justify-between"><span>{i.product?.name}</span><span>{itemQty(i)}</span></div>)}
-            <div className="flex justify-between border-t pt-1"><span>{orderQty(r)} cup</span><b>Total HPP {rp(orderHpp(r))}</b></div>
-            <div className="flex justify-end pt-1"><CupStickerButton rider={r.rider?.full_name || "Rider"} items={r.items.map((i: any) => ({ name: i.product?.name, short_name: i.product?.short_name, price: i.product?.price, shelf_life_days: i.product?.shelf_life_days, qty: itemQty(i) }))} /></div>
-          </div>
-        ))}
+        {tab === "done" && (() => {
+          const dk = (d: string) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+          const m = new Map<string, any[]>();
+          done.forEach((r) => { const k = r.rider_id + "|" + dk(r.created_at); m.set(k, [...(m.get(k) || []), r]); });
+          return Array.from(m.values()).map((arr) => {
+            const reqs = [...arr].sort((a, b) => a.created_at.localeCompare(b.created_at));
+            const sent = reqs.filter((r) => r.status === "transferred");
+            // sisa stok tercatat sebagai item dengan requested_qty 0 (ditambahkan Hub) atau selisih approved - requested pada order pertama
+            const lines = new Map<string, { name: string; product: any; sisa: number; per: Record<string, number> }>();
+            reqs.forEach((r, idx) => r.items.forEach((i: any) => {
+              const l = lines.get(i.product_id) || { name: i.product?.name, product: i.product, sisa: 0, per: {} };
+              const appr = itemQty(i); const reqd = Number(i.requested_qty || 0);
+              if (idx === 0 && r.status === "transferred" && i.approved_qty != null && appr > reqd) { l.sisa += appr - reqd; l.per[r.id] = reqd; }
+              else l.per[r.id] = appr;
+              lines.set(i.product_id, l);
+            }));
+            const L = Array.from(lines.values()).map((l) => ({ ...l, total: l.sisa + reqs.reduce((s, r) => s + (r.status === "transferred" ? (l.per[r.id] || 0) : 0), 0) }))
+              .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            const hpp = L.reduce((s, l) => s + l.total * Number(l.product?.cost_price || 0), 0);
+            return (
+              <div key={reqs[0].id} className="space-y-2 rounded-xl border p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div><p className="font-semibold">{reqs[0].rider?.full_name}</p><p className="text-xs text-muted-foreground">{new Date(reqs[0].created_at).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "short", year: "numeric" })} • {reqs.length} order</p></div>
+                  <div className="flex flex-wrap gap-1">{reqs.map((r, i) => <Badge key={r.id} variant={STATUS[r.status]?.v}>Order {i + 1}: {STATUS[r.status]?.label}</Badge>)}</div>
+                </div>
+                {reqs.filter((r) => r.notes).map((r) => <p key={r.id} className="text-xs">Catatan order {reqs.indexOf(r) + 1}: {r.notes}</p>)}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-separate border-spacing-0 text-sm [&_tbody_td]:border-b">
+                    <thead className="table-head-raised">
+                      <tr className="text-xs">
+                        <th className="p-2 text-left">Menu</th>
+                        <th className="p-2 text-center">Sisa Stok</th>
+                        {reqs.map((r, i) => <th key={r.id} className="p-2 text-center">Order {i + 1}<span className="block font-normal">{tm(r.created_at)} WIB</span></th>)}
+                        <th className="p-2 text-center">Total Kirim</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {L.map((l) => (
+                        <tr key={l.name}>
+                          <td className="p-2">{l.name}</td>
+                          <td className="p-2 text-center">{l.sisa || "-"}</td>
+                          {reqs.map((r) => <td key={r.id} className={"p-2 text-center " + (r.status !== "transferred" ? "line-through text-muted-foreground" : "")}>{l.per[r.id] ?? "-"}</td>)}
+                          <td className="p-2 text-center font-bold">{l.total}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-muted/50 font-bold">
+                        <td className="p-2">Total</td>
+                        <td className="p-2 text-center">{L.reduce((s, l) => s + l.sisa, 0)}</td>
+                        {reqs.map((r) => <td key={r.id} className="p-2 text-center">{L.reduce((s, l) => s + (l.per[r.id] || 0), 0)}</td>)}
+                        <td className="p-2 text-center">{L.reduce((s, l) => s + l.total, 0)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+                  <b>Total HPP {rp(hpp)}</b>
+                  {sent.length > 0 && <CupStickerButton rider={reqs[0].rider?.full_name || "Rider"} items={L.filter((l) => l.total > 0).map((l) => ({ name: l.product?.name || l.name, short_name: l.product?.short_name, price: l.product?.price, shelf_life_days: l.product?.shelf_life_days, qty: l.total }))} />}
+                </div>
+              </div>
+            );
+          });
+        })()}
         {tab === "manual" && (
           <div className="space-y-3">
             <div className="grid gap-2 sm:grid-cols-2">
