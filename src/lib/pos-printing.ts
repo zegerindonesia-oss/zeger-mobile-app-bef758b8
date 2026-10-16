@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
+import { EscPos, btReady, btSend, tsplLabels, type TsplLabel } from './bt-printer';
 
 export type PrinterRole = 'receipt' | 'kitchen' | 'sticker';
 export type PaperWidth = '58' | '80' | 'label';
@@ -18,6 +19,11 @@ export interface PrinterConfig {
   categories: string[];
   /** Kitchen/sticker: specific product ids routed to this printer (override). */
   productIds: string[];
+  /** 'bluetooth' = direct raw print (ESC/POS / TSPL) without dialog; 'system' = browser print. */
+  connection?: 'system' | 'bluetooth';
+  /** Label size in mm (sticker printers). */
+  labelW?: number;
+  labelH?: number;
 }
 
 export interface ReceiptLayout {
@@ -55,13 +61,14 @@ export interface PrintSettings {
 export const newPrinter = (role: PrinterRole, name: string): PrinterConfig => ({
   id: crypto.randomUUID(), name, role, paper: role === 'sticker' ? 'label' : '80',
   enabled: true, autoPrint: true, copies: 1, categories: [], productIds: [],
+  connection: 'bluetooth', labelW: 33, labelH: 15,
 });
 
 export const DEFAULT_SETTINGS: PrintSettings = {
   printers: [
     newPrinter('receipt', 'Printer Kasir'),
-    { ...newPrinter('kitchen', 'Printer Dapur A (Minuman)'), categories: [] },
-    { ...newPrinter('kitchen', 'Printer Dapur B (Makanan)'), enabled: false },
+    newPrinter('kitchen', 'Printer Kitchen'),
+    newPrinter('sticker', 'Printer Label Stiker'),
   ],
   receiptHeader: '',
   receiptFooter: 'Terima kasih atas kunjungan Anda!',
@@ -306,9 +313,77 @@ export const printHtml = async (html: string, copies = 1) => {
 
 const enabled = (s: PrintSettings, role: PrinterRole) => s.printers.filter((p) => p.enabled && p.role === role);
 
+// ---------- Raw encoders (Bluetooth) ----------
+const colsOf = (p: PrinterConfig) => (p.paper === '58' ? 32 : 48);
+const ascii = (x: unknown) => String(x ?? '');
+
+export const escReceipt = (d: ReceiptPrint, s: PrintSettings, p: PrinterConfig) => {
+  const L = layoutOf(s); const e = new EscPos(colsOf(p));
+  e.align('c').bold(true).size(2, 2).line(L.brandName || d.branch_name).size(1, 1).bold(false);
+  if (L.brandName) e.line(d.branch_name);
+  [L.address, L.phone, L.instagram, s.receiptHeader].filter(Boolean).forEach((x) => e.line(x));
+  if (L.showQueue) e.hr().line('No. Antrean').bold(true).size(2, 2).line(d.transaction_number.slice(-3)).size(1, 1).bold(false);
+  e.align('l').hr('=').row('No. Struk', d.transaction_number).row('Tanggal', jkt(d.created_at));
+  if (L.showCashier) e.row('Kasir', d.kasir_name);
+  if (L.showOrderType) e.row('Tipe', d.order_type.replace('_', ' ').toUpperCase() + (d.table_number ? ` Meja ${d.table_number}` : ''));
+  if (L.showCustomer && d.customer_name) e.row('Customer', d.customer_name);
+  e.hr('=');
+  d.items.forEach((i) => {
+    if (L.showUnitPrice) { e.line(i.product_name).row(`  ${i.qty} x ${rp(i.price || 0)}`, rp(i.subtotal || 0)); }
+    else e.row(`${i.qty}x ${i.product_name}`, rp(i.subtotal || 0));
+    if (L.showNotes && i.notes) e.line(`  ${i.notes}`);
+  });
+  e.hr().row('Subtotal', rp(d.subtotal));
+  if (L.showDiscount && d.discount > 0) e.row('Diskon', `-${rp(d.discount)}`);
+  if (L.showTaxService && d.service_charge > 0) e.row('Service', rp(d.service_charge));
+  if (L.showTaxService && d.tax > 0) e.row('Pajak', rp(d.tax));
+  e.bold(true).size(1, 2).row('TOTAL', rp(d.total)).size(1, 1).bold(false).hr();
+  if (L.showPayment) {
+    e.row(d.payment_method_1.toUpperCase(), rp(d.amount_1));
+    if (d.payment_method_2) e.row(d.payment_method_2.toUpperCase(), rp(d.amount_2 || 0));
+    if (d.change_amount > 0) e.row('Kembalian', rp(d.change_amount));
+  }
+  e.align('c').hr('=').line(s.receiptFooter);
+  if (L.wifiName) e.line(`WiFi: ${L.wifiName}${L.wifiPass ? ` Pass: ${L.wifiPass}` : ''}`);
+  if (L.policy) e.line(L.policy);
+  if (L.showPoweredBy) e.line('Powered by Flow F&B');
+  return e.feed(4).cut().bytes();
+};
+
+export const escKitchen = (k: KitchenPrint, p: PrinterConfig) => {
+  const e = new EscPos(colsOf(p));
+  e.align('c').bold(true).line(k.station.toUpperCase());
+  if (k.addition) e.line('** TAMBAHAN **');
+  e.size(2, 2).line(k.table_number ? `MEJA ${k.table_number}` : `#${k.ref.slice(-3)}`).size(1, 1).bold(false);
+  e.line(k.order_type.replace('_', ' ').toUpperCase() + (k.customer_name ? ` - ${k.customer_name}` : ''));
+  e.line(`${k.ref}  ${jkt(k.created_at)}`).align('l').hr();
+  k.items.forEach((i) => { e.bold(true).size(1, 2).line(`${i.qty}x ${i.product_name}`).size(1, 1).bold(false); if (i.notes) e.line(`  >> ${i.notes}`); });
+  return e.hr().align('c').line(`Total item: ${k.items.reduce((a, i) => a + i.qty, 0)}`).feed(4).cut().bytes();
+};
+
+/** Customer cup labels: queue/table, cup n/total, item, modifiers/notes. */
+export const tsplCustomer = (k: KitchenPrint, p: PrinterConfig) => {
+  const total = k.items.reduce((a, i) => a + i.qty, 0); let n = 0;
+  const labels: TsplLabel[] = [];
+  k.items.forEach((i) => { for (let x = 0; x < i.qty; x++) { n++; labels.push({ lines: [
+    { text: `${k.table_number ? `MEJA ${k.table_number}` : `#${k.ref.slice(-3)}`}  ${n}/${total}`, bold: true },
+    { text: i.product_name, big: true },
+    ...(i.notes ? [{ text: ascii(i.notes).slice(0, 30) }] : []),
+    { text: ascii(k.customer_name || '').slice(0, 18) },
+  ] }); } });
+  return tsplLabels(labels, p.labelW || 33, p.labelH || 15);
+};
+
+const sendBt = async (p: PrinterConfig, bytes: Uint8Array) => {
+  if (p.connection !== 'bluetooth' || !(await btReady(p.id))) return false;
+  try { for (let c = 0; c < Math.max(1, p.copies); c++) await btSend(p.id, bytes); return true; }
+  catch (e) { console.warn('BT print failed, fallback to system print', e); return false; }
+};
+
 export const printReceipt = async (s: PrintSettings, d: ReceiptPrint, auto: boolean) => {
   for (const p of enabled(s, 'receipt')) {
     if (auto && !p.autoPrint) continue;
+    if (await sendBt(p, escReceipt(d, s, p))) continue;
     await printHtml(renderReceipt(d, s, p.paper), p.copies);
   }
 };
@@ -319,7 +394,9 @@ export const printKitchen = async (s: PrintSettings, k: Omit<KitchenPrint, 'stat
     if (auto && !p.autoPrint) continue;
     const items = routeItems(p, k.items);
     if (!items.length) continue;
-    const html = p.role === 'sticker' ? renderStickers({ ...k, station: p.name, items }) : renderKitchenTicket({ ...k, station: p.name, items }, p.paper);
+    const kk = { ...k, station: p.name, items };
+    if (await sendBt(p, p.role === 'sticker' ? tsplCustomer(kk, p) : escKitchen(kk, p))) continue;
+    const html = p.role === 'sticker' ? renderStickers(kk) : renderKitchenTicket(kk, p.paper);
     await printHtml(html, p.copies);
   }
 };
@@ -330,8 +407,19 @@ export const printStickersOnly = async (s: PrintSettings, k: Omit<KitchenPrint, 
   const targets = ps.length ? ps : [newPrinter('sticker', 'Stiker')];
   for (const p of targets) {
     const items = routeItems(p, k.items);
-    if (items.length) await printHtml(renderStickers({ ...k, station: p.name, items }), p.copies);
+    if (!items.length) continue;
+    const kk = { ...k, station: p.name, items };
+    if (await sendBt(p, tsplCustomer(kk, p))) continue;
+    await printHtml(renderStickers(kk), p.copies);
   }
+};
+
+/** Rider/CK stickers over Bluetooth to the branch's sticker printer. Returns false if none connected. */
+export const printRawToSticker = async (branchId: string | null, labels: TsplLabel[]) => {
+  const s = await loadPrintSettings(branchId);
+  const p = enabled(s, 'sticker').find((x) => x.connection === 'bluetooth');
+  if (!p) return false;
+  return sendBt({ ...p, copies: 1 }, tsplLabels(labels, p.labelW || 33, p.labelH || 15));
 };
 
 export const printShiftReport = async (s: PrintSettings, r: ShiftReportPrint) => {
