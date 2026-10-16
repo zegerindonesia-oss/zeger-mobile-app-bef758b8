@@ -449,6 +449,7 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
                   <TableHead className="text-right">HPP CK</TableHead>
                   <TableHead>Foto URL</TableHead>
                   <TableHead>Aktif</TableHead>
+                  <TableHead>Lacak Stok</TableHead>
                   <TableHead>Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
@@ -474,6 +475,11 @@ export const ProductBulkUpload = ({ products, onComplete }: ProductBulkUploadPro
                     <TableCell>
                       <Badge variant={row.is_active ? "default" : "secondary"} className="text-xs">
                         {row.is_active ? "Ya" : "Tidak"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={row.track_stock ? "outline" : "secondary"} className="text-xs">
+                        {row.track_stock ? "Pakai Stok" : "Unlimited"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-destructive">{row._message || ""}</TableCell>
