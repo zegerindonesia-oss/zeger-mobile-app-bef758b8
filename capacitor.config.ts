@@ -23,6 +23,18 @@ const config: CapacitorConfig = {
   server: { url: `${DOMAIN}${t.path}`, cleartext: true },
   android: { path: `${t.dir}/android`, allowMixedContent: true },
   ios: { path: `${t.dir}/ios` },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2500,
+      launchAutoHide: true,
+      launchFadeOutDuration: 400,
+      backgroundColor: '#ffffff',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+  },
 };
 
 export default config;
