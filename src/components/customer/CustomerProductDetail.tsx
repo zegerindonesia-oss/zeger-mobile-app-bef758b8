@@ -1,3 +1,4 @@
+import { describeMenu } from '@/lib/menu-descriptions';
 import { useMemo, useState } from 'react';
 import { ChevronLeft, Minus, Plus, ShoppingBag, Flame, Snowflake, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -104,7 +105,7 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
       <section className="px-4 pt-5">
         <h1 className="text-2xl font-extrabold leading-tight">{product.name}</h1>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          {product.description || 'Racikan kopi berkualitas khas Zeger, diseduh segar untukmu.'}
+          {describeMenu(product.name, product.description)}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="cx-num text-xl font-extrabold text-zeger">{formatRupiah(unit)}</span>

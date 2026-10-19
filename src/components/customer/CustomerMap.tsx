@@ -233,8 +233,8 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
     );
   };
 
-  const fetchNearbyRiders = async (lat: number, lng: number) => {
-    setLoading(true);
+  const fetchNearbyRiders = async (lat: number, lng: number, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('get-nearby-riders', {
         body: { customer_lat: lat, customer_lng: lng, radius_km: 50 }
@@ -249,6 +249,12 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!userLocation) return;
+    const t = window.setInterval(() => fetchNearbyRiders(userLocation.lat, userLocation.lng, true), 20000);
+    return () => window.clearInterval(t);
+  }, [userLocation]);
 
   const filteredRiders = useMemo(
     () => nearbyRiders.filter(r => r.lat === null || r.lng === null || radiusKm === Infinity || r.distance_km <= radiusKm),
@@ -609,8 +615,8 @@ function RiderDetailSheet({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-extrabold leading-tight">{item.name}</p>
-                    {item.description && (
-                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{item.description}</p>
+                    {(
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{describeMenu(item.name, item.description)}</p>
                     )}
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <p className="cx-num text-sm font-bold text-zeger">{formatRupiah(item.price)}</p>
@@ -731,9 +737,10 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
           </div>
         </div>
 
-        {product.description && (
-          <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">{product.description}</p>
-        )}
+        <div className="cx-card mt-4 rounded-[22px] px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-zeger">Tentang menu ini</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{describeMenu(product.name, product.description)}</p>
+        </div>
 
         <div className="mt-5 flex items-center justify-center">
           <span className={`rounded-full px-4 py-1.5 text-xs font-bold ${outOfStock ? 'bg-[hsl(var(--cx-rail))] text-muted-foreground' : 'bg-emerald-50 text-emerald-700'}`}>
