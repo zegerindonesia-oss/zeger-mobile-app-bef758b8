@@ -64,6 +64,15 @@ const nativeReconnect = async (printerId: string) => {
   return id ? nativeOpen(printerId, id) : null;
 };
 
+const findWritable = async (server: any) => {
+  for (const s of await server.getPrimaryServices()) {
+    for (const c of await s.getCharacteristics()) {
+      if (c.properties.writeWithoutResponse || c.properties.write) return c;
+    }
+  }
+  throw new Error('Printer tidak punya jalur tulis Bluetooth (BLE).');
+};
+
 const open = async (printerId: string, device: any) => {
   const server = device.gatt.connected ? device.gatt : await device.gatt.connect();
   const ch = await findWritable(server);
