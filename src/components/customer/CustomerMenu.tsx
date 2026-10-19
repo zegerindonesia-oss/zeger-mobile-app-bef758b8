@@ -166,7 +166,7 @@ export function CustomerMenu({
               onError={onArtError(artworkFor(featured))}
               alt={featured.name}
               loading="lazy"
-              className="cx-art cx-float h-[104px] w-[86px] shrink-0 object-contain"
+              className="cx-float h-[104px] w-[104px] shrink-0 rounded-[22px] object-cover shadow-xl ring-2 ring-white/25"
             />
           </div>
         </section>
@@ -189,7 +189,7 @@ export function CustomerMenu({
           <div className="mt-3 grid grid-cols-2 gap-3">
             {visible.map((p) => (
               <article key={p.id} className="cx-card flex flex-col overflow-hidden rounded-[22px]">
-                <button onClick={() => onAddToCart(p)} className="block aspect-square overflow-hidden bg-white text-left">
+                <button onClick={() => onAddToCart(p)} className="m-2 mb-0 block aspect-square overflow-hidden rounded-[18px] bg-white text-left shadow-sm">
                   <img
                     src={normalizeImageUrl(p.image_url) || artworkFor(p)}
                     onError={onArtError(artworkFor(p))}

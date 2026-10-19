@@ -45,7 +45,7 @@ interface CustomerMapProps {
   onCallRider?: (orderId: string, rider: Rider) => void;
 }
 
-const DISTANCE_OPTIONS = [5, 3, 1.5] as const;
+const DISTANCE_OPTIONS = [1.5, 3, 5, 10, Infinity] as const;
 
 const buildPinIcon = (selected: boolean) => {
   const size = selected ? 56 : 42;
@@ -67,6 +67,11 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapsKeyMissing, setMapsKeyMissing] = useState(false);
+  // Managed Google key only works on *.lovable.app; elsewhere show OpenStreetMap.
+  const [mapBlocked, setMapBlocked] = useState(() => {
+    const h = typeof window !== 'undefined' ? window.location.hostname : '';
+    return !(h.endsWith('lovable.app') || h.endsWith('lovableproject.com') || h === 'localhost');
+  });
   const [radiusKm, setRadiusKm] = useState<number>(5);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
@@ -249,7 +254,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
   };
 
   const filteredRiders = useMemo(
-    () => nearbyRiders.filter(r => r.lat === null || r.lng === null || r.distance_km <= radiusKm),
+    () => nearbyRiders.filter(r => r.lat === null || r.lng === null || radiusKm === Infinity || r.distance_km <= radiusKm),
     [nearbyRiders, radiusKm]
   );
 
@@ -345,7 +350,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
               data-active={radiusKm === km}
               className="cx-seg-item flex-1 py-2.5 text-xs font-bold"
             >
-              {km} km
+              {km === Infinity ? 'Semua' : km === 10 ? '>5 km' : `${km} km`}
             </button>
           ))}
         </div>
@@ -367,20 +372,12 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       <div className="mb-4 px-5">
         <div className="cx-card relative overflow-hidden rounded-[26px] p-0">
           <div ref={mapContainer} className="h-60 w-full bg-[hsl(var(--cx-rail))]" />
-          {mapsKeyMissing ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
-              <MapPin className="mb-3 h-9 w-9 text-zeger" />
-              <p className="text-sm font-extrabold">Peta belum aktif</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                Rider tetap bisa dipilih dari daftar di bawah.
-              </p>
-            </div>
-          ) : mapError ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white px-8 text-center">
-              <AlertCircle className="mb-3 h-9 w-9 text-zeger" />
-              <p className="text-sm font-extrabold">Peta gagal dimuat</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{mapError}</p>
-            </div>
+          {(mapsKeyMissing || mapError || mapBlocked) && userLocation ? (
+            <iframe
+              title="Peta rider"
+              className="absolute inset-0 h-full w-full border-0"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${userLocation.lng - 0.03},${userLocation.lat - 0.02},${userLocation.lng + 0.03},${userLocation.lat + 0.02}&layer=mapnik&marker=${userLocation.lat},${userLocation.lng}`}
+            />
           ) : null}
         </div>
       </div>
@@ -394,7 +391,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
       ) : filteredRiders.length === 0 ? (
         <div className="mx-5 rounded-[26px] bg-[hsl(var(--cx-rail))] py-10 text-center">
           <MapPin className="mx-auto mb-2 h-9 w-9 text-muted-foreground/50" />
-          <p className="text-sm font-bold">Belum ada rider dalam {radiusKm} km</p>
+          <p className="text-sm font-bold">Belum ada rider {radiusKm === Infinity ? 'aktif' : `dalam ${radiusKm} km`}</p>
           <p className="mt-1 text-[11px] text-muted-foreground">Coba perluas jangkauan pencarian</p>
         </div>
       ) : (
@@ -701,12 +698,14 @@ function ProductDetailView({ product, onClose }: { product: StockItem; onClose: 
           <span className="w-10" />
         </div>
         <div className="relative z-10 mt-2 flex justify-center">
-          <img
-            src={product.image_url || art}
-            onError={onArtError(art)}
-            alt={product.name}
-            className="cx-art cx-float h-52 w-auto max-w-[70%] object-contain"
-          />
+          <div className="flex h-56 w-56 items-center justify-center overflow-hidden rounded-full bg-white shadow-2xl ring-8 ring-white/20">
+            <img
+              src={product.image_url || art}
+              onError={onArtError(art)}
+              alt={product.name}
+              className="cx-float h-[88%] w-[88%] object-contain mix-blend-multiply"
+            />
+          </div>
         </div>
       </div>
 
