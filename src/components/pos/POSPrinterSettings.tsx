@@ -47,7 +47,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
 
   useEffect(() => {
     if (!open) return;
-    loadPrintSettings(branchId).then(setS);
+    loadPrintSettings(branchId).then((v: any) => setS({ ...(v || {}), printers: (v?.printers || []).map((p: any) => ({ ...p, role: roleMeta[p?.role as PrinterRole] ? p.role : 'receipt', categories: Array.isArray(p?.categories) ? p.categories : [], products: Array.isArray(p?.products) ? p.products : [] })) })).catch(() => toast.error('Gagal memuat pengaturan printer'));
     supabase.from('products').select('id,name,category').eq('is_active', true).order('name')
       .then(({ data }) => setProducts((data as any) || []));
   }, [open, branchId]);
@@ -57,12 +57,12 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
     [products],
   );
 
+  const [, rerender] = useState(0);
   if (!s) return null;
   const upd = (id: string, patch: Partial<PrinterConfig>) =>
     setS({ ...s, printers: s.printers.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-  const [, rerender] = useState(0);
   const pair = async (p: PrinterConfig) => {
     try { const n = await btPair(p.id); upd(p.id, { connection: 'bluetooth' }); toast.success(`Terhubung ke ${n}`); }
     catch (e: any) { if (e?.name !== 'NotFoundError') toast.error(e.message || 'Gagal menghubungkan'); }

@@ -25,42 +25,39 @@ export const OpenShiftModal = ({ open, onOpen }: OpenProps) => {
     }
   };
 
+  if (!open) return null;
+  const quick = [100000, 200000, 300000, 500000];
+  const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
   return (
-    <Dialog open={open}>
-      <DialogContent className="max-w-sm" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle>Buka Shift Kasir</DialogTitle>
-          <DialogDescription>Mulai sesi POS dengan mencatat modal kas awal.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Tipe Shift</Label>
-            <Select value={shiftType} onValueChange={setShiftType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pagi">Pagi</SelectItem>
-                <SelectItem value="siang">Siang</SelectItem>
-                <SelectItem value="malam">Malam</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Modal Kas Awal (Rp)</Label>
-            <Input
-              type="number"
-              value={openingCash || ''}
-              onChange={(e) => setOpeningCash(Number(e.target.value) || 0)}
-              placeholder="0"
-            />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/95 backdrop-blur-md p-4">
+      <div className="w-full max-w-md rounded-3xl border bg-card p-6 shadow-2xl space-y-5">
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-bold">Buka Kasir</h1>
+          <p className="text-sm text-muted-foreground">Hitung uang di laci, lalu masukkan modal kas awal untuk mulai berjualan.</p>
+        </div>
+        <div>
+          <Label>Shift</Label>
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            {['pagi', 'siang', 'malam'].map((t) => (
+              <Button key={t} type="button" variant={shiftType === t ? 'default' : 'outline'} onClick={() => setShiftType(t)} className="capitalize">{t}</Button>
+            ))}
           </div>
         </div>
-        <DialogFooter>
-          <Button onClick={handleSubmit} disabled={loading} className="w-full">
-            {loading ? 'Membuka...' : 'Buka Shift'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div>
+          <Label>Modal Kas Awal</Label>
+          <Input inputMode="numeric" className="h-14 text-2xl font-bold text-center mt-1" value={openingCash ? openingCash.toLocaleString('id-ID') : ''}
+            onChange={(e) => setOpeningCash(Number(e.target.value.replace(/\D/g, '')) || 0)} placeholder="Rp0" />
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {quick.map((q) => (
+              <Button key={q} type="button" variant="secondary" onClick={() => setOpeningCash(q)}>{fmt(q)}</Button>
+            ))}
+          </div>
+        </div>
+        <Button onClick={handleSubmit} disabled={loading} className="w-full h-14 text-lg">
+          {loading ? 'Membuka...' : `Buka Kasir · ${fmt(openingCash)}`}
+        </Button>
+      </div>
+    </div>
   );
 };
 
