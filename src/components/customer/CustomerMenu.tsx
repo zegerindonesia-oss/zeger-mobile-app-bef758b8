@@ -1,3 +1,4 @@
+import { describeMenu } from '@/lib/menu-descriptions';
 import { useMemo, useState } from 'react';
 import { ChevronLeft, Plus, Search, ShoppingBag, Store, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -202,9 +203,7 @@ export function CustomerMenu({
                   <button onClick={() => onAddToCart(p)} className="text-left">
                     <h3 className="line-clamp-2 min-h-[2.2rem] text-[13px] font-extrabold leading-snug">{p.name}</h3>
                   </button>
-                  {p.description && (
-                    <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{p.description}</p>
-                  )}
+                  <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{describeMenu(p.name, p.description)}</p>
                   <div className="mt-auto flex items-center justify-between pt-2.5">
                     <span className="cx-num text-sm font-extrabold text-zeger">{formatRupiah(p.price)}</span>
                     <button
