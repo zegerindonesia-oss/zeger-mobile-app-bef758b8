@@ -10,17 +10,62 @@ const SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb',
 ];
 
+import { Capacitor } from '@capacitor/core';
+import { BleClient } from '@capacitor-community/bluetooth-le';
+
 type Conn = { device: any; ch: any };
 const conns = new Map<string, Conn>();
 const nameKey = (id: string) => `zeger_bt_printer_${id}`;
+const devKey = (id: string) => `zeger_bt_device_${id}`;
 
-export const btSupported = () => typeof navigator !== 'undefined' && !!(navigator as any).bluetooth;
+const isNative = () => Capacitor.isNativePlatform();
+const webBt = () => typeof navigator !== 'undefined' && !!(navigator as any).bluetooth;
+
+export const btSupported = () => isNative() || webBt();
 export const btSavedName = (printerId: string) => localStorage.getItem(nameKey(printerId));
-export const btIsConnected = (printerId: string) => !!conns.get(printerId)?.device?.gatt?.connected;
+export const btIsConnected = (printerId: string) => !!conns.get(printerId)?.device?.gatt?.connected || nativeConn.has(printerId);
+
+// ---------- Native (Android/iOS app) ----------
+type NativeCh = { deviceId: string; service: string; characteristic: string; noResp: boolean };
+const nativeConn = new Map<string, NativeCh>();
+let bleReady = false;
+const ensureBle = async () => {
+  if (!bleReady) { await BleClient.initialize({ androidNeverForLocation: true }); bleReady = true; }
+  if (!(await BleClient.isEnabled())) {
+    try { await BleClient.requestEnable(); } catch { throw new Error('Nyalakan Bluetooth di tablet terlebih dulu.'); }
+  }
+};
+const nativeOpen = async (printerId: string, deviceId: string, name?: string) => {
+  await ensureBle();
+  try { await BleClient.connect(deviceId, () => nativeConn.delete(printerId), { timeout: 10000 }); }
+  catch (e: any) { if (!/already/i.test(String(e?.message))) throw new Error('Gagal tersambung ke printer. Pastikan printer menyala & dekat tablet.'); }
+  const services = await BleClient.getServices(deviceId);
+  for (const s of services) for (const c of s.characteristics) {
+    if (c.properties.writeWithoutResponse || c.properties.write) {
+      const ch = { deviceId, service: s.uuid, characteristic: c.uuid, noResp: !!c.properties.writeWithoutResponse };
+      nativeConn.set(printerId, ch);
+      localStorage.setItem(devKey(printerId), deviceId);
+      if (name) localStorage.setItem(nameKey(printerId), name);
+      return ch;
+    }
+  }
+  throw new Error('Printer tidak punya jalur tulis Bluetooth (BLE).');
+};
+const nativePair = async (printerId: string) => {
+  await ensureBle();
+  const d = await BleClient.requestDevice({ optionalServices: SERVICES.map(String).filter((s) => s.includes('-')) });
+  await nativeOpen(printerId, d.deviceId, d.name || 'Printer Bluetooth');
+  return d.name || 'Printer Bluetooth';
+};
+const nativeReconnect = async (printerId: string) => {
+  const c = nativeConn.get(printerId);
+  if (c) return c;
+  const id = localStorage.getItem(devKey(printerId));
+  return id ? nativeOpen(printerId, id) : null;
+};
 
 const findWritable = async (server: any) => {
-  const services = await server.getPrimaryServices();
-  for (const s of services) {
+  for (const s of await server.getPrimaryServices()) {
     for (const c of await s.getCharacteristics()) {
       if (c.properties.writeWithoutResponse || c.properties.write) return c;
     }
@@ -36,9 +81,10 @@ const open = async (printerId: string, device: any) => {
   return ch;
 };
 
-/** User gesture required. Shows the Chrome Bluetooth picker. */
+/** User gesture required. Shows the Bluetooth device picker. */
 export const btPair = async (printerId: string) => {
-  if (!btSupported()) throw new Error('Browser ini belum mendukung Bluetooth langsung. Gunakan Chrome di Android/PC.');
+  if (isNative()) return nativePair(printerId);
+  if (!webBt()) throw new Error('Browser ini belum mendukung Bluetooth langsung. Gunakan Chrome di Android/PC.');
   const device = await (navigator as any).bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: SERVICES });
   await open(printerId, device);
   return device.name as string;
@@ -46,8 +92,10 @@ export const btPair = async (printerId: string) => {
 
 export const btForget = (printerId: string) => {
   try { conns.get(printerId)?.device?.gatt?.disconnect(); } catch { /* ignore */ }
-  conns.delete(printerId);
-  localStorage.removeItem(nameKey(printerId));
+  const n = nativeConn.get(printerId);
+  if (n) BleClient.disconnect(n.deviceId).catch(() => {});
+  conns.delete(printerId); nativeConn.delete(printerId);
+  localStorage.removeItem(nameKey(printerId)); localStorage.removeItem(devKey(printerId));
 };
 
 /** Reconnect silently to a previously paired device (Chrome getDevices permission). */
@@ -63,9 +111,21 @@ const reconnect = async (printerId: string) => {
 };
 
 export const btSend = async (printerId: string, data: Uint8Array) => {
+  const chunk = 180;
+  if (isNative()) {
+    const ch = await nativeReconnect(printerId);
+    if (!ch) throw new Error('Printer Bluetooth belum terhubung. Buka Pengaturan Printer → Hubungkan.');
+    for (let i = 0; i < data.length; i += chunk) {
+      const part = data.slice(i, i + chunk);
+      const dv = new DataView(part.buffer, part.byteOffset, part.byteLength);
+      if (ch.noResp) await BleClient.writeWithoutResponse(ch.deviceId, ch.service, ch.characteristic, dv);
+      else await BleClient.write(ch.deviceId, ch.service, ch.characteristic, dv);
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    return;
+  }
   const ch = await reconnect(printerId);
   if (!ch) throw new Error('Printer Bluetooth belum terhubung. Buka Pengaturan Printer → Hubungkan.');
-  const chunk = 180;
   for (let i = 0; i < data.length; i += chunk) {
     const part = data.slice(i, i + chunk);
     if (ch.properties.writeWithoutResponse) await ch.writeValueWithoutResponse(part);
@@ -77,7 +137,7 @@ export const btSend = async (printerId: string, data: Uint8Array) => {
 /** True when this printer should be served over Bluetooth and is reachable. */
 export const btReady = async (printerId: string) => {
   if (!btSupported() || !btSavedName(printerId)) return false;
-  try { return !!(await reconnect(printerId)); } catch { return false; }
+  try { return isNative() ? !!(await nativeReconnect(printerId)) : !!(await reconnect(printerId)); } catch { return false; }
 };
 
 // ---------- Encoders ----------
