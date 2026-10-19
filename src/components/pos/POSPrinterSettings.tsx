@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -80,7 +81,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
       } catch (e: any) { return toast.error(e.message); }
     }
     if (p.role === 'receipt') printHtml(renderReceipt({ transaction_number: 'TEST-001', branch_name: 'TES PRINTER', kasir_name: 'Kasir', created_at: now, order_type: 'take_away', items, subtotal: 18000, discount: 0, service_charge: 0, tax: 0, total: 18000, payment_method_1: 'cash', amount_1: 20000, change_amount: 2000 }, s, p.paper));
-    else if (p.role === 'sticker') printHtml(renderStickers({ station: p.name, ref: 'TEST-001', order_type: 'take_away', created_at: now, customer_name: 'Budi', items }));
+    else if (p.role === 'sticker') printHtml(renderStickers({ station: p.name, ref: 'TEST-001', order_type: 'take_away', created_at: now, customer_name: 'Budi', items }, p));
     else printHtml(renderKitchenTicket({ station: p.name, ref: 'TEST-001', order_type: 'take_away', created_at: now, items }, p.paper));
   };
 
@@ -135,20 +136,35 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
                   <Select value={p.connection || 'system'} onValueChange={(v: any) => upd(p.id, { connection: v })}>
                     <SelectTrigger className="h-8 w-[190px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bluetooth">Bluetooth langsung</SelectItem>
-                      <SelectItem value="system">Dialog cetak (USB/PC)</SelectItem>
+                      <SelectItem value="bluetooth">Bluetooth (cari & sambungkan)</SelectItem>
+                      <SelectItem value="system">Printer Android / Windows terpasang</SelectItem>
                     </SelectContent>
                   </Select>
                   {p.connection === 'bluetooth' && <>
                     <Badge variant={btSavedName(p.id) ? 'default' : 'outline'}><Bluetooth className="mr-1 h-3 w-3" />{btSavedName(p.id) || 'Belum terhubung'}</Badge>
                     <Button size="sm" className="btn-glossy-primary" onClick={() => pair(p)} disabled={!btSupported()}><Bluetooth className="h-3 w-3" /> {btSavedName(p.id) ? 'Ganti' : 'Hubungkan'}</Button>
                     {btSavedName(p.id) && <Button size="sm" variant="ghost" onClick={() => { btForget(p.id); rerender((x) => x + 1); }}>Putuskan</Button>}
-                    {!btSupported() && <span className="text-xs text-destructive">Browser ini tidak mendukung Bluetooth — pakai Chrome.</span>}
+                    {!btSupported() && <span className="text-xs text-destructive basis-full">Aplikasi ini belum bisa mencari Bluetooth. Buka POS lewat Google Chrome di tablet (flowfnb.flowsstack.com/pos) lalu tekan Hubungkan — atau pilih "Printer Android / Windows terpasang".</span>}
+                    {btSupported() && !btSavedName(p.id) && <span className="text-xs text-muted-foreground basis-full">Nyalakan printer & Bluetooth tablet, tekan Hubungkan, pilih nama printer (Xprinter, Hasmart, Kijang, dll), lalu tekan Tes.</span>}
                   </>}
                   {p.role === 'sticker' && <span className="flex items-center gap-1 text-xs">Label
                     <Input type="number" className="h-8 w-14" value={p.labelW || 33} onChange={(e) => upd(p.id, { labelW: Number(e.target.value) || 33 })} />×
                     <Input type="number" className="h-8 w-14" value={p.labelH || 15} onChange={(e) => upd(p.id, { labelH: Number(e.target.value) || 15 })} />mm</span>}
                 </div>
+                {p.role === 'sticker' && (
+                  <div className="grid sm:grid-cols-2 gap-3 rounded-lg border bg-background p-3">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm"><span>Ukuran tulisan stiker</span><b>{p.fontScale ?? 100}%</b></div>
+                      <Slider min={80} max={140} step={5} value={[p.fontScale ?? 100]} onValueChange={([v]) => upd(p.id, { fontScale: v })} />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm"><span>Jarak antar baris</span><b>{(p.lineSpacing ?? 1.25).toFixed(2)}</b></div>
+                      <Slider min={1} max={2} step={0.05} value={[p.lineSpacing ?? 1.25]} onValueChange={([v]) => upd(p.id, { lineSpacing: v })} />
+                    </div>
+                    <iframe title="Preview stiker" className="sm:col-span-2 mx-auto bg-card shadow rounded border-0" style={{ width: 220, height: 140 }}
+                      srcDoc={renderStickers({ station: p.name, ref: 'POS-0015', order_type: 'take_away', created_at: new Date().toISOString(), customer_name: 'Budi', items: [{ product_name: 'Aren Latte Large', qty: 1, notes: 'Less Ice, 50% Sugar' }] }, p)} />
+                  </div>
+                )}
                 {showFilter && (
                   <div className="space-y-2">
                     <div className="text-xs text-muted-foreground">

@@ -24,6 +24,9 @@ export interface PrinterConfig {
   /** Label size in mm (sticker printers). */
   labelW?: number;
   labelH?: number;
+  /** Sticker text size % (80–140) and line spacing (1.0–2.0). */
+  fontScale?: number;
+  lineSpacing?: number;
 }
 
 export interface ReceiptLayout {
@@ -231,7 +234,7 @@ ${k.addition ? '<div class="c b">** TAMBAHAN **</div>' : ''}
 ${k.items.map((i) => `<div class="b" style="font-size:1.3em">${i.qty}x ${esc(i.product_name)}</div>${i.notes ? `<div class="n">» ${esc(i.notes)}</div>` : ''}`).join('<div style="height:4px"></div>')}
 <div class="hr"></div><div class="c">Total item: ${k.items.reduce((s, i) => s + i.qty, 0)}</div>`);
 
-export const renderStickers = (k: KitchenPrint) => {
+export const renderStickers = (k: KitchenPrint, p?: Pick<PrinterConfig, 'fontScale' | 'lineSpacing'>) => {
   const labels: string[] = [];
   const total = k.items.reduce((s, i) => s + i.qty, 0);
   let n = 0;
@@ -243,7 +246,7 @@ export const renderStickers = (k: KitchenPrint) => {
 <div class="row"><span>${esc(k.customer_name || '-')}</span><span>${esc(k.order_type.replace('_', ' ').toUpperCase())}</span></div><div class="mut">${jkt(k.created_at)}</div></div>`);
     }
   });
-  return doc('label', `Stiker ${k.ref}`, labels.join(''));
+  return doc('label', `Stiker ${k.ref}`, labels.join(''), p?.fontScale ?? 100, p?.lineSpacing ?? 1.25);
 };
 
 export interface ShiftReportPrint {
@@ -371,7 +374,7 @@ export const tsplCustomer = (k: KitchenPrint, p: PrinterConfig) => {
     ...(i.notes ? [{ text: ascii(i.notes).slice(0, 30) }] : []),
     { text: ascii(k.customer_name || '').slice(0, 18) },
   ] }); } });
-  return tsplLabels(labels, p.labelW || 33, p.labelH || 15);
+  return tsplLabels(labels, p.labelW || 33, p.labelH || 15, 2, p.fontScale ?? 100, p.lineSpacing ?? 1.25);
 };
 
 const sendBt = async (p: PrinterConfig, bytes: Uint8Array) => {
@@ -396,7 +399,7 @@ export const printKitchen = async (s: PrintSettings, k: Omit<KitchenPrint, 'stat
     if (!items.length) continue;
     const kk = { ...k, station: p.name, items };
     if (await sendBt(p, p.role === 'sticker' ? tsplCustomer(kk, p) : escKitchen(kk, p))) continue;
-    const html = p.role === 'sticker' ? renderStickers(kk) : renderKitchenTicket(kk, p.paper);
+    const html = p.role === 'sticker' ? renderStickers(kk, p) : renderKitchenTicket(kk, p.paper);
     await printHtml(html, p.copies);
   }
 };
@@ -410,7 +413,7 @@ export const printStickersOnly = async (s: PrintSettings, k: Omit<KitchenPrint, 
     if (!items.length) continue;
     const kk = { ...k, station: p.name, items };
     if (await sendBt(p, tsplCustomer(kk, p))) continue;
-    await printHtml(renderStickers(kk), p.copies);
+    await printHtml(renderStickers(kk, p), p.copies);
   }
 };
 

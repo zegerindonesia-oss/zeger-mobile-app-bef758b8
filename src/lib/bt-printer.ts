@@ -114,7 +114,8 @@ const q = (s: string) => ascii(s).replace(/"/g, "'");
 export interface TsplLabel { lines: { text: string; big?: boolean; bold?: boolean }[]; side?: string[]; qr?: string }
 
 /** TSPL for label printers (Xprinter XP-420B etc). 203dpi = 8 dots/mm. */
-export const tsplLabels = (labels: TsplLabel[], wMm = 33, hMm = 15, gapMm = 2) => {
+export const tsplLabels = (labels: TsplLabel[], wMm = 33, hMm = 15, gapMm = 2, scale = 100, spacing = 1.25) => {
+  const big2 = scale >= 125; const sp = spacing / 1.25;
   const W = wMm * 8, H = hMm * 8;
   let out = `SIZE ${wMm} mm,${hMm} mm\r\nGAP ${gapMm} mm,0 mm\r\nDIRECTION 1\r\nDENSITY 10\r\nSPEED 3\r\n`;
   const sideW = labels.some((l) => l.qr || l.side?.length) ? Math.round(W * 0.3) : 0;
@@ -123,10 +124,10 @@ export const tsplLabels = (labels: TsplLabel[], wMm = 33, hMm = 15, gapMm = 2) =
     let y = 4;
     for (const ln of l.lines) {
       const font = ln.big ? '2' : '1';
-      const mul = ln.big ? 1 : 1;
+      const mul = ln.big && big2 ? 2 : 1;
       out += `TEXT 6,${y},"${font}",0,${mul},${mul},"${q(ln.text)}"\r\n`;
       if (ln.bold) out += `TEXT 7,${y},"${font}",0,${mul},${mul},"${q(ln.text)}"\r\n`;
-      y += ln.big ? 22 : 14;
+      y += Math.round((ln.big ? (big2 ? 40 : 22) : 14) * sp);
       if (y > H - 10) break;
     }
     if (sideW) {
