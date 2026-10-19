@@ -1,4 +1,5 @@
 import RiderLogin from './pages/RiderLogin';
+import { NativeSplash } from '@/components/NativeSplash';
 import Accounting from "@/pages/accounting/Accounting";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -88,6 +89,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
+        <NativeSplash />
         <Toaster />
         <Sonner />
         <Routes>
