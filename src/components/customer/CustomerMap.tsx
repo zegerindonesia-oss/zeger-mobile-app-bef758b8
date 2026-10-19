@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { buildMapsScriptUrl, getGoogleMapsKey } from '@/config/maps';
 import { artworkFor, cxArt, formatRupiah, onArtError } from '@/lib/customer-art';
+import { describeMenu } from '@/lib/menu-descriptions';
+import LiveRiderMap, { VESPA_SVG } from './LiveRiderMap';
 
 interface StockItem {
   product_id: string;
@@ -48,16 +50,11 @@ interface CustomerMapProps {
 const DISTANCE_OPTIONS = [1.5, 3, 5, 10, Infinity] as const;
 
 const buildPinIcon = (selected: boolean) => {
-  const size = selected ? 56 : 42;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 40 52">
-  <defs><filter id="s" x="-20%" y="-10%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity="0.35"/></filter></defs>
-  <path filter="url(#s)" d="M20 1C10 1 2 9 2 19c0 13.5 18 31 18 31s18-17.5 18-31C38 9 30 1 20 1z" fill="#EA2831" stroke="#ffffff" stroke-width="2"/>
-  <circle cx="20" cy="19" r="7" fill="#ffffff"/>
-</svg>`;
+  const size = selected ? 58 : 46;
   return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: { width: size, height: size * 1.3 },
-    anchor: { x: size / 2, y: size * 1.3 },
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(VESPA_SVG(selected))}`,
+    scaledSize: { width: size, height: size },
+    anchor: { x: size / 2, y: size / 2 },
   };
 };
 
@@ -350,7 +347,7 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
               data-active={radiusKm === km}
               className="cx-seg-item flex-1 py-2.5 text-xs font-bold"
             >
-              {km === Infinity ? 'Semua' : km === 10 ? '>5 km' : `${km} km`}
+              {km === Infinity ? '>10 km' : `${String(km).replace('.', ',')} km`}
             </button>
           ))}
         </div>
@@ -373,12 +370,19 @@ const CustomerMap = ({ customerUser, onCallRider }: CustomerMapProps = {}) => {
         <div className="cx-card relative overflow-hidden rounded-[26px] p-0">
           <div ref={mapContainer} className="h-60 w-full bg-[hsl(var(--cx-rail))]" />
           {(mapsKeyMissing || mapError || mapBlocked) && userLocation ? (
-            <iframe
-              title="Peta rider"
-              className="absolute inset-0 h-full w-full border-0"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${userLocation.lng - 0.03},${userLocation.lat - 0.02},${userLocation.lng + 0.03},${userLocation.lat + 0.02}&layer=mapnik&marker=${userLocation.lat},${userLocation.lng}`}
+            <LiveRiderMap
+              center={userLocation}
+              riders={filteredRiders}
+              focusedId={focusedRiderId}
+              onSelect={(id) => {
+                setFocusedRiderId(id);
+                riderCardRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
             />
           ) : null}
+          <span className="pointer-events-none absolute left-3 top-3 z-[500] inline-flex items-center gap-1.5 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-bold shadow">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> LIVE · {filteredRiders.length} rider
+          </span>
         </div>
       </div>
 
