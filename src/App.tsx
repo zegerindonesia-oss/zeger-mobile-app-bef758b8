@@ -1,3 +1,4 @@
+import RiderLogin from './pages/RiderLogin';
 import Accounting from "@/pages/accounting/Accounting";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -113,16 +114,15 @@ const App = () => (
               </HomeGate>
             } />
             <Route path="/mobile-seller" element={
-              <RoleBasedRoute allowedRoles={['rider', 'sb_rider', 'bh_rider']}>
+              <RoleBasedRoute allowedRoles={['rider', 'sb_rider', 'bh_rider']} redirectTo="/rider-login">
                 <MobileSeller />
               </RoleBasedRoute>
             } />
             <Route path="/customer-app" element={
-              <RoleBasedRoute allowedRoles={['customer']} redirectTo="/auth">
-                <CustomerApp />
-              </RoleBasedRoute>
+              <CustomerApp />
             } />
             <Route path="/customer" element={<CustomerApp />} />
+            <Route path="/rider-login" element={<RiderLogin />} />
             <Route path="/admin" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>
                 <ModernLayout>

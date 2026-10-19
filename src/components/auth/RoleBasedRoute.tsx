@@ -17,7 +17,7 @@ export const RoleBasedRoute = ({
   useEffect(() => {
     // Redirect unauthenticated users immediately
     if (!loading && !user) {
-      window.location.replace('/auth');
+      window.location.replace(redirectTo);
       return;
     }
 
