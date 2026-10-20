@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell, ChevronRight, Store, MapPinned, Bike, Share2, Crown, Gift,
-  MessageCircle, ShieldCheck, BadgeCheck, Sparkles,
+  MessageCircle, ShieldCheck, BadgeCheck, Sparkles, Search,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
@@ -128,6 +128,10 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
             <div className="cx-card-glass rounded-full px-3.5 py-1.5">
               <p className="text-[11px] font-bold tracking-[0.18em] text-zeger">ZEGER COFFEE</p>
             </div>
+            <div className="flex gap-2">
+            <button onClick={() => startOrder('pickup')} aria-label="Cari menu" className="cx-icon-btn h-11 w-11">
+              <Search className="h-[18px] w-[18px]" />
+            </button>
             {config.features.notifications && (
               <button
                 onClick={() => onNavigate('notifications')}
@@ -142,6 +146,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
                 )}
               </button>
             )}
+            </div>
           </div>
 
           {banners.length > 1 && (
