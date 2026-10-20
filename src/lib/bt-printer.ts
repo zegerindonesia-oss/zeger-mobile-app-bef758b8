@@ -51,11 +51,36 @@ const nativeOpen = async (printerId: string, deviceId: string, name?: string) =>
   }
   throw new Error('Printer tidak punya jalur tulis Bluetooth (BLE).');
 };
+const fullUuid = (s: number | string) =>
+  typeof s === 'number' ? `${s.toString(16).padStart(8, '0')}-0000-1000-8000-00805f9b34fb` : s.toLowerCase();
+const ALL_SERVICES = Array.from(new Set(SERVICES.map(fullUuid)));
 const nativePair = async (printerId: string) => {
   await ensureBle();
-  const d = await BleClient.requestDevice({ optionalServices: SERVICES.map(String).filter((s) => s.includes('-')) });
+  const d = await BleClient.requestDevice({ optionalServices: ALL_SERVICES });
   await nativeOpen(printerId, d.deviceId, d.name || 'Printer Bluetooth');
   return d.name || 'Printer Bluetooth';
+};
+
+export type BtFound = { deviceId: string; name: string; rssi?: number };
+/** Native app only: scan all nearby Bluetooth devices for ~8s, reporting each one found. */
+export const btScan = async (onFound: (d: BtFound) => void, ms = 8000) => {
+  await ensureBle();
+  const seen = new Set<string>();
+  await BleClient.requestLEScan({ allowDuplicates: false }, (r) => {
+    if (seen.has(r.device.deviceId)) return;
+    seen.add(r.device.deviceId);
+    onFound({ deviceId: r.device.deviceId, name: r.device.name || r.localName || 'Perangkat tanpa nama', rssi: r.rssi });
+  });
+  await new Promise((res) => setTimeout(res, ms));
+  await BleClient.stopLEScan().catch(() => {});
+};
+export const btStopScan = () => BleClient.stopLEScan().catch(() => {});
+export const btCanScan = () => isNative();
+/** Connect a printer slot to a device picked from btScan. */
+export const btConnectTo = async (printerId: string, d: BtFound) => {
+  await BleClient.stopLEScan().catch(() => {});
+  await nativeOpen(printerId, d.deviceId, d.name);
+  return d.name;
 };
 const nativeReconnect = async (printerId: string) => {
   const c = nativeConn.get(printerId);
@@ -85,7 +110,7 @@ const open = async (printerId: string, device: any) => {
 export const btPair = async (printerId: string) => {
   if (isNative()) return nativePair(printerId);
   if (!webBt()) throw new Error('Browser ini belum mendukung Bluetooth langsung. Gunakan Chrome di Android/PC.');
-  const device = await (navigator as any).bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: SERVICES });
+  const device = await (navigator as any).bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ALL_SERVICES });
   await open(printerId, device);
   return device.name as string;
 };
