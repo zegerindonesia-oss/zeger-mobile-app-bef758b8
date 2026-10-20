@@ -107,7 +107,28 @@ export default function CustomerCheckout({
     return () => { alive = false; };
   }, [customerUser?.id]);
 
-  const deliveryFee = orderType === "outlet_delivery" ? cfg.order.delivery_fee : 0;
+  type Rate = { courier_code: string; service_code: string; name: string; price: number; eta?: string };
+  const [rates, setRates] = useState<Rate[]>([]);
+  const [rateMsg, setRateMsg] = useState<string>("");
+  const [courier, setCourier] = useState<Rate | null>(null);
+  useEffect(() => {
+    if (orderType !== "outlet_delivery") return;
+    if (!customerUser.latitude || !customerUser.longitude) { setRateMsg("Aktifkan lokasi untuk cek ongkir kurir instan."); return; }
+    let alive = true;
+    setRateMsg("Mengecek ongkir kurir instan...");
+    supabase.functions.invoke("biteship-rates", {
+      body: { outlet_id: outletId, dest_lat: customerUser.latitude, dest_lng: customerUser.longitude, value: Math.round(subtotal) },
+    }).then(({ data, error }) => {
+      if (!alive) return;
+      const list: Rate[] = (data as any)?.rates || [];
+      setRates(list);
+      setCourier(list[0] || null);
+      setRateMsg(error || !list.length ? ((data as any)?.error || "Kurir instan belum tersedia, pakai ongkir standar.") : "");
+    });
+    return () => { alive = false; };
+  }, [orderType, outletId, customerUser.latitude, customerUser.longitude, subtotal]);
+
+  const deliveryFee = orderType === "outlet_delivery" ? (courier?.price ?? cfg.order.delivery_fee) : 0;
   const takeAwayCharge = orderType === "outlet_pickup" ? cfg.order.takeaway_charge : 0;
   const deliveryDiscount = orderType === "outlet_delivery"
     ? Math.floor(deliveryFee * (cfg.order.delivery_discount_percent / 100))
@@ -146,6 +167,7 @@ export default function CustomerCheckout({
       subtotal,
       totalPrice: total,
       deliveryFee,
+      courier: orderType === "outlet_delivery" && courier ? courier : undefined,
       takeAwayCharge,
       discount: deliveryDiscount + pointsDiscount + voucherDiscount,
       voucherDiscount,
@@ -217,10 +239,33 @@ export default function CustomerCheckout({
                 placeholder="Nama jalan, nomor rumah, patokan..."
                 className="mt-1.5 w-full rounded-2xl border border-[hsl(var(--cx-line))] bg-white px-4 py-3 text-sm outline-none focus:border-zeger/50 focus:ring-4 focus:ring-zeger/10 resize-none"
               />
-              <div className="mt-3 cx-ride-track rounded-2xl bg-zeger-soft/60 h-16 flex items-center px-4">
-                <img src={cxArt.scooter} alt="" className="cx-ride h-12 w-12 object-contain" />
-                <p className="ml-2 text-xs font-semibold text-zeger-dark">Rider Zeger siap antar pesananmu.</p>
-              </div>
+              <p className="mt-4 text-xs font-semibold text-muted-foreground mb-2">Kurir Instan</p>
+              {rates.length > 0 ? (
+                <div className="space-y-2">
+                  {rates.map((r) => {
+                    const active = courier?.courier_code === r.courier_code && courier?.service_code === r.service_code;
+                    return (
+                      <button
+                        key={r.courier_code + r.service_code}
+                        type="button"
+                        onClick={() => setCourier(r)}
+                        className={`w-full flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all active:scale-[0.98] ${active ? 'border-zeger bg-zeger-soft/60 ring-4 ring-zeger/10' : 'border-[hsl(var(--cx-line))] bg-card'}`}
+                      >
+                        <div>
+                          <p className="text-sm font-bold">{r.name}</p>
+                          {r.eta && <p className="text-[11px] text-muted-foreground">Estimasi {r.eta}</p>}
+                        </div>
+                        <span className="text-sm font-extrabold text-zeger-dark">{formatRupiah(r.price)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="cx-ride-track rounded-2xl bg-zeger-soft/60 h-16 flex items-center px-4">
+                  <img src={cxArt.scooter} alt="" className="cx-ride h-12 w-12 object-contain" />
+                  <p className="ml-2 text-xs font-semibold text-zeger-dark">{rateMsg || "Kurir siap antar pesananmu."}</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="mt-4">
