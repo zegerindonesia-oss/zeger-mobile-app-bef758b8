@@ -17,7 +17,7 @@ import {
   printHtml, renderKitchenTicket, renderReceipt, renderStickers,
   escReceipt, escKitchen, tsplCustomer,
 } from '@/lib/pos-printing';
-import { btPair, btForget, btSavedName, btSupported, btSend } from '@/lib/bt-printer';
+import { btPair, btForget, btSavedName, btSupported, btSend, btCanScan, btScan, btStopScan, btConnectTo, type BtFound } from '@/lib/bt-printer';
 import { ReceiptDesigner } from './ReceiptDesigner';
 import { StickerPreview } from './StickerPreview';
 
@@ -59,15 +59,33 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
   );
 
   const [, rerender] = useState(0);
+  const [scanFor, setScanFor] = useState<string | null>(null);
+  const [found, setFound] = useState<BtFound[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [connecting, setConnecting] = useState<string | null>(null);
   if (!s) return null;
   const upd = (id: string, patch: Partial<PrinterConfig>) =>
     setS({ ...s, printers: s.printers.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
   const pair = async (p: PrinterConfig) => {
+    if (btCanScan()) {
+      setScanFor(p.id); setFound([]); setScanning(true);
+      try { await btScan((d) => setFound((f) => [...f, d].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999)))); }
+      catch (e: any) { toast.error(e.message || 'Gagal mencari Bluetooth'); }
+      finally { setScanning(false); }
+      return;
+    }
     try { const n = await btPair(p.id); upd(p.id, { connection: 'bluetooth' }); toast.success(`Terhubung ke ${n}`); }
     catch (e: any) { if (e?.name !== 'NotFoundError') toast.error(e.message || 'Gagal menghubungkan'); }
     rerender((x) => x + 1);
+  };
+  const connectFound = async (d: BtFound) => {
+    if (!scanFor) return;
+    setConnecting(d.deviceId);
+    try { await btConnectTo(scanFor, d); upd(scanFor, { connection: 'bluetooth' }); toast.success(`Terhubung ke ${d.name}`); setScanFor(null); }
+    catch (e: any) { toast.error(e.message || 'Gagal menghubungkan'); }
+    finally { setConnecting(null); rerender((x) => x + 1); }
   };
   const testPrint = async (p: PrinterConfig) => {
     const now = new Date().toISOString();
