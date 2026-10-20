@@ -771,6 +771,16 @@ export type Database = {
       }
       customer_orders: {
         Row: {
+          courier_code: string | null
+          courier_driver_name: string | null
+          courier_driver_phone: string | null
+          courier_name: string | null
+          courier_order_id: string | null
+          courier_service_code: string | null
+          courier_status: string | null
+          courier_tracking_url: string | null
+          courier_updated_at: string | null
+          courier_waybill: string | null
           created_at: string
           delivery_address: string | null
           delivery_fee: number | null
@@ -794,6 +804,16 @@ export type Database = {
           voucher_id: string | null
         }
         Insert: {
+          courier_code?: string | null
+          courier_driver_name?: string | null
+          courier_driver_phone?: string | null
+          courier_name?: string | null
+          courier_order_id?: string | null
+          courier_service_code?: string | null
+          courier_status?: string | null
+          courier_tracking_url?: string | null
+          courier_updated_at?: string | null
+          courier_waybill?: string | null
           created_at?: string
           delivery_address?: string | null
           delivery_fee?: number | null
@@ -817,6 +837,16 @@ export type Database = {
           voucher_id?: string | null
         }
         Update: {
+          courier_code?: string | null
+          courier_driver_name?: string | null
+          courier_driver_phone?: string | null
+          courier_name?: string | null
+          courier_order_id?: string | null
+          courier_service_code?: string | null
+          courier_status?: string | null
+          courier_tracking_url?: string | null
+          courier_updated_at?: string | null
+          courier_waybill?: string | null
           created_at?: string
           delivery_address?: string | null
           delivery_fee?: number | null
