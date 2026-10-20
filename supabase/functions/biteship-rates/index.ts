@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     if (!parsed.success) return json({ error: parsed.error.flatten().fieldErrors }, 400)
     const b = parsed.data
 
-    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!)
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } })
     const { data: outlet } = await sb.from('branches').select('latitude, longitude').eq('id', b.outlet_id).maybeSingle()
     const o = outlet as { latitude?: number; longitude?: number } | null
     if (!o?.latitude || !o?.longitude) return json({ error: 'Lokasi outlet belum diatur', rates: [] }, 200)
