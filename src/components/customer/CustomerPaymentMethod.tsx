@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { ArrowLeft, Check, Loader2, QrCode, ShieldCheck, Wallet, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +32,43 @@ export default function CustomerPaymentMethod({
   const [selectedMethod, setSelectedMethod] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [showQRISModal, setShowQRISModal] = useState(false);
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [qrString, setQrString] = useState('');
+  const [qrState, setQrState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const doneRef = useRef(false);
+
+  const createQris = async () => {
+    setQrState('loading');
+    const { data, error } = await supabase.functions.invoke('duitku-qris', { body: { action: 'create', order_id: orderId } });
+    if (error || !data?.qr_string) {
+      setQrState('error');
+      toast({ title: 'QRIS gagal dibuat', description: data?.error || 'Coba lagi sebentar.', variant: 'destructive' });
+      return;
+    }
+    setQrString(data.qr_string);
+    setQrState('ready');
+  };
+
+  const checkStatus = async (manual = false) => {
+    if (doneRef.current) return;
+    const { data } = await supabase.functions.invoke('duitku-qris', { body: { action: 'status', order_id: orderId } });
+    if (data?.paid && !doneRef.current) {
+      doneRef.current = true;
+      setShowQRISModal(false);
+      onSuccess('qris');
+    } else if (manual) {
+      toast({ title: 'Belum terbayar', description: 'Pembayaran belum kami terima. Tunggu sebentar ya.' });
+    }
+  };
+
+  const closeQris = () => { setShowQRISModal(false); setQrState('idle'); };
+
+  // Poll payment status while the QR is shown, so the order continues automatically.
+  useEffect(() => {
+    if (!showQRISModal || qrState !== 'ready') return;
+    const t = setInterval(() => checkStatus(), 4000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQRISModal, qrState]);
 
   const handlePayment = async () => {
     if (!selectedMethod) {
@@ -41,6 +78,7 @@ export default function CustomerPaymentMethod({
 
     if (selectedMethod === 'QRIS') {
       setShowQRISModal(true);
+      if (qrState !== 'ready') createQris();
       return;
     }
 
@@ -181,7 +219,7 @@ export default function CustomerPaymentMethod({
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[hsl(var(--cx-line))] bg-white/90 px-5 py-4 backdrop-blur">
               <h2 className="text-base font-extrabold">Pembayaran QRIS</h2>
               <button
-                onClick={() => { setShowQRISModal(false); setPaymentConfirmed(false); }}
+                onClick={closeQris}
                 aria-label="Tutup"
                 className="cx-icon-btn h-9 w-9"
               >
@@ -190,21 +228,32 @@ export default function CustomerPaymentMethod({
             </div>
 
             <div className="space-y-5 p-5">
-              <div className="cx-card rounded-[24px] p-3">
-                <img src="/qris/zeger-qris.jpg" alt="Kode QRIS Zeger Coffee" className="w-full rounded-[18px]" />
+              <div className="cx-card flex min-h-[260px] items-center justify-center rounded-[24px] bg-white p-4">
+                {qrState === 'loading' && <Loader2 className="h-8 w-8 animate-spin text-zeger" />}
+                {qrState === 'ready' && qrString && <QRCodeSVG value={qrString} size={240} level="M" includeMargin />}
+                {qrState === 'error' && (
+                  <div className="text-center text-sm text-muted-foreground">
+                    <p>QRIS belum bisa dibuat.</p>
+                    <button onClick={createQris} className="cx-btn cx-btn-ghost mt-3 px-4 py-2 text-xs">Coba lagi</button>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-[22px] bg-[hsl(var(--cx-rail))] p-4 text-center">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Total pembayaran</p>
                 <p className="cx-num mt-1 text-3xl font-extrabold text-zeger">{formatRupiah(totalAmount)}</p>
+                {qrState === 'ready' && (
+                  <p className="mt-2 flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menunggu pembayaran… berlaku 15 menit
+                  </p>
+                )}
               </div>
 
               <ol className="space-y-2 rounded-[22px] border border-[hsl(var(--cx-line))] p-4 text-xs leading-relaxed text-muted-foreground">
                 {[
                   'Buka aplikasi e-wallet atau m-banking kamu',
-                  'Pilih menu Scan QR lalu arahkan ke kode di atas',
-                  `Masukkan nominal ${formatRupiah(totalAmount)}`,
-                  'Selesaikan pembayaran, lalu tekan "Sudah bayar"',
+                  'Pilih Scan QR lalu arahkan ke kode di atas (nominal otomatis)',
+                  'Selesaikan pembayaran — pesanan langsung diproses otomatis',
                 ].map((step, i) => (
                   <li key={i} className="flex gap-2.5">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zeger text-[10px] font-bold text-white">{i + 1}</span>
@@ -213,33 +262,16 @@ export default function CustomerPaymentMethod({
                 ))}
               </ol>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-[20px] bg-[hsl(var(--cx-rail))] p-4">
-                <input
-                  type="checkbox"
-                  checked={paymentConfirmed}
-                  onChange={(e) => setPaymentConfirmed(e.target.checked)}
-                  className="mt-0.5 h-5 w-5 accent-[hsl(var(--zeger))]"
-                />
-                <span className="text-xs font-semibold leading-snug">Saya sudah melakukan pembayaran melalui QRIS</span>
-              </label>
-
               <div className="space-y-2 pb-[calc(env(safe-area-inset-bottom)+4px)]">
                 <button
-                  onClick={() => {
-                    if (!paymentConfirmed) {
-                      toast({ title: 'Belum dicentang', description: 'Centang konfirmasi pembayaran dulu.', variant: 'destructive' });
-                      return;
-                    }
-                    setShowQRISModal(false);
-                    onSuccess('QRIS');
-                  }}
-                  disabled={!paymentConfirmed}
+                  onClick={() => checkStatus(true)}
+                  disabled={qrState !== 'ready'}
                   className="cx-btn cx-btn-primary w-full py-4 text-sm"
                 >
-                  Sudah bayar
+                  Cek pembayaran
                 </button>
                 <button
-                  onClick={() => { setShowQRISModal(false); setPaymentConfirmed(false); }}
+                  onClick={closeQris}
                   className="cx-btn cx-btn-ghost w-full py-3 text-sm"
                 >
                   Batal
