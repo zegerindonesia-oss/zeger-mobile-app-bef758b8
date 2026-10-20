@@ -37,11 +37,46 @@ Deno.serve(async (req) => {
       const amount = f.get('amount') ?? '', oid = f.get('merchantOrderId') ?? ''
       const expected = await md5(merchant + amount + oid + apiKey)
       if (f.get('merchantCode') !== merchant || f.get('signature') !== expected) return new Response('bad signature', { status: 400 })
-      if (f.get('resultCode') === '00') await markPaid(oid, f.get('reference') ?? undefined)
+      if (f.get('resultCode') === '00' && !oid.startsWith('POS-')) await markPaid(oid, f.get('reference') ?? undefined)
       return new Response('OK')
     }
 
-    const parsed = Body.safeParse(await req.json())
+    const raw = await req.json().catch(() => ({}))
+
+    // In-store POS QRIS: cashier creates a QR for the bill amount; paid status is verified with Duitku.
+    if (raw?.action === 'pos_create' || raw?.action === 'pos_status') {
+      const P = z.object({ action: z.enum(['pos_create', 'pos_status']), ref: z.string().regex(/^POS-[A-Za-z0-9-]{8,60}$/), amount: z.number().int().min(1).max(100000000).optional() })
+      const p = P.safeParse(raw)
+      if (!p.success) return json({ error: p.error.flatten().fieldErrors }, 400)
+      const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
+      const { data: u } = await admin.auth.getUser(token)
+      if (!u?.user) return json({ error: 'Unauthorized' }, 401)
+      const { data: prof } = await admin.from('profiles').select('role, branch_id').eq('user_id', u.user.id).maybeSingle()
+      if (!prof || prof.role === 'customer') return json({ error: 'Forbidden' }, 403)
+      if (p.data.action === 'pos_status') {
+        const res = await fetch(`${base}/webapi/api/merchant/transactionStatus`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ merchantCode: merchant, merchantOrderId: p.data.ref, signature: await md5(merchant + p.data.ref + apiKey) }),
+        })
+        const d = await res.json().catch(() => ({}))
+        return json({ paid: d.statusCode === '00', amount: Number(d.amount) || null, reference: d.reference, status: d.statusCode })
+      }
+      if (!p.data.amount) return json({ error: 'amount wajib' }, 400)
+      const res = await fetch(`${base}/webapi/api/merchant/v2/inquiry`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchantCode: merchant, paymentAmount: p.data.amount, paymentMethod: method, merchantOrderId: p.data.ref,
+          productDetails: `Pembayaran Kasir ${p.data.ref.slice(4, 12)}`, email: 'kasir@flowfnb.com', phoneNumber: '', customerVaName: 'Pelanggan',
+          callbackUrl: `${url}/functions/v1/duitku-qris`, returnUrl: 'https://flowfnb.flowsstack.com/pos',
+          signature: await md5(merchant + p.data.ref + p.data.amount + apiKey), expiryPeriod: 15,
+        }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || d.statusCode !== '00') { console.error('pos inquiry failed', res.status, d); return json({ error: d.statusMessage || d.Message || 'Gagal membuat QRIS' }, 502) }
+      return json({ qr_string: d.qrString, reference: d.reference, amount: p.data.amount })
+    }
+
+    const parsed = Body.safeParse(raw)
     if (!parsed.success) return json({ error: parsed.error.flatten().fieldErrors }, 400)
     const { action, order_id } = parsed.data
     // Caller's own session: RLS ensures customers only reach their own order.
