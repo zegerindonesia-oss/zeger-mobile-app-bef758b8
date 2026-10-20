@@ -2,8 +2,8 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { z } from 'npm:zod@3'
 
-// Instant couriers suitable for F&B (hot/cold drinks, short distance)
-const COURIERS = 'gojek,grab,shopee,lalamove,borzo'
+// Instant couriers for F&B: GoSend and GrabExpress only
+const COURIERS = 'gojek,grab'
 const INSTANT = new Set(['instant', 'same_day_instant', 'motor', 'instant_bike'])
 
 const Body = z.object({
