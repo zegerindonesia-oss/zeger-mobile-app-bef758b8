@@ -41,6 +41,7 @@ import CustomerCheckout from '@/components/customer/CustomerCheckout';
 import CustomerOrderSuccess from '@/components/customer/CustomerOrderSuccess';
 import CustomerOrderWaiting from '@/components/customer/CustomerOrderWaiting';
 import CustomerOrderTracking from '@/components/customer/CustomerOrderTracking';
+import CustomerCourierTracking from '@/components/customer/CustomerCourierTracking';
 import CustomerPaymentMethod from '@/components/customer/CustomerPaymentMethod';
 import { CustomerSubscription } from '@/components/customer/CustomerSubscription';
 import { CustomerReferral } from '@/components/customer/CustomerReferral';
@@ -76,7 +77,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'street' | 'subscription' | 'referral' | 'care' | 'notifications';
+type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'courier-tracking' | 'street' | 'subscription' | 'referral' | 'care' | 'notifications';
 
 /** Screens that keep the floating bottom dock visible. */
 const DOCK_VIEWS: View[] = ['home', 'vouchers', 'promo-reward', 'orders', 'profile', 'loyalty', 'map'];
@@ -342,6 +343,11 @@ function CustomerAppInner() {
         return;
       }
 
+      if (orderData && (orderData as any).order_type === 'outlet_delivery' && (orderData as any).courier_code) {
+        setTrackingOrderId(orderId);
+        setActiveView('courier-tracking');
+        return;
+      }
       if (orderData) {
         // Create rider object from order data
         const riderInfo = {
@@ -615,12 +621,25 @@ function CustomerAppInner() {
         .update({
           payment_method: paymentMethod || 'qris',
           status: 'pending', // Change to pending (waiting for rider)
-        })
+          ...(pendingOrderData.orderType === 'outlet_delivery' && pendingOrderData.courier ? {
+            courier_code: pendingOrderData.courier.courier_code,
+            courier_service_code: pendingOrderData.courier.service_code,
+            courier_name: pendingOrderData.courier.name,
+          } : {}),
+        } as any)
         .eq('id', pendingOrderData.orderId);
 
       if (updateError) {
         console.error('❌ Order update error:', updateError);
         throw updateError;
+      }
+
+      // Call the courier automatically for delivery orders (customer never deals with it)
+      if (pendingOrderData.orderType === 'outlet_delivery' && pendingOrderData.courier) {
+        supabase.functions.invoke('courier-delivery', { body: {
+          action: 'book', order_id: pendingOrderData.orderId,
+          courier_code: pendingOrderData.courier.courier_code, service_code: pendingOrderData.courier.service_code,
+        } }).catch((e) => console.error('courier booking', e));
       }
 
       // Update user points if used
@@ -931,6 +950,16 @@ function CustomerAppInner() {
                     title: "Dibatalkan",
                     description: "Permintaan dibatalkan",
                   });
+                }}
+              />
+            )}
+            {activeView === 'courier-tracking' && trackingOrderId && (
+              <CustomerCourierTracking
+                orderId={trackingOrderId}
+                onBack={() => { setActiveView('orders'); setTrackingOrderId(null); }}
+                onCompleted={() => {
+                  toast({ title: "Pesanan Selesai!", description: "Terima kasih telah menggunakan Zeger" });
+                  setActiveView('orders'); setTrackingOrderId(null);
                 }}
               />
             )}
