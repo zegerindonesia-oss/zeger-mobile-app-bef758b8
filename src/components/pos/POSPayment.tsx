@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { POSQrisDialog } from './POSQrisDialog';
 
 interface Props {
   open: boolean;
@@ -36,6 +37,7 @@ export const POSPayment = ({ open, total, onClose, onConfirm }: Props) => {
   const [method2, setMethod2] = useState('qris');
   const [amount2, setAmount2] = useState<number>(0);
   const [processing, setProcessing] = useState(false);
+  const [qrisOpen, setQrisOpen] = useState(false);
 
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
 
@@ -147,11 +149,23 @@ export const POSPayment = ({ open, total, onClose, onConfirm }: Props) => {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={processing}>Batal</Button>
-          <Button onClick={handleConfirm} disabled={processing}>
-            {processing ? 'Memproses...' : 'Konfirmasi Bayar'}
-          </Button>
+          {method1 === 'qris' && !mixed ? (
+            <Button onClick={() => setQrisOpen(true)} disabled={processing}>
+              {processing ? 'Memproses...' : 'Tampilkan QRIS'}
+            </Button>
+          ) : (
+            <Button onClick={handleConfirm} disabled={processing}>
+              {processing ? 'Memproses...' : 'Konfirmasi Bayar'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
+      <POSQrisDialog
+        open={qrisOpen}
+        amount={total}
+        onClose={() => setQrisOpen(false)}
+        onPaid={() => { setQrisOpen(false); handleConfirm(); }}
+      />
     </Dialog>
   );
 };
