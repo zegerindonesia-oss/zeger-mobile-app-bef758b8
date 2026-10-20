@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.pos-voice-parse]
 verify_jwt = true
+
+[functions.duitku-qris]
+verify_jwt = false
