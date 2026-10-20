@@ -230,6 +230,23 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
           {!inline && <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>}
           <Button onClick={save} disabled={saving} className="h-11 px-6">{saving ? 'Menyimpan...' : designer ? 'Simpan Desain Struk' : 'Simpan Pengaturan Printer'}</Button>
         </div>
+        <Dialog open={!!scanFor} onOpenChange={(o) => { if (!o) { btStopScan(); setScanFor(null); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><Bluetooth className="h-5 w-5 text-primary" /> Pilih Printer Bluetooth</DialogTitle></DialogHeader>
+            <p className="text-xs text-muted-foreground">{scanning ? 'Mencari perangkat di sekitar...' : 'Pencarian selesai.'} Ketuk nama printer untuk menyambungkan.</p>
+            <div className="max-h-80 overflow-y-auto space-y-2">
+              {found.map((d) => (
+                <button key={d.deviceId} disabled={!!connecting} onClick={() => connectFound(d)}
+                  className="w-full flex items-center justify-between rounded-xl border bg-card p-3 text-left hover:bg-muted disabled:opacity-60">
+                  <span className="flex items-center gap-2"><Printer className="h-4 w-4 text-primary" /><span className="font-medium">{d.name}</span></span>
+                  <span className="text-xs text-muted-foreground">{connecting === d.deviceId ? 'Menyambung...' : d.rssi ? `${d.rssi} dBm` : ''}</span>
+                </button>
+              ))}
+              {!scanning && !found.length && <p className="text-sm text-center py-6 text-muted-foreground">Tidak ada perangkat. Pastikan printer menyala dan dekat tablet.</p>}
+            </div>
+            <DialogFooter><Button variant="outline" disabled={scanning} onClick={() => scanFor && pair({ id: scanFor } as PrinterConfig)}>{scanning ? 'Mencari...' : 'Cari Ulang'}</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
     </Shell>
   );
 };
