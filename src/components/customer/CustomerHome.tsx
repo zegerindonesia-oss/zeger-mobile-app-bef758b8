@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell, ChevronRight, Store, MapPinned, Bike, Share2, Crown, Gift,
-  MessageCircle, ShieldCheck, BadgeCheck, Sparkles,
+  MessageCircle, ShieldCheck, BadgeCheck, User, Search, ShoppingBag, ArrowRight, Plus,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
@@ -90,12 +90,60 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
   const swipe = (dir: 1 | -1) => setSlide((s) => (s + dir + banners.length) % banners.length);
 
+  const [mode, setMode] = useState<CustomerOrderMode>('pickup');
+  const banner = banners[slide];
+
   return (
     <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-28">
-      {/* ---------- Hero banner (managed in Back Office → Promo Banner) ---------- */}
-      <header className="relative">
+      {/* 1. Brand header */}
+      <header className="flex items-center justify-between px-5 pb-3 pt-safe">
+        <div className="pt-4">
+          <p className="text-[26px] font-extrabold leading-none tracking-tight text-zeger">ZEGER</p>
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Coffee · Hi {firstName}</p>
+        </div>
+        <div className="flex gap-2 pt-4">
+          {config.features.notifications && (
+            <button onClick={() => onNavigate('notifications')} aria-label="Notifikasi" className="cx-icon-btn relative h-11 w-11">
+              <Bell className="h-[18px] w-[18px]" />
+              {unread > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-zeger px-1 text-[10px] font-bold text-zeger-foreground">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </button>
+          )}
+          <button onClick={() => onNavigate('profile')} aria-label="Profil" className="cx-icon-btn h-11 w-11">
+            <User className="h-[18px] w-[18px]" />
+          </button>
+        </div>
+      </header>
+
+      {/* 2. How do you want it? Pick Up / Delivery + search */}
+      {config.sections.order_types && (
+        <div className="cx-card mx-4 flex items-center gap-2 rounded-[22px] p-1.5">
+          <div className="cx-seg grid flex-1 grid-cols-2 gap-1">
+            {(['pickup', 'delivery'] as const).map((m) => (
+              <button
+                key={m}
+                data-active={mode === m}
+                onClick={() => setMode(m)}
+                className="cx-seg-item flex items-center justify-center gap-1.5 py-2.5 text-[13px]"
+              >
+                {m === 'pickup' ? <ShoppingBag className="h-4 w-4" /> : <Bike className="h-4 w-4" />}
+                {m === 'pickup' ? 'Pick Up' : 'Delivery'}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => startOrder(mode)} aria-label="Cari menu" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-muted-foreground active:bg-zeger-soft">
+            <Search className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
+      {/* 3. Promo banner with one clear action */}
+      <section className="px-4 pt-4">
         <div
-          className="relative h-[290px] overflow-hidden rounded-b-[32px] bg-zeger-dark"
+          className="relative h-[200px] overflow-hidden rounded-[26px] bg-gradient-to-br from-zeger-dark via-zeger to-zeger-dark"
           onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
           onTouchEnd={(e) => {
             if (touchX.current === null || banners.length < 2) return;
@@ -104,224 +152,80 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
             touchX.current = null;
           }}
         >
-          {/* Brand backdrop — always rendered so a missing banner image still looks finished */}
-          <div className="absolute inset-0 bg-gradient-to-br from-zeger-dark via-zeger to-zeger-dark" />
-          <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-[86px] flex flex-col items-center px-8 text-center">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.3em] text-white/70">Zeger Coffee</p>
-            <p className="mt-1 text-xl font-extrabold leading-tight text-white drop-shadow-sm">
-              {banners[slide]?.title || 'Ngopi enak, poinnya ikut'}
-            </p>
-          </div>
-
           {banners.map((b, i) => (
-            <BannerSlide
-              key={b.id}
-              banner={b}
-              active={i === slide}
-              onOpen={() => b.link_url && window.open(b.link_url, '_blank', 'noopener')}
-            />
+            <BannerSlide key={b.id} banner={b} active={i === slide} onOpen={() => b.link_url && window.open(b.link_url, '_blank', 'noopener')} />
           ))}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[hsl(var(--cx-shadow)/0.45)] via-transparent to-[hsl(var(--cx-shadow)/0.55)]" />
-
-          <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4 pt-safe">
-            <div className="cx-card-glass rounded-full px-3.5 py-1.5">
-              <p className="text-[11px] font-bold tracking-[0.18em] text-zeger">ZEGER COFFEE</p>
-            </div>
-            {config.features.notifications && (
-              <button
-                onClick={() => onNavigate('notifications')}
-                aria-label="Notifikasi"
-                className="cx-icon-btn relative h-11 w-11"
-              >
-                <Bell className="h-[18px] w-[18px]" />
-                {unread > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-zeger px-1 text-[10px] font-bold text-zeger-foreground ring-2 ring-white">
-                    {unread > 9 ? '9+' : unread}
-                  </span>
-                )}
-              </button>
-            )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[hsl(var(--cx-shadow)/0.6)] via-[hsl(var(--cx-shadow)/0.15)] to-transparent" />
+          <div className="absolute inset-y-0 left-0 flex w-3/5 flex-col justify-center p-5">
+            <p className="line-clamp-3 text-[22px] font-extrabold leading-[1.1] text-zeger-foreground">
+              {banner?.title || 'Ngopi enak, poinnya ikut'}
+            </p>
+            <button
+              onClick={() => startOrder(mode)}
+              className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-background px-4 py-2 text-[13px] font-bold text-zeger shadow-md active:scale-95"
+            >
+              Pesan Sekarang <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
-
           {banners.length > 1 && (
-            <div className="absolute inset-x-0 bottom-[70px] flex justify-center gap-1.5">
+            <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
               {banners.map((b, i) => (
-                <button
-                  key={b.id}
-                  aria-label={`Banner ${i + 1}`}
-                  onClick={() => setSlide(i)}
-                  className={cn('h-1.5 rounded-full transition-all duration-300', i === slide ? 'w-6 bg-white' : 'w-1.5 bg-white/55')}
-                />
+                <button key={b.id} aria-label={`Banner ${i + 1}`} onClick={() => setSlide(i)}
+                  className={cn('h-1.5 rounded-full transition-all', i === slide ? 'w-5 bg-background' : 'w-1.5 bg-background/55')} />
               ))}
             </div>
           )}
         </div>
+      </section>
 
-        {/* ---------- Floating points card ---------- */}
-        {config.features.loyalty && (
-          <div className="cx-card cx-rise relative -mt-12 mx-4 overflow-hidden rounded-[26px]">
-            <div className="flex items-center justify-between gap-3 p-3.5">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zeger-cream to-white shadow-[inset_0_1px_0_white,0_6px_14px_-8px_hsl(var(--cx-shadow)/0.5)]">
-                  <img src={cxArt.coin} alt="" aria-hidden className="cx-coin h-10 w-10 object-contain" loading="lazy" width={640} height={640} />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Zeger Poin</p>
-                  <p className="cx-num truncate text-2xl font-extrabold leading-tight">{points.toLocaleString('id-ID')}</p>
-                </div>
-              </div>
-              <div className="flex -space-x-2">
-                {[0, 1, 2].map((i) => (
-                  <img
-                    key={i}
-                    src={cxArt.coin}
-                    alt=""
-                    aria-hidden
-                    loading="lazy"
-                    width={640}
-                    height={640}
-                    className="cx-coin h-7 w-7 object-contain"
-                    style={{ transform: `translateY(${i % 2 ? 5 : -4}px) rotate(${i * 10 - 10}deg)` }}
-                  />
-                ))}
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigate('loyalty')}
-              className="flex w-full items-center justify-between border-t border-dashed border-[hsl(var(--cx-line))] px-4 py-3 text-left text-sm font-bold transition-colors active:bg-zeger-soft"
-            >
-              Tukarkan poinmu dengan hadiah menarik
-              <ChevronRight className="h-[18px] w-[18px] text-zeger" />
-            </button>
-          </div>
-        )}
-      </header>
-
-      {/* ---------- Subscription teaser ---------- */}
-      {config.features.subscription && (
-        <button
-          onClick={() => onNavigate('subscription')}
-          className="cx-card mx-4 mt-3.5 flex w-[calc(100%-2rem)] items-center gap-3 overflow-hidden rounded-[22px] p-2.5 pr-3 transition-transform active:scale-[0.985]"
-        >
-          <span className="cx-stage flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl">
-            <img src={cxArt.crown} alt="" aria-hidden className="cx-art cx-float h-9 w-9 object-contain" loading="lazy" width={640} height={640} />
-          </span>
-          <span className="flex-1 text-left">
-            <span className="block text-sm font-extrabold">MyZeger Plan</span>
-            <span className="block text-xs text-muted-foreground">Berlangganan, jauh lebih untung tiap bulan</span>
-          </span>
-          <span className="cx-btn cx-btn-ghost px-4 py-1.5 text-xs">Lihat</span>
-        </button>
-      )}
-
-      {/* ---------- Channel + order mode ---------- */}
+      {/* 4. Where to order — icon tiles */}
       {config.sections.order_types && (
-        <section className="px-4 pt-6">
-          <h2 className="text-xl font-extrabold">Hi {firstName}, pesan sekarang?</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Pilih layanan Zeger yang paling dekat denganmu</p>
-
-          <div className="cx-seg mt-3 grid grid-cols-3 gap-1">
+        <section className="px-4 pt-5">
+          <h2 className="text-[17px] font-bold">Pesan dari mana?</h2>
+          <div className="mt-3 grid grid-cols-3 gap-3">
             {CHANNELS.map((c) => (
               <button
                 key={c.id}
-                onClick={() => setChannel(c.id)}
-                data-active={channel === c.id}
-                className="cx-seg-item flex flex-col items-center gap-1 px-1 py-2.5 text-[11px]"
+                onClick={() => {
+                  setChannel(c.id);
+                  if (c.id === 'wheels') onNavigate('map'); else onChooseChannel?.(c.id, mode);
+                }}
+                className="cx-card flex flex-col items-center gap-1.5 rounded-[20px] px-2 py-3 text-center active:scale-95"
               >
-                <c.icon className="h-[18px] w-[18px]" strokeWidth={2.4} />
-                {c.short}
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-zeger-soft text-zeger">
+                  <c.icon className="h-5 w-5" />
+                </span>
+                <span className="text-[12px] font-bold leading-tight">{c.title}</span>
+                <span className="text-[10px] leading-tight text-muted-foreground">{c.desc}</span>
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            {CHANNELS.find((c) => c.id === channel)?.desc}
-          </p>
-
-          {channel === 'wheels' ? (
-            <button
-              onClick={() => onNavigate('map')}
-              className="cx-card cx-ride-track mt-3 flex w-full items-center gap-3 overflow-hidden rounded-[26px] p-4 text-left transition-transform active:scale-[0.985]"
-            >
-              <span className="flex-1">
-                <span className="block text-xl font-extrabold text-zeger">Cari Rider</span>
-                <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-                  Lihat rider Zeger terdekat di peta, datangi langsung atau panggil lewat WhatsApp
-                </span>
-              </span>
-              <img src={cxArt.scooter} alt="" aria-hidden className="cx-art cx-ride h-20 w-24 shrink-0 object-contain" loading="lazy" width={896} height={752} />
-            </button>
-          ) : (
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => startOrder('pickup')}
-                className="cx-card cx-stage relative flex min-h-[154px] flex-col overflow-hidden rounded-[26px] p-4 text-left transition-transform active:scale-[0.97]"
-              >
-                <span className="relative z-10 block text-lg font-extrabold">Pick Up</span>
-                <span className="relative z-10 mt-0.5 block text-xs text-muted-foreground">
-                  Ambil di {channel === 'street' ? 'booth' : 'store'} tanpa antre
-                </span>
-                <img
-                  src={cxArt.bag}
-                  alt=""
-                  aria-hidden
-                  loading="lazy"
-                  width={640}
-                  height={640}
-                  className="cx-art cx-float absolute -bottom-2 right-0 h-[86px] w-[86px] object-contain"
-                />
-              </button>
-              <button
-                onClick={() => startOrder('delivery')}
-                className="cx-card cx-ride-track relative flex min-h-[154px] flex-col overflow-hidden rounded-[26px] bg-gradient-to-br from-zeger-soft to-white p-4 text-left transition-transform active:scale-[0.97]"
-              >
-                <span className="relative z-10 block text-lg font-extrabold text-zeger">Delivery</span>
-                <span className="relative z-10 mt-0.5 block text-xs text-muted-foreground">Diantar rider ke lokasimu</span>
-                <img
-                  src={cxArt.scooter}
-                  alt=""
-                  aria-hidden
-                  loading="lazy"
-                  width={896}
-                  height={752}
-                  className="cx-art cx-ride absolute bottom-3 right-0 h-[76px] w-[100px] object-contain"
-                />
-              </button>
-            </div>
-          )}
         </section>
       )}
 
-      {/* ---------- Favourites ---------- */}
+      {/* 5. Popular picks */}
       {favourites.length > 0 && (
-        <section className="pt-7">
-          <div className="flex items-center justify-between px-4">
-            <h2 className="flex items-center gap-1.5 text-xl font-extrabold">
-              Favorit Zeger <Sparkles className="h-[18px] w-[18px] text-zeger-gold" />
-            </h2>
-            <button onClick={() => startOrder('pickup')} className="flex items-center text-xs font-bold text-zeger">
-              Semua menu <ChevronRight className="h-4 w-4" />
+        <section className="px-4 pt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[17px] font-bold">Menu Favorit</h2>
+            <button onClick={() => startOrder(mode)} className="flex items-center gap-1 text-[13px] font-semibold text-zeger">
+              Lihat semua <ArrowRight className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {favourites.map((p: any) => (
-              <button
-                key={p.id}
-                onClick={() => startOrder('pickup')}
-                className="cx-card w-[138px] shrink-0 snap-start overflow-hidden rounded-[22px] text-left transition-transform active:scale-[0.96]"
-              >
-                <span className="block aspect-square overflow-hidden bg-white">
-                  <img
-                    src={normalizeImageUrl(p.image_url) || artworkFor(p)}
-                    onError={onArtError(artworkFor(p))}
-                    alt={p.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
+          <div className="mt-3 grid grid-cols-3 gap-2.5">
+            {favourites.slice(0, 6).map((p: any) => (
+              <button key={p.id} onClick={() => startOrder(mode)} className="cx-card overflow-hidden rounded-[20px] text-left active:scale-[0.97]">
+                <span className="block aspect-square overflow-hidden bg-background">
+                  <img src={normalizeImageUrl(p.image_url) || artworkFor(p)} onError={onArtError(artworkFor(p))} alt={p.name} loading="lazy" className="h-full w-full object-cover" />
                 </span>
-                <span className="block p-2.5">
-                  <span className="line-clamp-2 block min-h-[2.1rem] text-xs font-bold leading-snug">{p.name}</span>
-                  <span className="cx-num mt-1 block text-sm font-extrabold text-zeger">{formatRupiah(p.price)}</span>
+                <span className="block p-2">
+                  <span className="line-clamp-2 block min-h-[2rem] text-[12px] font-semibold leading-tight">{p.name}</span>
+                  <span className="mt-1 flex items-center justify-between">
+                    <span className="cx-num text-[12px] font-bold text-zeger">{formatRupiah(p.price)}</span>
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zeger text-zeger-foreground">
+                      <Plus className="h-3.5 w-3.5" />
+                    </span>
+                  </span>
                 </span>
               </button>
             ))}
@@ -329,61 +233,58 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         </section>
       )}
 
-      <div className="mt-4 h-2 bg-[hsl(var(--cx-rail))]" />
+      {/* 6. Rewards strip */}
+      {config.features.loyalty && (
+        <section className="px-4 pt-6">
+          <div className="cx-card flex items-center gap-3 rounded-[22px] p-3.5">
+            <img src={cxArt.coin} alt="" aria-hidden className="cx-coin h-12 w-12 shrink-0 object-contain" loading="lazy" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold text-zeger">Zeger Poin</p>
+              <p className="text-[12px] text-muted-foreground">
+                <span className="cx-num font-bold text-foreground">{points.toLocaleString('id-ID')}</span> poin · tukar dengan hadiah
+              </p>
+            </div>
+            <button onClick={() => onNavigate('loyalty')} className="cx-btn cx-btn-primary shrink-0 px-4 py-2 text-[13px]">Tukar</button>
+          </div>
+        </section>
+      )}
 
-      {/* ---------- Highlights ---------- */}
+      {/* 7. Extras */}
       <section className="px-4 pt-6">
-        <h2 className="text-xl font-extrabold">Yang Menarik di Zeger</h2>
+        <h2 className="text-[17px] font-bold">Lainnya</h2>
         <div className="mt-3 grid grid-cols-3 gap-3">
-          {config.features.referral && (
-            <Feature art={cxArt.coin} fallbackIcon={Share2} title="Share The Sip" desc="Ajak teman, dapat poin" onClick={() => onNavigate('referral')} />
-          )}
           {config.features.subscription && (
             <Feature art={cxArt.crown} fallbackIcon={Crown} title="MyZeger Plan" desc="Langganan hemat" onClick={() => onNavigate('subscription')} />
           )}
+          {config.features.referral && (
+            <Feature art={cxArt.coin} fallbackIcon={Share2} title="Share The Sip" desc="Ajak teman" onClick={() => onNavigate('referral')} />
+          )}
           {config.features.vouchers && (
-            <Feature art={cxArt.gift} fallbackIcon={Gift} title="Zeger Gift" desc="Voucher & hadiah" onClick={() => onNavigate('vouchers')} />
+            <Feature art={cxArt.gift} fallbackIcon={Gift} title="Zeger Gift" desc="Voucher" onClick={() => onNavigate('vouchers')} />
           )}
         </div>
       </section>
 
-      <div className="mt-6 h-2 bg-[hsl(var(--cx-rail))]" />
-
-      {/* ---------- Zeger Care ---------- */}
       {config.features.care && (
-        <section className="px-4 pt-6">
-          <h2 className="text-xl font-extrabold">Perlu Bantuan?</h2>
-          <button
-            onClick={() => onNavigate('care')}
-            className="cx-card mt-3 flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left transition-transform active:scale-[0.985]"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zeger-soft text-zeger">
-              <MessageCircle className="h-6 w-6" />
+        <section className="px-4 pt-4">
+          <button onClick={() => onNavigate('care')} className="cx-card flex w-full items-center gap-3 rounded-[20px] p-3.5 text-left active:scale-[0.985]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zeger-soft text-zeger">
+              <MessageCircle className="h-5 w-5" />
             </span>
             <span className="flex-1">
-              <span className="block text-xs text-muted-foreground">Zeger Care (chat only)</span>
-              <span className="cx-num block text-lg font-extrabold text-zeger">{waDisplay}</span>
+              <span className="block text-[13px] font-semibold">Perlu bantuan? Chat Zeger Care</span>
+              <span className="cx-num block text-[12px] text-muted-foreground">{waDisplay}</span>
             </span>
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
         </section>
       )}
 
-      {/* ---------- Trust ---------- */}
-      <section className="mx-4 mt-6 divide-y divide-dashed divide-[hsl(var(--cx-line))] border-y border-dashed border-[hsl(var(--cx-line))]">
-        <div className="flex items-center gap-3.5 py-4 text-xs leading-relaxed text-muted-foreground">
-          <BadgeCheck className="h-7 w-7 shrink-0 text-zeger" />
-          Zeger Coffee sudah tersertifikasi halal oleh MUI
-        </div>
-        <div className="flex items-start gap-3.5 py-4 text-xs leading-relaxed text-muted-foreground">
-          <ShieldCheck className="h-7 w-7 shrink-0 text-zeger" />
-          <div>
-            Dirjen Perlindungan Konsumen dan Tata Tertib Niaga, Kementerian Perdagangan Republik Indonesia.
-            <p className="mt-1 font-bold text-foreground">WhatsApp Dirjen PKTN: 0853-1111-1010</p>
-          </div>
-        </div>
+      <section className="mx-4 mt-5 space-y-3 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 shrink-0 text-zeger" /> Tersertifikasi halal MUI</p>
+        <p className="flex items-start gap-2"><ShieldCheck className="h-4 w-4 shrink-0 text-zeger" /> Pengaduan konsumen: Dirjen PKTN Kemendag, WhatsApp 0853-1111-1010</p>
       </section>
-      <div className="h-24" />
+      <div className="h-20" />
     </div>
   );
 }
