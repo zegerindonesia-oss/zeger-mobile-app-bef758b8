@@ -6,6 +6,7 @@ import {
   ChevronLeft, Store, ShoppingBag, Bike, Ticket, ChevronRight, Clock, Check, Info, Wallet, Banknote, QrCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AddressPinMap from "./AddressPinMap";
 import { cxArt, artworkFor, onArtError, formatRupiah } from "@/lib/customer-art";
 import { cartSubtotal, unitPrice, describeCustomizations, pointsFor } from "@/lib/customer-pricing";
 import { voucherBlockedReason, voucherDiscountFor, voucherHeadline, voucherKind } from "@/lib/customer-voucher";
@@ -56,9 +57,7 @@ interface CustomerCheckoutProps {
 }
 
 const PAYMENTS = [
-  { id: "e_wallet", label: "E-Wallet / QRIS", hint: "Bayar lewat QRIS di aplikasi", icon: QrCode },
-  { id: "transfer", label: "Transfer Bank", hint: "Konfirmasi otomatis", icon: Wallet },
-  { id: "cash", label: "Tunai di Outlet", hint: "Bayar saat pesanan diambil", icon: Banknote },
+  { id: "e_wallet", label: "E-Wallet / QRIS", hint: "Scan dari m-banking / e-wallet apa pun", icon: QrCode },
 ] as const;
 
 const PICKUP_TIMES = [
@@ -77,7 +76,7 @@ export default function CustomerCheckout({
   const [orderType, setOrderType] = useState<"outlet_pickup" | "outlet_delivery">(initialOrderType);
   const [deliveryAddress, setDeliveryAddress] = useState(customerUser.address || "");
   const [pickupTime, setPickupTime] = useState("now");
-  const [paymentMethod, setPaymentMethod] = useState<string>("e_wallet");
+  const paymentMethod: string = "e_wallet";
   const [usePoints, setUsePoints] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vouchers, setVouchers] = useState<ClaimedVoucher[]>([]);
@@ -111,24 +110,37 @@ export default function CustomerCheckout({
   const [rates, setRates] = useState<Rate[]>([]);
   const [rateMsg, setRateMsg] = useState<string>("");
   const [courier, setCourier] = useState<Rate | null>(null);
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
+    customerUser.latitude && customerUser.longitude ? { lat: customerUser.latitude, lng: customerUser.longitude } : null,
+  );
+  const useMyLocation = () => {
+    navigator.geolocation?.getCurrentPosition(
+      (p) => setPin({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => toast({ title: "Lokasi tidak aktif", description: "Geser pin di peta ke rumahmu." }),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
   useEffect(() => {
     if (orderType !== "outlet_delivery") return;
-    if (!customerUser.latitude || !customerUser.longitude) { setRateMsg("Aktifkan lokasi untuk cek ongkir kurir instan."); return; }
+    if (!pin) { setRateMsg("Tentukan titik lokasi di peta untuk cek ongkir."); setRates([]); setCourier(null); return; }
     let alive = true;
-    setRateMsg("Mengecek ongkir kurir instan...");
-    supabase.functions.invoke("biteship-rates", {
-      body: { outlet_id: outletId, dest_lat: customerUser.latitude, dest_lng: customerUser.longitude, value: Math.round(subtotal) },
-    }).then(({ data, error }) => {
-      if (!alive) return;
-      const list: Rate[] = (data as any)?.rates || [];
-      setRates(list);
-      setCourier(list[0] || null);
-      setRateMsg(error || !list.length ? ((data as any)?.error || "Kurir instan belum tersedia, pakai ongkir standar.") : "");
-    });
-    return () => { alive = false; };
-  }, [orderType, outletId, customerUser.latitude, customerUser.longitude, subtotal]);
+    setRates([]); setCourier(null);
+    setRateMsg("Mengecek ongkir GoSend & GrabExpress...");
+    const t = setTimeout(() => {
+      supabase.functions.invoke("biteship-rates", {
+        body: { outlet_id: outletId, dest_lat: pin.lat, dest_lng: pin.lng, value: Math.round(subtotal) },
+      }).then(({ data, error }) => {
+        if (!alive) return;
+        const list: Rate[] = (data as any)?.rates || [];
+        setRates(list);
+        setCourier(list[0] || null);
+        setRateMsg(error || !list.length ? ((data as any)?.error || "Kurir belum tersedia untuk lokasi ini.") : "");
+      });
+    }, 500);
+    return () => { alive = false; clearTimeout(t); };
+  }, [orderType, outletId, pin?.lat, pin?.lng, subtotal]);
 
-  const deliveryFee = orderType === "outlet_delivery" ? (courier?.price ?? cfg.order.delivery_fee) : 0;
+  const deliveryFee = orderType === "outlet_delivery" ? (courier?.price ?? 0) : 0;
   const takeAwayCharge = orderType === "outlet_pickup" ? cfg.order.takeaway_charge : 0;
   const deliveryDiscount = orderType === "outlet_delivery"
     ? Math.floor(deliveryFee * (cfg.order.delivery_discount_percent / 100))
@@ -155,13 +167,17 @@ export default function CustomerCheckout({
       toast({ title: "Alamat belum diisi", description: "Masukkan alamat pengiriman dulu ya.", variant: "destructive" });
       return;
     }
+    if (orderType === "outlet_delivery" && (!pin || !courier)) {
+      toast({ title: "Pilih kurir dulu", description: "Tentukan titik lokasi lalu pilih GoSend atau GrabExpress.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     onConfirm({
       outletId,
       orderType,
       deliveryAddress: orderType === "outlet_delivery" ? deliveryAddress : undefined,
-      deliveryLat: customerUser.latitude,
-      deliveryLng: customerUser.longitude,
+      deliveryLat: orderType === "outlet_delivery" ? pin?.lat : customerUser.latitude,
+      deliveryLng: orderType === "outlet_delivery" ? pin?.lng : customerUser.longitude,
       pickupTime,
       paymentMethod,
       subtotal,
@@ -178,7 +194,7 @@ export default function CustomerCheckout({
     });
   };
 
-  const disabled = loading || (orderType === 'outlet_delivery' && !deliveryAddress.trim());
+  const disabled = loading || (orderType === 'outlet_delivery' && (!deliveryAddress.trim() || !courier));
 
   return (
     <div className="cx-app min-h-screen pb-48">
@@ -230,7 +246,13 @@ export default function CustomerCheckout({
 
           {orderType === 'outlet_delivery' ? (
             <div className="mt-4">
-              <label className="text-xs font-semibold text-muted-foreground" htmlFor="cx-address">Alamat Pengiriman</label>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-muted-foreground">Titik Lokasi Pengiriman</p>
+                <button type="button" onClick={useMyLocation} className="cx-btn cx-btn-ghost px-3 py-1.5 text-[11px]">Pakai lokasi saya</button>
+              </div>
+              <AddressPinMap value={pin} fallback={{ lat: -7.2575, lng: 112.7521 }} onChange={setPin} />
+              <p className="mt-1.5 text-[11px] text-muted-foreground">Ketuk peta atau geser pin merah ke lokasi rumahmu.</p>
+              <label className="mt-3 block text-xs font-semibold text-muted-foreground" htmlFor="cx-address">Detail Alamat</label>
               <textarea
                 id="cx-address"
                 value={deliveryAddress}
@@ -413,7 +435,7 @@ export default function CustomerCheckout({
                 key={p.id}
                 type="button"
                 data-active={paymentMethod === p.id}
-                onClick={() => setPaymentMethod(p.id)}
+                
                 className="cx-opt w-full px-4 py-3 flex items-center gap-3 text-left"
               >
                 <p.icon className="h-[18px] w-[18px] shrink-0" />
@@ -464,7 +486,7 @@ export default function CustomerCheckout({
             disabled={disabled}
             className="cx-btn cx-btn-primary w-full px-5 py-4 flex items-center justify-between"
           >
-            <span className="text-sm">{loading ? 'Memproses...' : 'Buat Pesanan'}</span>
+            <span className="text-sm">{loading ? 'Memproses...' : 'Lanjut Bayar QRIS'}</span>
             <span className="cx-num text-base font-extrabold">{formatRupiah(total)}</span>
           </button>
         </div>

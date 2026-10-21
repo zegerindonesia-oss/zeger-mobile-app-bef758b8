@@ -29,7 +29,7 @@ export default function CustomerPaymentMethod({
   onSuccess,
 }: CustomerPaymentMethodProps) {
   const { toast } = useToast();
-  const [selectedMethod, setSelectedMethod] = useState<string>('');
+  const [selectedMethod, setSelectedMethod] = useState<string>('QRIS');
   const [loading, setLoading] = useState(false);
   const [showQRISModal, setShowQRISModal] = useState(false);
   const [qrString, setQrString] = useState('');
@@ -131,39 +131,6 @@ export default function CustomerPaymentMethod({
             <p className="relative mt-2 inline-flex items-center gap-1.5 text-[11px] text-white/85">
               <ShieldCheck className="h-3.5 w-3.5" /> Transaksi aman & terenkripsi
             </p>
-          </section>
-
-          {/* E-wallet */}
-          <section className="space-y-2.5">
-            <h2 className="flex items-center gap-2 pl-1 text-sm font-extrabold">
-              <Wallet className="h-4 w-4 text-zeger" /> E-Wallet
-            </h2>
-            {E_WALLETS.map((w) => {
-              const active = selectedMethod === w.id;
-              return (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => setSelectedMethod(w.id)}
-                  data-active={active}
-                  className="cx-opt flex w-full items-center gap-3 rounded-[22px] p-3.5 text-left"
-                >
-                  <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-md', w.ring)}>
-                    <Wallet className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">{w.name}</span>
-                    <span className="block truncate text-[11px] opacity-70">{w.note}</span>
-                  </span>
-                  <span className={cn(
-                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
-                    active ? 'border-white bg-white/25' : 'border-[hsl(var(--cx-line))]',
-                  )}>
-                    {active && <Check className="h-3.5 w-3.5" />}
-                  </span>
-                </button>
-              );
-            })}
           </section>
 
           {/* QRIS */}
