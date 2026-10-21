@@ -111,22 +111,35 @@ export default function CustomerCheckout({
   const [rates, setRates] = useState<Rate[]>([]);
   const [rateMsg, setRateMsg] = useState<string>("");
   const [courier, setCourier] = useState<Rate | null>(null);
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
+    customerUser.latitude && customerUser.longitude ? { lat: customerUser.latitude, lng: customerUser.longitude } : null,
+  );
+  const useMyLocation = () => {
+    navigator.geolocation?.getCurrentPosition(
+      (p) => setPin({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => toast({ title: "Lokasi tidak aktif", description: "Geser pin di peta ke rumahmu." }),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
   useEffect(() => {
     if (orderType !== "outlet_delivery") return;
-    if (!customerUser.latitude || !customerUser.longitude) { setRateMsg("Aktifkan lokasi untuk cek ongkir kurir instan."); return; }
+    if (!pin) { setRateMsg("Tentukan titik lokasi di peta untuk cek ongkir."); setRates([]); setCourier(null); return; }
     let alive = true;
-    setRateMsg("Mengecek ongkir kurir instan...");
-    supabase.functions.invoke("biteship-rates", {
-      body: { outlet_id: outletId, dest_lat: customerUser.latitude, dest_lng: customerUser.longitude, value: Math.round(subtotal) },
-    }).then(({ data, error }) => {
-      if (!alive) return;
-      const list: Rate[] = (data as any)?.rates || [];
-      setRates(list);
-      setCourier(list[0] || null);
-      setRateMsg(error || !list.length ? ((data as any)?.error || "Kurir instan belum tersedia, pakai ongkir standar.") : "");
-    });
-    return () => { alive = false; };
-  }, [orderType, outletId, customerUser.latitude, customerUser.longitude, subtotal]);
+    setRates([]); setCourier(null);
+    setRateMsg("Mengecek ongkir GoSend & GrabExpress...");
+    const t = setTimeout(() => {
+      supabase.functions.invoke("biteship-rates", {
+        body: { outlet_id: outletId, dest_lat: pin.lat, dest_lng: pin.lng, value: Math.round(subtotal) },
+      }).then(({ data, error }) => {
+        if (!alive) return;
+        const list: Rate[] = (data as any)?.rates || [];
+        setRates(list);
+        setCourier(list[0] || null);
+        setRateMsg(error || !list.length ? ((data as any)?.error || "Kurir belum tersedia untuk lokasi ini.") : "");
+      });
+    }, 500);
+    return () => { alive = false; clearTimeout(t); };
+  }, [orderType, outletId, pin?.lat, pin?.lng, subtotal]);
 
   const deliveryFee = orderType === "outlet_delivery" ? (courier?.price ?? cfg.order.delivery_fee) : 0;
   const takeAwayCharge = orderType === "outlet_pickup" ? cfg.order.takeaway_charge : 0;
