@@ -76,7 +76,7 @@ export default function CustomerCheckout({
   const [orderType, setOrderType] = useState<"outlet_pickup" | "outlet_delivery">(initialOrderType);
   const [deliveryAddress, setDeliveryAddress] = useState(customerUser.address || "");
   const [pickupTime, setPickupTime] = useState("now");
-  const paymentMethod = "qris";
+  const paymentMethod: string = "e_wallet";
   const [usePoints, setUsePoints] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vouchers, setVouchers] = useState<ClaimedVoucher[]>([]);
