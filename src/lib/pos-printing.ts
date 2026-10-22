@@ -19,6 +19,8 @@ export interface PrinterConfig {
   categories: string[];
   /** Kitchen/sticker: specific product ids routed to this printer (override). */
   productIds: string[];
+  /** Kitchen/sticker: product brands routed to this printer. */
+  brands?: string[];
   /** 'bluetooth' = direct raw print (ESC/POS / TSPL) without dialog; 'system' = browser print. */
   connection?: 'system' | 'bluetooth';
   /** Label size in mm (sticker printers). */
@@ -87,6 +89,7 @@ export const loadPrintSettings = async (branchId: string | null): Promise<PrintS
       .from('pos_printer_settings').select('config').eq('branch_id', branchId).maybeSingle();
     if (data?.config?.printers) {
       localStorage.setItem(cacheKey(branchId), JSON.stringify(data.config));
+      if (data.config.printers.some((p: PrinterConfig) => p.brands?.length)) await loadProductBrands();
       return { ...DEFAULT_SETTINGS, ...data.config };
     }
   } catch { /* offline: use cache */ }
@@ -108,21 +111,39 @@ export interface PrintItem {
   product_id?: string | null;
   product_name: string;
   category?: string | null;
+  brand?: string | null;
   qty: number;
   price?: number;
   subtotal?: number;
   notes?: string;
 }
 
-/** Item goes to printer if product is explicitly selected, or its category is checked.
+/** product_id → brand, used for brand routing (cart items don't carry brand). */
+const productBrands = new Map<string, string>();
+const BRAND_CACHE = 'zeger_product_brands';
+try { Object.entries(JSON.parse(localStorage.getItem(BRAND_CACHE) || '{}')).forEach(([k, v]) => productBrands.set(k, v as string)); } catch { /* ignore */ }
+export const loadProductBrands = async () => {
+  try {
+    const { data } = await (supabase as any).from('products').select('id,brand').not('brand', 'is', null);
+    if (!data) return;
+    productBrands.clear();
+    (data as { id: string; brand: string }[]).forEach((r) => r.brand && productBrands.set(r.id, r.brand));
+    localStorage.setItem(BRAND_CACHE, JSON.stringify(Object.fromEntries(productBrands)));
+  } catch { /* offline: keep cache */ }
+};
+
+/** Item goes to printer if product is explicitly selected, or its category or brand is checked.
  *  A printer with nothing selected receives all items. */
 export const routeItems = (printer: PrinterConfig, items: PrintItem[]) => {
-  const noFilter = printer.categories.length === 0 && printer.productIds.length === 0;
+  const brands = printer.brands || [];
+  const noFilter = printer.categories.length === 0 && printer.productIds.length === 0 && brands.length === 0;
   if (noFilter) return items;
-  return items.filter((i) =>
-    (i.product_id && printer.productIds.includes(i.product_id)) ||
-    (i.category && printer.categories.includes(i.category)),
-  );
+  return items.filter((i) => {
+    const brand = i.brand ?? (i.product_id ? productBrands.get(i.product_id) : undefined);
+    return (i.product_id && printer.productIds.includes(i.product_id)) ||
+      (i.category && printer.categories.includes(i.category)) ||
+      (!!brand && brands.includes(brand));
+  });
 };
 
 // ---------- Rendering ----------

@@ -17,7 +17,7 @@ import {
   printHtml, renderKitchenTicket, renderReceipt, renderStickers,
   escReceipt, escKitchen, tsplCustomer,
 } from '@/lib/pos-printing';
-import { btPair, btForget, btSavedName, btSupported, btSend, btCanScan, btScan, btStopScan, btConnectTo, type BtFound } from '@/lib/bt-printer';
+import { btPair, btForget, btSavedName, btSupported, btSend, btCanScan, btScan, btStopScan, btConnectTo, btListPaired, type BtFound } from '@/lib/bt-printer';
 import { ReceiptDesigner } from './ReceiptDesigner';
 import { StickerPreview } from './StickerPreview';
 
@@ -42,19 +42,24 @@ const roleMeta: Record<PrinterRole, { label: string; icon: any }> = {
 
 export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSaved, inline, designer, branchName }: Props) => {
   const [s, setS] = useState<PrintSettings | null>(null);
-  const [products, setProducts] = useState<{ id: string; name: string; category: string | null }[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string; category: string | null; brand: string | null }[]>([]);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!open) return;
-    loadPrintSettings(branchId).then((v: any) => setS({ ...(v || {}), printers: (v?.printers || []).map((p: any) => ({ ...p, role: roleMeta[p?.role as PrinterRole] ? p.role : 'receipt', categories: Array.isArray(p?.categories) ? p.categories : [], products: Array.isArray(p?.products) ? p.products : [] })) })).catch(() => toast.error('Gagal memuat pengaturan printer'));
-    supabase.from('products').select('id,name,category').eq('is_active', true).order('name')
+    loadPrintSettings(branchId).then((v: any) => setS({ ...(v || {}), printers: (v?.printers || []).map((p: any) => ({ ...p, role: roleMeta[p?.role as PrinterRole] ? p.role : 'receipt', categories: Array.isArray(p?.categories) ? p.categories : [], products: Array.isArray(p?.products) ? p.products : [], brands: Array.isArray(p?.brands) ? p.brands : [] })) })).catch(() => toast.error('Gagal memuat pengaturan printer'));
+    supabase.from('products').select('id,name,category,brand' as any).eq('is_active', true).order('name')
       .then(({ data }) => setProducts((data as any) || []));
   }, [open, branchId]);
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[],
+    [products],
+  );
+
+  const brands = useMemo(
+    () => Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort() as string[],
     [products],
   );
 
@@ -71,6 +76,15 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
   const pair = async (p: PrinterConfig) => {
     if (btCanScan()) {
       setScanFor(p.id); setFound([]); setScanning(true);
+      try {
+        const paired = await btListPaired();
+        setFound(paired);
+        await btScan((d) => setFound((f) => (f.some((x) => x.name === d.name && x.paired) ? f : [...f, d])));
+      } catch (e: any) { toast.error(e.message || 'Gagal mencari Bluetooth'); }
+      finally { setScanning(false); }
+      return;
+    }
+    if (false) {
       try { await btScan((d) => setFound((f) => [...f, d].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999)))); }
       catch (e: any) { toast.error(e.message || 'Gagal mencari Bluetooth'); }
       finally { setScanning(false); }
@@ -186,8 +200,25 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
                 {showFilter && (
                   <div className="space-y-2">
                     <div className="text-xs text-muted-foreground">
-                      Centang kategori dan/atau menu tertentu yang keluar di printer ini. Jika tidak ada yang dicentang, semua menu dicetak.
+                      Centang brand, kategori, dan/atau menu tertentu yang keluar di printer ini. Jika tidak ada yang dicentang, semua menu dicetak.
                     </div>
+                    {brands.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold">Brand</div>
+                        <div className="flex flex-wrap gap-2">
+                          {brands.map((b) => {
+                            const on = (p.brands || []).includes(b);
+                            return (
+                              <label key={b} className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs cursor-pointer ${on ? 'bg-primary text-primary-foreground border-primary' : ''}`}>
+                                <Checkbox className="h-3.5 w-3.5" checked={on} onCheckedChange={() => upd(p.id, { brands: toggle(p.brands || [], b) })} />
+                                {b}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div className="text-xs font-semibold">Kategori</div>
                     <div className="flex flex-wrap gap-2">
                       {categories.map((c) => (
                         <label key={c} className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs cursor-pointer ${p.categories.includes(c) ? 'bg-primary text-primary-foreground border-primary' : ''}`}>
@@ -233,13 +264,13 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
         <Dialog open={!!scanFor} onOpenChange={(o) => { if (!o) { btStopScan(); setScanFor(null); } }}>
           <DialogContent className="max-w-md">
             <DialogHeader><DialogTitle className="flex items-center gap-2"><Bluetooth className="h-5 w-5 text-primary" /> Pilih Printer Bluetooth</DialogTitle></DialogHeader>
-            <p className="text-xs text-muted-foreground">{scanning ? 'Mencari perangkat di sekitar...' : 'Pencarian selesai.'} Ketuk nama printer untuk menyambungkan.</p>
+            <p className="text-xs text-muted-foreground">{scanning ? 'Mencari perangkat di sekitar...' : 'Pencarian selesai.'} Ketuk nama printer untuk menyambungkan. Printer yang sudah dipairing di Pengaturan Bluetooth tablet tampil paling atas.</p>
             <div className="max-h-80 overflow-y-auto space-y-2">
               {found.map((d) => (
                 <button key={d.deviceId} disabled={!!connecting} onClick={() => connectFound(d)}
                   className="w-full flex items-center justify-between rounded-xl border bg-card p-3 text-left hover:bg-muted disabled:opacity-60">
                   <span className="flex items-center gap-2"><Printer className="h-4 w-4 text-primary" /><span className="font-medium">{d.name}</span></span>
-                  <span className="text-xs text-muted-foreground">{connecting === d.deviceId ? 'Menyambung...' : d.rssi ? `${d.rssi} dBm` : ''}</span>
+                  <span className="text-xs text-muted-foreground">{connecting === d.deviceId ? 'Menyambung...' : d.paired ? 'Sudah dipairing' : d.rssi ? `${d.rssi} dBm` : ''}</span>
                 </button>
               ))}
               {!scanning && !found.length && <p className="text-sm text-center py-6 text-muted-foreground">Tidak ada perangkat. Pastikan printer menyala dan dekat tablet.</p>}
