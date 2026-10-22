@@ -46,6 +46,7 @@ export const stickerCss = (c: StickerCfg = DEFAULT_STICKER_CFG) => {
   const m = (v?: number) => v ?? c.pad;
   const innerH = c.h - m(c.mt) - m(c.mb);
   const side = +Math.min(c.w * 0.36, innerH * 0.78).toFixed(2);
+  const qrSide = +(side * 0.62).toFixed(2);
   return `@page{size:${c.w}mm ${c.h}mm;margin:0}*{box-sizing:border-box;margin:0}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0}
 .stk{width:${c.w}mm;height:${c.h}mm;padding:${m(c.mt)}mm ${m(c.mr)}mm ${m(c.mb)}mm ${m(c.ml)}mm;display:flex;gap:.4mm;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
 .stk:last-child{page-break-after:auto;break-after:auto}
@@ -53,7 +54,7 @@ export const stickerCss = (c: StickerCfg = DEFAULT_STICKER_CFG) => {
 .p{font-weight:900;font-size:${f(10)}pt;line-height:${L}}
 .d{font-weight:700;font-size:${f(5.4)}pt;line-height:${L}}.r{width:${side}mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
 .b{font-weight:900;font-size:${f(4.6)}pt;color:#c00;text-align:center;line-height:1}.b small{display:block;font-size:${f(2.4)}pt;color:#000;letter-spacing:.3px}
-.rd{font-weight:900;font-size:${f(5.2)}pt;line-height:1;white-space:nowrap;max-width:${side}mm;overflow:hidden;text-align:center}.r svg{width:${side}mm;height:${side}mm;flex-shrink:0}`;
+.rd{font-weight:900;font-size:${f(7)}pt;line-height:1;white-space:nowrap;max-width:${side}mm;overflow:hidden;text-align:center}.r svg{width:${qrSide}mm;height:${qrSide}mm;flex-shrink:0}`;
 };
 export const STICKER_CSS = stickerCss();
 
