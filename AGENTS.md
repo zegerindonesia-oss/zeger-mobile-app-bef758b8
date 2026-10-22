@@ -14,3 +14,4 @@
 - Accounting module (COA tree, journals via create_accounting_journal RPC enforcing debit=credit, ledger, trial balance) lives at /accounting/:tab; access reuses has_procurement_access.
 - Rider stock orders to Central Kitchen live in rider_stock_requests(+items); Hub fulfils only via fulfill_rider_stock_request RPC, which creates 'sent' stock_movements (reference_type rider_request) priced at products.ck_price so the existing rider receive-confirmation flow is reused.
 - Native apps: capacitor.config.ts builds three shells (POS, Rider, Customer) selected by APP_TARGET, each with its own appId and native folder under native/<target>, so the stores see three separate apps from one codebase.
+- Bluetooth printing on native uses the local Capacitor plugin `plugins/bt-serial` (Classic SPP, paired devices, ids prefixed `spp:`) alongside BLE, because most label/thermal printers are Classic-only.

@@ -76,17 +76,11 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
   const pair = async (p: PrinterConfig) => {
     if (btCanScan()) {
       setScanFor(p.id); setFound([]); setScanning(true);
-      try {
-        const paired = await btListPaired();
-        setFound(paired);
-        await btScan((d) => setFound((f) => (f.some((x) => x.name === d.name && x.paired) ? f : [...f, d])));
-      } catch (e: any) { toast.error(e.message || 'Gagal mencari Bluetooth'); }
-      finally { setScanning(false); }
-      return;
-    }
-    if (false) {
-      try { await btScan((d) => setFound((f) => [...f, d].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999)))); }
-      catch (e: any) { toast.error(e.message || 'Gagal mencari Bluetooth'); }
+      let paired: BtFound[] = [];
+      try { paired = await btListPaired(); setFound(paired); }
+      catch (e: any) { toast.error(e.message || 'Gagal membaca printer yang sudah dipairing'); }
+      try { await btScan((d) => setFound((f) => (f.some((x) => x.name === d.name && x.paired) ? f : [...f, d]))); }
+      catch (e: any) { if (!paired.length) toast.error(e.message || 'Gagal mencari Bluetooth'); }
       finally { setScanning(false); }
       return;
     }
