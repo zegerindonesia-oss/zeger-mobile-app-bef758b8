@@ -13,6 +13,9 @@ import { POSSidebar } from '@/components/pos/POSSidebar';
 import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart, LayoutGrid, QrCode, UserRound, Phone, BarChart3 } from 'lucide-react';
 import { POSQuickMember } from '@/components/pos/POSQuickMember';
 import { POSReportsDialog } from '@/components/pos/POSReportsDialog';
+import { POSPinLock } from '@/components/pos/POSPinLock';
+import { getActiveCashier, setActiveCashier } from '@/lib/pos-cashier';
+import { Lock } from 'lucide-react';
 import { POSModeDialog } from '@/components/pos/POSModeDialog';
 import { modeLabel } from '@/lib/pos-order-modes';
 import { usePOSBranchSettings } from '@/hooks/usePOSBranchSettings';
@@ -87,6 +90,9 @@ const POSMain = () => {
   const [selectedTable, setSelectedTable] = useState<POSTable | null>(null);
   const [printSettings, setPrintSettings] = useState<PrintSettings>(DEFAULT_SETTINGS);
   const [printerOpen, setPrinterOpen] = useState(false);
+  const [cashier, setCashier] = useState(() => getActiveCashier(userProfile?.branch_id || null));
+  useEffect(() => { setCashier(getActiveCashier(userProfile?.branch_id || null)); }, [userProfile?.branch_id]);
+  const lockPos = () => { setActiveCashier(userProfile?.branch_id || null, null); setCashier(null); };
   const [report, setReport] = useState<{ kind: 'X' | 'Z'; shift: any } | null>(null);
   useEffect(() => { loadPrintSettings(userProfile?.branch_id || null).then(setPrintSettings); }, [userProfile?.branch_id]);
   const safePrint = (fn: () => Promise<void>) => fn().catch((e) => console.error('print failed', e));
@@ -208,6 +214,7 @@ const POSMain = () => {
           transaction_number: txNum,
           branch_id: userProfile.branch_id,
           kasir_id: userProfile.id,
+          cashier_name: cashier?.name || userProfile.full_name || null,
           shift_id: activeShift.id,
           order_type: orderType,
           external_order_id: externalOrderId || null,
@@ -279,7 +286,7 @@ const POSMain = () => {
         id: tx.id,
         transaction_number: txNum,
         branch_name: branchName,
-        kasir_name: userProfile.full_name,
+        kasir_name: cashier?.name || userProfile.full_name,
         created_at: new Date().toISOString(),
         order_type: orderType,
         table_number: tableNumber || null,
@@ -481,12 +488,12 @@ const POSMain = () => {
 
   const sidebarProps = {
     role: userProfile?.role,
-    userName: userProfile?.full_name || 'Kasir',
+    userName: cashier?.name || userProfile?.full_name || 'Kasir',
     branchName,
-    onCashMovement: () => navigate('/pos/settings?tab=kas'),
-    onCloseShift: () => navigate('/pos/settings?tab=shift'),
+    onCashMovement: () => navigate('/pos/cashier?tab=kas'),
+    onCloseShift: () => navigate('/pos/cashier?tab=shift'),
     onPrinterSettings: () => { setMobileNavOpen(false); navigate('/pos/settings'); },
-    onXReport: () => navigate('/pos/settings?tab=shift'),
+    onXReport: () => navigate('/pos/cashier?tab=shift'),
     onLogout: signOut,
     onRiderOrders: () => { setMobileNavOpen(false); navigate('/pos/rider-orders'); },
     riderCount: riderAlerts.count,
@@ -534,8 +541,8 @@ const POSMain = () => {
           <button onClick={() => navigate('/pos/kds')} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl hidden sm:flex items-center gap-1.5 text-sm font-semibold shrink-0" title="KDS">
             <Monitor className="h-4 w-4" /> <span className="hidden lg:inline">KDS</span>
           </button>
-          <button onClick={() => setReportsOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Laporan">
-            <BarChart3 className="h-4 w-4" /> <span className="hidden lg:inline">Laporan</span>
+          <button onClick={lockPos} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Ganti Kasir / Kunci">
+            <Lock className="h-4 w-4" /> <span className="hidden lg:inline">{cashier?.name || 'Kunci'}</span>
           </button>
         </header>
 
@@ -651,7 +658,8 @@ const POSMain = () => {
   function renderModals() {
     return (
     <>
-      <OpenShiftModal open={!activeShift && !shiftLoading} onOpen={handleOpenShift} />
+      {!cashier && <POSPinLock branchId={userProfile?.branch_id || null} branchName={branchName} onUnlock={() => setCashier(getActiveCashier(userProfile?.branch_id || null))} />}
+      <OpenShiftModal open={!!cashier && !activeShift && !shiftLoading} onOpen={handleOpenShift} />
       <POSPayment
         open={paymentOpen}
         total={paymentTotal}
@@ -683,7 +691,7 @@ const POSMain = () => {
       <POSPrinterSettings open={printerOpen} onOpenChange={setPrinterOpen} branchId={userProfile?.branch_id || null}
         userId={userProfile?.id} onSaved={setPrintSettings} />
       <POSShiftReport open={!!report} onOpenChange={(o) => !o && setReport(null)} shift={report?.shift || null}
-        kind={report?.kind || 'X'} branchName={branchName} kasirName={userProfile?.full_name || 'Kasir'} settings={printSettings} />
+        kind={report?.kind || 'X'} branchName={branchName} kasirName={cashier?.name || userProfile?.full_name || 'Kasir'} settings={printSettings} />
       <POSSplitBillDialog
         open={splitOpen}
         items={cart.items}
