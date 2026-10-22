@@ -248,6 +248,23 @@ export class EscPos {
 
 const q = (s: string) => ascii(s).replace(/"/g, "'");
 
+/** TSPL BITMAP labels from canvases drawn at 8 dots/mm — prints exactly what the preview shows. */
+export const tsplBitmapLabels = (canvases: HTMLCanvasElement[], wMm: number, hMm: number, gapMm = 2) => {
+  const parts: (Uint8Array | number[])[] = [enc(`SIZE ${wMm} mm,${hMm} mm\r\nGAP ${gapMm} mm,0 mm\r\nDIRECTION 1\r\nREFERENCE 0,0\r\nDENSITY 12\r\nSPEED 2\r\n`)];
+  for (const c of canvases) {
+    const w = c.width, h = c.height, wb = Math.ceil(w / 8);
+    const px = c.getContext('2d')!.getImageData(0, 0, w, h).data;
+    const data = new Uint8Array(wb * h).fill(0xff); // 1 = white, 0 = print
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const lum = px[i + 3] < 128 ? 255 : 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+      if (lum < 160) data[y * wb + (x >> 3)] &= ~(0x80 >> (x & 7));
+    }
+    parts.push(enc(`CLS\r\nBITMAP 0,0,${wb},${h},0,`), data, enc('\r\nPRINT 1,1\r\n'));
+  }
+  return concat(parts);
+};
+
 export interface TsplLabel { lines: { text: string; big?: boolean; bold?: boolean }[]; side?: string[]; qr?: string }
 
 /** TSPL for label printers (Xprinter XP-420B etc). 203dpi = 8 dots/mm. */

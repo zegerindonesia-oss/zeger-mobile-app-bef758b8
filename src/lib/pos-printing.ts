@@ -458,6 +458,14 @@ export const printRawToSticker = async (branchId: string | null, labels: TsplLab
   return sendBt({ ...p, copies: 1 }, tsplLabels(labels, p.labelW || 33, p.labelH || 15, 2, p.fontScale ?? 100, p.lineSpacing ?? 1.25));
 };
 
+/** Same as printRawToSticker but sends pre-rendered bitmap bytes (exact preview match). */
+export const printBytesToSticker = async (branchId: string | null, build: (wMm: number, hMm: number) => Promise<Uint8Array>) => {
+  const s = await loadPrintSettings(branchId);
+  const p = enabled(s, 'sticker').find((x) => x.connection === 'bluetooth');
+  if (!p || !(await btReady(p.id))) return false;
+  return sendBt({ ...p, copies: 1 }, await build(p.labelW || 33, p.labelH || 15));
+};
+
 export const printShiftReport = async (s: PrintSettings, r: ShiftReportPrint) => {
   const p = enabled(s, 'receipt')[0];
   await printHtml(renderShiftReport(r, p?.paper || '80', s));
