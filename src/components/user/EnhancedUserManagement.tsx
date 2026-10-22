@@ -1,3 +1,5 @@
+import { MODULE_ACCESS_OPTIONS, ROLE_MODULE_DEFAULTS, defaultModulesForRole } from "@/lib/role-presets";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,6 +104,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
   const [branchFilter, setBranchFilter] = useState('all');
   const [accessFilter, setAccessFilter] = useState('all');
   const [userPermissions, setUserPermissions] = useState<ModulePermission[]>([]);
+  const [moduleAccess, setModuleAccess] = useState<string[]>([]);
   const [riders, setRiders] = useState<Array<{ id: string; name: string; code: string }>>([]);
   const [reporters, setReporters] = useState<Array<{ id: string; full_name: string; role: string }>>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -360,6 +363,14 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
           }
         }
 
+        // Default module access (role preset + manual additions)
+        if (createdProfile && moduleAccess.length > 0) {
+          const { error: maErr } = await (supabase as any).from('user_module_permissions').insert(
+            moduleAccess.map((m) => ({ user_id: createdProfile.id, module_name: m, permission_type: 'view', is_granted: true }))
+          );
+          if (maErr) toast.warning('User dibuat, tetapi akses modul gagal disimpan: ' + maErr.message);
+        }
+
         // Handle assignments using RPC
         try {
           if (newUser.role === 'bh_report' && selectedRiderForAssignment && createdProfile) {
@@ -548,7 +559,8 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
     if (role === 'ho_admin' || role === 'ho_owner') {
       return [
         { value: 'ho_admin', label: 'HO Admin', access: 'web_backoffice', icon: Crown },
-        { value: 'ho_staff', label: 'HO Staff', access: 'web_backoffice', icon: Star },
+        { value: 'ho_staff', label: 'HO Staff / Purchasing', access: 'web_backoffice', icon: Star },
+        { value: 'finance', label: 'Finance & Accounting', access: 'web_backoffice', icon: FileText },
         { value: 'branch_manager', label: 'Branch Hub Manager', access: 'web_backoffice', icon: Building2 },
         { value: 'bh_staff', label: 'Branch Hub Staff', access: 'web_backoffice', icon: Briefcase },
         { value: 'bh_kasir', label: 'Branch Hub Kasir', access: 'pos_app', icon: CreditCard },
@@ -668,11 +680,11 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
         <CardContent className="space-y-6">
           {/* Dialog for creating user - moved from header */}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="glass-card w-[95vw] max-w-6xl max-h-[90vh] flex flex-col p-0">
-                <DialogHeader className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 border-b">
+          <DialogContent className="glass-card w-[95vw] max-w-4xl h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+                <DialogHeader className="shrink-0 bg-background p-6 border-b">
                   <DialogTitle className="gradient-text">Tambah User Baru</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 flex-1 overflow-y-auto p-6">
+                <div className="space-y-4 flex-1 min-h-0 overflow-y-auto p-6">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nama Lengkap *</Label>
                     <Input
@@ -730,6 +742,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                           role: value as UserRole,
                           app_access_type: selectedRole?.access as any || 'web_backoffice'
                         }));
+                        setModuleAccess(defaultModulesForRole(value));
                       }}
                     >
                       <SelectTrigger className="form-glass">
@@ -859,20 +872,57 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                     </div>
                   )}
 
-                  {/* Permission Matrix */}
-                  {newUser.role && newUser.role !== 'rider' && (
-                    <div className="space-y-3">
-                      <Label className="text-base font-semibold">Permission Settings</Label>
-                      <UserPermissionMatrix
-                        role={newUser.role}
-                        onPermissionsChange={setUserPermissions}
-                        riders={riders}
-                      />
+                  {/* Module access: auto from role, editable */}
+                  {newUser.role && (
+                    <div className="space-y-3 rounded-xl border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <Label className="text-base font-semibold">Akses Modul</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Otomatis sesuai role: {ROLE_MODULE_DEFAULTS[newUser.role]?.summary || 'atur manual'}. Centang untuk menambah/mengurangi.
+                          </p>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setModuleAccess(defaultModulesForRole(newUser.role))}>
+                          Reset ke default
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {MODULE_ACCESS_OPTIONS.map((m) => {
+                          const on = moduleAccess.includes(m.id);
+                          return (
+                            <label key={m.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${on ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
+                              <Checkbox
+                                checked={on}
+                                onCheckedChange={(c) => setModuleAccess((prev) => c ? [...new Set([...prev, m.id])] : prev.filter((x) => x !== m.id))}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <div className="text-sm font-medium">{m.label}</div>
+                                <div className="text-xs text-muted-foreground">{m.desc}</div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
+                  {/* Detailed permission matrix (advanced) */}
+                  {newUser.role && newUser.role !== 'rider' && (
+                    <details className="rounded-xl border p-4">
+                      <summary className="cursor-pointer text-sm font-semibold">Pengaturan detail (lanjutan)</summary>
+                      <div className="mt-3">
+                        <UserPermissionMatrix
+                          role={newUser.role}
+                          onPermissionsChange={setUserPermissions}
+                          riders={riders}
+                        />
+                      </div>
+                    </details>
+                  )}
+
                 </div>
-                <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6 border-t">
+                <div className="shrink-0 bg-background p-4 border-t">
                   <div className="flex gap-3">
                     <Button 
                       onClick={createUser} 
