@@ -69,7 +69,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
-    "flow-bt-serial": "./plugins/bt-serial",
+    "flow-bt-serial": "file:./plugins/bt-serial",
     "framer-motion": "^14.0.0",
     "html5-qrcode": "^2.3.8",
     "input-otp": "^1.4.2",
