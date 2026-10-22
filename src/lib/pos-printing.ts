@@ -300,14 +300,18 @@ ${r.notes ? `<div>Catatan: ${esc(r.notes)}</div>` : ''}
 const printOnce = (html: string) =>
   new Promise<void>((resolve) => {
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    // Real size off-screen: Chrome fails ("Print Failed") on 0×0 frames or frames removed while the print preview is open.
+    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:800px;border:0';
     document.body.appendChild(iframe);
     const d = iframe.contentDocument!;
     d.open(); d.write(html); d.close();
+    let done = false;
+    const finish = () => { if (done) return; done = true; setTimeout(() => { iframe.remove(); resolve(); }, 500); };
     setTimeout(() => {
-      try { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); } catch { /* ignore */ }
-      setTimeout(() => { iframe.remove(); resolve(); }, 1000);
-    }, 250);
+      const w = iframe.contentWindow;
+      try { w?.addEventListener('afterprint', finish); w?.focus(); w?.print(); } catch { finish(); }
+      setTimeout(finish, 120000);
+    }, 400);
   });
 
 export const printHtml = async (html: string, copies = 1) => {
