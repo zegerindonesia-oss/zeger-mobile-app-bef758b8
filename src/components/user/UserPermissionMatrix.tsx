@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -247,7 +247,11 @@ export function UserPermissionMatrix({ role, onPermissionsChange, riders = [] }:
 
   const getDefaultPermissions = (role: string) => {
     const roleDefaults: { [key: string]: string[] } = {
-      'bh_staff': ['dashboard', 'inventory', 'sales_pos', 'reports'],
+      'ho_admin': Object.keys(MODULES), 'ho_owner': Object.keys(MODULES),
+      'ho_staff': ['dashboard', 'inventory', 'reports'],
+      'finance': ['dashboard', 'finance', 'reports'],
+      'branch_manager': ['dashboard', 'inventory', 'sales_pos', 'reports', 'finance', 'admin'],
+      'bh_staff': ['dashboard', 'inventory', 'reports'],
       'bh_kasir': ['dashboard', 'sales_pos'],
       'bh_report': ['dashboard', 'reports', 'sales_pos'],
       'sb_branch_manager': ['dashboard', 'inventory', 'sales_pos', 'reports', 'admin', 'finance'],
@@ -286,6 +290,9 @@ export function UserPermissionMatrix({ role, onPermissionsChange, riders = [] }:
     onPermissionsChange(updated);
   };
 
+  useEffect(() => { applyRoleDefaults(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -300,7 +307,7 @@ export function UserPermissionMatrix({ role, onPermissionsChange, riders = [] }:
           </button>
         </div>
       </CardHeader>
-      <CardContent className="max-h-[70vh] overflow-y-auto space-y-6">
+      <CardContent className="space-y-6">
         {Object.entries(MODULES).map(([moduleKey, module]) => {
           const modulePermission = permissions.find(p => p.module === moduleKey);
           
