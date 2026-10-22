@@ -382,9 +382,9 @@ export const tsplCustomer = (k: KitchenPrint, p: PrinterConfig) => {
   const labels: TsplLabel[] = [];
   k.items.forEach((i) => { for (let x = 0; x < i.qty; x++) { n++; labels.push({ lines: [
     { text: `${k.table_number ? `MEJA ${k.table_number}` : `#${k.ref.slice(-3)}`}  ${n}/${total}`, bold: true },
-    { text: i.product_name, big: true },
+    { text: ascii(i.product_name).slice(0, Math.floor(((p.labelW || 33) * 8 - 8) / 12)), big: true },
     ...(i.notes ? [{ text: ascii(i.notes).slice(0, 30) }] : []),
-    { text: ascii(k.customer_name || '').slice(0, 18) },
+    { text: ascii(k.customer_name || '').slice(0, Math.floor(((p.labelW || 33) * 8 - 8) / 8)) },
   ] }); } });
   return tsplLabels(labels, p.labelW || 33, p.labelH || 15, 2, p.fontScale ?? 100, p.lineSpacing ?? 1.25);
 };
