@@ -53,3 +53,7 @@
 - [x] POS 3 printer (Kasir/Kitchen/Label) + Bluetooth langsung ESC/POS & TSPL
 - [ ] Pisah 3 APK Android (POS, Rider, Customer) — lanjutan
 - [ ] Uji cetak fisik Bluetooth XP-420B di tablet
+
+## Printer stiker (Okt 2026)
+- [x] POS bisa pakai printer Bluetooth yang sudah dipairing di tablet (Bluetooth Classic) — perlu build ulang APK
+- [x] Filter printer stiker/dapur per Brand (selain kategori & menu)

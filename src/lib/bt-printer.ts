@@ -12,6 +12,17 @@ const SERVICES = [
 
 import { Capacitor } from '@capacitor/core';
 import { BleClient } from '@capacitor-community/bluetooth-le';
+import { registerPlugin } from '@capacitor/core';
+
+/** Bluetooth Classic (SPP) bridge for printers paired in Android settings (most Xprinter/label printers). */
+const BtSerial = registerPlugin<{
+  listPaired(): Promise<{ devices: { address: string; name: string; type?: number }[] }>;
+  connect(o: { address: string }): Promise<void>;
+  write(o: { address: string; data: string }): Promise<void>;
+  disconnect(o: { address: string }): Promise<void>;
+}>('BtSerial');
+const SPP = 'spp:';
+const b64 = (u: Uint8Array) => { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
 
 type Conn = { device: any; ch: any };
 const conns = new Map<string, Conn>();
@@ -61,7 +72,19 @@ const nativePair = async (printerId: string) => {
   return d.name || 'Printer Bluetooth';
 };
 
-export type BtFound = { deviceId: string; name: string; rssi?: number };
+export type BtFound = { deviceId: string; name: string; rssi?: number; paired?: boolean };
+
+/** Printers already paired in Android Bluetooth settings (Classic SPP). Empty if the APK lacks the bridge. */
+export const btListPaired = async (): Promise<BtFound[]> => {
+  if (!isNative()) return [];
+  try {
+    const { devices } = await BtSerial.listPaired();
+    return devices.map((d) => ({ deviceId: SPP + d.address, name: d.name || d.address, paired: true }));
+  } catch (e: any) {
+    if (/not implemented|unimplemented/i.test(String(e?.message || e?.code))) return [];
+    throw e;
+  }
+};
 /** Native app only: scan all nearby Bluetooth devices for ~8s, reporting each one found. */
 export const btScan = async (onFound: (d: BtFound) => void, ms = 8000) => {
   await ensureBle();
@@ -79,13 +102,24 @@ export const btCanScan = () => isNative();
 /** Connect a printer slot to a device picked from btScan. */
 export const btConnectTo = async (printerId: string, d: BtFound) => {
   await BleClient.stopLEScan().catch(() => {});
+  if (d.deviceId.startsWith(SPP)) {
+    await BtSerial.connect({ address: d.deviceId.slice(SPP.length) });
+    localStorage.setItem(devKey(printerId), d.deviceId);
+    localStorage.setItem(nameKey(printerId), d.name);
+    return d.name;
+  }
   await nativeOpen(printerId, d.deviceId, d.name);
   return d.name;
+};
+const savedSpp = (printerId: string) => {
+  const id = localStorage.getItem(devKey(printerId));
+  return id?.startsWith(SPP) ? id.slice(SPP.length) : null;
 };
 const nativeReconnect = async (printerId: string) => {
   const c = nativeConn.get(printerId);
   if (c) return c;
   const id = localStorage.getItem(devKey(printerId));
+  if (id?.startsWith(SPP)) return null;
   return id ? nativeOpen(printerId, id) : null;
 };
 
@@ -119,6 +153,8 @@ export const btForget = (printerId: string) => {
   try { conns.get(printerId)?.device?.gatt?.disconnect(); } catch { /* ignore */ }
   const n = nativeConn.get(printerId);
   if (n) BleClient.disconnect(n.deviceId).catch(() => {});
+  const spp = savedSpp(printerId);
+  if (spp && isNative()) BtSerial.disconnect({ address: spp }).catch(() => {});
   conns.delete(printerId); nativeConn.delete(printerId);
   localStorage.removeItem(nameKey(printerId)); localStorage.removeItem(devKey(printerId));
 };
@@ -138,6 +174,8 @@ const reconnect = async (printerId: string) => {
 export const btSend = async (printerId: string, data: Uint8Array) => {
   const chunk = 180;
   if (isNative()) {
+    const spp = savedSpp(printerId);
+    if (spp) { await BtSerial.write({ address: spp, data: b64(data) }); return; }
     let ch = await nativeReconnect(printerId);
     if (!ch) throw new Error('Printer Bluetooth belum terhubung. Buka Pengaturan Printer → Hubungkan.');
     // Cheap label printers often keep the default 23-byte MTU: size chunks to the real MTU.
@@ -175,6 +213,7 @@ export const btSend = async (printerId: string, data: Uint8Array) => {
 /** True when this printer should be served over Bluetooth and is reachable. */
 export const btReady = async (printerId: string) => {
   if (!btSupported() || !btSavedName(printerId)) return false;
+  if (isNative() && savedSpp(printerId)) return true;
   try { return isNative() ? !!(await nativeReconnect(printerId)) : !!(await reconnect(printerId)); } catch { return false; }
 };
 

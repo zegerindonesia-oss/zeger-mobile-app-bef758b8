@@ -91,7 +91,7 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
           qr, side: (rider.trim().match(/^([A-Za-z]{1,3}-?\d+)\s+(.+)$/)?.slice(1, 3)) || [rider],
         })));
         if (await printRawToSticker(userProfile?.branch_id || null, labels)) { toast.success(`${total} stiker terkirim ke printer Bluetooth`); return; }
-        toast.info("Printer Bluetooth belum terhubung, membuka dialog cetak PC");
+        toast.info("Printer stiker Bluetooth belum diatur. Buka Pengaturan Printer → Stiker Cup → Hubungkan, lalu Simpan. Sementara membuka dialog cetak.");
       }
       const html = list.flatMap((it) => Array.from({ length: it.qty }, () => renderToStaticMarkup(<Sticker it={it} rider={rider} sd={sd} qr={qr} />))).join("");
       await printHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Stiker ${esc(rider)}</title><style>${css}</style></head><body>${html}</body></html>`);
