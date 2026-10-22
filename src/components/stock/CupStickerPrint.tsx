@@ -81,16 +81,12 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
     setBusy(true);
     try {
       if (mode === "bt") {
-        const labels = list.flatMap((it) => Array.from({ length: it.qty }, () => ({
-          lines: [
-            { text: (it.short_name || it.name).slice(0, 16), bold: true },
-            { text: Math.round(it.price || 0).toLocaleString("id-ID"), big: true },
-            { text: `SD:${fmt(sd)}` },
-            { text: `ED:${fmt(addDays(sd, it.shelf_life_days || DEFAULT_DAYS))}` },
-          ],
-          qr, side: (rider.trim().match(/^([A-Za-z]{1,3}-?\d+)\s+(.+)$/)?.slice(1, 3)) || [rider],
-        })));
-        if (await printRawToSticker(userProfile?.branch_id || null, labels)) { toast.success(`${total} stiker terkirim ke printer Bluetooth`); return; }
+        const ok = await printBytesToSticker(userProfile?.branch_id || null, async () => {
+          const canvases: HTMLCanvasElement[] = [];
+          for (const it of list) { const c = await drawStickerCanvas(it, rider, sd, qr, cfg); for (let i = 0; i < it.qty; i++) canvases.push(c); }
+          return tsplBitmapLabels(canvases, cfg.w, cfg.h);
+        });
+        if (ok) { toast.success(`${total} stiker terkirim ke printer Bluetooth`); return; }
         toast.info("Printer stiker Bluetooth belum diatur. Buka Pengaturan Printer → Stiker Cup → Hubungkan, lalu Simpan. Sementara membuka dialog cetak.");
       }
       const html = list.flatMap((it) => Array.from({ length: it.qty }, () => renderToStaticMarkup(<Sticker it={it} rider={rider} sd={sd} qr={qr} />))).join("");
