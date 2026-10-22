@@ -528,6 +528,9 @@ const POSMain = () => {
           <button onClick={() => navigate('/pos/kds')} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl hidden sm:flex items-center gap-1.5 text-sm font-semibold shrink-0" title="KDS">
             <Monitor className="h-4 w-4" /> <span className="hidden lg:inline">KDS</span>
           </button>
+          <button onClick={() => setReportsOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Laporan">
+            <BarChart3 className="h-4 w-4" /> <span className="hidden lg:inline">Laporan</span>
+          </button>
         </header>
 
 
@@ -550,6 +553,10 @@ const POSMain = () => {
                     <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Info tambahan / nama pelanggan"
                       className="w-full h-11 pl-9 pr-3 rounded-xl border border-border/70 bg-background/80 text-sm outline-none focus:ring-2 focus:ring-ring" />
                   </div>
+                  <button onClick={() => setQuickMemberOpen(true)} title="Nomor HP Member"
+                    className={`h-11 px-3 shrink-0 rounded-xl flex items-center gap-1.5 text-sm font-semibold ${member ? 'bg-primary text-primary-foreground' : 'pos-raised-control text-primary'}`}>
+                    <Phone className="h-4 w-4" /> <span className="hidden sm:inline truncate max-w-[7rem]">{member ? (member.name || member.phone) : 'No. HP'}</span>
+                  </button>
                   <button onClick={() => setMemberScanOpen(true)} title="Scan QR Member"
                     className={`h-11 w-11 shrink-0 rounded-xl flex items-center justify-center ${member ? 'bg-primary text-primary-foreground' : 'pos-raised-control text-primary'}`}>
                     <QrCode className="h-5 w-5" />
