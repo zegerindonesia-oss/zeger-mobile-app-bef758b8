@@ -31,7 +31,9 @@ export function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string;
       <div className="r">
         <div className="bw"><img className="lg" src={ZEGER_BEAN_LOGO} alt="" /><div className="b">Zeger!<small>COFFEE</small></div></div>
         {qr && <QRCodeSVG value={qr} size={64} level="L" />}
-        <div className="rd">{rider}</div>
+        {(() => { const m = rider.trim().match(/^([A-Za-z]{1,3}-?\d+)\s+(.+)$/); return m
+          ? <div className="rd"><div>{m[1]}</div><div>{m[2]}</div></div>
+          : <div className="rd">{rider}</div>; })()}
       </div>
     </div>
   );
@@ -47,7 +49,7 @@ export const stickerCss = (c: StickerCfg = DEFAULT_STICKER_CFG) => {
   const m = (v?: number) => v ?? c.pad;
   const innerH = c.h - m(c.mt) - m(c.mb);
   const side = +Math.min(c.w * 0.4, innerH * 1.0).toFixed(2);
-  const qrSide = +(innerH * 0.42).toFixed(2);
+  const qrSide = +(innerH * 0.3).toFixed(2);
   return `@page{size:${c.w}mm ${c.h}mm;margin:0}*{box-sizing:border-box;margin:0}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0}
 .stk{width:${c.w}mm;height:${c.h}mm;padding:${m(c.mt)}mm ${m(c.mr)}mm ${m(c.mb)}mm ${m(c.ml)}mm;display:flex;gap:.4mm;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
 .stk:last-child{page-break-after:auto;break-after:auto}
@@ -56,7 +58,7 @@ export const stickerCss = (c: StickerCfg = DEFAULT_STICKER_CFG) => {
 .d{font-weight:700;font-size:${f(5.2)}pt;line-height:${L};white-space:nowrap}.r{width:${side}mm;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;overflow:hidden}
 .bw{display:flex;align-items:center;gap:.3mm}.lg{height:${f(5.5) * 0.3528}mm;width:auto}
 .b{font-weight:900;font-size:${f(4.4)}pt;color:#c00;text-align:center;line-height:1}.b small{display:block;font-size:${f(2.3)}pt;color:#000;letter-spacing:.3px}
-.rd{font-weight:900;font-size:${f(5.6)}pt;line-height:1;white-space:nowrap;max-width:100%;text-align:center}.r svg{width:${qrSide}mm;height:${qrSide}mm;flex-shrink:0}`;
+.rd{font-weight:900;font-size:${f(5.2)}pt;line-height:1.05;white-space:nowrap;max-width:100%;overflow:hidden;text-align:center}.r svg{width:${qrSide}mm;height:${qrSide}mm;flex-shrink:0}`;
 };
 export const STICKER_CSS = stickerCss();
 
@@ -86,7 +88,7 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
             { text: `SD:${fmt(sd)}` },
             { text: `ED:${fmt(addDays(sd, it.shelf_life_days || DEFAULT_DAYS))}` },
           ],
-          qr, side: [rider],
+          qr, side: (rider.trim().match(/^([A-Za-z]{1,3}-?\d+)\s+(.+)$/)?.slice(1, 3)) || [rider],
         })));
         if (await printRawToSticker(userProfile?.branch_id || null, labels)) { toast.success(`${total} stiker terkirim ke printer Bluetooth`); return; }
         toast.info("Printer Bluetooth belum terhubung, membuka dialog cetak PC");
