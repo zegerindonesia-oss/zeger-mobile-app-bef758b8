@@ -301,7 +301,7 @@ const printOnce = (html: string) =>
   new Promise<void>((resolve) => {
     const iframe = document.createElement('iframe');
     // Real size off-screen: Chrome fails ("Print Failed") on 0×0 frames or frames removed while the print preview is open.
-    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:800px;border:0;visibility:hidden';
+    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:800px;border:0';
     document.body.appendChild(iframe);
     const d = iframe.contentDocument!;
     d.open(); d.write(html); d.close();
