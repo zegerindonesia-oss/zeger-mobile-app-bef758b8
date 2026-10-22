@@ -36,22 +36,24 @@ export function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string;
   );
 }
 
-export interface StickerCfg { w: number; h: number; font: number; line: number; pad: number; }
-export const DEFAULT_STICKER_CFG: StickerCfg = { w: 33, h: 15, font: 100, line: 1.0, pad: 0.5 };
+export interface StickerCfg { w: number; h: number; font: number; line: number; pad: number; ml?: number; mt?: number; mr?: number; mb?: number; }
+export const DEFAULT_STICKER_CFG: StickerCfg = { w: 33, h: 15, font: 100, line: 1.0, pad: 0.5, ml: 0.5, mt: 0.5, mr: 0.5, mb: 0.5 };
 const CFG_KEY = "zeger_sticker_cfg";
 export const loadStickerCfg = (): StickerCfg => { try { return { ...DEFAULT_STICKER_CFG, ...JSON.parse(localStorage.getItem(CFG_KEY) || "{}") }; } catch { return DEFAULT_STICKER_CFG; } };
 
 export const stickerCss = (c: StickerCfg = DEFAULT_STICKER_CFG) => {
   const k = c.font / 100; const f = (n: number) => +(n * k * (c.h / 15)).toFixed(2); const L = c.line;
-  const side = +(c.w * 0.26).toFixed(2);
+  const m = (v?: number) => v ?? c.pad;
+  const innerH = c.h - m(c.mt) - m(c.mb);
+  const side = +Math.min(c.w * 0.36, innerH * 0.78).toFixed(2);
   return `@page{size:${c.w}mm ${c.h}mm;margin:0}*{box-sizing:border-box;margin:0}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0}
-.stk{width:${c.w}mm;height:${c.h}mm;padding:${c.pad}mm;display:flex;gap:.4mm;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
+.stk{width:${c.w}mm;height:${c.h}mm;padding:${m(c.mt)}mm ${m(c.mr)}mm ${m(c.mb)}mm ${m(c.ml)}mm;display:flex;gap:.4mm;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
 .stk:last-child{page-break-after:auto;break-after:auto}
 .l{flex:1;min-width:0;line-height:${L};display:flex;flex-direction:column;justify-content:space-between}.n{font-weight:900;font-size:${f(7.5)}pt;line-height:${L};max-height:${2 * L}em;overflow:hidden;word-break:break-word}
 .p{font-weight:900;font-size:${f(10)}pt;line-height:${L}}
 .d{font-weight:700;font-size:${f(5.4)}pt;line-height:${L}}.r{width:${side}mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
 .b{font-weight:900;font-size:${f(4.6)}pt;color:#c00;text-align:center;line-height:1}.b small{display:block;font-size:${f(2.4)}pt;color:#000;letter-spacing:.3px}
-.rd{font-weight:700;font-size:${f(3.6)}pt;white-space:nowrap;max-width:${side}mm;overflow:hidden;text-align:center}.r svg{width:${+(side * 0.82).toFixed(2)}mm;height:${+(side * 0.82).toFixed(2)}mm}`;
+.rd{font-weight:900;font-size:${f(5.2)}pt;line-height:1;white-space:nowrap;max-width:${side}mm;overflow:hidden;text-align:center}.r svg{width:${side}mm;height:${side}mm;flex-shrink:0}`;
 };
 export const STICKER_CSS = stickerCss();
 
@@ -118,7 +120,12 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
           <div className="grid grid-cols-3 gap-2 text-xs">
             <label>Lebar (mm)<Input type="number" value={cfg.w} onChange={(e) => setCfg({ w: Number(e.target.value) || 33 })} /></label>
             <label>Tinggi (mm)<Input type="number" value={cfg.h} onChange={(e) => setCfg({ h: Number(e.target.value) || 15 })} /></label>
-            <label>Jarak tepi (mm)<Input type="number" step="0.1" value={cfg.pad} onChange={(e) => setCfg({ pad: Math.max(0, Number(e.target.value)) })} /></label>
+          </div>
+          <p className="text-xs font-semibold">Jarak tepi (mm) — geser isi stiker</p>
+          <div className="grid grid-cols-4 gap-2 text-xs">
+            {([["ml", "Kiri"], ["mt", "Atas"], ["mr", "Kanan"], ["mb", "Bawah"]] as const).map(([key, l]) => (
+              <label key={key}>{l}<Input type="number" step="0.1" min={0} value={cfg[key] ?? cfg.pad} onChange={(e) => setCfg({ [key]: Math.max(0, Number(e.target.value) || 0) })} /></label>
+            ))}
           </div>
           <div className="space-y-1"><div className="flex justify-between text-xs"><span>Ukuran tulisan</span><b>{cfg.font}%</b></div>
             <Slider min={70} max={150} step={5} value={[cfg.font]} onValueChange={([v]) => setCfg({ font: v })} /></div>
