@@ -20,8 +20,9 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "AI belum dikonfigurasi" }, 500);
 
-    const { transcript, products, modifiers } = await req.json();
-    if (!transcript || typeof transcript !== "string" || transcript.length > 1000) {
+    const { transcript, products, modifiers, already } = await req.json();
+    const alreadyTxt = Array.isArray(already) ? already.slice(0, 50).join("; ") : "";
+    if (!transcript || typeof transcript !== "string" || transcript.length > 3000) {
       return json({ error: "Transkrip tidak valid" }, 400);
     }
     const catalog = (Array.isArray(products) ? products : [])
@@ -35,9 +36,11 @@ Ubah ucapan kasir/pelanggan menjadi daftar item. Cocokkan nama produk dengan kat
 Pilihan modifier yang valid (gunakan teks persis): ${modList}
 Jika satu produk diucapkan dengan varian berbeda (misal "dua, satu less sugar satu normal"), pecah jadi beberapa item.
 Catatan bebas (misal "dipanasin", "pisah es") masukkan ke notes.
-Abaikan basa-basi ("silakan kak", "pesannya apa").
+Ucapan bisa berupa percakapan bebas kasir dan pelanggan. Abaikan basa-basi ("silakan kak", "pesannya apa", "ada lagi?").
+Item yang SUDAH tercatat: ${alreadyTxt || "(belum ada)"}. Jangan kembalikan lagi item itu jika hanya diulang/dikonfirmasi ("jadi aren dua ya"). Kembalikan hanya tambahan baru. Jika pelanggan jelas MEMBATALKAN item, abaikan saja.
+Deteksi juga nomor HP pelanggan (angka atau diucapkan, misal "nol delapan satu dua..." = "0812..."), tulis digit saja, kosongkan jika tidak ada/tidak lengkap (min 10 digit). Deteksi nama pelanggan jika disebut ("atas nama Budi").
 Balas HANYA JSON tanpa markdown dengan format:
-{"items":[{"product_id":"...","qty":1,"modifiers":["..."],"notes":""}],"unmatched":["frasa yang tidak ditemukan"]}
+{"items":[{"product_id":"...","qty":1,"modifiers":["..."],"notes":""}],"unmatched":["frasa menu yang tidak ditemukan"],"phone":"","customer_name":""}
 
 KATALOG (id|nama):
 ${catalog}
@@ -112,7 +115,12 @@ UCAPAN: "${transcript}"`;
     } catch {
       return json({ error: "Format jawaban AI tidak valid" }, 502);
     }
-    return json({ items: parsed.items ?? [], unmatched: parsed.unmatched ?? [] });
+    return json({
+      items: parsed.items ?? [],
+      unmatched: parsed.unmatched ?? [],
+      phone: String(parsed.phone ?? "").replace(/\D/g, ""),
+      customer_name: String(parsed.customer_name ?? "").trim(),
+    });
   } catch (e) {
     if (req.signal.aborted) return new Response(null, { status: 499 });
     console.error(e);
