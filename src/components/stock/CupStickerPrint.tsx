@@ -6,7 +6,52 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Printer, Tag, Bluetooth } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { printRawToSticker, printHtml } from "@/lib/pos-printing";
+import { printBytesToSticker, printHtml } from "@/lib/pos-printing";
+import { tsplBitmapLabels } from "@/lib/bt-printer";
+
+const loadImg = (src: string) => new Promise<HTMLImageElement | null>((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+
+/** Draws one sticker at 203dpi (8 dots/mm), mirroring the HTML preview layout. */
+async function drawStickerCanvas(it: StickerItem, rider: string, sd: Date, qr: string, c: StickerCfg) {
+  const D = 8, W = Math.round(c.w * D), H = Math.round(c.h * D);
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d")!; g.fillStyle = "#fff"; g.fillRect(0, 0, W, H); g.fillStyle = "#000"; g.textBaseline = "top";
+  const k = (c.font / 100) * (c.h / 15); const pt = (n: number) => n * k * 0.3528 * D; // pt → dots
+  const m = (v?: number) => (v ?? c.pad) * D;
+  const L = m(c.ml), T = m(c.mt), R = W - m(c.mr), B = H - m(c.mb), innerH = B - T;
+  const sideW = Math.min(c.w * 0.4 * D, innerH);
+  const lx = L, lw = R - sideW - 0.4 * D - L, rx = R - sideW;
+  const font = (w: number, s: number) => (g.font = `${w} ${s}px Arial, Helvetica, sans-serif`);
+  // left column
+  const name = it.short_name || it.name; const nS = pt(7); font(900, nS);
+  const words = name.split(/\s+/); const lines: string[] = []; let cur = "";
+  for (const w of words) { const t = cur ? `${cur} ${w}` : w; if (g.measureText(t).width > lw && cur) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur);
+  const nl = lines.slice(0, 2); nl.forEach((t, i) => g.fillText(t, lx, T + i * nS * c.line, lw));
+  const ed = addDays(sd, it.shelf_life_days || DEFAULT_DAYS);
+  const dS = pt(5.2), pS = pt(9.5);
+  font(700, dS); g.fillText(`ED : ${fmt(ed)}`, lx, B - dS, lw); g.fillText(`SD : ${fmt(sd)}`, lx, B - dS * 2 * c.line, lw);
+  const top = T + nl.length * nS * c.line, bot = B - dS * 2 * c.line;
+  font(900, pS); g.fillText(Math.round(it.price || 0).toLocaleString("id-ID"), lx, top + (bot - top - pS) / 2, lw);
+  // right column
+  const cx = rx + sideW / 2; g.textAlign = "center";
+  const logo = await loadImg(ZEGER_BEAN_LOGO); const bS = pt(4.4), sS = pt(2.3), lh = pt(5.5);
+  font(900, bS); const bw = Math.max(g.measureText("Zeger!").width, 0);
+  const totalW = lh + 0.3 * D + bw; const sx = cx - totalW / 2;
+  if (logo) g.drawImage(logo, sx, T, lh, lh);
+  g.fillText("Zeger!", sx + lh + 0.3 * D + bw / 2, T); font(400, sS); g.fillText("COFFEE", sx + lh + 0.3 * D + bw / 2, T + bS);
+  const mt = rider.trim().match(/^([A-Za-z]{1,3}-?\d+)\s+(.+)$/); const rl = mt ? [mt[1], mt[2]] : [rider];
+  const rS = pt(5.2); font(900, rS);
+  rl.forEach((t, i) => g.fillText(t, cx, B - (rl.length - i) * rS * 1.05, sideW));
+  if (qr) {
+    const q = Math.round((innerH * 0.3) / D * D);
+    const svg = renderToStaticMarkup(<QRCodeSVG value={qr} size={q} level="L" />);
+    const img = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
+    const hTop = T + Math.max(lh, bS + sS), hBot = B - rl.length * rS * 1.05;
+    if (img) { g.imageSmoothingEnabled = false; g.drawImage(img, Math.round(cx - q / 2), Math.round(hTop + (hBot - hTop - q) / 2), q, q); }
+  }
+  return cv;
+}
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { ZEGER_BEAN_LOGO } from "@/assets/zeger-bean-logo";
