@@ -5722,6 +5722,18 @@ export type Database = {
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
+      pos_quick_member: {
+        Args: { _name?: string; _phone: string }
+        Returns: {
+          email: string
+          id: string
+          is_new: boolean
+          member_code: string
+          name: string
+          phone: string
+          points: number
+        }[]
+      }
       post_bank_statements: { Args: { _ids: string[] }; Returns: number }
       postgis_constraint_dims: {
         Args: { geomcolumn: string; geomschema: string; geomtable: string }
