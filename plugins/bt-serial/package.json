@@ -1,0 +1,9 @@
+{
+  "name": "flow-bt-serial",
+  "version": "1.0.0",
+  "description": "Bluetooth Classic (SPP) printing for Flow F&B POS",
+  "main": "index.js",
+  "files": ["android/", "index.js"],
+  "capacitor": { "android": { "src": "android" } },
+  "peerDependencies": { "@capacitor/core": ">=6" }
+}
