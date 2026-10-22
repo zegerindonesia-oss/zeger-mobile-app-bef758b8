@@ -2302,6 +2302,7 @@ export type Database = {
         Row: {
           branch_id: string
           cash_difference: number | null
+          cashier_name: string | null
           closed_at: string | null
           closing_cash: number | null
           created_at: string
@@ -2323,6 +2324,7 @@ export type Database = {
         Insert: {
           branch_id: string
           cash_difference?: number | null
+          cashier_name?: string | null
           closed_at?: string | null
           closing_cash?: number | null
           created_at?: string
@@ -2344,6 +2346,7 @@ export type Database = {
         Update: {
           branch_id?: string
           cash_difference?: number | null
+          cashier_name?: string | null
           closed_at?: string | null
           closing_cash?: number | null
           created_at?: string
@@ -2546,6 +2549,7 @@ export type Database = {
           amount_2: number
           branch_id: string
           cash_received: number
+          cashier_name: string | null
           change_amount: number
           created_at: string
           customer_id: string | null
@@ -2583,6 +2587,7 @@ export type Database = {
           amount_2?: number
           branch_id: string
           cash_received?: number
+          cashier_name?: string | null
           change_amount?: number
           created_at?: string
           customer_id?: string | null
@@ -2620,6 +2625,7 @@ export type Database = {
           amount_2?: number
           branch_id?: string
           cash_received?: number
+          cashier_name?: string | null
           change_amount?: number
           created_at?: string
           customer_id?: string | null
@@ -3063,6 +3069,7 @@ export type Database = {
           location_updated_at: string | null
           phone: string | null
           photo_url: string | null
+          pos_pin_hash: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id: string
           updated_at: string | null
@@ -3082,6 +3089,7 @@ export type Database = {
           location_updated_at?: string | null
           phone?: string | null
           photo_url?: string | null
+          pos_pin_hash?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           tenant_id?: string
           updated_at?: string | null
@@ -3101,6 +3109,7 @@ export type Database = {
           location_updated_at?: string | null
           phone?: string | null
           photo_url?: string | null
+          pos_pin_hash?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           tenant_id?: string
           updated_at?: string | null
@@ -5633,6 +5642,7 @@ export type Database = {
           location_updated_at: string | null
           phone: string | null
           photo_url: string | null
+          pos_pin_hash: string | null
           role: Database["public"]["Enums"]["user_role"]
           tenant_id: string
           updated_at: string | null
@@ -5678,6 +5688,15 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant: string; _uid: string }
         Returns: boolean
+      }
+      list_branch_cashiers: {
+        Args: { _branch_id: string }
+        Returns: {
+          full_name: string
+          has_pin: boolean
+          profile_id: string
+          role: string
+        }[]
       }
       longtransactionsenabled: { Args: never; Returns: boolean }
       lookup_member: {
@@ -5837,6 +5856,10 @@ export type Database = {
         Returns: boolean
       }
       resolve_stock_alert: { Args: { alert_uuid: string }; Returns: boolean }
+      set_cashier_pin: {
+        Args: { _pin: string; _profile_id: string }
+        Returns: boolean
+      }
       spend_customer_points: {
         Args: { _order_id: string; _points: number }
         Returns: number
@@ -6453,6 +6476,13 @@ export type Database = {
           _reference?: string
         }
         Returns: number
+      }
+      verify_cashier_pin: {
+        Args: { _branch_id: string; _pin: string }
+        Returns: {
+          full_name: string
+          profile_id: string
+        }[]
       }
     }
     Enums: {
