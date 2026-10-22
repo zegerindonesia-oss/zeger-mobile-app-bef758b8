@@ -6,13 +6,13 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, MessageCircle } from 'lucide-react';
 
-interface Props { open: boolean; onOpenChange: (v: boolean) => void; branchId: string | null; shiftId?: string | null; branchName: string }
+interface Props { open: boolean; onOpenChange: (v: boolean) => void; branchId: string | null; shiftId?: string | null; branchName: string; inline?: boolean }
 
 const rp = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const PAY: Record<string, string> = { cash: 'Tunai', qris: 'QRIS', transfer: 'Transfer', edc: 'EDC/Debit', debit: 'Debit', card: 'Kartu' };
 
-export function POSReportsDialog({ open, onOpenChange, branchId, shiftId, branchName }: Props) {
+export function POSReportsDialog({ open, onOpenChange, branchId, shiftId, branchName, inline }: Props) {
   const [range, setRange] = useState<'shift' | 'today' | 'yesterday' | 'custom'>('today');
   const [from, setFrom] = useState(ymd(new Date()));
   const [to, setTo] = useState(ymd(new Date()));
@@ -88,10 +88,8 @@ export function POSReportsDialog({ open, onOpenChange, branchId, shiftId, branch
     <div className="rounded-xl border p-3"><div className="text-xs text-muted-foreground">{l}</div><div className="text-lg font-bold">{v}</div></div>
   );
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Laporan & Riwayat</DialogTitle></DialogHeader>
+  const body = (
+      <>
         <div className="flex flex-wrap gap-2 items-center">
           {([['shift', 'Shift Ini'], ['today', 'Hari Ini'], ['yesterday', 'Kemarin'], ['custom', 'Pilih Tanggal']] as const).map(([k, l]) => (
             <Button key={k} size="sm" variant={range === k ? 'default' : 'outline'} onClick={() => setRange(k)} disabled={k === 'shift' && !shiftId}>{l}</Button>
@@ -104,7 +102,7 @@ export function POSReportsDialog({ open, onOpenChange, branchId, shiftId, branch
         </div>
         {loading ? <div className="py-10 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div> : (
           <Tabs defaultValue="summary">
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-4 w-full h-12">
               <TabsTrigger value="summary">Penjualan</TabsTrigger>
               <TabsTrigger value="history">Riwayat</TabsTrigger>
               <TabsTrigger value="menu">Per Menu</TabsTrigger>
@@ -162,6 +160,14 @@ export function POSReportsDialog({ open, onOpenChange, branchId, shiftId, branch
             </TabsContent>
           </Tabs>
         )}
+      </>
+  );
+  if (inline) return <div className="space-y-3">{body}</div>;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Laporan & Riwayat</DialogTitle></DialogHeader>
+        {body}
       </DialogContent>
     </Dialog>
   );

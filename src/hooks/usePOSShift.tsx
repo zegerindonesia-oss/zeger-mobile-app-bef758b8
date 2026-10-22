@@ -1,3 +1,4 @@
+import { getActiveCashier } from '@/lib/pos-cashier';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -59,6 +60,7 @@ export const usePOSShift = () => {
         branch_id: userProfile.branch_id,
         shift_type: shiftType,
         opening_cash: openingCash,
+        cashier_name: getActiveCashier(userProfile.branch_id)?.name || userProfile.full_name || null,
         status: 'open',
       })
       .select()

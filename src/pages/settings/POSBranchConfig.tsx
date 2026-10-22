@@ -10,6 +10,7 @@ import { X, Plus, Store } from 'lucide-react';
 import { ALL_ORDER_MODES } from '@/lib/pos-order-modes';
 import { fetchBranchSettings, type POSBranchSettings } from '@/hooks/usePOSBranchSettings';
 import { useAuth } from '@/hooks/useAuth';
+import { CashierPinManager } from '@/components/pos/CashierPinManager';
 import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
 
 const TagEditor = ({ items, onChange }: { items: string[]; onChange: (v: string[]) => void }) => {
@@ -88,6 +89,8 @@ const POSBranchConfig = () => {
           <Card><CardHeader><CardTitle>Kategori Kas Masuk</CardTitle></CardHeader><CardContent><TagEditor items={s.cash_in_categories} onChange={(v) => up({ cash_in_categories: v })} /></CardContent></Card>
           <Card><CardHeader><CardTitle>Kategori Kas Keluar</CardTitle></CardHeader><CardContent><TagEditor items={s.cash_out_categories} onChange={(v) => up({ cash_out_categories: v })} /></CardContent></Card>
         </div>
+        <Card><CardHeader><CardTitle>Kasir & PIN Login POS</CardTitle></CardHeader>
+          <CardContent><CashierPinManager branchId={branchId} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Desain Struk Cabang</CardTitle></CardHeader>
           <CardContent><POSPrinterSettings key={branchId} inline designer open onOpenChange={() => undefined} branchId={branchId} branchName={branches.find((b) => b.id === branchId)?.name} userId={userProfile?.id} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Menu Dijual di Cabang Ini ({products.length - s.hidden_product_ids.length}/{products.length})</CardTitle></CardHeader>
