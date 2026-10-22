@@ -36,15 +36,16 @@ interface Props {
   onPrint?: () => void;
   onPrintStickers?: () => void;
   branchId?: string | null;
+  defaultPhone?: string | null;
 }
 
 const toWa = (p: string) => { const d = p.replace(/\D/g, ''); return d.startsWith('0') ? '62' + d.slice(1) : d.startsWith('62') ? d : d ? '62' + d : ''; };
 
-export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, branchId }: Props) => {
+export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, branchId, defaultPhone }: Props) => {
   const [cName, setCName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  useEffect(() => { if (open) { setCName(data?.customer_name || ''); setPhone(''); setEmail(''); } }, [open, data]);
+  useEffect(() => { if (open) { setCName(data?.customer_name || ''); setPhone(defaultPhone || ''); setEmail(''); } }, [open, data]);
   if (!data) return null;
 
   // Save/update the customer in CRM so returning customers can be found by phone.

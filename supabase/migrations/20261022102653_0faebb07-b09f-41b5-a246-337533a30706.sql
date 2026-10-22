@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.pos_quick_member(text, text) FROM PUBLIC, anon;

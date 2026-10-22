@@ -10,7 +10,9 @@ import { usePOSPromo } from '@/hooks/usePOSPromo';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { POSSidebar } from '@/components/pos/POSSidebar';
-import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart, LayoutGrid, QrCode, UserRound } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart, LayoutGrid, QrCode, UserRound, Phone, BarChart3 } from 'lucide-react';
+import { POSQuickMember } from '@/components/pos/POSQuickMember';
+import { POSReportsDialog } from '@/components/pos/POSReportsDialog';
 import { POSModeDialog } from '@/components/pos/POSModeDialog';
 import { modeLabel } from '@/lib/pos-order-modes';
 import { usePOSBranchSettings } from '@/hooks/usePOSBranchSettings';
@@ -74,6 +76,9 @@ const POSMain = () => {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [member, setMember] = useState<LoyaltyMember | null>(null);
   const [memberScanOpen, setMemberScanOpen] = useState(false);
+  const [quickMemberOpen, setQuickMemberOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const receiptPhoneRef = useRef<string>('');
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [redemption, setRedemption] = useState<AppliedRedemption | null>(null);
@@ -298,6 +303,7 @@ const POSMain = () => {
         cash_received: payload.cashReceived,
         change_amount: payload.change,
       };
+      receiptPhoneRef.current = member?.phone || '';
       setReceipt(receiptData);
       const printItems = cart.items.map((i) => ({
         product_id: i.is_custom ? null : i.product_id, product_name: i.product_name, category: i.category,
@@ -528,6 +534,9 @@ const POSMain = () => {
           <button onClick={() => navigate('/pos/kds')} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl hidden sm:flex items-center gap-1.5 text-sm font-semibold shrink-0" title="KDS">
             <Monitor className="h-4 w-4" /> <span className="hidden lg:inline">KDS</span>
           </button>
+          <button onClick={() => setReportsOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Laporan">
+            <BarChart3 className="h-4 w-4" /> <span className="hidden lg:inline">Laporan</span>
+          </button>
         </header>
 
 
@@ -550,6 +559,10 @@ const POSMain = () => {
                     <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Info tambahan / nama pelanggan"
                       className="w-full h-11 pl-9 pr-3 rounded-xl border border-border/70 bg-background/80 text-sm outline-none focus:ring-2 focus:ring-ring" />
                   </div>
+                  <button onClick={() => setQuickMemberOpen(true)} title="Nomor HP Member"
+                    className={`h-11 px-3 shrink-0 rounded-xl flex items-center gap-1.5 text-sm font-semibold ${member ? 'bg-primary text-primary-foreground' : 'pos-raised-control text-primary'}`}>
+                    <Phone className="h-4 w-4" /> <span className="hidden sm:inline truncate max-w-[7rem]">{member ? (member.name || member.phone) : 'No. HP'}</span>
+                  </button>
                   <button onClick={() => setMemberScanOpen(true)} title="Scan QR Member"
                     className={`h-11 w-11 shrink-0 rounded-xl flex items-center justify-center ${member ? 'bg-primary text-primary-foreground' : 'pos-raised-control text-primary'}`}>
                     <QrCode className="h-5 w-5" />
@@ -660,7 +673,7 @@ const POSMain = () => {
         onSelect={handleSelectTable}
         onRecall={handleRecallTable}
       />
-      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} branchId={userProfile?.branch_id || null}
+      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} defaultPhone={member?.phone || receiptPhoneRef.current} branchId={userProfile?.branch_id || null}
         onPrint={() => receipt && safePrint(() => printReceipt(printSettings, receipt, false))}
         onPrintStickers={() => receipt && safePrint(() => printStickersOnly(printSettings, {
           ref: receipt.transaction_number, order_type: receipt.order_type, table_number: receipt.table_number || null,
@@ -687,6 +700,8 @@ const POSMain = () => {
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
       <POSModeDialog allowedModes={branchPos?.order_modes} open={modeOpen} onOpenChange={setModeOpen} orderType={orderType} pax={pax} externalOrderId={externalOrderId}
         onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); if (v.orderType === 'dine_in' && !tableNumber) setTableMapOpen(true); }} />
+      <POSQuickMember open={quickMemberOpen} onOpenChange={setQuickMemberOpen} onSelect={(m) => { setMember(m); if (!customerName && m.name) setCustomerName(m.name); }} />
+      <POSReportsDialog open={reportsOpen} onOpenChange={setReportsOpen} branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} branchName={branchName} />
       <MemberScanDialog
         open={memberScanOpen}
         onOpenChange={setMemberScanOpen}
