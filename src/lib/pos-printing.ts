@@ -422,7 +422,7 @@ export const printRawToSticker = async (branchId: string | null, labels: TsplLab
   const s = await loadPrintSettings(branchId);
   const p = enabled(s, 'sticker').find((x) => x.connection === 'bluetooth');
   if (!p) return false;
-  return sendBt({ ...p, copies: 1 }, tsplLabels(labels, p.labelW || 33, p.labelH || 15));
+  return sendBt({ ...p, copies: 1 }, tsplLabels(labels, p.labelW || 33, p.labelH || 15, 2, p.fontScale ?? 100, p.lineSpacing ?? 1.25));
 };
 
 export const printShiftReport = async (s: PrintSettings, r: ShiftReportPrint) => {
