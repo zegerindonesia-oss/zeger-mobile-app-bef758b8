@@ -524,7 +524,7 @@ const POSMain = () => {
           <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Meja">
             <Armchair className="h-4 w-4" /> <span className="hidden sm:inline">Meja</span>
           </button>
-          <POSVoiceOrder onAdd={cart.addItem} />
+          <POSVoiceOrder onAdd={cart.addItem} onMember={setMember} />
           <div className="hidden sm:block"><POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} /></div>
           <button onClick={() => navigate('/pos/rider-orders')} title="Pesanan Rider"
             className={`pos-raised-control relative h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${riderAlerts.count ? 'text-destructive' : ''}`}>
