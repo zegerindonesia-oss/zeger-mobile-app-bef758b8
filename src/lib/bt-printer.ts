@@ -138,14 +138,27 @@ const reconnect = async (printerId: string) => {
 export const btSend = async (printerId: string, data: Uint8Array) => {
   const chunk = 180;
   if (isNative()) {
-    const ch = await nativeReconnect(printerId);
+    let ch = await nativeReconnect(printerId);
     if (!ch) throw new Error('Printer Bluetooth belum terhubung. Buka Pengaturan Printer → Hubungkan.');
-    for (let i = 0; i < data.length; i += chunk) {
-      const part = data.slice(i, i + chunk);
+    // Cheap label printers often keep the default 23-byte MTU: size chunks to the real MTU.
+    let size = 20;
+    try { size = Math.max(20, Math.min(180, (await BleClient.getMtu(ch.deviceId)) - 3)); } catch { /* keep 20 */ }
+    for (let i = 0; i < data.length; i += size) {
+      const part = data.slice(i, i + size);
       const dv = new DataView(part.buffer, part.byteOffset, part.byteLength);
-      if (ch.noResp) await BleClient.writeWithoutResponse(ch.deviceId, ch.service, ch.characteristic, dv);
-      else await BleClient.write(ch.deviceId, ch.service, ch.characteristic, dv);
-      await new Promise((r) => setTimeout(r, 20));
+      try {
+        if (ch.noResp) await BleClient.writeWithoutResponse(ch.deviceId, ch.service, ch.characteristic, dv);
+        else await BleClient.write(ch.deviceId, ch.service, ch.characteristic, dv);
+      } catch {
+        // Connection dropped mid-print: reconnect once and resend this chunk.
+        nativeConn.delete(printerId);
+        const id = localStorage.getItem(devKey(printerId));
+        if (!id) throw new Error('Printer Bluetooth terputus.');
+        ch = await nativeOpen(printerId, id);
+        if (ch.noResp) await BleClient.writeWithoutResponse(ch.deviceId, ch.service, ch.characteristic, dv);
+        else await BleClient.write(ch.deviceId, ch.service, ch.characteristic, dv);
+      }
+      await new Promise((r) => setTimeout(r, ch.noResp ? 30 : 10));
     }
     return;
   }

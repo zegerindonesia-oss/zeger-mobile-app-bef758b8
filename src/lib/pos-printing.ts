@@ -234,19 +234,27 @@ ${k.addition ? '<div class="c b">** TAMBAHAN **</div>' : ''}
 ${k.items.map((i) => `<div class="b" style="font-size:1.3em">${i.qty}x ${esc(i.product_name)}</div>${i.notes ? `<div class="n">» ${esc(i.notes)}</div>` : ''}`).join('<div style="height:4px"></div>')}
 <div class="hr"></div><div class="c">Total item: ${k.items.reduce((s, i) => s + i.qty, 0)}</div>`);
 
-export const renderStickers = (k: KitchenPrint, p?: Pick<PrinterConfig, 'fontScale' | 'lineSpacing'>) => {
+export const renderStickers = (k: KitchenPrint, p?: Partial<Pick<PrinterConfig, 'fontScale' | 'lineSpacing' | 'labelW' | 'labelH'>>) => {
+  const W = p?.labelW || 33, H = p?.labelH || 15;
+  const f = (n: number) => +(n * ((p?.fontScale ?? 100) / 100) * (H / 15)).toFixed(2);
+  const L = Math.min(p?.lineSpacing ?? 1.1, 1.3);
   const labels: string[] = [];
   const total = k.items.reduce((s, i) => s + i.qty, 0);
   let n = 0;
   k.items.forEach((i) => {
     for (let q = 0; q < i.qty; q++) {
       n++;
-      labels.push(`<div class="lbl"><div class="row b"><span style="font-size:1.3em">${k.table_number ? `MEJA ${esc(k.table_number)}` : `#${esc(k.ref.slice(-3))}`}</span><span>${n}/${total}</span></div>
-<div class="b" style="font-size:1.3em;line-height:1.1">${esc(i.product_name)}</div>${i.notes ? `<div class="b">» ${esc(i.notes)}</div>` : ''}
-<div class="row"><span>${esc(k.customer_name || '-')}</span><span>${esc(k.order_type.replace('_', ' ').toUpperCase())}</span></div><div class="mut">${jkt(k.created_at)}</div></div>`);
+      labels.push(`<div class="lbl"><div class="row b"><span>${k.table_number ? `MEJA ${esc(k.table_number)}` : `#${esc(k.ref.slice(-3))}`}</span><span>${n}/${total}</span></div>
+<div class="nm">${esc(i.product_name)}</div>${i.notes ? `<div class="nt">${esc(i.notes)}</div>` : ''}
+<div class="row ft"><span>${esc(k.customer_name || '-')}</span><span>${jkt(k.created_at)}</span></div></div>`);
     }
   });
-  return doc('label', `Stiker ${k.ref}`, labels.join(''), p?.fontScale ?? 100, p?.lineSpacing ?? 1.25);
+  const css = `@page{size:${W}mm ${H}mm;margin:0}*{box-sizing:border-box;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
+.lbl{width:${W}mm;height:${H}mm;padding:.6mm .8mm;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;line-height:${L};page-break-after:always;break-after:page}
+.lbl:last-child{page-break-after:auto;break-after:auto}.row{display:flex;justify-content:space-between;gap:1mm;white-space:nowrap;overflow:hidden}
+.b{font-weight:900;font-size:${f(6.5)}pt}.nm{font-weight:900;font-size:${f(7.5)}pt;max-height:${2 * L}em;overflow:hidden;word-break:break-word}
+.nt{font-weight:700;font-size:${f(5)}pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ft{font-weight:700;font-size:${f(5)}pt}`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Stiker ${esc(k.ref)}</title><style>${css}</style></head><body>${labels.join('')}</body></html>`;
 };
 
 export interface ShiftReportPrint {
