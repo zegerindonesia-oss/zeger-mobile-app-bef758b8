@@ -217,44 +217,51 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
       .eq("rider_id", riderId).order("shift_date", { ascending: false }).limit(10);
     if (se) return toast.error(se.message);
     if (!shifts?.length) { setLeftover((s) => ({ ...s, [riderId]: {} })); return toast.info("Rider belum punya shift"); }
-    const day = shifts[0].shift_date;
-    const sameDay = shifts.filter((s: any) => s.shift_date === day).sort((a: any, b: any) => {
-      const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
-      const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
-      return ta - tb;
-    });
-    const last = sameDay[sameDay.length - 1];
-    const { data, error } = await db.from("stock_movements")
-      .select("product_id, quantity, notes, created_at, actual_delivery_date, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
-      .eq("rider_id", riderId).in("movement_type", ["return", "out"])
-      .gte("created_at", `${day}T00:00:00+07:00`).lte("created_at", `${day}T23:59:59+07:00`).limit(500);
-    if (error) return toast.error(error.message);
-    const pick = (when: string) => {
-      const t = new Date(when).getTime(); let chosen = sameDay[0];
-      for (const s of sameDay) { const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0; if (st <= t) chosen = s; }
-      return chosen;
-    };
-    const map: Record<string, { qty: number; name: string; product: any }> = {};
-    const verified = new Set<string>();
-    (data || []).forEach((m: any) => {
-      if (pick(m.actual_delivery_date || m.created_at)?.id !== last.id) return;
-      const cur = map[m.product_id] || { qty: 0, name: m.products?.name, product: m.products };
-      // Pakai stok fisik hasil verifikasi Hub bila ada (sudah final setelah waste)
-      const mv = /Verified quantity:\s*(\d+)/i.exec(m.notes || "");
-      if (mv) verified.add(m.product_id);
-      cur.qty += mv ? Number(mv[1]) : Number(m.quantity || 0); map[m.product_id] = cur;
-    });
-    // Kurangi waste yang dicatat sejak shift terakhir dimulai (hanya untuk yang belum diverifikasi fisik)
-    const since = last.shift_start_time || `${day}T00:00:00+07:00`;
-    const { data: waste } = await db.from("product_waste").select("product_id, quantity").eq("rider_id", riderId).gte("created_at", since).limit(500);
-    (waste || []).forEach((w: any) => {
-      const cur = map[w.product_id];
-      if (cur && !verified.has(w.product_id)) cur.qty = Math.max(0, cur.qty - Number(w.quantity || 0));
-    });
-    Object.keys(map).forEach((k) => { if (map[k].qty <= 0) delete map[k]; });
-    setLeftover((s) => ({ ...s, [riderId]: map }));
-    if (!Object.keys(map).length) toast.info(`Tidak ada stok kembali di shift #${last.shift_number} (${day})`);
-    else toast.success(`Sisa stok shift #${last.shift_number} (${day}) ditambahkan`);
+    // Telusuri mundur per tanggal sampai ketemu shift terakhir yang punya stok kembali
+    const days = Array.from(new Set(shifts.map((s: any) => s.shift_date)));
+    for (const day of days) {
+      const sameDay = shifts.filter((s: any) => s.shift_date === day).sort((a: any, b: any) => {
+        const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
+        const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
+        return ta - tb;
+      });
+      const { data, error } = await db.from("stock_movements")
+        .select("product_id, quantity, notes, created_at, actual_delivery_date, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
+        .eq("rider_id", riderId).in("movement_type", ["return", "out"])
+        .gte("created_at", `${day}T00:00:00+07:00`).lte("created_at", `${day}T23:59:59+07:00`).limit(500);
+      if (error) return toast.error(error.message);
+      if (!data?.length) continue;
+      const pick = (when: string) => {
+        const t = new Date(when).getTime(); let chosen = sameDay[0];
+        for (const s of sameDay) { const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0; if (st <= t) chosen = s; }
+        return chosen;
+      };
+      // shift terakhir di hari itu yang benar-benar punya retur
+      const withRet = new Set(data.map((m: any) => pick(m.actual_delivery_date || m.created_at)?.id));
+      const last = [...sameDay].reverse().find((s: any) => withRet.has(s.id)) || sameDay[sameDay.length - 1];
+      const map: Record<string, { qty: number; name: string; product: any }> = {};
+      const verified = new Set<string>();
+      data.forEach((m: any) => {
+        if (pick(m.actual_delivery_date || m.created_at)?.id !== last.id) return;
+        const cur = map[m.product_id] || { qty: 0, name: m.products?.name, product: m.products };
+        // Pakai stok fisik hasil verifikasi Hub bila ada (sudah final setelah waste)
+        const mv = /Verified quantity:\s*(\d+)/i.exec(m.notes || "");
+        if (mv) verified.add(m.product_id);
+        cur.qty += mv ? Number(mv[1]) : Number(m.quantity || 0); map[m.product_id] = cur;
+      });
+      const since = last.shift_start_time || `${day}T00:00:00+07:00`;
+      const { data: waste } = await db.from("product_waste").select("product_id, quantity").eq("rider_id", riderId).gte("created_at", since).limit(500);
+      (waste || []).forEach((w: any) => {
+        const cur = map[w.product_id];
+        if (cur && !verified.has(w.product_id)) cur.qty = Math.max(0, cur.qty - Number(w.quantity || 0));
+      });
+      Object.keys(map).forEach((k) => { if (map[k].qty <= 0) delete map[k]; });
+      if (!Object.keys(map).length) continue;
+      setLeftover((s) => ({ ...s, [riderId]: map }));
+      return toast.success(`Sisa stok shift #${last.shift_number} (${day}) ditambahkan`);
+    }
+    setLeftover((s) => ({ ...s, [riderId]: {} }));
+    toast.info("Tidak ada stok kembali di shift sebelumnya — isi manual lewat ikon pensil");
   };
 
   const [sisaEdit, setSisaEdit] = useState("");
@@ -367,9 +374,9 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Edit sisa stok" onClick={() => setSisaEdit(`${rid}:${l.product_id}`)}><Pencil className="h-3.5 w-3.5" /></Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Hapus sisa stok" onClick={() => setSisa(rid, l, 0)}><Trash2 className="h-3.5 w-3.5" /></Button>
                           </div>
-                        ) : hasSisa ? (
+                        ) : (
                           <Button size="icon" variant="ghost" className="h-7 w-7" title="Isi sisa stok" onClick={() => setSisaEdit(`${rid}:${l.product_id}`)}><Pencil className="h-3.5 w-3.5 opacity-50" /></Button>
-                        ) : "-"}</td>
+                        )}</td>
                         {reqs.map((r) => {
                           const it = l.per[r.id];
                           return <td key={r.id} className="p-1 text-center">{it ? (
