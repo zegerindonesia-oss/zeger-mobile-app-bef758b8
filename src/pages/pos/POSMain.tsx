@@ -42,6 +42,8 @@ import { loadPrintSettings, printReceipt, printKitchen, printStickersOnly, DEFAU
 import { enqueueOfflineSale } from '@/lib/pos-offline';
 import { POSVoiceOrder } from '@/components/pos/POSVoiceOrder';
 import type { POSCartItem } from '@/hooks/usePOSCart';
+import { MemberBenefitsDialog, type MemberBenefit } from '@/components/loyalty/MemberBenefits';
+import { lookupRedemption as lookupRdm, previewRedemptionDiscount as previewRdm } from '@/lib/loyalty';
 
 /** Modifiers + free notes combined for receipt, KDS, and reports. */
 const lineNotes = (i: POSCartItem) =>
@@ -83,6 +85,7 @@ const POSMain = () => {
   const [reportsOpen, setReportsOpen] = useState(false);
   const receiptPhoneRef = useRef<string>('');
   const [redeemOpen, setRedeemOpen] = useState(false);
+  const [benefitsOpen, setBenefitsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [redemption, setRedemption] = useState<AppliedRedemption | null>(null);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
@@ -131,6 +134,23 @@ const POSMain = () => {
     loadBranch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.branch_id]);
+
+  // Apply a member reward: free menus are added to the cart first so the discount covers them.
+  const applyBenefit = async (b: MemberBenefit) => {
+    let base = Math.max(0, cart.totals.total - totalPromoDiscount);
+    if (b.product_id) {
+      const { data: p } = await supabase.from('products').select('id, code, name, category, price, image_url').eq('id', b.product_id).maybeSingle();
+      if (p && !cart.items.some((i) => i.product_id === p.id)) {
+        cart.addItem({ product_id: p.id, product_code: (p as any).code || '', product_name: p.name, category: (p as any).category ?? null, price: Number(p.price), image_url: (p as any).image_url });
+        base += Number(p.price);
+      }
+    }
+    const info = await lookupRdm(b.code);
+    if (!info || info.status !== 'active') throw new Error('Voucher tidak aktif');
+    const discount = b.product_id ? Math.min(Number(info.discount_value), base) : previewRdm(info, base);
+    setRedemption({ code: b.code, discount, reward_name: b.reward_name, points_spent: 0, remaining_points: member?.points ?? 0 });
+    toast.success(`Voucher dipakai: ${b.reward_name}`);
+  };
 
   const generateTxNumber = (suffix?: string) => {
     const d = new Date();
@@ -643,7 +663,7 @@ const POSMain = () => {
               setMember(null);
               setRedemption(null);
             }}
-            onRedeemPoints={() => setRedeemOpen(true)}
+            onRedeemPoints={() => setBenefitsOpen(true)}
             onShowMemberHistory={() => setHistoryOpen(true)}
             redemption={redemption}
             onClearRedemption={() => setRedemption(null)}
@@ -713,8 +733,17 @@ const POSMain = () => {
       <MemberScanDialog
         open={memberScanOpen}
         onOpenChange={setMemberScanOpen}
-        onSelect={setMember}
+        onSelect={(m) => { setMember(m); setBenefitsOpen(true); }}
         amount={Math.max(0, cart.totals.total - totalPromoDiscount)}
+      />
+      <MemberBenefitsDialog
+        open={benefitsOpen}
+        onOpenChange={setBenefitsOpen}
+        memberId={member?.id}
+        memberName={member?.name}
+        points={member?.points ?? 0}
+        onRedeemMore={() => { setBenefitsOpen(false); setRedeemOpen(true); }}
+        onUse={(b) => { applyBenefit(b).catch((e) => toast.error(e.message || 'Gagal memakai voucher')); }}
       />
       <LoyaltyRedeemDialog
         open={redeemOpen}

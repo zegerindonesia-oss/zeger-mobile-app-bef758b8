@@ -127,7 +127,7 @@ export const POSCart = ({
             </div>
             <div className="mt-1 grid grid-cols-2 gap-1">
               <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={onRedeemPoints}>
-                <Gift className="mr-1 h-3 w-3" /> Tukar Poin
+                <Gift className="mr-1 h-3 w-3" /> Benefit & Voucher
               </Button>
               <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={onShowMemberHistory}>
                 <History className="mr-1 h-3 w-3" /> Riwayat

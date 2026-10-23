@@ -68,10 +68,17 @@ export function MemberScanDialog({ open, onOpenChange, onSelect, amount = 0 }: P
   }, [open]);
 
   const lookup = async (value: string) => {
-    const trimmed = value.trim();
+    let trimmed = value.trim();
     if (!trimmed) return;
     setLoading(true);
     try {
+      // A scanned reward voucher (RDM…) resolves to its owner so the cashier sees all benefits.
+      if (/^RDM/i.test(trimmed)) {
+        const { data: rd } = await (supabase as any).rpc('lookup_redemption', { _code: trimmed });
+        const r = Array.isArray(rd) ? rd[0] : rd;
+        if (!r) { toast.error('Voucher tidak ditemukan'); return; }
+        trimmed = r.member_id;
+      }
       const { data, error } = await (supabase as any).rpc('lookup_member', { _code: trimmed });
       if (error) throw error;
       const member = Array.isArray(data) ? data[0] : data;
