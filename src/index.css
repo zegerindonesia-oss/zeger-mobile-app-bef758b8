@@ -603,14 +603,17 @@
     font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
     background: hsl(var(--cx-canvas));
     color: hsl(var(--cx-ink));
-    letter-spacing: -0.011em;
+    letter-spacing: -0.005em;
     -webkit-font-smoothing: antialiased;
   }
   .cx-app h1, .cx-app h2, .cx-app .cx-display {
-    font-family: 'Sora', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-    letter-spacing: -0.028em;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.01em;
   }
-  .cx-num { font-family: 'Sora', ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  /* Calmer weights, Fore-like: extrabold reads as bold, bold as semibold */
+  .cx-app .font-extrabold, .cx-app .font-black { font-weight: 700; }
+  .cx-app .font-bold { font-weight: 600; }
+  .cx-num { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 
   /* ---- Surfaces ---- */
   .cx-card {
