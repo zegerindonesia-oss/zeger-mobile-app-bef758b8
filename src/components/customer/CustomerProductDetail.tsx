@@ -1,6 +1,6 @@
 import { describeMenu } from '@/lib/menu-descriptions';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, Minus, Plus, ShoppingBag, Flame, Snowflake, Check } from 'lucide-react';
+import { ChevronLeft, Minus, Plus, ShoppingBag, CupSoda, Coffee, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { normalizeImageUrl } from '@/lib/image-url';
 import { artworkFor, cxArt, formatRupiah, onArtError } from '@/lib/customer-art';
@@ -69,7 +69,9 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
 
   const total = unit * quantity;
   const artFallback = temperature === 'hot' ? cxArt.cupHot : artworkFor(product);
-  const hero = normalizeImageUrl(product.image_url) || artFallback;
+  const opts = (product.custom_options && typeof product.custom_options === 'object') ? product.custom_options : {};
+  const variantImg = temperature === 'hot' ? opts.image_hot : opts.image_iced;
+  const hero = normalizeImageUrl(variantImg) || normalizeImageUrl(product.image_url) || artFallback;
 
   const toggleTopping = (id: string) =>
     setToppings((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
@@ -120,16 +122,14 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
 
       <div className="space-y-5 px-4 pt-6">
         {/* Temperature */}
-        <Group title="Suhu" required>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button onClick={() => setTemperature('cold')} data-active={temperature === 'cold'} className="cx-opt flex items-center justify-center gap-2 py-3.5 text-sm">
-              <Snowflake className="h-[18px] w-[18px]" /> Iced
-            </button>
-            <button onClick={() => setTemperature('hot')} data-active={temperature === 'hot'} className="cx-opt flex items-center justify-center gap-2 py-3.5 text-sm">
-              <Flame className="h-[18px] w-[18px]" /> Hot
-            </button>
-          </div>
-        </Group>
+        <div className="flex gap-2.5">
+          <button onClick={() => setTemperature('cold')} data-active={temperature === 'cold'} className="cx-opt flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm">
+            <CupSoda className="h-[18px] w-[18px]" /> Iced
+          </button>
+          <button onClick={() => setTemperature('hot')} data-active={temperature === 'hot'} className="cx-opt flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm">
+            <Coffee className="h-[18px] w-[18px]" /> Hot
+          </button>
+        </div>
 
         {/* Size */}
         <Group title="Ukuran" required>
