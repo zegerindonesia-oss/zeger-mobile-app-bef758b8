@@ -579,3 +579,60 @@ export default function LoyaltyManagement() {
     </main>
   );
 }
+
+/** Structured editor for reward_value: free menu, fixed or % discount, and claim validity window. */
+function RewardValueFields({ rewardType, value, products, onChange }: {
+  rewardType: string;
+  value: string;
+  products: { id: string; name: string; price: number }[];
+  onChange: (rewardType: string, value: string) => void;
+}) {
+  let v: any = {};
+  try { v = value ? JSON.parse(value) : {}; } catch { v = {}; }
+  const kind = rewardType === 'free_product' ? 'free_product' : v.discount_type === 'percentage' ? 'percentage' : 'fixed';
+  const set = (patch: any, type = rewardType) => onChange(type, JSON.stringify({ ...v, ...patch }));
+  const selectCls = 'flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm';
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Jenis Hadiah</Label>
+          <select className={selectCls} value={kind} onChange={(e) => {
+            const k = e.target.value;
+            if (k === 'free_product') set({ discount_type: undefined }, 'free_product');
+            else set({ discount_type: k, product_id: undefined }, 'discount');
+          }}>
+            <option value="free_product">Menu Gratis</option>
+            <option value="fixed">Potongan Rupiah</option>
+            <option value="percentage">Potongan Persen</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Berlaku setelah ditukar (jam)</Label>
+          <Input type="number" min={1} value={v.valid_hours ?? 24} onChange={(e) => set({ valid_hours: Number(e.target.value) || 24 })} />
+        </div>
+      </div>
+      {kind === 'free_product' ? (
+        <div className="space-y-1.5">
+          <Label>Menu yang didapat</Label>
+          <select className={selectCls} value={v.product_id || ''} onChange={(e) => set({ product_id: e.target.value })}>
+            <option value="">Pilih menu…</option>
+            {products.map((p) => <option key={p.id} value={p.id}>{p.name} · Rp{Number(p.price).toLocaleString('id-ID')}</option>)}
+          </select>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>{kind === 'percentage' ? 'Diskon (%)' : 'Potongan (Rp)'}</Label>
+            <Input type="number" value={v.discount_value ?? ''} onChange={(e) => set({ discount_value: Number(e.target.value) })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Min. transaksi (Rp)</Label>
+            <Input type="number" value={v.min_transaction ?? ''} onChange={(e) => set({ min_transaction: Number(e.target.value) })} />
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">Contoh: 10 poin → Klasik Latte gratis, berlaku 24 jam setelah ditukar.</p>
+    </div>
+  );
+}
