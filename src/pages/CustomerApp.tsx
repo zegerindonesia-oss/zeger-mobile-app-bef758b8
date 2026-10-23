@@ -814,6 +814,12 @@ function CustomerAppInner() {
                 onNavigate={(view: string) => setActiveView(view as View)}
               />
             )}
+            {tableCtx && ['menu', 'cart', 'checkout'].includes(activeView) && (
+              <div className="sticky top-0 z-30 flex items-center justify-between gap-2 bg-zeger px-4 py-2 text-xs text-primary-foreground">
+                <span className="font-semibold">Dine In · Meja {tableCtx.table}</span>
+                <span className="truncate opacity-90">{tableCtx.branchName}</span>
+              </div>
+            )}
             {activeView === 'menu' && (
               <CustomerMenu 
                 products={products}
