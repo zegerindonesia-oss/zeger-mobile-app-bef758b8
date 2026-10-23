@@ -197,7 +197,7 @@ export function CustomerMenu({
                 key={b}
                 onClick={() => { setBrand(b); setCategory('all'); }}
                 data-active={brand === b}
-                className="cx-chip shrink-0 px-4 py-2 text-xs font-extrabold uppercase tracking-wide"
+                className="cx-chip shrink-0 px-4 py-2 text-xs font-semibold"
               >
                 {b === 'all' ? 'Semua Brand' : b}
               </button>
