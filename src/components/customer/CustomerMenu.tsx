@@ -230,7 +230,7 @@ export function CustomerMenu({
       {category !== 'fav' && !search && (
         <section className="pt-4">
           <div className="flex items-center justify-between px-4">
-            <h2 className="text-base font-extrabold">My Favorite</h2>
+            <h2 className="text-[17px] font-semibold">My Favorite</h2>
             {favProducts.length > 0 && (
               <button onClick={() => setCategory('fav')} className="text-xs font-bold text-zeger">Lihat Semua</button>
             )}
@@ -247,12 +247,12 @@ export function CustomerMenu({
                     <img src={normalizeImageUrl(p.image_url) || artworkFor(p)} onError={onArtError(artworkFor(p))} alt={p.name} loading="lazy" className="h-full w-full object-contain" />
                   </button>
                   <button onClick={() => onAddToCart(p)} className="min-w-0 flex-1 text-left">
-                    <span className="line-clamp-2 block pr-6 text-[13px] font-extrabold leading-snug">{p.name}</span>
-                    <span className="cx-num mt-1 block text-sm font-extrabold">{formatRupiah(p.price)}</span>
+                    <span className="line-clamp-2 block pr-6 text-[13px] font-medium leading-snug">{p.name}</span>
+                    <span className="cx-num mt-1 block text-sm font-semibold">{formatRupiah(p.price)}</span>
                   </button>
                   <HeartBtn on onClick={() => toggle(p.id)} className="absolute right-2 top-2" />
                   <button onClick={() => onAddToCart(p)} aria-label={`Tambah ${p.name}`} className="cx-btn cx-btn-primary absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center">
-                    <Plus className="h-4 w-4" strokeWidth={3} />
+                    <Plus className="h-4 w-4" strokeWidth={2.5} />
                   </button>
                 </div>
               ))}
@@ -270,9 +270,9 @@ export function CustomerMenu({
         </div>
       ) : (
         groups.map(([cat, items]) => (
-          <section key={cat} className="mt-3 border-t-8 border-[hsl(var(--cx-rail))] px-4 pt-4">
+          <section key={cat} className="mt-3 border-t-[6px] border-[hsl(var(--cx-rail))] px-4 pt-4">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-lg font-extrabold">{cat}</h2>
+              <h2 className="text-[17px] font-semibold">{cat}</h2>
               <span className="text-xs text-muted-foreground">{items.length} item</span>
             </div>
             <div className="divide-y divide-dashed divide-[hsl(var(--cx-line))]">
@@ -284,15 +284,15 @@ export function CustomerMenu({
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex items-start gap-2">
                       <button onClick={() => onAddToCart(p)} className="min-w-0 flex-1 text-left">
-                        <h3 className="line-clamp-2 text-[15px] font-extrabold leading-snug">{p.name}</h3>
+                        <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug">{p.name}</h3>
                       </button>
                       <HeartBtn on={isFav(p.id)} onClick={() => toggle(p.id)} />
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{describeMenu(p.name, p.description)}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{describeMenu(p.name, p.description)}</p>
                     <div className="mt-auto flex items-center justify-between pt-2">
-                      <span className="cx-num text-sm font-extrabold">{formatRupiah(p.price)}</span>
+                      <span className="cx-num text-sm font-semibold">{formatRupiah(p.price)}</span>
                       <button onClick={() => onAddToCart(p)} aria-label={`Tambah ${p.name}`} className="cx-btn cx-btn-primary flex h-8 w-8 items-center justify-center">
-                        <Plus className="h-4 w-4" strokeWidth={3} />
+                        <Plus className="h-4 w-4" strokeWidth={2.5} />
                       </button>
                     </div>
                   </div>
