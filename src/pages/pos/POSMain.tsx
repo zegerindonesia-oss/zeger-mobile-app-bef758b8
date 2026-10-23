@@ -1,7 +1,7 @@
 import { HubRiderRequestQueue } from '@/components/stock/RiderStockRequests';
 import { Bell } from 'lucide-react';
 import { useRiderRequestAlerts } from '@/hooks/useRiderRequestAlerts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePOSShift } from '@/hooks/usePOSShift';
