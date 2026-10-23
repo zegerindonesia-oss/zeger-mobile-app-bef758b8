@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
+import { readTableContext } from '@/lib/table-qr';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,7 +93,8 @@ function CustomerAppInner() {
   const [customerUser, setCustomerUser] = useState<CustomerUser | null>(null);
   
   // App state
-  const [activeView, setActiveView] = useState<View>('home');
+  const tableCtx = useMemo(() => readTableContext(), []);
+  const [activeView, setActiveView] = useState<View>(tableCtx ? ('menu' as View) : 'home');
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +106,7 @@ function CustomerAppInner() {
     name: string;
     address: string;
     distance?: string;
-  } | null>(null);
+  } | null>(tableCtx ? { id: tableCtx.branchId, name: tableCtx.branchName, address: tableCtx.branchAddress } : null);
   
   // Order success state
   const [lastOrderId, setLastOrderId] = useState<string>('');
@@ -557,6 +559,7 @@ function CustomerAppInner() {
           delivery_fee: orderData.deliveryFee,
           discount_amount: orderData.discount,
           status: 'pending_payment',
+          ...(tableCtx && orderData.outletId === tableCtx.branchId ? { table_number: tableCtx.table } : {}),
         })
         .select()
         .single();
