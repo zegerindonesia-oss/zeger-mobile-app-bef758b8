@@ -469,6 +469,28 @@ const ProductManagement = () => {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              {([['image_iced', 'Foto versi Iced'], ['image_hot', 'Foto versi Hot']] as const).map(([key, label]) => {
+                let opts: any = {};
+                try { opts = form.custom_options.trim() ? JSON.parse(form.custom_options) : {}; } catch { opts = null; }
+                return (
+                  <div key={key} className="space-y-2">
+                    <Label>{label} (opsional)</Label>
+                    <ImageUpload
+                      value={opts?.[key] || ""}
+                      onChange={(url) => {
+                        if (opts === null) { toast.error("Perbaiki Custom Options JSON dulu"); return; }
+                        const next = { ...opts, [key]: url || undefined };
+                        setForm((f) => ({ ...f, custom_options: JSON.stringify(next, null, 2) }));
+                      }}
+                      bucket="product-images"
+                      label={label}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
             <div className="space-y-2">
               <Label>Custom Options (JSON, opsional)</Label>
               <Textarea

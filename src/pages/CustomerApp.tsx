@@ -824,6 +824,7 @@ function CustomerAppInner() {
                 onChangeOutlet={() => setActiveView('outlets')}
                 onBack={() => setActiveView('home')}
                 orderMode={orderMode}
+                onOrderModeChange={setOrderMode}
                 cartItemCount={getTotalItems()}
                 onViewCart={() => setActiveView('cart')}
                 cart={cart}
@@ -883,6 +884,10 @@ function CustomerAppInner() {
                 onBack={() => setActiveView('cart')}
                 onChangeOutlet={() => setActiveView('outlets')}
                 initialOrderType={orderMode === 'delivery' ? 'outlet_delivery' : 'outlet_pickup'}
+                suggestions={products}
+                onQuickAdd={(p: any) => addToCart(p, 1, {})}
+                onAddMore={() => setActiveView('menu')}
+                onOpenSubscription={() => setActiveView('subscription')}
               />
             )}
             {activeView === 'payment' && pendingOrderData && pendingOrderData.orderId && (

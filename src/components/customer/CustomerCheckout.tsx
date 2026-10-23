@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCustomerAppConfig } from "@/hooks/useCustomerAppConfig";
 import {
-  ChevronLeft, Store, ShoppingBag, Bike, Ticket, ChevronRight, Clock, Check, Info, Wallet, Banknote, QrCode,
+  ChevronLeft, Store, ShoppingBag, Bike, Ticket, ChevronRight, Clock, Check, Info, Plus, Wallet, Banknote, QrCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddressPinMap from "./AddressPinMap";
@@ -54,7 +54,13 @@ interface CustomerCheckoutProps {
   onBack: () => void;
   onChangeOutlet?: () => void;
   initialOrderType?: "outlet_pickup" | "outlet_delivery";
+  suggestions?: any[];
+  onQuickAdd?: (product: any) => void;
+  onAddMore?: () => void;
+  onOpenSubscription?: () => void;
 }
+
+const SNACK_RE = /(snack|food|makan|pastry|bakery|roti|cake|kue|cookie|croissant|toast|dessert)/i;
 
 const PAYMENTS = [
   { id: "e_wallet", label: "E-Wallet / QRIS", hint: "Scan dari m-banking / e-wallet apa pun", icon: QrCode },
@@ -70,6 +76,7 @@ const PICKUP_TIMES = [
 export default function CustomerCheckout({
   cart, outletId, outletName, outletAddress, outletDistance, customerUser,
   onConfirm, onBack, onChangeOutlet, initialOrderType = "outlet_pickup",
+  suggestions = [], onQuickAdd, onAddMore, onOpenSubscription,
 }: CustomerCheckoutProps) {
   const { toast } = useToast();
   const cfg = useCustomerAppConfig();
@@ -193,6 +200,25 @@ export default function CustomerCheckout({
       pointsEarned: earnedPoints,
     });
   };
+
+  // Best usable voucher (highest saving) for the one-tap "Pakai" card.
+  const bestVoucher = useMemo(() => {
+    let best: { uv: ClaimedVoucher; value: number } | null = null;
+    vouchers.forEach((uv) => {
+      if (!uv.voucher || voucherBlockedReason(uv.voucher, { subtotal, shippingDue })) return;
+      const value = voucherDiscountFor(uv.voucher, { subtotal, shippingDue });
+      if (value > 0 && (!best || value > best.value)) best = { uv, value };
+    });
+    return best as { uv: ClaimedVoucher; value: number } | null;
+  }, [vouchers, subtotal, shippingDue]);
+
+  // Cross-sell: snacks/food first, then other menus, never items already in cart.
+  const crossSell = useMemo(() => {
+    const inCart = new Set(cart.map((c) => c.id));
+    const pool = suggestions.filter((p) => !inCart.has(p.id) && Number(p.price) > 0);
+    const isSnack = (p: any) => SNACK_RE.test(`${p.category || ''} ${p.sub_category || ''} ${p.name}`);
+    return [...pool.filter(isSnack), ...pool.filter((p) => !isSnack(p))].slice(0, 8);
+  }, [suggestions, cart]);
 
   const disabled = loading || (orderType === 'outlet_delivery' && (!deliveryAddress.trim() || !courier));
 
@@ -337,6 +363,71 @@ export default function CustomerCheckout({
             ))}
           </div>
         </div>
+
+        {/* Cross-sell */}
+        {onQuickAdd && crossSell.length > 0 && (
+          <section className="-mx-4 bg-zeger-cream/60 py-4">
+            <h2 className="px-4 text-base font-extrabold">Lebih nikmat kalau ditambah ini</h2>
+            <p className="px-4 text-[11px] text-muted-foreground">Pasangan pas untuk pesananmu</p>
+            <div className="mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-1 no-scrollbar">
+              {crossSell.map((p) => (
+                <div key={p.id} className="cx-card flex w-[230px] shrink-0 snap-start items-center gap-3 rounded-2xl p-2.5">
+                  <img src={p.image_url || artworkFor(p)} onError={onArtError(artworkFor(p))} alt={p.name} loading="lazy" className="h-16 w-16 shrink-0 rounded-xl bg-white object-contain" />
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-xs font-bold leading-snug">{p.name}</p>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="cx-num text-xs font-extrabold">{formatRupiah(p.price)}</span>
+                      <button
+                        type="button"
+                        aria-label={`Tambah ${p.name}`}
+                        onClick={() => { onQuickAdd(p); toast({ title: `${p.name} ditambahkan` }); }}
+                        className="cx-btn cx-btn-primary flex h-7 w-7 items-center justify-center"
+                      >
+                        <Plus className="h-3.5 w-3.5" strokeWidth={3} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {onAddMore && (
+          <div className="cx-card rounded-3xl p-4 flex items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-bold">Ada tambahan lagi?</p>
+              <p className="text-[11px] text-muted-foreground">Kamu masih bisa tambahin menu lain, ya.</p>
+            </div>
+            <button type="button" onClick={onAddMore} className="cx-btn cx-btn-ghost px-4 py-2 text-xs">Tambah</button>
+          </div>
+        )}
+
+        {/* Subscription upsell */}
+        {cfg.features.subscription && onOpenSubscription && (
+          <button type="button" onClick={onOpenSubscription} className="cx-card w-full overflow-hidden rounded-3xl bg-gradient-to-br from-zeger-soft to-white p-4 text-left">
+            <div className="flex items-center gap-3">
+              <img src={cxArt.crown} alt="" aria-hidden className="h-12 w-12 shrink-0 object-contain" />
+              <div className="flex-1">
+                <p className="text-sm font-extrabold">Berlangganan, Lebih Untung</p>
+                <p className="text-[11px] text-muted-foreground">MyZeger Plan: free cup, buy 1 get 1 & diskon tiap hari</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-zeger" />
+            </div>
+          </button>
+        )}
+
+        {/* Best voucher */}
+        {bestVoucher && selectedVoucher?.id !== bestVoucher.uv.id && (
+          <div className="flex items-center gap-3 rounded-3xl border-2 border-zeger/40 bg-zeger-soft/50 p-4">
+            <Ticket className="h-6 w-6 shrink-0 text-zeger" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">1 voucher terbaik untukmu</p>
+              <p className="text-[11px] font-semibold text-zeger">Dapat diskon {formatRupiah(bestVoucher.value)}</p>
+            </div>
+            <button type="button" onClick={() => setSelectedVoucher(bestVoucher.uv)} className="cx-btn cx-btn-ghost px-4 py-2 text-xs">Pakai</button>
+          </div>
+        )}
 
         {/* Voucher */}
         <button

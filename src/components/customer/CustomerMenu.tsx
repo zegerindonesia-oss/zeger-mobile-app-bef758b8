@@ -1,6 +1,7 @@
 import { describeMenu } from '@/lib/menu-descriptions';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, Plus, Search, ShoppingBag, Store, Sparkles } from 'lucide-react';
+import { ChevronLeft, Plus, Search, ShoppingBag, Store, Heart } from 'lucide-react';
+import { useFavorites } from '@/lib/customer-favorites';
 import { cn } from '@/lib/utils';
 import { normalizeImageUrl } from '@/lib/image-url';
 import { artworkFor, formatRupiah, onArtError } from '@/lib/customer-art';
@@ -27,6 +28,7 @@ interface CustomerMenuProps {
   onChangeOutlet?: () => void;
   onBack?: () => void;
   orderMode?: 'pickup' | 'delivery';
+  onOrderModeChange?: (mode: 'pickup' | 'delivery') => void;
   cartItemCount: number;
   onViewCart: () => void;
   cart: any[];
@@ -43,12 +45,14 @@ export function CustomerMenu({
   onChangeOutlet,
   onBack,
   orderMode = 'pickup',
+  onOrderModeChange,
   onViewCart,
   cart = [],
 }: CustomerMenuProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
+  const { ids: favIds, isFav, toggle } = useFavorites();
 
   const brands = useMemo(() => {
     const seen: string[] = [];
@@ -70,13 +74,22 @@ export function CustomerMenu({
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
       const inBrand = brand === 'all' || brandOf(p) === brand;
-      const inCat = category === 'all' || catOf(p) === category;
+      const inCat = category === 'all' || (category === 'fav' ? favIds.includes(p.id) : catOf(p) === category);
       const inSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
       return inBrand && inCat && inSearch;
     });
-  }, [products, search, category, brand]);
+  }, [products, search, category, brand, favIds]);
 
-  const featured = useMemo(() => products.find((p) => p.image_url) || products[0], [products]);
+  const favProducts = useMemo(
+    () => favIds.map((id) => products.find((p) => p.id === id)).filter(Boolean) as Product[],
+    [favIds, products],
+  );
+  const groups = useMemo(() => {
+    const m = new Map<string, Product[]>();
+    visible.forEach((p) => { const c = catOf(p); m.set(c, [...(m.get(c) || []), p]); });
+    return Array.from(m.entries());
+  }, [visible]);
+
   const totalItems = countItems(cart);
   const totalPrice = cartSubtotal(cart);
 
@@ -84,6 +97,22 @@ export function CustomerMenu({
     <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-40">
       {/* Header */}
       <header className="cx-bar sticky top-0 z-20 px-4 pb-3 pt-3">
+        <div className="mb-3 flex justify-center">
+          <div className="flex rounded-full bg-[hsl(var(--cx-rail))] p-1">
+            {(['pickup', 'delivery'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => onOrderModeChange?.(m)}
+                className={cn(
+                  'rounded-full px-6 py-2 text-sm font-extrabold transition-all',
+                  orderMode === m ? 'bg-white text-zeger shadow ring-2 ring-zeger' : 'text-muted-foreground',
+                )}
+              >
+                {m === 'pickup' ? 'Pick Up' : 'Delivery'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           {onBack && (
             <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-10 w-10 shrink-0">
@@ -130,6 +159,14 @@ export function CustomerMenu({
           </div>
         )}
         <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            onClick={() => setCategory(category === 'fav' ? 'all' : 'fav')}
+            data-active={category === 'fav'}
+            aria-label="Favoritku"
+            className="cx-chip shrink-0 px-4 py-2"
+          >
+            <Heart className={cn('h-4 w-4', category === 'fav' ? 'fill-current' : 'fill-destructive text-destructive')} />
+          </button>
           {categories.map((c) => (
             <button
               key={c}
@@ -143,84 +180,82 @@ export function CustomerMenu({
         </div>
       </header>
 
-      {/* Daily special */}
-      {featured && category === 'all' && !search && (
-        <section className="px-4 pt-4">
-          <h2 className="flex items-center gap-1.5 text-base font-extrabold">
-            Pilihan Hari Ini <Sparkles className="h-4 w-4 text-zeger-gold" />
-          </h2>
-          <div className="cx-card cx-stage-dark cx-rise mt-2.5 flex items-center gap-3 overflow-hidden rounded-[26px] p-4">
-            <div className="min-w-0 flex-1 text-white">
-              <p className="truncate text-lg font-extrabold leading-tight">{featured.name}</p>
-              <p className="mt-1 line-clamp-2 text-xs leading-snug text-white/80">
-                {featured.description || 'Racikan spesial Zeger, nikmat disajikan kapan saja.'}
-              </p>
-              <div className="mt-3 flex items-center gap-2.5">
-                <span className="cx-num text-base font-extrabold">{formatRupiah(featured.price)}</span>
-                <button onClick={() => onAddToCart(featured)} className="cx-btn cx-btn-gold px-4 py-1.5 text-xs">
-                  Pesan
-                </button>
-              </div>
-            </div>
-            <img
-              src={normalizeImageUrl(featured.image_url) || artworkFor(featured)}
-              onError={onArtError(artworkFor(featured))}
-              alt={featured.name}
-              loading="lazy"
-              className="cx-float h-[104px] w-[104px] shrink-0 rounded-[22px] object-cover shadow-xl ring-2 ring-white/25"
-            />
+      {/* My Favorite */}
+      {category !== 'fav' && !search && (
+        <section className="pt-4">
+          <div className="flex items-center justify-between px-4">
+            <h2 className="text-base font-extrabold">My Favorite</h2>
+            {favProducts.length > 0 && (
+              <button onClick={() => setCategory('fav')} className="text-xs font-bold text-zeger">Lihat Semua</button>
+            )}
           </div>
+          {favProducts.length === 0 ? (
+            <p className="mx-4 mt-2 rounded-2xl border border-dashed border-[hsl(var(--cx-line))] bg-white px-4 py-3 text-xs text-muted-foreground">
+              Tekan ikon <Heart className="inline h-3.5 w-3.5 text-destructive" /> di menu untuk menyimpan favoritmu di sini.
+            </p>
+          ) : (
+            <div className="mt-2.5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {favProducts.map((p) => (
+                <div key={p.id} className="cx-card relative flex w-[78%] max-w-[290px] shrink-0 snap-start items-center gap-3 rounded-[20px] p-2.5">
+                  <button onClick={() => onAddToCart(p)} className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-2xl bg-white">
+                    <img src={normalizeImageUrl(p.image_url) || artworkFor(p)} onError={onArtError(artworkFor(p))} alt={p.name} loading="lazy" className="h-full w-full object-contain" />
+                  </button>
+                  <button onClick={() => onAddToCart(p)} className="min-w-0 flex-1 text-left">
+                    <span className="line-clamp-2 block pr-6 text-[13px] font-extrabold leading-snug">{p.name}</span>
+                    <span className="cx-num mt-1 block text-sm font-extrabold">{formatRupiah(p.price)}</span>
+                  </button>
+                  <HeartBtn on onClick={() => toggle(p.id)} className="absolute right-2 top-2" />
+                  <button onClick={() => onAddToCart(p)} aria-label={`Tambah ${p.name}`} className="cx-btn cx-btn-primary absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center">
+                    <Plus className="h-4 w-4" strokeWidth={3} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
-      {/* Grid */}
-      <section className="px-4 pt-5">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-base font-extrabold">{category === 'all' ? 'Semua Menu' : category}</h2>
-          <span className="text-xs text-muted-foreground">{visible.length} item</span>
+      {/* Menu grouped by category */}
+      {visible.length === 0 ? (
+        <div className="cx-card mx-4 mt-5 flex flex-col items-center rounded-[26px] px-6 py-12 text-center">
+          {category === 'fav' ? <Heart className="h-10 w-10 text-muted-foreground" /> : <Search className="h-10 w-10 text-muted-foreground" />}
+          <p className="mt-3 text-sm font-bold">{category === 'fav' ? 'Belum ada favorit' : 'Menu tidak ditemukan'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{category === 'fav' ? 'Tekan ikon hati di menu yang kamu suka.' : 'Coba kata kunci atau kategori lain.'}</p>
         </div>
-
-        {visible.length === 0 ? (
-          <div className="cx-card mt-3 flex flex-col items-center rounded-[26px] px-6 py-12 text-center">
-            <Search className="h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-sm font-bold">Menu tidak ditemukan</p>
-            <p className="mt-1 text-xs text-muted-foreground">Coba kata kunci atau kategori lain.</p>
-          </div>
-        ) : (
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {visible.map((p) => (
-              <article key={p.id} className="cx-card flex flex-col overflow-hidden rounded-[22px]">
-                <button onClick={() => onAddToCart(p)} className="m-2 mb-0 block aspect-square overflow-hidden rounded-[18px] bg-white text-left shadow-sm">
-                  <img
-                    src={normalizeImageUrl(p.image_url) || artworkFor(p)}
-                    onError={onArtError(artworkFor(p))}
-                    alt={p.name}
-                    loading="lazy"
-                    className="cx-tilt h-full w-full object-cover"
-                  />
-                </button>
-                <div className="flex flex-1 flex-col p-3">
-                  <button onClick={() => onAddToCart(p)} className="text-left">
-                    <h3 className="line-clamp-2 min-h-[2.2rem] text-[13px] font-extrabold leading-snug">{p.name}</h3>
+      ) : (
+        groups.map(([cat, items]) => (
+          <section key={cat} className="mt-3 border-t-8 border-[hsl(var(--cx-rail))] px-4 pt-4">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-extrabold">{cat}</h2>
+              <span className="text-xs text-muted-foreground">{items.length} item</span>
+            </div>
+            <div className="divide-y divide-dashed divide-[hsl(var(--cx-line))]">
+              {items.map((p) => (
+                <article key={p.id} className="flex gap-3 py-3.5">
+                  <button onClick={() => onAddToCart(p)} className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm">
+                    <img src={normalizeImageUrl(p.image_url) || artworkFor(p)} onError={onArtError(artworkFor(p))} alt={p.name} loading="lazy" className="h-full w-full object-contain" />
                   </button>
-                  <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{describeMenu(p.name, p.description)}</p>
-                  <div className="mt-auto flex items-center justify-between pt-2.5">
-                    <span className="cx-num text-sm font-extrabold text-zeger">{formatRupiah(p.price)}</span>
-                    <button
-                      onClick={() => onAddToCart(p)}
-                      aria-label={`Tambah ${p.name}`}
-                      className="cx-btn cx-btn-primary flex h-9 w-9 items-center justify-center"
-                    >
-                      <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
-                    </button>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="flex items-start gap-2">
+                      <button onClick={() => onAddToCart(p)} className="min-w-0 flex-1 text-left">
+                        <h3 className="line-clamp-2 text-[15px] font-extrabold leading-snug">{p.name}</h3>
+                      </button>
+                      <HeartBtn on={isFav(p.id)} onClick={() => toggle(p.id)} />
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{describeMenu(p.name, p.description)}</p>
+                    <div className="mt-auto flex items-center justify-between pt-2">
+                      <span className="cx-num text-sm font-extrabold">{formatRupiah(p.price)}</span>
+                      <button onClick={() => onAddToCart(p)} aria-label={`Tambah ${p.name}`} className="cx-btn cx-btn-primary flex h-8 w-8 items-center justify-center">
+                        <Plus className="h-4 w-4" strokeWidth={3} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
+                </article>
+              ))}
+            </div>
+          </section>
+        ))
+      )}
       {/* Floating cart bar */}
       {totalItems > 0 && (
         <div className="fixed inset-x-0 bottom-[78px] z-30 px-4 pb-[env(safe-area-inset-bottom)]">
@@ -243,6 +278,19 @@ export function CustomerMenu({
         </div>
       )}
     </div>
+  );
+}
+
+function HeartBtn({ on, onClick, className }: { on: boolean; onClick: () => void; className?: string }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      aria-label={on ? 'Hapus dari favorit' : 'Tambah ke favorit'}
+      aria-pressed={on}
+      className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform active:scale-90', className)}
+    >
+      <Heart className={cn('h-5 w-5', on ? 'fill-destructive text-destructive' : 'text-muted-foreground')} />
+    </button>
   );
 }
 
