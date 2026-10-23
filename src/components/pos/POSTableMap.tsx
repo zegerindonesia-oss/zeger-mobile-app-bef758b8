@@ -8,6 +8,11 @@ import { toast } from 'sonner';
 import { Armchair, Clock, Users, Plus, Trash2, ArrowRightLeft, Combine, Receipt, CalendarClock, DoorOpen, ShoppingBag } from 'lucide-react';
 import { usePOSTables, type POSTable, type TableStatus } from '@/hooks/usePOSTables';
 import { cn } from '@/lib/utils';
+import { QrCode, Printer } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { printTableQrs, type QrTemplate } from '@/lib/table-qr-print';
+import { tableQrUrl } from '@/lib/table-qr';
+import { supabase } from '@/integrations/supabase/client';
 
 const STATUS: Record<TableStatus, { label: string; cls: string; dot: string }> = {
   available: { label: 'Kosong', cls: 'border-success/40 bg-success/10 text-success', dot: 'bg-success' },
@@ -225,6 +230,20 @@ const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
   const [shape, setShape] = useState('square');
   const [sec, setSec] = useState<string>('none');
   const [bulk, setBulk] = useState('');
+  const [tpl, setTpl] = useState<QrTemplate>('tent');
+  const [wifi, setWifi] = useState('');
+  const [branchName, setBranchName] = useState('');
+  const [preview, setPreview] = useState<any>(null);
+
+  useEffect(() => {
+    if (!branchId) return;
+    supabase.from('branches').select('name').eq('id', branchId).maybeSingle().then(({ data }) => setBranchName(data?.name || ''));
+  }, [branchId]);
+
+  const print = (nums: string[]) => {
+    if (!nums.length) return toast.error('Belum ada meja');
+    if (!printTableQrs(tpl, branchId, branchName, nums, wifi.trim() || undefined)) toast.error('Izinkan pop-up untuk mencetak');
+  };
 
   const run = async (p: Promise<any>, msg: string) => {
     const { error } = await p;
@@ -292,14 +311,42 @@ const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
       </div>
 
       <div className="space-y-2">
-        <h4 className="font-semibold">Daftar Meja ({tables.length})</h4>
+        <h4 className="font-semibold flex items-center gap-2"><QrCode className="h-4 w-4" /> QR Meja (Scan untuk Pesan)</h4>
+        <div className="grid grid-cols-2 gap-2">
+          <Select value={tpl} onValueChange={(v) => setTpl(v as QrTemplate)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tent">Tent card / akrilik (A6)</SelectItem>
+              <SelectItem value="sticker">Stiker meja</SelectItem>
+              <SelectItem value="thermal">Struk printer kasir</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input placeholder="WiFi (opsional)" value={wifi} onChange={(e) => setWifi(e.target.value)} />
+        </div>
+        <Button variant="outline" className="w-full" onClick={() => print(tables.map((t: any) => t.table_number))}><Printer className="h-4 w-4 mr-2" />Cetak Semua QR Meja</Button>
+
+        <h4 className="font-semibold pt-3">Daftar Meja ({tables.length})</h4>
         {tables.map((t: any) => (
           <div key={t.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
             <span><b>{t.table_number}</b> · {t.capacity} kursi · {sections.find((s: any) => s.id === t.section_id)?.name || 'Tanpa area'}</span>
+            <span className="flex">
+            <Button size="icon" variant="ghost" title="Lihat QR" onClick={() => setPreview(t)}><QrCode className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" title="Cetak QR" onClick={() => print([t.table_number])}><Printer className="h-4 w-4" /></Button>
             <Button size="icon" variant="ghost" disabled={t.status !== 'available'} onClick={() => run(db.from('pos_tables').update({ is_active: false }).eq('id', t.id), 'Meja dinonaktifkan')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+            </span>
           </div>
         ))}
       </div>
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-w-xs text-center">
+          <DialogHeader><DialogTitle>Meja {preview?.table_number}</DialogTitle></DialogHeader>
+          {preview && <div className="flex flex-col items-center gap-3">
+            <div className="rounded-xl bg-card p-3 border"><QRCodeSVG value={tableQrUrl(branchId, preview.table_number)} size={200} /></div>
+            <p className="text-xs text-muted-foreground break-all">{tableQrUrl(branchId, preview.table_number)}</p>
+            <Button className="w-full" onClick={() => print([preview.table_number])}><Printer className="h-4 w-4 mr-2" />Cetak</Button>
+          </div>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
