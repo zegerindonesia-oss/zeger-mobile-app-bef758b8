@@ -69,11 +69,14 @@ export default function LoyaltyManagement() {
     stock_quantity: null as number | null
   });
 
+  const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
   useEffect(() => {
     document.title = 'Loyalty Management | Zeger ERP';
     fetchTiers();
     fetchRewards();
     fetchEarnSettings();
+    supabase.from('products').select('id, name, price').eq('is_active', true).order('name')
+      .then(({ data }) => setProducts((data as any) || []));
   }, []);
 
   const fetchEarnSettings = async () => {
