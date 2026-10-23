@@ -19,6 +19,7 @@ import POSKitchen from "./pages/pos/POSKitchen";
 import POSRiderOrders from "./pages/pos/POSRiderOrders";
 import MobileSeller from "./pages/MobileSeller";
 import CustomerApp from "./pages/CustomerApp";
+import TableLanding from "./pages/TableLanding";
 import CxLab from "./pages/dev/CxLab";
 import NotFound from "./pages/NotFound";
 import DigitalReceipt from "./pages/DigitalReceipt";
@@ -127,6 +128,7 @@ const App = () => (
               <CustomerApp />
             } />
             <Route path="/customer" element={<CustomerApp />} />
+            <Route path="/table" element={<TableLanding />} />
             <Route path="/rider-login" element={<RiderLogin />} />
             <Route path="/admin" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'finance']}>

@@ -19,3 +19,4 @@
 - POS reports (/pos/reports) and cashier cash/shift tools (/pos/cashier) are full pages inside POSPageShell so the sidebar stays visible.
 - COGS calculator & menu engineering (/master/cogs) is read-only analytics: plate cost = recipe × raw_materials.cost_per_unit (auto-updated to latest purchase price by record_material_movement) + wastage %, classified with Kasavana & Smith in src/lib/menu-engineering.ts, so it never writes stock or prices.
 - Loyalty rewards: reward_value JSON holds valid_hours (claim window, default 24) and product_id for free_product rewards; redeem_loyalty_reward stamps expiry/product on loyalty_redemptions, and POS + customer app both read member_benefits() so they always show the same vouchers.
+- POS dine-in table QR uses /table?b=&t= (get_table_qr_info RPC, public minimal fields); context kept in sessionStorage and stamped as customer_orders.table_number, a trigger marks pos_tables occupied, so guests can order without installing the app.

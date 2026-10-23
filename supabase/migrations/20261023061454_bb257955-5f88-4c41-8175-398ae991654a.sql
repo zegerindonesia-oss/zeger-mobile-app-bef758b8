@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.mark_table_from_customer_order() FROM PUBLIC, anon, authenticated;
