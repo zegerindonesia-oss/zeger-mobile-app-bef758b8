@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CupStickerButton } from "./CupStickerPrint";
-import { Bell, History, Minus, Plus, Send, Trash2, Truck } from "lucide-react";
+import { Bell, History, Minus, Pencil, Plus, Send, Trash2, Truck } from "lucide-react";
 
 const db = supabase as any;
 const STATUS: Record<string, { label: string; v: "default" | "secondary" | "destructive" | "outline" }> = {
