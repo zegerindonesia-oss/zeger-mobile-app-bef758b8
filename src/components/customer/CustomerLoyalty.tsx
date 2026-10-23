@@ -252,10 +252,7 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
                 </div>
                 <p className="cx-num mt-3 text-lg font-semibold tracking-[0.2em]">{openVoucher.code}</p>
                 <p className="mt-1 text-xs font-semibold text-emerald-600">{expiryLabel(openVoucher.expires_at)}</p>
-                <button onClick={() => { setOpenVoucher(null); onNavigate('menu'); }} className="cx-btn cx-btn-primary mt-4 w-full py-3 text-sm">
-                  Pesan di aplikasi
-                </button>
-                <p className="mt-2 text-[11px] text-muted-foreground">Pesan di aplikasi: masukkan kode ini di halaman checkout.</p>
+                <p className="mt-3 text-[11px] text-muted-foreground">Datang ke outlet, kasir scan QR ini atau sebut nomor HP member kamu.</p>
               </>
             ) : (
               <p className="mt-3 text-sm text-muted-foreground">{openVoucher.status === 'used' ? 'Voucher ini sudah dipakai.' : 'Voucher ini sudah kedaluwarsa.'}</p>
