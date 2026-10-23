@@ -504,15 +504,12 @@ export default function LoyaltyManagement() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Reward Value (JSON)</Label>
-                    <Textarea
-                      value={rewardForm.reward_value}
-                      onChange={(e) => setRewardForm({ ...rewardForm, reward_value: e.target.value })}
-                      placeholder='{"discount": 20000} or {"product_id": "xxx"}'
-                      rows={3}
-                    />
-                  </div>
+                  <RewardValueFields
+                    rewardType={rewardForm.reward_type}
+                    value={rewardForm.reward_value}
+                    products={products}
+                    onChange={(reward_type, reward_value) => setRewardForm({ ...rewardForm, reward_type, reward_value })}
+                  />
                   <div className="space-y-2">
                     <Label>Gambar Reward</Label>
                     <ImageUpload
