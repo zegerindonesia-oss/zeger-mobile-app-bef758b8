@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell, ChevronRight, Store, MapPinned, Bike, Share2, Crown, Gift,
-  MessageCircle, ShieldCheck, BadgeCheck, Sparkles, Search,
+  MessageCircle, ShieldCheck, BadgeCheck, Search, X, Check,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
@@ -21,6 +21,7 @@ interface CustomerHomeProps {
   onChooseChannel?: (channel: CustomerChannel, mode: CustomerOrderMode) => void;
 }
 
+interface Special { id: string; title: string; desc: string; art: string; badge?: string; points: string[]; cta: string; action: () => void }
 interface Banner { id: string; title: string; image_url: string; link_url: string | null }
 
 const CHANNELS: { id: CustomerChannel; title: string; short: string; desc: string; icon: typeof Store }[] = [
@@ -87,6 +88,21 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
     if (channel === 'wheels') { onNavigate('map'); return; }
     onChooseChannel?.(channel, mode);
   };
+
+  const wa = (text: string) => window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  const [special, setSpecial] = useState<Special | null>(null);
+  const specials: Special[] = [
+    config.features.subscription && { id: 'plan', title: 'Zeger Plan', desc: 'Berlangganan jauh lebih untung', art: cxArt.crown,
+      points: ['Diskon setiap hari selama masa langganan', 'Free cup & promo khusus member', 'Bisa dipakai di semua outlet Zeger'], cta: 'Lihat paket langganan', action: () => onNavigate('subscription') },
+    { id: 'stuff', title: 'Zeger Stuff', desc: 'Bawa minumanmu dengan gaya baru', art: cxArt.bottle, badge: 'Baru',
+      points: ['Tumbler, botol & merchandise resmi Zeger', 'Edisi terbatas untuk Zeger Lovers', 'Tanyakan stok lewat Zeger Care'], cta: 'Tanya merchandise', action: () => wa('Halo Zeger, saya tertarik dengan merchandise Zeger Stuff.') },
+    { id: 'gathering', title: 'Coffee Gathering', desc: 'Rayakan momen spesial bareng Zeger', art: cxArt.bag,
+      points: ['Paket kopi untuk meeting, arisan, acara kantor', 'Bisa pesan dalam jumlah besar', 'Diantar ke lokasi acaramu'], cta: 'Pesan untuk acara', action: () => wa('Halo Zeger, saya ingin pesan Coffee Gathering untuk acara.') },
+    config.features.referral && { id: 'ref', title: 'Share The Sip', desc: 'Bagikan kode referral, dapatkan hadiah', art: cxArt.coin,
+      points: ['Bagikan kode referral-mu ke teman', `Kamu & teman sama-sama dapat poin`, 'Tanpa batas jumlah teman'], cta: 'Bagikan kode', action: () => onNavigate('referral') },
+    config.features.vouchers && { id: 'gift', title: 'Zeger Gift', desc: 'Berbagi kebahagiaan dengan orang terdekat', art: cxArt.gift,
+      points: ['Voucher & hadiah untuk orang tersayang', 'Tukarkan dengan menu favorit', 'Cek voucher yang kamu punya'], cta: 'Lihat voucher', action: () => onNavigate('vouchers') },
+  ].filter(Boolean) as Special[];
 
   const swipe = (dir: 1 | -1) => setSlide((s) => (s + dir + banners.length) % banners.length);
 
@@ -297,60 +313,40 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
         </section>
       )}
 
-      {/* ---------- Favourites ---------- */}
-      {favourites.length > 0 && (
-        <section className="pt-7">
-          <div className="flex items-center justify-between px-4">
-            <h2 className="flex items-center gap-1.5 text-xl font-extrabold">
-              Favorit Zeger <Sparkles className="h-[18px] w-[18px] text-zeger-gold" />
-            </h2>
-            <button onClick={() => startOrder('pickup')} className="flex items-center text-xs font-bold text-zeger">
-              Semua menu <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {favourites.map((p: any) => (
-              <button
-                key={p.id}
-                onClick={() => startOrder('pickup')}
-                className="cx-card w-[138px] shrink-0 snap-start overflow-hidden rounded-[22px] text-left transition-transform active:scale-[0.96]"
-              >
-                <span className="block aspect-square overflow-hidden bg-white">
-                  <img
-                    src={normalizeImageUrl(p.image_url) || artworkFor(p)}
-                    onError={onArtError(artworkFor(p))}
-                    alt={p.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                </span>
-                <span className="block p-2.5">
-                  <span className="line-clamp-2 block min-h-[2.1rem] text-xs font-bold leading-snug">{p.name}</span>
-                  <span className="cx-num mt-1 block text-sm font-extrabold text-zeger">{formatRupiah(p.price)}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
       <div className="mt-4 h-2 bg-[hsl(var(--cx-rail))]" />
 
-      {/* ---------- Highlights ---------- */}
+      {/* ---------- Spesial untukmu ---------- */}
       <section className="px-4 pt-6">
-        <h2 className="text-xl font-extrabold">Yang Menarik di Zeger</h2>
-        <div className="mt-3 grid grid-cols-3 gap-3">
-          {config.features.referral && (
-            <Feature art={cxArt.coin} fallbackIcon={Share2} title="Share The Sip" desc="Ajak teman, dapat poin" onClick={() => onNavigate('referral')} />
-          )}
-          {config.features.subscription && (
-            <Feature art={cxArt.crown} fallbackIcon={Crown} title="MyZeger Plan" desc="Langganan hemat" onClick={() => onNavigate('subscription')} />
-          )}
-          {config.features.vouchers && (
-            <Feature art={cxArt.gift} fallbackIcon={Gift} title="Zeger Gift" desc="Voucher & hadiah" onClick={() => onNavigate('vouchers')} />
-          )}
+        <h2 className="text-xl font-extrabold">Spesial Untukmu di Zeger Coffee</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {specials.map((sp) => (
+            <button key={sp.id} onClick={() => setSpecial(sp)}
+              className="cx-card relative flex flex-col items-center rounded-[22px] px-3 pb-5 pt-5 text-center transition-transform active:scale-[0.97]">
+              {sp.badge && <span className="absolute -right-1 top-3 rounded-l-md bg-zeger px-2.5 py-0.5 text-[11px] font-bold text-zeger-foreground">{sp.badge}</span>}
+              <img src={sp.art} alt="" aria-hidden className="cx-art h-20 w-20 object-contain" loading="lazy" />
+              <span className="mt-3 block text-base font-bold">{sp.title}</span>
+              <span className="mt-1 block text-xs leading-snug text-muted-foreground">{sp.desc}</span>
+            </button>
+          ))}
         </div>
       </section>
+
+      {special && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40" onClick={() => setSpecial(null)}>
+          <div className="cx-app w-full max-w-md rounded-t-[28px] bg-background p-6 pb-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-end"><button onClick={() => setSpecial(null)} aria-label="Tutup" className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><X className="h-4 w-4" /></button></div>
+            <img src={special.art} alt="" aria-hidden className="mx-auto h-24 w-24 object-contain" />
+            <h3 className="mt-3 text-center text-xl font-extrabold">{special.title}</h3>
+            <p className="mt-1 text-center text-sm text-muted-foreground">{special.desc}</p>
+            <ul className="mt-5 space-y-2.5">
+              {special.points.map((pt) => (
+                <li key={pt} className="flex items-start gap-2.5 text-sm"><Check className="mt-0.5 h-4 w-4 shrink-0 text-zeger" />{pt}</li>
+              ))}
+            </ul>
+            <button onClick={() => { const sp = special; setSpecial(null); sp.action(); }} className="cx-btn cx-btn-primary mt-6 w-full py-3.5 text-sm">{special.cta}</button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 h-2 bg-[hsl(var(--cx-rail))]" />
 
