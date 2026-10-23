@@ -225,7 +225,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
     });
     const last = sameDay[sameDay.length - 1];
     const { data, error } = await db.from("stock_movements")
-      .select("product_id, quantity, created_at, actual_delivery_date, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
+      .select("product_id, quantity, notes, created_at, actual_delivery_date, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
       .eq("rider_id", riderId).in("movement_type", ["return", "out"])
       .gte("created_at", `${day}T00:00:00+07:00`).lte("created_at", `${day}T23:59:59+07:00`).limit(500);
     if (error) return toast.error(error.message);
@@ -235,16 +235,35 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
       return chosen;
     };
     const map: Record<string, { qty: number; name: string; product: any }> = {};
+    const verified = new Set<string>();
     (data || []).forEach((m: any) => {
       if (pick(m.actual_delivery_date || m.created_at)?.id !== last.id) return;
       const cur = map[m.product_id] || { qty: 0, name: m.products?.name, product: m.products };
-      cur.qty += Number(m.quantity || 0); map[m.product_id] = cur;
+      // Pakai stok fisik hasil verifikasi Hub bila ada (sudah final setelah waste)
+      const mv = /Verified quantity:\s*(\d+)/i.exec(m.notes || "");
+      if (mv) verified.add(m.product_id);
+      cur.qty += mv ? Number(mv[1]) : Number(m.quantity || 0); map[m.product_id] = cur;
     });
+    // Kurangi waste yang dicatat sejak shift terakhir dimulai (hanya untuk yang belum diverifikasi fisik)
+    const since = last.shift_start_time || `${day}T00:00:00+07:00`;
+    const { data: waste } = await db.from("product_waste").select("product_id, quantity").eq("rider_id", riderId).gte("created_at", since).limit(500);
+    (waste || []).forEach((w: any) => {
+      const cur = map[w.product_id];
+      if (cur && !verified.has(w.product_id)) cur.qty = Math.max(0, cur.qty - Number(w.quantity || 0));
+    });
+    Object.keys(map).forEach((k) => { if (map[k].qty <= 0) delete map[k]; });
     setLeftover((s) => ({ ...s, [riderId]: map }));
     if (!Object.keys(map).length) toast.info(`Tidak ada stok kembali di shift #${last.shift_number} (${day})`);
     else toast.success(`Sisa stok shift #${last.shift_number} (${day}) ditambahkan`);
   };
 
+  const [sisaEdit, setSisaEdit] = useState("");
+  const setSisa = (rid: string, l: any, qty: number) => setLeftover((s) => {
+    const cur = { ...(s[rid] || {}) };
+    if (!(qty > 0)) delete cur[l.product_id];
+    else cur[l.product_id] = { qty: Math.floor(qty), name: l.name, product: l.product };
+    return { ...s, [rid]: cur };
+  });
   const q = (i: any) => Number(edit[i.id] ?? i.approved_qty ?? i.requested_qty ?? 0);
   const buildLines = (reqs: any[]) => {
     const lo = leftover[reqs[0].rider_id] || {};
@@ -336,7 +355,21 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
                     {L.map((l) => (
                       <tr key={l.product_id} className="border-b">
                         <td className={"p-2 " + (l.total === 0 ? "line-through text-muted-foreground" : "")}>{l.name}</td>
-                        <td className="p-2 text-center">{l.sisa || "-"}</td>
+                        <td className="p-1 text-center">{sisaEdit === `${rid}:${l.product_id}` ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <Input autoFocus type="number" min={0} className="h-8 w-14 text-center" defaultValue={l.sisa}
+                              onBlur={(e) => { setSisa(rid, l, Number(e.target.value)); setSisaEdit(""); }}
+                              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+                          </div>
+                        ) : l.sisa ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="w-8">{l.sisa}</span>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="Edit sisa stok" onClick={() => setSisaEdit(`${rid}:${l.product_id}`)}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="Hapus sisa stok" onClick={() => setSisa(rid, l, 0)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        ) : hasSisa ? (
+                          <Button size="icon" variant="ghost" className="h-7 w-7" title="Isi sisa stok" onClick={() => setSisaEdit(`${rid}:${l.product_id}`)}><Pencil className="h-3.5 w-3.5 opacity-50" /></Button>
+                        ) : "-"}</td>
                         {reqs.map((r) => {
                           const it = l.per[r.id];
                           return <td key={r.id} className="p-1 text-center">{it ? (
