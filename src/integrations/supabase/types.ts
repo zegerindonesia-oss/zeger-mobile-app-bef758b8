@@ -797,6 +797,7 @@ export type Database = {
           rider_id: string | null
           rider_profile_id: string | null
           status: string
+          table_number: string | null
           tenant_id: string
           total_price: number
           updated_at: string
@@ -830,6 +831,7 @@ export type Database = {
           rider_id?: string | null
           rider_profile_id?: string | null
           status?: string
+          table_number?: string | null
           tenant_id?: string
           total_price?: number
           updated_at?: string
@@ -863,6 +865,7 @@ export type Database = {
           rider_id?: string | null
           rider_profile_id?: string | null
           status?: string
+          table_number?: string | null
           tenant_id?: string
           total_price?: number
           updated_at?: string
@@ -5625,6 +5628,16 @@ export type Database = {
           email: string
           last_sign_in_at: string
           user_id: string
+        }[]
+      }
+      get_table_qr_info: {
+        Args: { _branch_id: string; _table: string }
+        Returns: {
+          branch_address: string
+          branch_id: string
+          branch_name: string
+          table_exists: boolean
+          table_number: string
         }[]
       }
       get_user_level: {
