@@ -239,7 +239,7 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
       {/* ---------- Channel + order mode ---------- */}
       {config.sections.order_types && (
         <section className="px-4 pt-6">
-          <h2 className="text-xl font-extrabold">Hi {firstName}, pesan sekarang?</h2>
+          <h2 className="text-lg font-bold">Hi {firstName}, pesan sekarang?</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">Pilih layanan Zeger yang paling dekat denganmu</p>
 
           <div className="cx-seg mt-3 grid grid-cols-3 gap-1">
@@ -317,14 +317,14 @@ export function CustomerHome({ customerUser, onNavigate, recentProducts = [], on
 
       {/* ---------- Spesial untukmu ---------- */}
       <section className="px-4 pt-6">
-        <h2 className="text-xl font-extrabold">Spesial Untukmu di Zeger Coffee</h2>
+        <h2 className="text-lg font-bold">Spesial Untukmu di Zeger Coffee</h2>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {specials.map((sp) => (
             <button key={sp.id} onClick={() => setSpecial(sp)}
-              className="cx-card relative flex flex-col items-center rounded-[22px] px-3 pb-5 pt-5 text-center transition-transform active:scale-[0.97]">
-              {sp.badge && <span className="absolute -right-1 top-3 rounded-l-md bg-zeger px-2.5 py-0.5 text-[11px] font-bold text-zeger-foreground">{sp.badge}</span>}
-              <img src={sp.art} alt="" aria-hidden className="cx-art h-20 w-20 object-contain" loading="lazy" />
-              <span className="mt-3 block text-base font-bold">{sp.title}</span>
+              className="cx-card relative flex flex-col items-center rounded-2xl px-3 pb-4 pt-5 text-center transition-transform active:scale-[0.97]">
+              {sp.badge && <span className="absolute -right-1 top-3 rounded-l-md bg-zeger px-2 py-0.5 text-[10px] font-semibold text-zeger-foreground">{sp.badge}</span>}
+              <img src={sp.art} alt="" aria-hidden className="cx-art h-16 w-16 object-contain" loading="lazy" />
+              <span className="mt-3 block text-sm font-semibold">{sp.title}</span>
               <span className="mt-1 block text-xs leading-snug text-muted-foreground">{sp.desc}</span>
             </button>
           ))}
