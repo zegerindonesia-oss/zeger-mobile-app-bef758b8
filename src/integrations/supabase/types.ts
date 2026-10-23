@@ -1567,6 +1567,7 @@ export type Database = {
           member_id: string
           min_transaction: number
           points_spent: number
+          product_id: string | null
           reward_id: string | null
           reward_name: string
           status: string
@@ -1587,6 +1588,7 @@ export type Database = {
           member_id: string
           min_transaction?: number
           points_spent?: number
+          product_id?: string | null
           reward_id?: string | null
           reward_name: string
           status?: string
@@ -1607,6 +1609,7 @@ export type Database = {
           member_id?: string
           min_transaction?: number
           points_spent?: number
+          product_id?: string | null
           reward_id?: string | null
           reward_name?: string
           status?: string
@@ -5723,6 +5726,23 @@ export type Database = {
           min_transaction: number
           reward_name: string
           status: string
+        }[]
+      }
+      member_benefits: {
+        Args: { _member_id: string }
+        Returns: {
+          code: string
+          discount_type: string
+          discount_value: number
+          expires_at: string
+          id: string
+          image_url: string
+          max_discount: number
+          min_transaction: number
+          product_id: string
+          reward_name: string
+          status: string
+          used_at: string
         }[]
       }
       member_points_history: {
