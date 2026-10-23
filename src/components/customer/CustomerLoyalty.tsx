@@ -6,6 +6,9 @@ import { LoyaltyRedeemDialog } from '@/components/loyalty/LoyaltyRedeemDialog';
 import { PointsHistoryList } from '@/components/loyalty/PointsHistoryList';
 import { cxArt, formatRupiah } from '@/lib/customer-art';
 import { cn } from '@/lib/utils';
+import { redeemReward } from '@/lib/loyalty';
+import { expiryLabel } from '@/components/loyalty/MemberBenefits';
+import { toast } from 'sonner';
 
 interface CustomerLoyaltyProps {
   customerUser: any;
@@ -17,6 +20,9 @@ interface Redemption {
   id: string; reward_name: string; code: string; points_spent: number; status: string; expires_at: string | null;
 }
 
+const isActive = (r: { status: string; expires_at: string | null }) =>
+  r.status === 'active' && (!r.expires_at || new Date(r.expires_at).getTime() > Date.now());
+
 export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLoyaltyProps) {
   const [points, setPoints] = useState<number>(customerUser?.points || 0);
   const [memberCode, setMemberCode] = useState<string | null>(customerUser?.member_code || null);
@@ -26,6 +32,27 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
   const [showQr, setShowQr] = useState(false);
+  const [catalog, setCatalog] = useState<any[]>([]);
+  const [confirm, setConfirm] = useState<any | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [openVoucher, setOpenVoucher] = useState<Redemption | null>(null);
+  useEffect(() => {
+    supabase.from('loyalty_rewards').select('id, reward_name, description, points_required, image_url, reward_type, reward_value, stock_quantity')
+      .eq('is_active', true).order('points_required').then(({ data }) => setCatalog(data || []));
+  }, []);
+  const doRedeem = async () => {
+    if (!confirm || !customerUser?.id) return;
+    setBusy(true);
+    try {
+      const res = await redeemReward(customerUser.id, confirm.id);
+      setPoints(res.remaining_points);
+      await load();
+      setTab('rewards');
+      setOpenVoucher({ id: res.code, reward_name: confirm.reward_name, code: res.code, points_spent: res.points_spent, status: 'active',
+        expires_at: new Date(Date.now() + Number(confirm.reward_value?.valid_hours ?? 24) * 3600000).toISOString() });
+      setConfirm(null);
+    } catch (e: any) { toast.error(e.message || 'Gagal menukar poin'); } finally { setBusy(false); }
+  };
 
   const load = useCallback(async () => {
     if (!customerUser?.id) return;
@@ -117,6 +144,35 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
         </div>
       </section>
 
+      {/* Reward catalog */}
+      {catalog.length > 0 && (
+        <section className="pt-6">
+          <div className="flex items-baseline justify-between px-4">
+            <h2 className="text-base font-semibold">Tukar Poinmu</h2>
+            <span className="text-xs text-muted-foreground">{points} poin</span>
+          </div>
+          <div className="mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+            {catalog.map((r) => {
+              const enough = points >= r.points_required;
+              const out = r.stock_quantity !== null && r.stock_quantity <= 0;
+              return (
+                <button key={r.id} onClick={() => setConfirm(r)} disabled={out}
+                  className="cx-card w-[150px] shrink-0 snap-start overflow-hidden rounded-[20px] text-left disabled:opacity-50">
+                  <div className="aspect-square bg-[hsl(var(--cx-rail))]">
+                    {r.image_url ? <img src={r.image_url} alt={r.reward_name} className="h-full w-full object-cover" loading="lazy" />
+                      : <div className="flex h-full items-center justify-center"><Gift className="h-8 w-8 text-muted-foreground" /></div>}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="line-clamp-2 text-[13px] font-semibold leading-tight">{r.reward_name}</p>
+                    <p className={cn('mt-1 text-xs font-semibold', enough ? 'text-zeger' : 'text-muted-foreground')}>{r.points_required} poin</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Tabs */}
       <section className="px-4 pt-6">
         <div className="cx-seg grid grid-cols-2 gap-1">
@@ -137,7 +193,7 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
           ) : (
             <div className="space-y-2.5">
               {redemptions.map((r) => (
-                <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-[hsl(var(--cx-line))] p-3">
+                <button key={r.id} onClick={() => setOpenVoucher(r)} className="flex w-full items-center gap-3 rounded-2xl border border-[hsl(var(--cx-line))] p-3 text-left">
                   <span className="cx-stage flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zeger">
                     <Gift className="h-5 w-5" />
                   </span>
@@ -150,12 +206,12 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
                   <span
                     className={cn(
                       'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold',
-                      r.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-[hsl(var(--cx-rail))] text-muted-foreground',
+                      isActive(r) ? 'bg-emerald-50 text-emerald-600' : 'bg-[hsl(var(--cx-rail))] text-muted-foreground',
                     )}
                   >
-                    {r.status === 'active' ? 'Aktif' : r.status === 'used' ? 'Terpakai' : 'Kedaluwarsa'}
+                    {isActive(r) ? expiryLabel(r.expires_at) : r.status === 'used' ? 'Terpakai' : 'Kedaluwarsa'}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -167,6 +223,46 @@ export function CustomerLoyalty({ customerUser, onNavigate, onBack }: CustomerLo
           Lihat semua voucher saya
         </button>
       </div>
+
+      {confirm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setConfirm(null)}>
+          <div className="w-full max-w-md rounded-t-[28px] bg-white p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+            {confirm.image_url && <img src={confirm.image_url} alt="" className="mx-auto h-40 w-40 rounded-2xl object-cover" />}
+            <p className="mt-3 text-center text-base font-semibold">{confirm.reward_name}</p>
+            {confirm.description && <p className="mt-1 text-center text-sm text-muted-foreground">{confirm.description}</p>}
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              Tukar <b className="text-foreground">{confirm.points_required} poin</b> · berlaku {Number(confirm.reward_value?.valid_hours ?? 24)} jam setelah ditukar
+            </p>
+            <button disabled={busy || points < confirm.points_required} onClick={doRedeem} className="cx-btn cx-btn-primary mt-4 w-full py-3 text-sm disabled:opacity-50">
+              {points < confirm.points_required ? `Kurang ${confirm.points_required - points} poin` : busy ? 'Memproses…' : 'Tukar sekarang'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {openVoucher && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setOpenVoucher(null)}>
+          <div className="w-full max-w-md rounded-t-[28px] bg-white p-5 pb-8 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base font-semibold">{openVoucher.reward_name}</p>
+            {isActive(openVoucher) ? (
+              <>
+                <p className="mt-1 text-xs text-muted-foreground">Tunjukkan QR ini ke kasir outlet</p>
+                <div className="mx-auto mt-4 w-fit rounded-2xl border border-[hsl(var(--cx-line))] bg-white p-3">
+                  <QRCodeSVG value={openVoucher.code} size={190} level="M" />
+                </div>
+                <p className="cx-num mt-3 text-lg font-semibold tracking-[0.2em]">{openVoucher.code}</p>
+                <p className="mt-1 text-xs font-semibold text-emerald-600">{expiryLabel(openVoucher.expires_at)}</p>
+                <button onClick={() => { setOpenVoucher(null); onNavigate('menu'); }} className="cx-btn cx-btn-primary mt-4 w-full py-3 text-sm">
+                  Pesan di aplikasi
+                </button>
+                <p className="mt-2 text-[11px] text-muted-foreground">Pesan di aplikasi: masukkan kode ini di halaman checkout.</p>
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">{openVoucher.status === 'used' ? 'Voucher ini sudah dipakai.' : 'Voucher ini sudah kedaluwarsa.'}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <LoyaltyRedeemDialog
         open={redeemOpen}
