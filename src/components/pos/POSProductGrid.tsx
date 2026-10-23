@@ -299,8 +299,8 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
                     <Star3D key={String(isFav(p))} size={20} active={isFav(p)} />
                   </button>
                   {p.image_url ? (
-                    <div className="aspect-[4/3] w-full bg-card rounded-xl overflow-hidden mb-2">
-                      <img src={normalizeImageUrl(p.image_url) || p.image_url} alt={p.name} className="w-full h-full object-contain object-center p-1 transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                    <div className="aspect-[4/3] w-full bg-muted rounded-xl overflow-hidden mb-2">
+                      <img src={normalizeImageUrl(p.image_url) || p.image_url} alt={p.name} className="block w-full h-full object-cover object-center rounded-xl transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                     </div>
                   ) : (
                     <div className="aspect-[4/3] w-full bg-muted/70 rounded-xl mb-2 flex items-center justify-center text-xs font-bold text-muted-foreground">
