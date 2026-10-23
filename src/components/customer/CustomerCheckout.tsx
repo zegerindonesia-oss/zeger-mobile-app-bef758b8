@@ -81,7 +81,10 @@ export default function CustomerCheckout({
   const { toast } = useToast();
   const cfg = useCustomerAppConfig();
   const [orderType, setOrderType] = useState<"outlet_pickup" | "outlet_delivery">(initialOrderType);
-  const [deliveryAddress, setDeliveryAddress] = useState(customerUser.address || "");
+  const [deliveryAddress, setDeliveryAddress] = useState(() => {
+    if (customerUser.address) return customerUser.address;
+    try { return JSON.parse(localStorage.getItem("cx_delivery_address_v1") || "null")?.address || ""; } catch { return ""; }
+  });
   const [pickupTime, setPickupTime] = useState("now");
   const paymentMethod: string = "e_wallet";
   const [usePoints, setUsePoints] = useState(false);
