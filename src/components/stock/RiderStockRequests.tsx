@@ -376,7 +376,7 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
                           </div>
                         ) : (
                           <Button size="icon" variant="ghost" className="h-7 w-7" title="Isi sisa stok" onClick={() => setSisaEdit(`${rid}:${l.product_id}`)}><Pencil className="h-3.5 w-3.5 opacity-50" /></Button>
-                        ) : "-"}</td>
+                        )}</td>
                         {reqs.map((r) => {
                           const it = l.per[r.id];
                           return <td key={r.id} className="p-1 text-center">{it ? (
