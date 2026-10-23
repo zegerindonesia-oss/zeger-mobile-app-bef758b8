@@ -1,6 +1,7 @@
 import { describeMenu } from '@/lib/menu-descriptions';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, Plus, Search, ShoppingBag, Store, Sparkles } from 'lucide-react';
+import { ChevronLeft, Plus, Search, ShoppingBag, Store, Heart } from 'lucide-react';
+import { useFavorites } from '@/lib/customer-favorites';
 import { cn } from '@/lib/utils';
 import { normalizeImageUrl } from '@/lib/image-url';
 import { artworkFor, formatRupiah, onArtError } from '@/lib/customer-art';
@@ -27,6 +28,7 @@ interface CustomerMenuProps {
   onChangeOutlet?: () => void;
   onBack?: () => void;
   orderMode?: 'pickup' | 'delivery';
+  onOrderModeChange?: (mode: 'pickup' | 'delivery') => void;
   cartItemCount: number;
   onViewCart: () => void;
   cart: any[];
@@ -43,12 +45,14 @@ export function CustomerMenu({
   onChangeOutlet,
   onBack,
   orderMode = 'pickup',
+  onOrderModeChange,
   onViewCart,
   cart = [],
 }: CustomerMenuProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
+  const { ids: favIds, isFav, toggle } = useFavorites();
 
   const brands = useMemo(() => {
     const seen: string[] = [];
@@ -70,13 +74,22 @@ export function CustomerMenu({
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
       const inBrand = brand === 'all' || brandOf(p) === brand;
-      const inCat = category === 'all' || catOf(p) === category;
+      const inCat = category === 'all' || (category === 'fav' ? favIds.includes(p.id) : catOf(p) === category);
       const inSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
       return inBrand && inCat && inSearch;
     });
-  }, [products, search, category, brand]);
+  }, [products, search, category, brand, favIds]);
 
-  const featured = useMemo(() => products.find((p) => p.image_url) || products[0], [products]);
+  const favProducts = useMemo(
+    () => favIds.map((id) => products.find((p) => p.id === id)).filter(Boolean) as Product[],
+    [favIds, products],
+  );
+  const groups = useMemo(() => {
+    const m = new Map<string, Product[]>();
+    visible.forEach((p) => { const c = catOf(p); m.set(c, [...(m.get(c) || []), p]); });
+    return Array.from(m.entries());
+  }, [visible]);
+
   const totalItems = countItems(cart);
   const totalPrice = cartSubtotal(cart);
 
@@ -84,6 +97,22 @@ export function CustomerMenu({
     <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-40">
       {/* Header */}
       <header className="cx-bar sticky top-0 z-20 px-4 pb-3 pt-3">
+        <div className="mb-3 flex justify-center">
+          <div className="flex rounded-full bg-[hsl(var(--cx-rail))] p-1">
+            {(['pickup', 'delivery'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => onOrderModeChange?.(m)}
+                className={cn(
+                  'rounded-full px-6 py-2 text-sm font-extrabold transition-all',
+                  orderMode === m ? 'bg-white text-zeger shadow ring-2 ring-zeger' : 'text-muted-foreground',
+                )}
+              >
+                {m === 'pickup' ? 'Pick Up' : 'Delivery'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           {onBack && (
             <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-10 w-10 shrink-0">
@@ -130,6 +159,14 @@ export function CustomerMenu({
           </div>
         )}
         <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            onClick={() => setCategory(category === 'fav' ? 'all' : 'fav')}
+            data-active={category === 'fav'}
+            aria-label="Favoritku"
+            className="cx-chip shrink-0 px-4 py-2"
+          >
+            <Heart className={cn('h-4 w-4', category === 'fav' ? 'fill-current' : 'fill-destructive text-destructive')} />
+          </button>
           {categories.map((c) => (
             <button
               key={c}
@@ -241,6 +278,19 @@ export function CustomerMenu({
         </div>
       )}
     </div>
+  );
+}
+
+function HeartBtn({ on, onClick, className }: { on: boolean; onClick: () => void; className?: string }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      aria-label={on ? 'Hapus dari favorit' : 'Tambah ke favorit'}
+      aria-pressed={on}
+      className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform active:scale-90', className)}
+    >
+      <Heart className={cn('h-5 w-5', on ? 'fill-destructive text-destructive' : 'text-muted-foreground')} />
+    </button>
   );
 }
 

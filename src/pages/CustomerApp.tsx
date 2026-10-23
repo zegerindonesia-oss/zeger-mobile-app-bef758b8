@@ -824,6 +824,7 @@ function CustomerAppInner() {
                 onChangeOutlet={() => setActiveView('outlets')}
                 onBack={() => setActiveView('home')}
                 orderMode={orderMode}
+                onOrderModeChange={setOrderMode}
                 cartItemCount={getTotalItems()}
                 onViewCart={() => setActiveView('cart')}
                 cart={cart}
