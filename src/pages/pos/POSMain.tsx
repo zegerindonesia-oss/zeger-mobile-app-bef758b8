@@ -22,7 +22,7 @@ import { usePOSBranchSettings } from '@/hooks/usePOSBranchSettings';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { POSTableMap } from '@/components/pos/POSTableMap';
-import type { POSTable } from '@/hooks/usePOSTables';
+import { usePOSTables, type POSTable } from '@/hooks/usePOSTables';
 import { POSProductGrid } from '@/components/pos/POSProductGrid';
 import { POSCart } from '@/components/pos/POSCart';
 import { POSPayment } from '@/components/pos/POSPayment';
@@ -91,6 +91,11 @@ const POSMain = () => {
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltyEarnSettings>(DEFAULT_EARN_SETTINGS);
   const [tableMapOpen, setTableMapOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<POSTable | null>(null);
+  const { tables: liveTables } = usePOSTables(userProfile?.branch_id || null);
+  const tableCounts = useMemo(() => {
+    const top = liveTables.filter((t) => !t.merged_into);
+    return { busy: top.filter((t) => t.status === 'occupied' || t.status === 'billing').length, free: top.filter((t) => t.status === 'available').length };
+  }, [liveTables]);
   const [printSettings, setPrintSettings] = useState<PrintSettings>(DEFAULT_SETTINGS);
   const [printerOpen, setPrinterOpen] = useState(false);
   const [cashier, setCashier] = useState(() => getActiveCashier(userProfile?.branch_id || null));
@@ -550,6 +555,12 @@ const POSMain = () => {
           {!online && <WifiOff className="lg:hidden h-4 w-4 text-destructive shrink-0" />}
           <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Meja">
             <Armchair className="h-4 w-4" /> <span className="hidden sm:inline">Meja</span>
+            {liveTables.length > 0 && (
+              <span className="flex items-center gap-1 text-[11px] font-medium">
+                <span className="h-2 w-2 rounded-full bg-destructive" />{tableCounts.busy}
+                <span className="h-2 w-2 rounded-full bg-success ml-1" />{tableCounts.free}
+              </span>
+            )}
           </button>
           <POSVoiceOrder onAdd={cart.addItem} onMember={setMember} />
           <div className="hidden sm:block"><POSOnlineOrderPanel branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} /></div>
