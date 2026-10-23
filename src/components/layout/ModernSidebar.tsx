@@ -133,6 +133,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "master-products", label: "Produk / Menu", icon: Coffee, path: "/master/products" },
       { id: "master-variants", label: "Varian Menu", icon: Layers, path: "/master/variants" },
       { id: "raw-materials", label: "Bahan Baku, WIP & Resep", icon: Package, path: "/inventory/raw-materials", module: "bom", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager"] },
+      { id: "cogs-calculator", label: "Kalkulator HPP & Analisa Menu", icon: Package, path: "/master/cogs", module: "bom", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager"] },
     ]
   },
   {
