@@ -1,6 +1,12 @@
 import { describeMenu } from '@/lib/menu-descriptions';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, Plus, Search, ShoppingBag, Store, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, ShoppingBag, Store, Heart, MapPin, Loader2 } from 'lucide-react';
+
+export const ADDR_KEY = 'cx_delivery_address_v1';
+type SavedAddress = { label: string; address: string; lat: number; lng: number };
+const loadAddress = (): SavedAddress | null => {
+  try { return JSON.parse(localStorage.getItem(ADDR_KEY) || 'null'); } catch { return null; }
+};
 import { useFavorites } from '@/lib/customer-favorites';
 import { cn } from '@/lib/utils';
 import { normalizeImageUrl } from '@/lib/image-url';
@@ -93,19 +99,52 @@ export function CustomerMenu({
   const totalItems = countItems(cart);
   const totalPrice = cartSubtotal(cart);
 
+  const [addr, setAddr] = useState<SavedAddress | null>(() => loadAddress());
+  const [locating, setLocating] = useState(false);
+  const locate = () => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        let text = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=id`);
+          const j = await r.json();
+          if (j?.display_name) text = j.display_name;
+        } catch { /* keep coords */ }
+        const next = { label: 'Lokasi Saat Ini', address: text, lat, lng };
+        localStorage.setItem(ADDR_KEY, JSON.stringify(next));
+        setAddr(next);
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+  const switchMode = (m: 'pickup' | 'delivery') => {
+    onOrderModeChange?.(m);
+    if (m === 'delivery' && !addr) locate();
+  };
+
   return (
     <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-40">
       {/* Header */}
       <header className="cx-bar sticky top-0 z-20 px-4 pb-3 pt-3">
-        <div className="mb-3 flex justify-center">
-          <div className="flex rounded-full bg-[hsl(var(--cx-rail))] p-1">
+        <div className="mb-3 flex items-center justify-center relative">
+          {onBack && (
+            <button onClick={onBack} aria-label="Kembali" className="absolute left-0 flex h-9 w-9 items-center justify-center">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          )}
+          <div className="flex rounded-full bg-card p-1 shadow-sm">
             {(['pickup', 'delivery'] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => onOrderModeChange?.(m)}
+                onClick={() => switchMode(m)}
                 className={cn(
-                  'rounded-full px-6 py-2 text-sm font-extrabold transition-all',
-                  orderMode === m ? 'bg-white text-zeger shadow ring-2 ring-zeger' : 'text-muted-foreground',
+                  'rounded-full px-6 py-1.5 text-sm font-medium transition-all',
+                  orderMode === m ? 'bg-zeger-soft text-zeger font-semibold ring-1 ring-zeger' : 'text-muted-foreground',
                 )}
               >
                 {m === 'pickup' ? 'Pick Up' : 'Delivery'}
@@ -113,25 +152,32 @@ export function CustomerMenu({
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {onBack && (
-            <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-10 w-10 shrink-0">
-              <ChevronLeft className="h-5 w-5" />
+        <div className="rounded-2xl bg-card px-3 shadow-[0_2px_10px_hsl(var(--cx-shadow)/0.08)]">
+          <button onClick={onChangeOutlet} className="flex w-full items-center gap-3 py-3 text-left">
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zeger-soft">
+              <Store className="h-[18px] w-[18px] text-zeger" />
+              {orderMode === 'delivery' && <span className="absolute left-1/2 top-full h-6 -translate-x-1/2 border-l border-dotted border-muted-foreground/60" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-semibold leading-tight">{outletName || 'Pilih outlet'}</span>
+              <span className="mt-0.5 block truncate text-xs text-muted-foreground">{outletAddress || 'Outlet terdekat'}</span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+          {orderMode === 'delivery' && (
+            <button onClick={locate} className="flex w-full items-center gap-3 border-t border-[hsl(var(--cx-line))] py-3 text-left">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                {locating ? <Loader2 className="h-[18px] w-[18px] animate-spin text-destructive" /> : <MapPin className="h-[18px] w-[18px] text-destructive" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] font-semibold leading-tight">{addr?.label || 'Atur alamat pengantaran'}</span>
+                <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">
+                  {locating ? 'Mendeteksi lokasimu…' : addr?.address || 'Ketuk untuk pakai lokasi saat ini'}
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
           )}
-          <button
-            onClick={onChangeOutlet}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl bg-white px-3 py-2 text-left shadow-[0_1px_2px_hsl(var(--cx-shadow)/0.06)] transition-transform active:scale-[0.98]"
-          >
-            <Store className="h-[18px] w-[18px] shrink-0 text-zeger" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-extrabold leading-tight">{outletName || 'Pilih outlet'}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">
-                {orderMode === 'delivery' ? 'Delivery' : 'Pick Up'}{outletAddress ? ` · ${outletAddress}` : ''}
-              </span>
-            </span>
-            <span className="shrink-0 text-[11px] font-bold text-zeger">Ubah</span>
-          </button>
         </div>
 
         <div className="relative mt-3">
@@ -151,7 +197,7 @@ export function CustomerMenu({
                 key={b}
                 onClick={() => { setBrand(b); setCategory('all'); }}
                 data-active={brand === b}
-                className="cx-chip shrink-0 px-4 py-2 text-xs font-extrabold uppercase tracking-wide"
+                className="cx-chip shrink-0 px-4 py-2 text-xs font-semibold"
               >
                 {b === 'all' ? 'Semua Brand' : b}
               </button>
@@ -184,7 +230,7 @@ export function CustomerMenu({
       {category !== 'fav' && !search && (
         <section className="pt-4">
           <div className="flex items-center justify-between px-4">
-            <h2 className="text-base font-extrabold">My Favorite</h2>
+            <h2 className="text-[17px] font-semibold">My Favorite</h2>
             {favProducts.length > 0 && (
               <button onClick={() => setCategory('fav')} className="text-xs font-bold text-zeger">Lihat Semua</button>
             )}
@@ -201,12 +247,12 @@ export function CustomerMenu({
                     <img src={normalizeImageUrl(p.image_url) || artworkFor(p)} onError={onArtError(artworkFor(p))} alt={p.name} loading="lazy" className="h-full w-full object-contain" />
                   </button>
                   <button onClick={() => onAddToCart(p)} className="min-w-0 flex-1 text-left">
-                    <span className="line-clamp-2 block pr-6 text-[13px] font-extrabold leading-snug">{p.name}</span>
-                    <span className="cx-num mt-1 block text-sm font-extrabold">{formatRupiah(p.price)}</span>
+                    <span className="line-clamp-2 block pr-6 text-[13px] font-medium leading-snug">{p.name}</span>
+                    <span className="cx-num mt-1 block text-sm font-semibold">{formatRupiah(p.price)}</span>
                   </button>
                   <HeartBtn on onClick={() => toggle(p.id)} className="absolute right-2 top-2" />
                   <button onClick={() => onAddToCart(p)} aria-label={`Tambah ${p.name}`} className="cx-btn cx-btn-primary absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center">
-                    <Plus className="h-4 w-4" strokeWidth={3} />
+                    <Plus className="h-4 w-4" strokeWidth={2.5} />
                   </button>
                 </div>
               ))}
@@ -224,9 +270,9 @@ export function CustomerMenu({
         </div>
       ) : (
         groups.map(([cat, items]) => (
-          <section key={cat} className="mt-3 border-t-8 border-[hsl(var(--cx-rail))] px-4 pt-4">
+          <section key={cat} className="mt-3 border-t-[6px] border-[hsl(var(--cx-rail))] px-4 pt-4">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-lg font-extrabold">{cat}</h2>
+              <h2 className="text-[17px] font-semibold">{cat}</h2>
               <span className="text-xs text-muted-foreground">{items.length} item</span>
             </div>
             <div className="divide-y divide-dashed divide-[hsl(var(--cx-line))]">
@@ -238,15 +284,15 @@ export function CustomerMenu({
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex items-start gap-2">
                       <button onClick={() => onAddToCart(p)} className="min-w-0 flex-1 text-left">
-                        <h3 className="line-clamp-2 text-[15px] font-extrabold leading-snug">{p.name}</h3>
+                        <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug">{p.name}</h3>
                       </button>
                       <HeartBtn on={isFav(p.id)} onClick={() => toggle(p.id)} />
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{describeMenu(p.name, p.description)}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{describeMenu(p.name, p.description)}</p>
                     <div className="mt-auto flex items-center justify-between pt-2">
-                      <span className="cx-num text-sm font-extrabold">{formatRupiah(p.price)}</span>
+                      <span className="cx-num text-sm font-semibold">{formatRupiah(p.price)}</span>
                       <button onClick={() => onAddToCart(p)} aria-label={`Tambah ${p.name}`} className="cx-btn cx-btn-primary flex h-8 w-8 items-center justify-center">
-                        <Plus className="h-4 w-4" strokeWidth={3} />
+                        <Plus className="h-4 w-4" strokeWidth={2.5} />
                       </button>
                     </div>
                   </div>
