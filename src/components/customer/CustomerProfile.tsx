@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { AddressBook } from './AddressBook';
+import { useAddresses } from '@/lib/customer-addresses';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
 import {
   User, Mail, Phone, MapPin, Edit3, Save, X, LogOut, Bell, HelpCircle, Shield, FileText,
-  Ticket, Crown, Gift, ChevronRight, ShoppingBag, Sparkles,
+  Ticket, Crown, Gift, ChevronRight, ShoppingBag, Sparkles, Camera, Loader2, CalendarDays,
 } from 'lucide-react';
 import { cxArt } from '@/lib/customer-art';
 import { cn } from '@/lib/utils';
@@ -31,6 +33,38 @@ export function CustomerProfile({ customerUser, onUpdateProfile, onNavigate }: C
     phone: customerUser?.phone || '',
     address: customerUser?.address || '',
   });
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
+  const { list: addresses, active: activeAddr } = useAddresses();
+  const memberSince = customerUser?.created_at
+    ? new Date(customerUser.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast({ title: 'Foto terlalu besar', description: 'Maksimal 5 MB.', variant: 'destructive' }); return; }
+    setUploading(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) throw new Error('Silakan masuk ulang.');
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${uid}/customer-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+      const { data, error } = await supabase.from('customer_users').update({ photo_url: url }).eq('id', customerUser.id).select().single();
+      if (error) throw error;
+      onUpdateProfile(data);
+      toast({ title: 'Foto profil diperbarui' });
+    } catch (err: any) {
+      toast({ title: 'Gagal upload foto', description: err.message, variant: 'destructive' });
+    } finally { setUploading(false); }
+  };
 
   const points = customerUser?.points || 0;
   const tier = tierFor(points);
@@ -104,19 +138,28 @@ export function CustomerProfile({ customerUser, onUpdateProfile, onNavigate }: C
           className="pointer-events-none absolute -left-10 bottom-[-3rem] h-36 w-36 rounded-full bg-white/[0.07] blur-2xl"
         />
         <div className="flex items-center gap-4 relative">
-          <div className="h-16 w-16 rounded-full bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center overflow-hidden shrink-0">
-            {customerUser?.photo_url ? (
-              <img src={customerUser.photo_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-2xl font-extrabold">{(customerUser?.name || 'Z').charAt(0).toUpperCase()}</span>
-            )}
-          </div>
+          <button type="button" onClick={() => fileRef.current?.click()} aria-label="Ganti foto profil" className="relative h-16 w-16 shrink-0">
+            <span className="h-16 w-16 rounded-full bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center overflow-hidden">
+              {customerUser?.photo_url ? (
+                <img src={customerUser.photo_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-2xl font-extrabold">{(customerUser?.name || 'Z').charAt(0).toUpperCase()}</span>
+              )}
+            </span>
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-zeger shadow">
+              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+            </span>
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold truncate">{customerUser?.name || 'Zeger Lovers'}</h1>
             <p className="text-xs opacity-85 truncate">{customerUser?.email}</p>
             <span className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-white/18 border border-white/25 px-2.5 py-0.5 text-[11px] font-bold">
               <Crown className="h-3 w-3" /> {tier.level} Member
             </span>
+            {memberSince && (
+              <p className="mt-1 flex items-center gap-1 text-[11px] opacity-85"><CalendarDays className="h-3 w-3" /> Member sejak {memberSince}</p>
+            )}
           </div>
           <button
             onClick={() => setIsEditing((v) => !v)}
@@ -184,7 +227,9 @@ export function CustomerProfile({ customerUser, onUpdateProfile, onNavigate }: C
             <div className="space-y-3">
               <Field label="Nama Lengkap" value={formData.name} onChange={(v) => setFormData((p) => ({ ...p, name: v }))} />
               <Field label="Nomor Telepon" value={formData.phone} onChange={(v) => setFormData((p) => ({ ...p, phone: v }))} type="tel" />
-              <Field label="Alamat" value={formData.address} onChange={(v) => setFormData((p) => ({ ...p, address: v }))} />
+              <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-zeger/50 p-3 text-left text-sm font-semibold text-zeger">
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />} {customerUser?.photo_url ? 'Ganti foto profil' : 'Tambah foto profil'}
+              </button>
               <div className="flex gap-2 pt-1">
                 <button onClick={handleSaveProfile} disabled={loading} className="cx-btn cx-btn-primary flex-1 px-4 py-3 text-sm inline-flex items-center justify-center gap-2">
                   <Save className="h-4 w-4" /> {loading ? 'Menyimpan...' : 'Simpan'}
@@ -204,7 +249,7 @@ export function CustomerProfile({ customerUser, onUpdateProfile, onNavigate }: C
             <div className="space-y-3">
               <InfoRow icon={Mail} label="Email" value={customerUser?.email} />
               <InfoRow icon={Phone} label="Nomor Telepon" value={customerUser?.phone} />
-              <InfoRow icon={MapPin} label="Alamat" value={customerUser?.address} />
+              {memberSince && <InfoRow icon={CalendarDays} label="Bergabung sejak" value={memberSince} />}
             </div>
           )}
         </div>
@@ -231,6 +276,17 @@ export function CustomerProfile({ customerUser, onUpdateProfile, onNavigate }: C
             ))}
           </div>
         )}
+
+        {/* Saved addresses */}
+        <button onClick={() => setBookOpen(true)} className="cx-card w-full rounded-3xl p-4 flex items-center gap-3 text-left">
+          <span className="h-10 w-10 rounded-xl bg-zeger-soft flex items-center justify-center shrink-0"><MapPin className="h-[18px] w-[18px] text-zeger" /></span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold">Alamat Tersimpan <span className="font-normal text-muted-foreground">({addresses.length})</span></span>
+            <span className="block truncate text-xs text-muted-foreground">{activeAddr ? `${activeAddr.label} • ${activeAddr.address}` : 'Tambah alamat rumah, kantor, dll.'}</span>
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <AddressBook open={bookOpen} onClose={() => setBookOpen(false)} selectable={false} />
 
         {/* Legal */}
         <div className="cx-card rounded-3xl overflow-hidden">

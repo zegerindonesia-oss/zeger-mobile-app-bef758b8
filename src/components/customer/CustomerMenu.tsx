@@ -2,11 +2,9 @@ import { describeMenu } from '@/lib/menu-descriptions';
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Search, ShoppingBag, Store, Heart, MapPin, Loader2 } from 'lucide-react';
 
-export const ADDR_KEY = 'cx_delivery_address_v1';
-type SavedAddress = { label: string; address: string; lat: number; lng: number };
-const loadAddress = (): SavedAddress | null => {
-  try { return JSON.parse(localStorage.getItem(ADDR_KEY) || 'null'); } catch { return null; }
-};
+import { ACTIVE_KEY, upsertAddress, reverseGeocode, useAddresses } from '@/lib/customer-addresses';
+import { AddressBook } from './AddressBook';
+export const ADDR_KEY = ACTIVE_KEY;
 import { useFavorites } from '@/lib/customer-favorites';
 import { cn } from '@/lib/utils';
 import { normalizeImageUrl } from '@/lib/image-url';
@@ -99,23 +97,16 @@ export function CustomerMenu({
   const totalItems = countItems(cart);
   const totalPrice = cartSubtotal(cart);
 
-  const [addr, setAddr] = useState<SavedAddress | null>(() => loadAddress());
+  const { active: addr } = useAddresses();
   const [locating, setLocating] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
   const locate = () => {
     if (!navigator.geolocation) return;
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        let text = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        try {
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=id`);
-          const j = await r.json();
-          if (j?.display_name) text = j.display_name;
-        } catch { /* keep coords */ }
-        const next = { label: 'Lokasi Saat Ini', address: text, lat, lng };
-        localStorage.setItem(ADDR_KEY, JSON.stringify(next));
-        setAddr(next);
+        upsertAddress({ label: 'Lokasi Saat Ini', address: await reverseGeocode(lat, lng), lat, lng }, true);
         setLocating(false);
       },
       () => setLocating(false),
@@ -129,6 +120,7 @@ export function CustomerMenu({
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-40">
+      <AddressBook open={bookOpen} onClose={() => setBookOpen(false)} />
       {/* Header */}
       <header className="cx-bar sticky top-0 z-20 px-4 pb-3 pt-3">
         <div className="mb-3 flex items-center justify-center relative">
@@ -165,14 +157,14 @@ export function CustomerMenu({
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           </button>
           {orderMode === 'delivery' && (
-            <button onClick={locate} className="flex w-full items-center gap-3 border-t border-[hsl(var(--cx-line))] py-3 text-left">
+            <button onClick={() => setBookOpen(true)} className="flex w-full items-center gap-3 border-t border-[hsl(var(--cx-line))] py-3 text-left">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
                 {locating ? <Loader2 className="h-[18px] w-[18px] animate-spin text-destructive" /> : <MapPin className="h-[18px] w-[18px] text-destructive" />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-semibold leading-tight">{addr?.label || 'Atur alamat pengantaran'}</span>
                 <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">
-                  {locating ? 'Mendeteksi lokasimu…' : addr?.address || 'Ketuk untuk pakai lokasi saat ini'}
+                  {locating ? 'Mendeteksi lokasimu…' : addr?.address || 'Ketuk untuk pilih / tambah alamat'}
                 </span>
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
