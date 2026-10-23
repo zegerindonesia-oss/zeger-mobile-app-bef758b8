@@ -663,7 +663,7 @@ const POSMain = () => {
               setMember(null);
               setRedemption(null);
             }}
-            onRedeemPoints={() => setRedeemOpen(true)}
+            onRedeemPoints={() => setBenefitsOpen(true)}
             onShowMemberHistory={() => setHistoryOpen(true)}
             redemption={redemption}
             onClearRedemption={() => setRedemption(null)}
