@@ -1,0 +1,4 @@
+REVOKE EXECUTE ON FUNCTION public.ensure_phone_customer(text) FROM anon;
+COMMENT ON FUNCTION public.get_table_guest_menu(uuid) IS 'Intentional public QR menu endpoint: returns selling fields only for active products in the active branch tenant. No customer or cost data.';
+COMMENT ON FUNCTION public.submit_table_guest_order(uuid,text,text,text,jsonb,uuid) IS 'Intentional anonymous dine-in ordering endpoint. Validates active branch/table/tenant, recomputes prices, limits cart and submission frequency, returns only receipt metadata. Never authorizes member access from supplied phone.';
+COMMENT ON FUNCTION public.ensure_phone_customer(text) IS 'Authenticated only: links profile using server-verified auth phone, refuses accounts owned by another user.';
