@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { readTableContext } from '@/lib/table-qr';
+import { findNearestOutlet } from '@/lib/nearest-outlet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -744,11 +745,13 @@ function CustomerAppInner() {
                 onNavigate={setActiveView}
                 recentProducts={products.slice(0, 6)}
                 onAddToCart={addToCart}
-                onChooseChannel={(ch, mode) => {
+                onChooseChannel={async (ch, mode) => {
                   if (ch === 'wheels') { setActiveView('map'); return; }
                   setOrderChannel(ch);
                   setOrderMode(mode);
-                  setActiveView('outlets');
+                  const nearest = await findNearestOutlet(ch, mode).catch(() => null);
+                  if (nearest) { setSelectedOutlet(nearest); setActiveView('menu'); }
+                  else setActiveView('outlets');
                 }}
               />
             )}
