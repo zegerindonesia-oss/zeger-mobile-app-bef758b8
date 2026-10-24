@@ -1077,27 +1077,53 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                       />
                     </div>
                     
+                    {/* Brand tabs */}
+                    {brandList.length > 0 && (
+                      <div>
+                        <Label className="mb-2 block">Brand</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {[...brandList, "__all"].map((b) => (
+                            <Button
+                              key={b}
+                              type="button"
+                              size="sm"
+                              variant={activeBrand === b ? "default" : "outline"}
+                              className="rounded-full"
+                              onClick={() => { setActiveBrand(b); setSelectedCategories([]); }}
+                            >
+                              {b === "__all" ? "Semua Brand" : b}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Category Checkboxes */}
                     <div>
-                      <Label className="flex items-center gap-2 mb-2">
-                        <Filter className="h-4 w-4" />
-                        Filter Kategori
-                      </Label>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="flex items-center gap-2">
+                          <Filter className="h-4 w-4" />
+                          Filter Kategori
+                        </Label>
+                        {selectedCategories.length > 0 && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedCategories([])}>
+                            Tampilkan Semua
+                          </Button>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                        {["Espresso Based", "Milk Based", "Refresher", "Botol 200ml", "Botol 1 Liter", "Can Series", "Paket Ramadhan", "Snack"].map(cat => (
+                        {categoryList.map(cat => (
                           <div key={cat} className="flex items-center space-x-2">
                             <Checkbox 
-                              id={cat}
-                              checked={selectedCategories.includes(cat)}
+                              id={`cat-${cat}`}
+                              checked={selectedCategories.length === 0 || selectedCategories.includes(cat)}
                               onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedCategories([...selectedCategories, cat]);
-                                } else {
-                                  setSelectedCategories(selectedCategories.filter(c => c !== cat));
-                                }
+                                const base = selectedCategories.length === 0 ? categoryList : selectedCategories;
+                                const next = checked ? Array.from(new Set([...base, cat])) : base.filter(c => c !== cat);
+                                setSelectedCategories(next.length === categoryList.length ? [] : next);
                               }}
                             />
-                            <label htmlFor={cat} className="text-sm cursor-pointer">
+                            <label htmlFor={`cat-${cat}`} className="text-sm cursor-pointer">
                               {cat}
                             </label>
                           </div>
@@ -1109,15 +1135,12 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {products
+                {(searchQuery ? products : brandProducts)
                   .filter(p => {
-                    // Filter by search query
                     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-                    
-                    // Filter by selected categories
-                    const matchesCategory = selectedCategories.length === 0 || 
-                                           selectedCategories.includes(p.category);
-                    
+                    // Search spans all brands/categories
+                    const matchesCategory = !!searchQuery || selectedCategories.length === 0 ||
+                                           selectedCategories.includes(catOf(p));
                     return matchesSearch && matchesCategory;
                   })
                   .sort((a, b) => a.name.localeCompare(b.name)) // Sort A-Z
@@ -1125,7 +1148,7 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
                   <div key={product.id} className="flex items-center justify-between p-3 border rounded bg-white">
                     <div>
                       <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">{product.category}</p>
+                      <p className="text-sm text-muted-foreground">{[product.brand, catOf(product)].filter(Boolean).join(' · ')}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
