@@ -272,9 +272,16 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
       // Fetch products
       const { data: productsData } = await supabase
         .from('products')
-        .select('id, name, category')
+        .select('id, name, category, sub_category, brand')
         .eq('is_active', true);
-      setProducts(productsData || []);
+      const list = (productsData || []) as Product[];
+      setProducts(list);
+      // Default brand: Zeger On The Wheels (rider brand), else show all
+      setActiveBrand((cur) => {
+        if (cur) return cur;
+        const otw = list.map((p) => p.brand).find((b) => b && /on\s*the\s*wheel/i.test(b));
+        return otw || "__all";
+      });
 
       // Fetch riders - filter by branch for branch managers
       console.log('Fetching riders for role:', role, 'branchId:', branchId);
