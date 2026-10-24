@@ -1,4 +1,6 @@
 # Roadmap
+- [x] Back Office Customer App Settings: urutan kategori tersimpan dan diterapkan ke filter serta bagian menu, termasuk tamu QR.
+- [ ] Uji simpan urutan kategori dengan akun admin asli — sesi terautentikasi tidak tersedia pada Supabase eksternal.
 - [x] QR meja langsung membuka menu tanpa login; checkout nama + nomor HP, bayar di kasir; bill dan tiket dapur diuji tanpa meninggalkan data uji.
 - [ ] Login pelanggan nomor HP + OTP — provider SMS Supabase belum aktif.
 - [x] KDS multi-station (Barista/Dapur), SLA, recall

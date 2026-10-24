@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { normalizeImageUrl } from '@/lib/image-url';
 import { artworkFor, formatRupiah, onArtError } from '@/lib/customer-art';
 import { cartItemCount as countItems, cartSubtotal } from '@/lib/customer-pricing';
+import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
+import { customerCategory, orderCustomerCategories } from '@/lib/customer-category-order';
 
 interface Product {
   id: string;
@@ -41,7 +43,7 @@ interface CustomerMenuProps {
 }
 
 const brandOf = (p: Product) => (p.brand || '').trim() || 'Zeger';
-const catOf = (p: Product) => (p.sub_category || p.category || 'Lainnya').trim();
+const catOf = customerCategory;
 
 export function CustomerMenu({
   products,
@@ -61,6 +63,7 @@ export function CustomerMenu({
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
   const { ids: favIds, isFav, toggle } = useFavorites();
+  const config = useCustomerAppConfig();
 
   const brands = useMemo(() => {
     const seen: string[] = [];
@@ -75,8 +78,8 @@ export function CustomerMenu({
       const c = catOf(p);
       if (!seen.includes(c)) seen.push(c);
     });
-    return ['all', ...seen];
-  }, [products, brand]);
+    return ['all', ...orderCustomerCategories(seen, config.category_order)];
+  }, [products, brand, config.category_order]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -95,8 +98,8 @@ export function CustomerMenu({
   const groups = useMemo(() => {
     const m = new Map<string, Product[]>();
     visible.forEach((p) => { const c = catOf(p); m.set(c, [...(m.get(c) || []), p]); });
-    return Array.from(m.entries());
-  }, [visible]);
+    return orderCustomerCategories(Array.from(m.keys()), config.category_order).map(c => [c, m.get(c) || []] as [string, Product[]]);
+  }, [visible, config.category_order]);
 
   const totalItems = countItems(cart);
   const totalPrice = cartSubtotal(cart);
