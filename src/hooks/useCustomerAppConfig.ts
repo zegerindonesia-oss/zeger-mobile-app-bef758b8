@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeCategoryOrder } from '@/lib/customer-category-order';
 
 export interface CustomerAppConfig {
+  category_order: string[];
   features: {
     loyalty: boolean;
     subscription: boolean;
@@ -39,6 +41,7 @@ export interface CustomerAppConfig {
 }
 
 const DEFAULT: CustomerAppConfig = {
+  category_order: [],
   features: { loyalty: true, subscription: true, vouchers: true, promo_reward: true, referral: true, care: true, notifications: true },
   sections: { membership: true, voucher_referral: true, order_types: true, rider_nearby: true, promo_active: true, big_order: true, zeger_care: true },
   care: { whatsapp_number: '628133180488', faq_items: [] },
@@ -54,14 +57,15 @@ async function loadConfig(): Promise<CustomerAppConfig> {
   if (cachePromise) return cachePromise;
   cachePromise = (async () => {
     try {
-      const { data } = await supabase
+      const [{ data }, { data: categoryOrder }] = await Promise.all([supabase
         .from('app_settings')
         .select('setting_key, setting_value')
         .eq('setting_type', 'customer_app')
-        .eq('is_active', true);
+        .eq('is_active', true), supabase.rpc('get_customer_category_order')]);
       const map: Record<string, any> = {};
       (data || []).forEach((r: any) => { map[r.setting_key] = r.setting_value; });
       const cfg: CustomerAppConfig = {
+        category_order: normalizeCategoryOrder(categoryOrder),
         features: { ...DEFAULT.features, ...(map['customer_features'] || {}) },
         sections: { ...DEFAULT.sections, ...(map['customer_home.sections'] || {}) },
         care: {
@@ -87,14 +91,17 @@ async function loadConfig(): Promise<CustomerAppConfig> {
 
 export function invalidateCustomerAppConfig() {
   cache = null;
+  window.dispatchEvent(new Event('customer-app-config-changed'));
 }
 
 export function useCustomerAppConfig(): CustomerAppConfig {
   const [cfg, setCfg] = useState<CustomerAppConfig>(cache || DEFAULT);
   useEffect(() => {
     let alive = true;
-    loadConfig().then(c => { if (alive) setCfg(c); });
-    return () => { alive = false; };
+    const refresh = () => { loadConfig().then(c => { if (alive) setCfg(c); }); };
+    refresh();
+    window.addEventListener('customer-app-config-changed', refresh);
+    return () => { alive = false; window.removeEventListener('customer-app-config-changed', refresh); };
   }, []);
   return cfg;
 }

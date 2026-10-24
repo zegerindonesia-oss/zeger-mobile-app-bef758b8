@@ -10,6 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { invalidateCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
+import { CategoryOrderSettings } from '@/components/customer/CategoryOrderSettings';
+import { normalizeCategoryOrder } from '@/lib/customer-category-order';
 
 const FEATURE_KEYS = [
   ['loyalty', 'Zeger Loyalty'],
@@ -41,11 +43,14 @@ export default function CustomerAppSettings() {
   const [prefix, setPrefix] = useState('ZG-');
   const [fees, setFees] = useState({ delivery_fee: 25400, delivery_discount_percent: 20, takeaway_charge: 3500 });
   const [saving, setSaving] = useState(false);
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { document.title = 'Customer App Settings | Zeger ERP'; load(); }, []);
 
   const load = async () => {
-    const { data } = await supabase.from('app_settings').select('setting_key, setting_value').eq('setting_type', 'customer_app');
+    const { data, error } = await supabase.from('app_settings').select('setting_key, setting_value').eq('setting_type', 'customer_app');
+    if (error) { toast.error('Pengaturan belum dapat dimuat'); return; }
     const map: Record<string, any> = {};
     (data || []).forEach((r: any) => { map[r.setting_key] = r.setting_value; });
     setFeatures(map['customer_features'] || {});
@@ -55,6 +60,8 @@ export default function CustomerAppSettings() {
     setReferralPoints(typeof map['referral.reward_points'] === 'number' ? map['referral.reward_points'] : 50);
     setPrefix(typeof map['referral.code_prefix'] === 'string' ? map['referral.code_prefix'] : 'ZG-');
     setFees(f => ({ ...f, ...(map['order.fees'] || {}) }));
+    setCategoryOrder(normalizeCategoryOrder(map['customer_menu.category_order']));
+    setLoading(false);
   };
 
   const upsert = async (key: string, value: any) => {
@@ -72,6 +79,7 @@ export default function CustomerAppSettings() {
       await upsert('referral.reward_points', referralPoints);
       await upsert('referral.code_prefix', prefix);
       await upsert('order.fees', fees);
+      await upsert('customer_menu.category_order', categoryOrder);
       invalidateCustomerAppConfig();
       toast.success('Setting disimpan');
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
@@ -82,18 +90,23 @@ export default function CustomerAppSettings() {
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate('/settings/app-management')}><ArrowLeft className="h-5 w-5" /></Button>
         <h1 className="text-2xl font-bold">Customer App Settings</h1>
-        <Button onClick={saveAll} disabled={saving} className="ml-auto"><Save className="h-4 w-4 mr-1" />Simpan</Button>
+        <Button onClick={saveAll} disabled={saving || loading} className="ml-auto"><Save className="h-4 w-4 mr-1" />Simpan</Button>
       </div>
 
       <Tabs defaultValue="layout">
-        <TabsList>
+        <TabsList className="h-auto flex flex-wrap justify-start gap-1">
           <TabsTrigger value="layout">Layout</TabsTrigger>
+          <TabsTrigger value="category-order">Urutan Kategori</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="care">Care</TabsTrigger>
           <TabsTrigger value="referral">Referral</TabsTrigger>
           <TabsTrigger value="fees">Ongkir & Biaya</TabsTrigger>
           <TabsTrigger value="channels">Kanal Outlet</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="category-order">
+          <CategoryOrderSettings order={categoryOrder} onChange={setCategoryOrder} />
+        </TabsContent>
 
         <TabsContent value="layout">
           <Card><CardHeader><CardTitle>Section Home</CardTitle></CardHeader><CardContent className="space-y-3">
