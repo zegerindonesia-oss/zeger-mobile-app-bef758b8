@@ -833,6 +833,7 @@ function CustomerAppInner() {
                 outletId={selectedOutlet?.id}
                 outletName={selectedOutlet?.name}
                 outletAddress={selectedOutlet?.address}
+                outletDistance={selectedOutlet?.distance}
                 onChangeOutlet={() => setActiveView('outlets')}
                 onBack={() => setActiveView('home')}
                 orderMode={orderMode}
