@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ZegerLogo } from '@/components/ui/zeger-logo';
 import { useToast } from '@/hooks/use-toast';
 import { cxArt } from '@/lib/customer-art';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { normalizeCustomerPhone } from '@/lib/customer-entry';
 import {
   Eye, EyeOff, Mail, Lock, User, Phone, MapPin, ArrowLeft, Loader2,
   Coffee, Gift, Crown, ShieldCheck,
@@ -13,7 +15,7 @@ interface CustomerAuthProps {
   onAuthSuccess: () => void;
 }
 
-type AuthMode = 'login' | 'register' | 'complete-profile' | 'forgot';
+type AuthMode = 'phone' | 'otp' | 'login' | 'register' | 'complete-profile' | 'forgot';
 
 const PERKS = [
   { icon: Coffee, label: 'Pesan di semua kanal Zeger' },
@@ -52,7 +54,15 @@ function Field({
 
 export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
   const { toast } = useToast();
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<AuthMode>('phone');
+  const [otp, setOtp] = useState('');
+  const [otpPhone, setOtpPhone] = useState('');
+  const [retryAt, setRetryAt] = useState(0);
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const update = () => setSeconds(Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)));
+    update(); const timer = setInterval(update, 1000); return () => clearInterval(timer);
+  }, [retryAt]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -71,6 +81,50 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const sendPhoneOtp = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const phone = normalizeCustomerPhone(formData.phone);
+    if (!phone) { toast({ title: 'Nomor HP tidak valid', description: 'Gunakan format 08xxxxxxxxxx.', variant: 'destructive' }); return; }
+    if (seconds > 0 || loading) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ phone });
+      if (error) throw error;
+      setOtpPhone(phone); setOtp(''); setRetryAt(Date.now() + 60000); setMode('otp');
+    } catch (error: any) {
+      toast({ title: 'Kode belum terkirim', description: /provider|phone.*disabled|unsupported|sms/i.test(error.message || '') ? 'Login SMS belum tersedia. Gunakan email untuk akun lama; pesanan QR meja tetap bisa tanpa login.' : error.message, variant: 'destructive' });
+    } finally { setLoading(false); }
+  };
+
+  const verifyPhoneOtp = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({ phone: otpPhone, token: otp, type: 'sms' });
+      if (error) throw error;
+      const { error: profileError } = await supabase.rpc('ensure_phone_customer', { _name: 'Member' });
+      if (profileError) throw profileError;
+      onAuthSuccess();
+    } catch (error: any) { toast({ title: 'Verifikasi belum berhasil', description: error.message, variant: 'destructive' }); }
+    finally { setLoading(false); }
+  };
+
+  const renderPhone = () => (
+    <form onSubmit={sendPhoneOtp} className="space-y-4">
+      <Field id="login-phone" label="Nomor HP" icon={Phone} type="tel" autoComplete="tel" inputMode="tel" placeholder="08xxxxxxxxxx" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} required />
+      <Button type="submit" disabled={loading || seconds > 0} className="cx-btn cx-btn-primary h-12 w-full">{loading ? 'Mengirim…' : 'Kirim kode OTP'}</Button>
+      <Button type="button" variant="link" className="w-full" onClick={() => setMode('login')}>Masuk dengan email (akun lama)</Button>
+    </form>
+  );
+  const renderOtp = () => (
+    <form onSubmit={verifyPhoneOtp} className="space-y-4">
+      <p className="text-sm text-muted-foreground">Kode SMS dikirim ke {otpPhone}</p>
+      <Field id="login-otp" label="Kode OTP" icon={ShieldCheck} type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" placeholder="6 digit kode" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} required />
+      <Button type="submit" disabled={loading || otp.length !== 6} className="cx-btn cx-btn-primary h-12 w-full">{loading ? 'Memverifikasi…' : 'Masuk'}</Button>
+      <Button type="button" variant="link" disabled={loading || seconds > 0} className="w-full" onClick={() => void sendPhoneOtp()}>{seconds > 0 ? `Kirim ulang dalam ${seconds} detik` : 'Kirim ulang kode'}</Button>
+      <Button type="button" variant="ghost" className="w-full" onClick={() => { setMode('phone'); setOtp(''); }}>Ubah nomor HP</Button>
+    </form>
+  );
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -393,6 +447,8 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
   const heading =
     emailSent ? 'Verifikasi email'
+      : mode === 'phone' ? 'Masuk ke Zeger'
+      : mode === 'otp' ? 'Verifikasi nomor HP'
       : mode === 'login' ? 'Selamat datang kembali'
       : mode === 'register' ? 'Gabung Zeger'
       : mode === 'forgot' ? 'Lupa kata sandi'
@@ -400,12 +456,14 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
   const subheading =
     emailSent ? 'Satu langkah lagi'
+      : mode === 'phone' ? 'Nomor HP kamu, satu langkah untuk masuk'
+      : mode === 'otp' ? 'Masukkan kode dari SMS'
       : mode === 'login' ? 'Masuk untuk pesan & kumpulkan poin'
       : mode === 'register' ? 'Buat akun dalam satu menit'
       : mode === 'forgot' ? 'Kami bantu pulihkan akunmu'
       : 'Supaya pesananmu sampai dengan tepat';
 
-  const canGoBack = !emailSent && (mode === 'register' || mode === 'forgot');
+  const canGoBack = !emailSent && (mode === 'register' || mode === 'forgot' || mode === 'login');
 
   return (
     <div className="cx-app min-h-screen bg-[hsl(var(--cx-canvas))]">
@@ -417,7 +475,7 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
 
           {canGoBack && (
             <button
-              onClick={() => setMode('login')}
+              onClick={() => setMode('phone')}
               aria-label="Kembali"
               className="relative mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm transition active:scale-90"
             >
@@ -448,6 +506,8 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
           <div className="cx-card cx-rise rounded-[28px] p-5">
             {emailSent ? renderEmailSent() : (
               <>
+                {mode === 'phone' && renderPhone()}
+                {mode === 'otp' && renderOtp()}
                 {mode === 'login' && renderLogin()}
                 {mode === 'register' && renderRegister()}
                 {mode === 'complete-profile' && renderCompleteProfile()}
