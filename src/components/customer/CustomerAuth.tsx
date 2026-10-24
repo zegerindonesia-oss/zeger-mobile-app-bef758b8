@@ -502,7 +502,7 @@ export function CustomerAuth({ onAuthSuccess }: CustomerAuthProps) {
         </header>
 
         {/* Form card */}
-        <main className="-mt-10 flex-1 px-5 pb-10">
+        <main className="relative z-10 -mt-10 flex-1 px-5 pb-10">
           <div className="cx-card cx-rise rounded-[28px] p-5">
             {emailSent ? renderEmailSent() : (
               <>
