@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { canChooseTableBranch, TABLE_MANAGEMENT_ROLES } from './table-management';
+import { canChooseTableBranch, TABLE_MANAGEMENT_ROLES } from '../src/lib/table-management';
 
 describe('Back Office table management', () => {
   test('HO admin and owner can choose a branch', () => {
