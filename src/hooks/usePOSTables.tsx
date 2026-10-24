@@ -35,15 +35,18 @@ export const usePOSTables = (branchId: string | null) => {
   const [tables, setTables] = useState<POSTable[]>([]);
   const [sections, setSections] = useState<POSTableSection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!branchId) return;
+    if (!branchId) { setTables([]); setSections([]); setLoading(false); return; }
+    setLoading(true);
     const [t, s] = await Promise.all([
       db.from('pos_tables').select('*').eq('branch_id', branchId).eq('is_active', true).order('sort_order').order('table_number'),
       db.from('pos_table_sections').select('*').eq('branch_id', branchId).order('sort_order'),
     ]);
     setTables((t.data || []) as POSTable[]);
     setSections((s.data || []) as POSTableSection[]);
+    setError(t.error?.message || s.error?.message || null);
     setLoading(false);
   }, [branchId]);
 
@@ -51,8 +54,9 @@ export const usePOSTables = (branchId: string | null) => {
     load();
     if (!branchId) return;
     const channel = supabase
-      .channel(`pos_tables_${branchId}`)
+      .channel(`pos_tables_${branchId}_${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_tables', filter: `branch_id=eq.${branchId}` }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_table_sections', filter: `branch_id=eq.${branchId}` }, () => load())
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -71,5 +75,5 @@ export const usePOSTables = (branchId: string | null) => {
       current_total: 0, open_bill: null, merged_into: null,
     });
 
-  return { tables, sections, loading, reload: load, updateTable, releaseTable, db };
+  return { tables, sections, loading, error, reload: load, updateTable, releaseTable, db };
 };

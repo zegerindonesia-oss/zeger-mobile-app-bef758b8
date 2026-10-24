@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Armchair, Clock, Users, Plus, Trash2, ArrowRightLeft, Combine, Receipt, CalendarClock, DoorOpen, ShoppingBag } from 'lucide-react';
 import { usePOSTables, type POSTable, type TableStatus } from '@/hooks/usePOSTables';
 import { cn } from '@/lib/utils';
-import { QrCode, Printer } from 'lucide-react';
+import { QrCode, Printer, Pencil, Copy } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { printTableQrs, type QrTemplate } from '@/lib/table-qr-print';
 import { tableQrUrl } from '@/lib/table-qr';
@@ -223,7 +223,7 @@ export const POSTableMap = ({ open, onOpenChange, branchId, canManage, selectedT
   );
 };
 
-const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
+export const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
   const [secName, setSecName] = useState('');
   const [num, setNum] = useState('');
   const [cap, setCap] = useState('4');
@@ -234,6 +234,25 @@ const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
   const [wifi, setWifi] = useState('');
   const [branchName, setBranchName] = useState('');
   const [preview, setPreview] = useState<any>(null);
+  const [editing, setEditing] = useState<POSTable | null>(null);
+  const [editNumber, setEditNumber] = useState('');
+  const [editCapacity, setEditCapacity] = useState('4');
+  const [editSection, setEditSection] = useState('none');
+  const [editShape, setEditShape] = useState('square');
+  const [saving, setSaving] = useState(false);
+
+  const saveEdit = async () => {
+    if (!editing || !editNumber.trim() || Number(editCapacity) < 1) return;
+    setSaving(true);
+    const { data, error } = await db.from('pos_tables').update({
+      table_number: editNumber.trim(), capacity: Number(editCapacity),
+      section_id: editSection === 'none' ? null : editSection, shape: editShape,
+    }).eq('id', editing.id).eq('branch_id', branchId).eq('status', 'available').select('id');
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    if (!data?.length) return toast.error('Meja sedang dipakai atau tidak dapat diubah');
+    setEditing(null); await reload(); toast.success('Meja diperbarui');
+  };
 
   useEffect(() => {
     if (!branchId) return;
@@ -249,7 +268,7 @@ const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
     const { error } = await p;
     if (error) return toast.error(error.message);
     toast.success(msg);
-    reload();
+    await reload();
   };
 
   const addTables = async (numbers: string[]) => {
@@ -328,21 +347,33 @@ const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
         <h4 className="font-semibold pt-3">Daftar Meja ({tables.length})</h4>
         {tables.map((t: any) => (
           <div key={t.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-            <span><b>{t.table_number}</b> · {t.capacity} kursi · {sections.find((s: any) => s.id === t.section_id)?.name || 'Tanpa area'}</span>
-            <span className="flex">
+            <span className="min-w-0 break-words"><b>{t.table_number}</b> · {t.capacity} kursi · {sections.find((s: any) => s.id === t.section_id)?.name || 'Tanpa area'}<span className="block text-xs text-muted-foreground">{STATUS[t.status as TableStatus]?.label}</span></span>
+            <span className="flex shrink-0">
+            <Button size="icon" variant="ghost" title="Edit meja" aria-label={`Edit meja ${t.table_number}`} disabled={t.status !== 'available'} onClick={() => { setEditing(t); setEditNumber(t.table_number); setEditCapacity(String(t.capacity)); setEditSection(t.section_id || 'none'); setEditShape(t.shape); }}><Pencil className="h-4 w-4" /></Button>
             <Button size="icon" variant="ghost" title="Lihat QR" onClick={() => setPreview(t)}><QrCode className="h-4 w-4" /></Button>
             <Button size="icon" variant="ghost" title="Cetak QR" onClick={() => print([t.table_number])}><Printer className="h-4 w-4" /></Button>
-            <Button size="icon" variant="ghost" disabled={t.status !== 'available'} onClick={() => run(db.from('pos_tables').update({ is_active: false }).eq('id', t.id), 'Meja dinonaktifkan')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+            <Button size="icon" variant="ghost" title="Nonaktifkan meja" aria-label={`Nonaktifkan meja ${t.table_number}`} disabled={t.status !== 'available'} onClick={() => { if (window.confirm(`Nonaktifkan Meja ${t.table_number}?`)) run(db.from('pos_tables').update({ is_active: false }).eq('id', t.id).eq('status', 'available'), 'Meja dinonaktifkan'); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
             </span>
           </div>
         ))}
       </div>
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Edit Meja</DialogTitle></DialogHeader>
+          <label className="space-y-1 text-sm">Nomor meja<Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} /></label>
+          <label className="space-y-1 text-sm">Kapasitas kursi<Input type="number" min={1} value={editCapacity} onChange={(e) => setEditCapacity(e.target.value)} /></label>
+          <Select value={editSection} onValueChange={setEditSection}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Tanpa area</SelectItem>{sections.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
+          <Select value={editShape} onValueChange={setEditShape}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="square">Kotak</SelectItem><SelectItem value="round">Bulat</SelectItem></SelectContent></Select>
+          <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)}>Batal</Button><Button onClick={saveEdit} disabled={saving || !editNumber.trim() || Number(editCapacity) < 1}>{saving ? 'Menyimpan...' : 'Simpan'}</Button></div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
         <DialogContent className="max-w-xs text-center">
           <DialogHeader><DialogTitle>Meja {preview?.table_number}</DialogTitle></DialogHeader>
           {preview && <div className="flex flex-col items-center gap-3">
             <div className="rounded-xl bg-card p-3 border"><QRCodeSVG value={tableQrUrl(branchId, preview.table_number)} size={200} /></div>
             <p className="text-xs text-muted-foreground break-all">{tableQrUrl(branchId, preview.table_number)}</p>
+            <Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(tableQrUrl(branchId, preview.table_number)); toast.success('Tautan QR disalin'); } catch { toast.error('Tautan tidak dapat disalin'); } }}><Copy />Salin tautan</Button>
             <Button className="w-full" onClick={() => print([preview.table_number])}><Printer className="h-4 w-4 mr-2" />Cetak</Button>
           </div>}
         </DialogContent>
