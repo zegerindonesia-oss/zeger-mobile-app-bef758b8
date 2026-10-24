@@ -58,3 +58,5 @@
 - [x] POS bisa pakai printer Bluetooth yang sudah dipairing di tablet (Bluetooth Classic) — perlu build ulang APK
 - [x] Filter printer stiker/dapur per Brand (selain kategori & menu)
 - [x] QR meja smart hybrid (scan → web order / app), cetak QR, status meja di POS
+- [x] Back Office: Manajemen Meja & QR per cabang, pengaturan bersama POS dan cetak QR.
+- [ ] Uji tambah/edit meja dan sinkron POS dengan akun asli — koneksi Supabase eksternal tidak menyediakan sesi uji terautentikasi.

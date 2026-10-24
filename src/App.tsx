@@ -86,6 +86,8 @@ import RiderIncome from "./pages/finance/RiderIncome";
 import PromoManagement from "./pages/settings/PromoManagement";
 import BundleManagement from "./pages/settings/BundleManagement";
 import POSBranchConfig from "./pages/settings/POSBranchConfig";
+import TableManagement from "./pages/master/TableManagement";
+import { TABLE_MANAGEMENT_ROLES } from '@/lib/table-management';
 
 const queryClient = new QueryClient();
 
@@ -461,6 +463,7 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
+            <Route path="/master/tables" element={<RoleBasedRoute allowedRoles={TABLE_MANAGEMENT_ROLES}><ModernLayout><TableManagement /></ModernLayout></RoleBasedRoute>} />
             {[
               ['/inventory/procurement', <ProcurementInvoice />],
               ['/invoicing/purchase-orders', <ProcurementInvoice tab="new" />],

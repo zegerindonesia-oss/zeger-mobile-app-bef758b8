@@ -41,6 +41,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTenantModules } from "@/hooks/useTenantModules";
+import { TABLE_MANAGEMENT_ROLES } from '@/lib/table-management';
 
 interface MenuItem {
   id: string;
@@ -128,8 +129,9 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     id: "data-master",
     label: "Data Master",
     icon: Database,
-    roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"],
+    roles: TABLE_MANAGEMENT_ROLES,
     children: [
+      { id: "master-tables", label: "Manajemen Meja & QR", icon: Store, path: "/master/tables", module: "pos", roles: TABLE_MANAGEMENT_ROLES },
       { id: "master-products", label: "Produk / Menu", icon: Coffee, path: "/master/products" },
       { id: "master-variants", label: "Varian Menu", icon: Layers, path: "/master/variants" },
       { id: "raw-materials", label: "Bahan Baku, WIP & Resep", icon: Package, path: "/inventory/raw-materials", module: "bom", roles: ["1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "ho_staff", "branch_manager", "sb_branch_manager"] },
