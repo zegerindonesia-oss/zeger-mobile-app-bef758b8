@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] QR meja langsung membuka menu tanpa login; checkout nama + nomor HP.
+- [ ] Login pelanggan nomor HP + OTP — provider SMS Supabase belum aktif.
 - [x] KDS multi-station (Barista/Dapur), SLA, recall
 - [x] FlowF&B marketing website + company onboarding signup
 - [ ] Superadmin SaaS module toggles (per-tenant feature flags)
