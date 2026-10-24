@@ -5,6 +5,9 @@ import { useCustomerAppConfig } from "@/hooks/useCustomerAppConfig";
 import {
   ChevronLeft, Store, ShoppingBag, Bike, Ticket, ChevronRight, Clock, Check, Info, Plus, Wallet, Banknote, QrCode,
 } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { validGuestIdentity, normalizeCustomerPhone } from '@/lib/customer-entry';
 import { cn } from "@/lib/utils";
 import AddressPinMap from "./AddressPinMap";
 import { cxArt, artworkFor, onArtError, formatRupiah } from "@/lib/customer-art";
@@ -58,6 +61,9 @@ interface CustomerCheckoutProps {
   onQuickAdd?: (product: any) => void;
   onAddMore?: () => void;
   onOpenSubscription?: () => void;
+  guestMode?: boolean;
+  dineInTable?: string;
+  submitting?: boolean;
 }
 
 const SNACK_RE = /(snack|food|makan|pastry|bakery|roti|cake|kue|cookie|croissant|toast|dessert)/i;
@@ -77,9 +83,12 @@ export default function CustomerCheckout({
   cart, outletId, outletName, outletAddress, outletDistance, customerUser,
   onConfirm, onBack, onChangeOutlet, initialOrderType = "outlet_pickup",
   suggestions = [], onQuickAdd, onAddMore, onOpenSubscription,
+  guestMode = false, dineInTable, submitting = false,
 }: CustomerCheckoutProps) {
   const { toast } = useToast();
   const cfg = useCustomerAppConfig();
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [orderType, setOrderType] = useState<"outlet_pickup" | "outlet_delivery">(initialOrderType);
   const [deliveryAddress, setDeliveryAddress] = useState(() => {
     if (customerUser.address) return customerUser.address;
@@ -151,7 +160,7 @@ export default function CustomerCheckout({
   }, [orderType, outletId, pin?.lat, pin?.lng, subtotal]);
 
   const deliveryFee = orderType === "outlet_delivery" ? (courier?.price ?? 0) : 0;
-  const takeAwayCharge = orderType === "outlet_pickup" ? cfg.order.takeaway_charge : 0;
+  const takeAwayCharge = dineInTable ? 0 : orderType === "outlet_pickup" ? cfg.order.takeaway_charge : 0;
   const deliveryDiscount = orderType === "outlet_delivery"
     ? Math.floor(deliveryFee * (cfg.order.delivery_discount_percent / 100))
     : 0;
@@ -172,7 +181,8 @@ export default function CustomerCheckout({
     if (usePoints && maxPointsCanUse === 0) setUsePoints(false);
   }, [usePoints, maxPointsCanUse]);
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
+    if (guestMode && !validGuestIdentity(guestName, guestPhone)) { toast({ title: "Lengkapi nama dan nomor HP", variant: "destructive" }); return; }
     if (orderType === "outlet_delivery" && !deliveryAddress.trim()) {
       toast({ title: "Alamat belum diisi", description: "Masukkan alamat pengiriman dulu ya.", variant: "destructive" });
       return;
@@ -182,7 +192,9 @@ export default function CustomerCheckout({
       return;
     }
     setLoading(true);
-    onConfirm({
+    try { await onConfirm({
+      guestName: guestName.trim(),
+      guestPhone: normalizeCustomerPhone(guestPhone),
       outletId,
       orderType,
       deliveryAddress: orderType === "outlet_delivery" ? deliveryAddress : undefined,
@@ -201,7 +213,7 @@ export default function CustomerCheckout({
       voucherCode: voucherDiscount > 0 ? selectedVoucher?.voucher?.code : undefined,
       pointsUsed: usePoints ? maxPointsCanUse : 0,
       pointsEarned: earnedPoints,
-    });
+    }); } finally { setLoading(false); }
   };
 
   // Best usable voucher (highest saving) for the one-tap "Pakai" card.
@@ -223,7 +235,7 @@ export default function CustomerCheckout({
     return [...pool.filter(isSnack), ...pool.filter((p) => !isSnack(p))].slice(0, 8);
   }, [suggestions, cart]);
 
-  const disabled = loading || (orderType === 'outlet_delivery' && (!deliveryAddress.trim() || !courier));
+  const disabled = loading || submitting || (orderType === 'outlet_delivery' && (!deliveryAddress.trim() || !courier));
 
   return (
     <div className="cx-app min-h-screen pb-48">
@@ -236,7 +248,7 @@ export default function CustomerCheckout({
 
       <main className="px-4 pt-4 space-y-4">
         {/* Mode */}
-        <div className="cx-seg grid grid-cols-2 gap-1">
+        {!dineInTable && <div className="cx-seg grid grid-cols-2 gap-1">
           <button
             type="button"
             data-active={orderType === 'outlet_pickup'}
@@ -254,6 +266,15 @@ export default function CustomerCheckout({
             <Bike className="h-4 w-4" /> Diantar
           </button>
         </div>
+
+        }
+        {guestMode && <section className="space-y-3">
+          <h2 className="text-base font-semibold">Nama pemesan · Meja {dineInTable}</h2>
+          <label htmlFor="guest-name" className="block text-sm">Nama</label>
+          <Input id="guest-name" autoComplete="name" value={guestName} maxLength={80} onChange={e => setGuestName(e.target.value)} placeholder="Nama kamu" />
+          <label htmlFor="guest-phone" className="block text-sm">Nomor HP</label>
+          <Input id="guest-phone" type="tel" autoComplete="tel" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="08xxxxxxxxxx" />
+        </section>}
 
         {/* Outlet */}
         <div className="cx-card rounded-3xl p-4">
@@ -318,7 +339,7 @@ export default function CustomerCheckout({
                 </div>
               )}
             </div>
-          ) : (
+          ) : !dineInTable ? (
             <div className="mt-4">
               <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" /> Waktu Pengambilan
@@ -337,7 +358,7 @@ export default function CustomerCheckout({
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Items */}
@@ -433,7 +454,7 @@ export default function CustomerCheckout({
         )}
 
         {/* Voucher */}
-        <button
+        {!guestMode && <button
           type="button"
           onClick={() => setShowVouchers((s) => !s)}
           className="cx-card rounded-3xl p-4 w-full flex items-center gap-3 text-left"
@@ -452,7 +473,7 @@ export default function CustomerCheckout({
             </p>
           </div>
           <ChevronRight className={cn('h-5 w-5 text-muted-foreground transition-transform', showVouchers && 'rotate-90')} />
-        </button>
+        </button>}
 
         {showVouchers && (
           <div className="space-y-2 cx-rise">
@@ -494,7 +515,7 @@ export default function CustomerCheckout({
         )}
 
         {/* Points */}
-        <div className="cx-card rounded-3xl p-4 flex items-center gap-3">
+        {!guestMode && <div className="cx-card rounded-3xl p-4 flex items-center gap-3">
           <img src={cxArt.coin} alt="" className="cx-coin cx-coin-spin h-10 w-10 object-contain shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold">Tukar Zeger Point</p>
@@ -520,11 +541,12 @@ export default function CustomerCheckout({
           </button>
         </div>
 
+        }
         {/* Payment method */}
         <div className="cx-card rounded-3xl p-4">
           <h2 className="text-base font-bold mb-3">Metode Pembayaran</h2>
           <div className="space-y-2">
-            {PAYMENTS.map((p) => (
+            {guestMode ? <p className="text-sm font-medium">Bayar di kasir · Belum dibayar</p> : PAYMENTS.map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -566,7 +588,7 @@ export default function CustomerCheckout({
           <div className="mt-3 flex items-center gap-2 rounded-2xl bg-zeger-cream px-3 py-2">
             <Info className="h-3.5 w-3.5 text-zeger-dark shrink-0" />
             <p className="text-[11px] text-zeger-dark font-medium">
-              Kamu akan mendapat <span className="font-extrabold">{earnedPoints} poin</span> setelah pesanan selesai.
+              {guestMode ? 'Verifikasi nomor HP untuk akses poin member. ' : 'Kamu akan mendapat '}{!guestMode && <><span className="font-extrabold">{earnedPoints} poin</span> setelah pesanan selesai.</>}
             </p>
           </div>
         </div>
@@ -580,7 +602,7 @@ export default function CustomerCheckout({
             disabled={disabled}
             className="cx-btn cx-btn-primary w-full px-5 py-4 flex items-center justify-between"
           >
-            <span className="text-sm">{loading ? 'Memproses...' : 'Lanjut Bayar QRIS'}</span>
+            <span className="text-sm">{loading || submitting ? 'Memproses...' : guestMode ? 'Kirim Pesanan · Bayar di Kasir' : 'Lanjut Bayar QRIS'}</span>
             <span className="cx-num text-base font-extrabold">{formatRupiah(total)}</span>
           </button>
         </div>

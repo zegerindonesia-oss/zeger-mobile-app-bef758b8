@@ -37,6 +37,7 @@ interface CustomerMenuProps {
   cartItemCount: number;
   onViewCart: () => void;
   cart: any[];
+  dineInTable?: string;
 }
 
 const brandOf = (p: Product) => (p.brand || '').trim() || 'Zeger';
@@ -54,6 +55,7 @@ export function CustomerMenu({
   onOrderModeChange,
   onViewCart,
   cart = [],
+  dineInTable,
 }: CustomerMenuProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
@@ -129,7 +131,7 @@ export function CustomerMenu({
     return () => window.removeEventListener('scroll', on);
   }, []);
   const collapsed = scrollY > 120;
-  const modeLabel = orderMode === 'pickup' ? 'Pick Up' : 'Delivery';
+  const modeLabel = dineInTable ? `Dine In · Meja ${dineInTable}` : orderMode === 'pickup' ? 'Pick Up' : 'Delivery';
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-40">
@@ -179,7 +181,7 @@ export function CustomerMenu({
             )}
             <h1 className="text-base font-semibold">Zeger Coffee</h1>
           </div>
-          <div className="mt-3 flex justify-center">
+          {!dineInTable && <div className="mt-3 flex justify-center">
             <div className="flex rounded-full bg-card p-1">
               {(['pickup', 'delivery'] as const).map((m) => (
                 <button
@@ -195,6 +197,7 @@ export function CustomerMenu({
               ))}
             </div>
           </div>
+          }
           <p className="mt-3 text-center text-xs font-medium opacity-80">Grind the Essentials</p>
         </div>
       </section>

@@ -21,3 +21,6 @@
 - Loyalty rewards: reward_value JSON holds valid_hours (claim window, default 24) and product_id for free_product rewards; redeem_loyalty_reward stamps expiry/product on loyalty_redemptions, and POS + customer app both read member_benefits() so they always show the same vouchers.
 - POS dine-in table QR uses /table?b=&t= (get_table_qr_info RPC, public minimal fields); context kept in sessionStorage and stamped as customer_orders.table_number, a trigger marks pos_tables occupied, so guests can order without installing the app.
 - Back Office table configuration at /master/tables shares TableSetup and pos_tables/pos_table_sections with POS; HO branch selection is tenant-scoped and managers use their assigned branch, so QR and table settings have one source of truth.
+
+- Table QR guests browse a minimal-field tenant-scoped menu RPC and submit an atomic server-priced dine-in bill to POS/KDS; guest phone never grants member access, and guest checkout uses pay-at-counter rather than claiming gateway payment.
+- Customer phone sign-in uses Supabase SMS OTP and server-verified phone profile linking; existing email login remains as migration fallback, and SMS delivery requires the hosted phone provider to be enabled.

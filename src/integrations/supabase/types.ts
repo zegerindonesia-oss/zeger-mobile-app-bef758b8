@@ -5487,6 +5487,7 @@ export type Database = {
         | { Args: { schema_name: string; table_name: string }; Returns: string }
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
+      ensure_phone_customer: { Args: { _name?: string }; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       expire_old_reservations: { Args: never; Returns: number }
       fulfill_rider_stock_request: {
@@ -5630,6 +5631,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_table_guest_menu: { Args: { _branch_id: string }; Returns: Json }
       get_table_qr_info: {
         Args: { _branch_id: string; _table: string }
         Returns: {
@@ -6477,6 +6479,17 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      submit_table_guest_order: {
+        Args: {
+          _branch_id: string
+          _items: Json
+          _name: string
+          _phone: string
+          _request_id: string
+          _table: string
+        }
+        Returns: Json
       }
       sync_accounting_auto: {
         Args: { _from: string; _to: string }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
+import { isGuestBrowseView } from '@/lib/customer-entry';
 import { readTableContext } from '@/lib/table-qr';
 import { findNearestOutlet } from '@/lib/nearest-outlet';
 import { Card, CardContent } from '@/components/ui/card';
@@ -79,7 +80,7 @@ interface CartItem extends Product {
   customizations: any;
 }
 
-type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'courier-tracking' | 'street' | 'subscription' | 'referral' | 'care' | 'notifications';
+type View = 'home' | 'loyalty' | 'promo-reward' | 'vouchers' | 'orders' | 'profile' | 'map' | 'menu' | 'product-detail' | 'cart' | 'outlets' | 'checkout' | 'payment' | 'order-success' | 'waiting' | 'order-tracking' | 'courier-tracking' | 'guest-success' | 'street' | 'subscription' | 'referral' | 'care' | 'notifications';
 
 /** Screens that keep the floating bottom dock visible. */
 const DOCK_VIEWS: View[] = ['home', 'vouchers', 'promo-reward', 'orders', 'profile', 'loyalty', 'map'];
@@ -99,6 +100,9 @@ function CustomerAppInner() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [guestSubmitting, setGuestSubmitting] = useState(false);
+  const [guestReceipt, setGuestReceipt] = useState<{ order_id: string; table: string; total: number } | null>(null);
+  const [guestRequestId, setGuestRequestId] = useState(() => crypto.randomUUID());
   const [activeOrdersCount, setActiveOrdersCount] = useState(0);
   
   // Outlet selection state
@@ -211,7 +215,7 @@ function CustomerAppInner() {
   // Fetch products on mount
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [tableCtx?.branchId]);
 
   // Real-time subscription for active orders
   useEffect(() => {
@@ -406,6 +410,12 @@ function CustomerAppInner() {
 
   const fetchProducts = async () => {
     try {
+      if (tableCtx) {
+        const { data, error } = await supabase.rpc('get_table_guest_menu', { _branch_id: tableCtx.branchId });
+        if (error) throw error;
+        setProducts((Array.isArray(data) ? data : []) as unknown as Product[]);
+        return;
+      }
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -542,6 +552,24 @@ function CustomerAppInner() {
   const getTotalItems = () => cartItemCount(cart as any);
 
   const handleProceedToPayment = async (orderData: any) => {
+    if (!isAuthenticated) {
+      if (!tableCtx || guestSubmitting) return;
+      setGuestSubmitting(true);
+      try {
+        const { data, error } = await supabase.rpc('submit_table_guest_order', {
+          _branch_id: tableCtx.branchId, _table: tableCtx.table,
+          _name: orderData.guestName, _phone: orderData.guestPhone,
+          _items: cart.map(i => ({ id: i.id, quantity: i.quantity, customizations: i.customizations })),
+          _request_id: guestRequestId,
+        });
+        if (error) throw error;
+        setGuestReceipt(data as unknown as { order_id: string; table: string; total: number });
+        setCart([]); setGuestRequestId(crypto.randomUUID()); setActiveView('guest-success');
+      } catch (error: any) { toast({ title: 'Pesanan belum terkirim', description: error.message, variant: 'destructive' }); }
+      finally { setGuestSubmitting(false); }
+      return;
+    }
+    if (!customerUser) return;
     try {
       console.log('🛒 Creating order with pending payment status...');
       
@@ -549,7 +577,7 @@ function CustomerAppInner() {
       const { data: order, error: orderError } = await supabase
         .from('customer_orders')
         .insert({
-          user_id: customerUser!.id,
+          user_id: customerUser.id,
           outlet_id: orderData.outletId,
           order_type: orderData.orderType,
           delivery_address: orderData.deliveryAddress,
@@ -616,6 +644,7 @@ function CustomerAppInner() {
       return;
     }
     
+    if (!customerUser) return;
     try {
       console.log('✅ Payment confirmed, processing order:', pendingOrderData.orderId);
 
@@ -648,11 +677,11 @@ function CustomerAppInner() {
 
       // Update user points if used
       if (pendingOrderData.pointsUsed > 0) {
-        const newPointsBalance = (customerUser!.points || 0) - pendingOrderData.pointsUsed;
+        const newPointsBalance = (customerUser.points || 0) - pendingOrderData.pointsUsed;
         const { error: pointsError } = await supabase
           .from('customer_users')
           .update({ points: newPointsBalance })
-          .eq('id', customerUser!.id);
+          .eq('id', customerUser.id);
 
         if (pointsError) throw pointsError;
         
@@ -717,7 +746,7 @@ function CustomerAppInner() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !(tableCtx && isGuestBrowseView(activeView) && !tab)) {
     return <CustomerAuth onAuthSuccess={() => {
       setIsAuthenticated(true);
       fetchCustomerProfile();
@@ -834,10 +863,11 @@ function CustomerAppInner() {
                 outletName={selectedOutlet?.name}
                 outletAddress={selectedOutlet?.address}
                 outletDistance={selectedOutlet?.distance}
-                onChangeOutlet={() => setActiveView('outlets')}
-                onBack={() => setActiveView('home')}
+                onChangeOutlet={tableCtx ? undefined : () => setActiveView('outlets')}
+                onBack={tableCtx ? undefined : () => setActiveView('home')}
                 orderMode={orderMode}
-                onOrderModeChange={setOrderMode}
+                onOrderModeChange={tableCtx ? undefined : setOrderMode}
+                dineInTable={tableCtx?.table}
                 cartItemCount={getTotalItems()}
                 onViewCart={() => setActiveView('cart')}
                 cart={cart}
@@ -866,7 +896,7 @@ function CustomerAppInner() {
                 outletAddress={selectedOutlet?.address}
                 outletDistance={selectedOutlet?.distance}
                 orderMode={orderMode === 'delivery' ? 'outlet_delivery' : 'outlet_pickup'}
-                onOrderModeChange={(mode) => setOrderMode(mode === 'outlet_delivery' ? 'delivery' : 'pickup')}
+                onOrderModeChange={(mode) => { if (!tableCtx) setOrderMode(mode === 'outlet_delivery' ? 'delivery' : 'pickup'); }}
                 onUpdateQuantity={updateCartQuantity}
                 onNavigate={(view: string) => {
                   if (view === 'checkout' && !selectedOutlet) {
@@ -885,23 +915,38 @@ function CustomerAppInner() {
                 onDeleteItem={handleDeleteCartItem}
               />
             )}
-            {activeView === 'checkout' && selectedOutlet && customerUser && (
+            {activeView === 'checkout' && selectedOutlet && (customerUser || tableCtx) && (
               <CustomerCheckout
                 cart={cart}
                 outletId={selectedOutlet.id}
                 outletName={selectedOutlet.name}
                 outletAddress={selectedOutlet.address}
                 outletDistance={selectedOutlet.distance}
-                customerUser={customerUser}
+                customerUser={customerUser || { id: '', points: 0 }}
+                guestMode={!isAuthenticated}
+                dineInTable={tableCtx?.table}
+                submitting={guestSubmitting}
                 onConfirm={handleProceedToPayment}
                 onBack={() => setActiveView('cart')}
-                onChangeOutlet={() => setActiveView('outlets')}
+                onChangeOutlet={tableCtx ? undefined : () => setActiveView('outlets')}
                 initialOrderType={orderMode === 'delivery' ? 'outlet_delivery' : 'outlet_pickup'}
                 suggestions={products}
                 onQuickAdd={(p: any) => addToCart(p, 1, {})}
                 onAddMore={() => setActiveView('menu')}
                 onOpenSubscription={() => setActiveView('subscription')}
               />
+            )}
+            {activeView === 'guest-success' && guestReceipt && (
+              <main className="mx-auto max-w-md px-6 py-12 space-y-6 text-center">
+                <ZegerLogo size="lg" />
+                <h1 className="text-xl font-semibold">Pesanan terkirim</h1>
+                <p className="text-sm text-muted-foreground">Meja {guestReceipt.table} · {selectedOutlet?.name}</p>
+                <p className="text-sm">Kode pesanan {guestReceipt.order_id.slice(0, 8).toUpperCase()}</p>
+                <p className="text-lg font-semibold">Rp{Number(guestReceipt.total || 0).toLocaleString('id-ID')}</p>
+                <p className="text-sm text-muted-foreground">Belum dibayar · Selesaikan pembayaran di kasir.</p>
+                <Button className="w-full" onClick={() => setActiveView('menu')}>Kembali ke menu</Button>
+                <Button variant="outline" className="w-full" onClick={() => setActiveView('profile')}>Masuk untuk akses member</Button>
+              </main>
             )}
             {activeView === 'payment' && pendingOrderData && pendingOrderData.orderId && (
               <CustomerPaymentMethod
@@ -1018,7 +1063,7 @@ function CustomerAppInner() {
 }
 export default function CustomerApp() {
   const [showIntro, setShowIntro] = useState(() => {
-    try { return !localStorage.getItem(ONBOARDING_KEY); } catch { return false; }
+    try { return !readTableContext() && !localStorage.getItem(ONBOARDING_KEY); } catch { return false; }
   });
   if (showIntro) return <CustomerOnboarding onDone={() => setShowIntro(false)} />;
   return <CustomerAppInner />;

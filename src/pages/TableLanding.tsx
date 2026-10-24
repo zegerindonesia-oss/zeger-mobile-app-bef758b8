@@ -24,8 +24,9 @@ const TableLanding = () => {
       if (error || !row) return setError('Outlet tidak ditemukan.');
       setInfo(row);
       saveTableContext({ branchId, branchName: row.branch_name, branchAddress: row.branch_address || '', table });
+      navigate('/customer-app', { replace: true });
     });
-  }, [branchId, table]);
+  }, [branchId, table, navigate]);
 
   const openApp = () => {
     // Opens the installed app via its custom scheme; falls back to the store.
