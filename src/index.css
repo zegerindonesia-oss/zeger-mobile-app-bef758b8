@@ -21,6 +21,7 @@
 @layer base {
   :root {
     --zeger: 357 82% 54%;
+    --zeger-accent: 18 96% 58%;
     --zeger-dark: 355 75% 34%;
     --zeger-soft: 0 86% 96%;
     --zeger-cream: 43 96% 94%;

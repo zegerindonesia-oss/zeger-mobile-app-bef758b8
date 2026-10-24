@@ -167,7 +167,7 @@ export function CustomerMenu({
       </div>
 
       {/* Hero with parallax */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-zeger via-zeger to-[hsl(var(--zeger-accent,25_95%_55%))] pb-12 pt-[calc(env(safe-area-inset-top)+12px)] text-primary-foreground">
+      <section className="relative overflow-hidden bg-gradient-to-br from-zeger via-zeger to-[hsl(var(--zeger-accent))] pb-12 pt-[calc(env(safe-area-inset-top)+12px)] text-primary-foreground">
         <div
           className="pointer-events-none absolute -right-16 -top-10 h-56 w-56 rounded-full bg-primary-foreground/10 blur-2xl"
           style={{ transform: `translateY(${scrollY * 0.4}px)` }}
