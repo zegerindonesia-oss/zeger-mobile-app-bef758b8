@@ -552,7 +552,7 @@ function CustomerAppInner() {
   const getTotalItems = () => cartItemCount(cart as any);
 
   const handleProceedToPayment = async (orderData: any) => {
-    if (!isAuthenticated && !(tableCtx && isGuestBrowseView(activeView) && !tab)) {
+    if (!isAuthenticated) {
       if (!tableCtx || guestSubmitting) return;
       setGuestSubmitting(true);
       try {
