@@ -5,6 +5,9 @@ import { useSearchParams } from 'react-router-dom';
 import { isGuestBrowseView } from '@/lib/customer-entry';
 import { readTableContext } from '@/lib/table-qr';
 import { findNearestOutlet } from '@/lib/nearest-outlet';
+import { isStoreOpen } from '@/lib/store-hours';
+import { useCustomerAppConfig } from '@/hooks/useCustomerAppConfig';
+import { StoreClosedSheet } from '@/components/customer/StoreClosedSheet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -136,6 +139,8 @@ function CustomerAppInner() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [orderChannel, setOrderChannel] = useState<'branch' | 'street'>('branch');
   const [orderMode, setOrderMode] = useState<'pickup' | 'delivery'>('pickup');
+  const appConfig = useCustomerAppConfig();
+  const [storeClosed, setStoreClosed] = useState(false);
   
   // Pending order data for payment flow
   const [pendingOrderData, setPendingOrderData] = useState<any>(null);
@@ -776,6 +781,7 @@ function CustomerAppInner() {
                 onAddToCart={addToCart}
                 onChooseChannel={async (ch, mode) => {
                   if (ch === 'wheels') { setActiveView('map'); return; }
+                  if (!isStoreOpen(appConfig.order.open_time, appConfig.order.close_time)) { setStoreClosed(true); return; }
                   setOrderChannel(ch);
                   setOrderMode(mode);
                   const nearest = await findNearestOutlet(ch, mode).catch(() => null);
@@ -873,6 +879,7 @@ function CustomerAppInner() {
                 cart={cart}
               />
             )}
+            <StoreClosedSheet open={storeClosed} onClose={() => setStoreClosed(false)} openTime={appConfig.order.open_time} closeTime={appConfig.order.close_time} />
             {activeView === 'product-detail' && selectedProduct && (
               <CustomerProductDetail
                 product={selectedProduct}

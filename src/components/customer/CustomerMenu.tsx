@@ -167,10 +167,14 @@ export function CustomerMenu({
       </div>
 
       {/* Hero with parallax */}
-      <section className="relative overflow-hidden bg-zeger pb-12 pt-[calc(env(safe-area-inset-top)+12px)] text-primary-foreground">
+      <section className="relative overflow-hidden bg-gradient-to-br from-zeger via-zeger to-[hsl(var(--zeger-accent))] pb-12 pt-[calc(env(safe-area-inset-top)+12px)] text-primary-foreground">
         <div
-          className="pointer-events-none absolute -right-16 -top-10 h-56 w-56 rounded-full bg-primary-foreground/5"
+          className="pointer-events-none absolute -right-16 -top-10 h-56 w-56 rounded-full bg-primary-foreground/10 blur-2xl"
           style={{ transform: `translateY(${scrollY * 0.4}px)` }}
+        />
+        <div
+          className="pointer-events-none absolute -bottom-20 -left-16 h-48 w-48 rounded-full bg-[hsl(45_100%_70%/0.25)] blur-3xl"
+          style={{ transform: `translateY(${scrollY * 0.2}px)` }}
         />
         <div
           className="relative px-4"
@@ -201,7 +205,7 @@ export function CustomerMenu({
             </div>
           </div>
           }
-          <p className="mt-3 text-center text-xs font-medium opacity-80">Grind the Essentials</p>
+          <p className="mt-3 text-center text-xs font-medium opacity-80">Good Mood Coffee · Your Mood Booster</p>
         </div>
       </section>
 

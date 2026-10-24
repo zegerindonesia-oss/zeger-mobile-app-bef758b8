@@ -249,8 +249,8 @@ const MobileSellerEnhanced = () => {
         error: inventoryError
       } = await supabase.from('inventory').select(`
           *,
-          products(id, name, price, category)
-        `).eq('rider_id', profile.id).gt('stock_quantity', 0);
+          products!inner(id, name, price, category, is_active)
+        `).eq('rider_id', profile.id).eq('products.is_active', true).gt('stock_quantity', 0);
       if (inventoryError) {
         console.error('Inventory fetch error:', inventoryError);
         toast.error("Gagal memuat stok: " + inventoryError.message);

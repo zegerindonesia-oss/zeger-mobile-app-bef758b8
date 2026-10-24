@@ -37,6 +37,9 @@ export interface CustomerAppConfig {
     delivery_discount_percent: number;
     /** Biaya kemasan take away (Rupiah). */
     takeaway_charge: number;
+    /** Jam buka/tutup store (WIB, HH:MM). */
+    open_time: string;
+    close_time: string;
   };
 }
 
@@ -46,7 +49,7 @@ const DEFAULT: CustomerAppConfig = {
   sections: { membership: true, voucher_referral: true, order_types: true, rider_nearby: true, promo_active: true, big_order: true, zeger_care: true },
   care: { whatsapp_number: '628133180488', faq_items: [] },
   referral: { reward_points: 50, code_prefix: 'ZG-' },
-  order: { delivery_fee: 25400, delivery_discount_percent: 20, takeaway_charge: 3500 },
+  order: { delivery_fee: 25400, delivery_discount_percent: 20, takeaway_charge: 3500, open_time: '07:00', close_time: '22:00' },
 };
 
 let cache: CustomerAppConfig | null = null;

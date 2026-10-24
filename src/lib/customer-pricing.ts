@@ -37,6 +37,12 @@ export const SIZE_LABELS: Record<string, string> = {
 export function describeCustomizations(c?: Record<string, any> | null): string {
   if (!c) return '';
   const parts: string[] = [];
+  if (Array.isArray(c.modifiers) && c.modifiers.length) {
+    if (c.temperature) parts.push(c.temperature === 'hot' ? 'Hot' : 'Iced');
+    parts.push(...c.modifiers.map((m: any) => m.name));
+    if (c.notes) parts.push(`"${c.notes}"`);
+    return parts.join(' • ');
+  }
   if (c.temperature) parts.push(c.temperature === 'hot' ? 'Panas' : 'Dingin');
   if (c.size) parts.push(SIZE_LABELS[c.size] || String(c.size));
   if (c.iceLevel) parts.push(`Es ${c.iceLevel === 'normal' ? 'Normal' : c.iceLevel === 'less' ? 'Sedikit' : 'Tanpa Es'}`);
@@ -51,12 +57,14 @@ export function describeCustomizations(c?: Record<string, any> | null): string {
 export interface PricedItem {
   price: number;
   quantity?: number;
-  customizations?: { size?: string; toppings?: string[] } | null;
+  customizations?: { size?: string; toppings?: string[]; modifiers?: { price: number }[] } | null;
 }
 
 /** Price of a single unit including size upgrade and toppings. */
 export function unitPrice(item: PricedItem): number {
   let price = Number(item.price) || 0;
+  const mods = item.customizations?.modifiers;
+  if (Array.isArray(mods)) return price + mods.reduce((s, m) => s + (Number(m.price) || 0), 0);
   const size = item.customizations?.size;
   if (size && SIZE_UPCHARGE[size]) price += SIZE_UPCHARGE[size];
   const toppings = item.customizations?.toppings;
