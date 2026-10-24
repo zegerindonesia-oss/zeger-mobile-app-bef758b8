@@ -39,7 +39,9 @@ interface StockTransferProps {
 interface Product {
   id: string;
   name: string;
-  category: string;
+  category: string | null;
+  sub_category?: string | null;
+  brand?: string | null;
 }
 
 interface StockTransferItem {
@@ -127,16 +129,15 @@ export const StockTransfer = ({ role, userId, branchId }: StockTransferProps) =>
   
   // Product filter states
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([
-    "Espresso Based",
-    "Milk Based", 
-    "Refresher",
-    "Botol 200ml",
-    "Botol 1 Liter",
-    "Can Series",
-    "Paket Ramadhan",
-    "Snack"
-  ]);
+  // Empty = all categories shown
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [activeBrand, setActiveBrand] = useState<string>("");
+  const catOf = (p: Product) => p.sub_category || p.category || "Lainnya";
+  const brandList = Array.from(new Set(products.map((p) => p.brand).filter(Boolean) as string[])).sort();
+  const brandProducts = !activeBrand || activeBrand === "__all"
+    ? products
+    : products.filter((p) => p.brand === activeBrand);
+  const categoryList = Array.from(new Set(brandProducts.map(catOf))).sort();
 
   // Branch Hub currently has no production/inventory source, so only Small
   // Branch transfers may validate and deduct branch-level inventory.
