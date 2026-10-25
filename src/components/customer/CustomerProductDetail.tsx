@@ -32,6 +32,22 @@ interface CustomerProductDetailProps {
 
 const isTempGroup = (g: ModifierGroup) => /suhu|temperat|hot|iced?\b/i.test(g.name) && g.options.every((o) => /ice|iced|hot|panas|dingin/i.test(o.name));
 
+/** Taste dots (1–5): manual custom_options.taste wins, else inferred from the menu name. */
+function tasteProfile(product: { name: string }, opts: any): [string, number][] {
+  const t = opts?.taste || {};
+  const n = product.name.toLowerCase();
+  const coffee = /americano|espresso|kopi|latte|mocha|coffee/.test(n);
+  const milk = /latte|milk|creamy|susu|chocomalt|matcha|cookies/.test(n);
+  const sweet = /aren|caramel|baileys|butterscotch|dolce|mocha|choco|cookies|lychee|lemonade|peach|sahabat/.test(n);
+  const strength = t.strength ?? (/americano|espresso/.test(n) ? 4 : coffee ? 3 : 0);
+  const rows: [string, number][] = [];
+  if (strength) rows.push(['Coffee Strength', strength]);
+  rows.push(['Sweetness', t.sweetness ?? (sweet ? 4 : 2)]);
+  const cream = t.creaminess ?? (milk ? 3 : 0);
+  if (cream) rows.push(['Creaminess', cream]);
+  return rows;
+}
+
 export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCount, onViewCart }: CustomerProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
   const [temperature, setTemperature] = useState<'hot' | 'cold'>('cold');
@@ -96,6 +112,18 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
             </span>
           )}
         </div>
+        <div className="mt-3 space-y-1.5">
+          {tasteProfile(product, opts).map(([label, v]) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="w-28 text-[11px] text-muted-foreground">{label}</span>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <span key={i} className={cn('h-2 w-2 rounded-full', i <= v ? 'bg-zeger' : 'bg-[hsl(var(--cx-line))]')} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <div className="space-y-4 px-4 pt-4">
@@ -111,15 +139,17 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
         )}
 
         {groups.map((g) => (
-          <Group key={g.name} title={g.name} required={g.required} hint={g.multi ? 'Bisa pilih lebih dari satu' : undefined}>
-            <div className="flex flex-wrap gap-2">
+          <Group key={g.name} title={g.name} required={g.required} hint={g.required ? 'Wajib, Pilih 1' : g.multi ? 'Optional, Bisa lebih dari 1' : 'Optional, Maksimal 1'}>
+            <div className="divide-y divide-dashed divide-[hsl(var(--cx-line))]">
               {g.options.map((o) => {
                 const on = (picked[g.name] || []).includes(o.name);
                 return (
-                  <button key={o.name} onClick={() => pick(g, o.name)} data-active={on} className="cx-opt flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs">
-                    {g.multi && on && <Check className="h-3 w-3" />}
-                    {o.name}
-                    {o.price > 0 && <span className={cn('cx-num text-[10px]', on ? 'text-white/85' : 'text-muted-foreground')}>+{formatRupiah(o.price)}</span>}
+                  <button key={o.name} onClick={() => pick(g, o.name)} className="flex w-full items-center gap-3 py-2.5 text-left">
+                    <span className="flex-1 text-xs">{o.name}</span>
+                    {o.price > 0 && <span className="cx-num text-[11px] text-muted-foreground">+{formatRupiah(o.price)}</span>}
+                    <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center border-2', g.multi ? 'rounded-md' : 'rounded-full', on ? 'border-zeger bg-zeger' : 'border-[hsl(var(--cx-line))]')}>
+                      {on && (g.multi ? <Check className="h-2.5 w-2.5 text-zeger-foreground" /> : <span className="h-1.5 w-1.5 rounded-full bg-zeger-foreground" />)}
+                    </span>
                   </button>
                 );
               })}
