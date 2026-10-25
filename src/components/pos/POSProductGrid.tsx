@@ -13,6 +13,7 @@ import { getModifierGroups, loadMasterModifierGroups } from '@/lib/pos-modifiers
 import type { AddItemOptions } from '@/hooks/usePOSCart';
 import { Star3D } from './Star3D';
 import { normalizeImageUrl } from '@/lib/image-url';
+import { normalizeCategoryOrder, orderCustomerCategories } from '@/lib/customer-category-order';
 
 const FAV = '__favorit__';
 
@@ -171,11 +172,15 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
     brandProducts.forEach((p) => { const c = catOf(p); m[c] = (m[c] || 0) + 1; });
     return m;
   }, [brandProducts]);
+  const [catOrder, setCatOrder] = useState<string[]>([]);
+  useEffect(() => {
+    (supabase as any).rpc('get_customer_category_order').then(({ data }: any) => setCatOrder(normalizeCategoryOrder(data)));
+  }, []);
   const categories = useMemo(() => {
-    const cats = ['Semua', ...Object.keys(catCounts).filter((c) => c !== 'Semua')];
+    const cats = ['Semua', ...orderCustomerCategories(Object.keys(catCounts).filter((c) => c !== 'Semua'), catOrder)];
     if (bundles.length > 0 && activeBrand === 'Semua Brand') cats.push('Bundle');
     return cats;
-  }, [catCounts, bundles, activeBrand]);
+  }, [catCounts, bundles, activeBrand, catOrder]);
 
   const favCount = useMemo(() => brandProducts.filter(isFav).length, [brandProducts, isFav]);
 

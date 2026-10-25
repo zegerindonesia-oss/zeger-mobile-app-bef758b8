@@ -37,7 +37,7 @@ const POSBranchConfig = () => {
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [branchId, setBranchId] = useState('');
   const [s, setS] = useState<POSBranchSettings | null>(null);
-  const [products, setProducts] = useState<{ id: string; name: string; category: string | null }[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string; category: string | null; sub_category: string | null; brand: string | null }[]>([]);
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -46,13 +46,22 @@ const POSBranchConfig = () => {
       setBranches(data || []);
       setBranchId(userProfile?.branch_id || data?.[0]?.id || '');
     });
-    supabase.from('products').select('id,name,category').eq('is_active', true).order('name').then(({ data }) => setProducts(data || []));
+    (supabase as any).from('products').select('id,name,category,sub_category,brand').eq('is_active', true).order('name').then(({ data }: any) => setProducts(data || []));
   }, [userProfile?.branch_id]);
   useEffect(() => { if (branchId) fetchBranchSettings(branchId).then(setS); }, [branchId]);
 
   const filtered = useMemo(() => products.filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase())), [products, search]);
+  const groups = useMemo(() => {
+    const by = (key: (p: typeof products[number]) => string) => {
+      const m = new Map<string, string[]>();
+      products.forEach((p) => { const k = key(p); m.set(k, [...(m.get(k) || []), p.id]); });
+      return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    };
+    return { brands: by((p) => p.brand?.trim() || 'Tanpa Brand'), cats: by((p) => p.sub_category?.trim() || p.category?.trim() || 'Lainnya') };
+  }, [products]);
   const up = (patch: Partial<POSBranchSettings>) => setS((x) => (x ? { ...x, ...patch } : x));
   const toggle = (arr: string[], id: string) => (arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
+  const setGroup = (ids: string[], show: boolean) => setS((x) => x ? { ...x, hidden_product_ids: show ? x.hidden_product_ids.filter((id) => !ids.includes(id)) : [...new Set([...x.hidden_product_ids, ...ids])] } : x);
 
   const save = async () => {
     if (!s) return;
@@ -93,8 +102,25 @@ const POSBranchConfig = () => {
           <CardContent><CashierPinManager branchId={branchId} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Desain Struk Cabang</CardTitle></CardHeader>
           <CardContent><POSPrinterSettings key={branchId} inline designer open onOpenChange={() => undefined} branchId={branchId} branchName={branches.find((b) => b.id === branchId)?.name} userId={userProfile?.id} /></CardContent></Card>
-        <Card><CardHeader><CardTitle>Menu Dijual di Cabang Ini ({products.length - s.hidden_product_ids.length}/{products.length})</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
+        <Card><CardHeader><CardTitle>Menu Dijual di Cabang Ini ({products.filter((p) => !s.hidden_product_ids.includes(p.id)).length}/{products.length})</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {([['Brand', groups.brands], ['Kategori', groups.cats]] as const).map(([label, list]) => (
+              <div key={label} className="space-y-2">
+                <div className="text-sm font-semibold">Pilih per {label}</div>
+                <div className="flex flex-wrap gap-2">
+                  {list.map(([name, ids]) => {
+                    const on = ids.filter((id) => !s.hidden_product_ids.includes(id)).length;
+                    return (
+                      <label key={name} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm cursor-pointer ${on === ids.length ? 'border-primary bg-primary/10' : ''}`}>
+                        <Checkbox checked={on === ids.length ? true : on === 0 ? false : 'indeterminate'} onCheckedChange={() => setGroup(ids, on !== ids.length)} />
+                        {name} <span className="text-xs text-muted-foreground">{on}/{ids.length}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="text-sm font-semibold">Pilih per Menu</div>
             <div className="flex flex-wrap gap-2">
               <Input className="max-w-xs" placeholder="Cari menu..." value={search} onChange={(e) => setSearch(e.target.value)} />
               <Button variant="outline" onClick={() => up({ hidden_product_ids: [] })}>Centang semua</Button>
@@ -104,7 +130,7 @@ const POSBranchConfig = () => {
               {filtered.map((p) => (
                 <label key={p.id} className="flex items-center gap-2 rounded-lg border p-2 text-sm cursor-pointer">
                   <Checkbox checked={!s.hidden_product_ids.includes(p.id)} onCheckedChange={() => up({ hidden_product_ids: toggle(s.hidden_product_ids, p.id) })} />
-                  <span className="flex-1 truncate">{p.name}</span><span className="text-xs text-muted-foreground">{p.category}</span>
+                  <span className="flex-1 truncate">{p.name}</span><span className="text-xs text-muted-foreground truncate max-w-[45%]">{[p.brand, p.sub_category || p.category].filter(Boolean).join(' · ')}</span>
                 </label>
               ))}
             </div>
