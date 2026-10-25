@@ -562,6 +562,12 @@ export default function CustomerCheckout({
                 {paymentMethod === p.id && <Check className="h-4 w-4 shrink-0" />}
               </button>
             ))}
+            {!guestMode && ['GoPay', 'ShopeePay', 'OVO', 'Kartu Kredit'].map((n) => (
+              <div key={n} className="flex w-full items-center justify-between rounded-2xl border border-dashed border-[hsl(var(--cx-line))] px-4 py-3 opacity-60">
+                <span className="text-sm font-medium">{n}</span>
+                <span className="text-[11px] text-muted-foreground">Segera hadir</span>
+              </div>
+            ))}
           </div>
         </div>
 
