@@ -70,14 +70,22 @@ export function RiderStockRequestForm() {
       setHubs(data || []);
       setHubId(userProfile?.branch_id && data?.some((b: any) => b.id === userProfile.branch_id) ? userProfile.branch_id : data?.[0]?.id || "");
     });
-    db.from("products").select("id,name,category,cost_price").eq("is_active", true).eq("show_in_rider_app", true).order("name").then(({ data }: any) => setProducts(data || []));
+    db.from("products").select("id,name,category,sub_category,brand,cost_price").eq("is_active", true).order("name").then(({ data }: any) => {
+      const list = data || [];
+      setProducts(list);
+      setBrand((cur) => cur || list.map((p: any) => p.brand).find((b: string) => b && /on\s*the\s*wheel/i.test(b)) || "__all");
+    });
   }, [userProfile?.branch_id]);
 
-  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort() as string[], [products]);
-  const [cats, setCats] = useState<string[]>(["Espresso Based", "Milk Based", "Refresher", "Refreshers"]);
-  const list = useMemo(() => products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) && (search || cats.includes(p.category))
-  ), [products, search, cats]);
+  const [brand, setBrand] = useState("");
+  const catOf = (p: any) => p.sub_category || p.category || "Lainnya";
+  const brands = useMemo(() => Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort() as string[], [products]);
+  const brandProducts = useMemo(() => !brand || brand === "__all" ? products : products.filter((p) => p.brand === brand), [products, brand]);
+  const categories = useMemo(() => Array.from(new Set(brandProducts.map(catOf))).sort() as string[], [brandProducts]);
+  const [cats, setCats] = useState<string[]>([]);
+  const list = useMemo(() => (search ? products : brandProducts).filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) && (!!search || !cats.length || cats.includes(catOf(p)))
+  ), [products, brandProducts, search, cats]);
   const toggleCat = (c: string) => setCats((s) => s.includes(c) ? s.filter((x) => x !== c) : [...s, c]);
   const picked = Object.entries(qty).filter(([, q]) => q > 0);
   const set = (id: string, d: number) => setQty((s) => ({ ...s, [id]: Math.max(0, (s[id] || 0) + d) }));
@@ -103,7 +111,16 @@ export function RiderStockRequestForm() {
           <select className="w-full rounded-md border bg-background p-2 text-sm" value={hubId} onChange={(e) => setHubId(e.target.value)}>
             {hubs.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
           </select>
-          <Input placeholder="Cari menu…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder="Cari menu (semua brand)…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          {brands.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {[...brands, "__all"].map((b) => (
+                <Button key={b} type="button" size="sm" variant={brand === b ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => { setBrand(b); setCats([]); }}>
+                  {b === "__all" ? "Semua Brand" : b}
+                </Button>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 rounded-lg border p-2">
             {categories.map((c) => (
               <label key={c} className="flex cursor-pointer items-center gap-2 text-xs">
@@ -115,7 +132,7 @@ export function RiderStockRequestForm() {
           <div className="max-h-80 space-y-1 overflow-y-auto">
             {list.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-lg border p-2">
-                <div className="min-w-0"><p className="truncate text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.category} • HPP {rp(Number(p.cost_price))}/cup</p>{(qty[p.id] || 0) > 0 && <p className="text-xs font-semibold text-primary">Subtotal HPP {rp((qty[p.id] || 0) * Number(p.cost_price || 0))}</p>}</div>
+                <div className="min-w-0"><p className="truncate text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{[p.brand, catOf(p)].filter(Boolean).join(" · ")} • HPP {rp(Number(p.cost_price))}/cup</p>{(qty[p.id] || 0) > 0 && <p className="text-xs font-semibold text-primary">Subtotal HPP {rp((qty[p.id] || 0) * Number(p.cost_price || 0))}</p>}</div>
                 <div className="flex items-center gap-2">
                   <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => set(p.id, -1)}><Minus className="h-4 w-4" /></Button>
                   <span className="w-6 text-center text-sm font-semibold">{qty[p.id] || 0}</span>
