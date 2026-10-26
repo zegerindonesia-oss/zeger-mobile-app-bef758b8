@@ -12,7 +12,7 @@ interface Props {
   onPaid: (reference: string | null) => void;
 }
 
-// Dynamic QRIS for in-store POS bills; polls Duitku until paid, then hands back to the payment flow.
+// Dynamic QRIS for in-store POS bills; polls Midtrans until paid, then hands back to the payment flow.
 export const POSQrisDialog = ({ open, amount, onClose, onPaid }: Props) => {
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export const POSQrisDialog = ({ open, amount, onClose, onPaid }: Props) => {
   const create = async () => {
     setQr(null); setError(null); setPaid(false); setLeft(900); done.current = false;
     ref.current = `POS-${crypto.randomUUID()}`;
-    const { data, error } = await supabase.functions.invoke('duitku-qris', {
+    const { data, error } = await supabase.functions.invoke('midtrans-qris', {
       body: { action: 'pos_create', ref: ref.current, amount: Math.round(amount) },
     });
     if (error || !data?.qr_string) { setError(data?.error || 'Gagal membuat QRIS. Coba lagi.'); return; }
@@ -37,7 +37,7 @@ export const POSQrisDialog = ({ open, amount, onClose, onPaid }: Props) => {
     if (!open || !qr || paid) return;
     const t = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
     const p = setInterval(async () => {
-      const { data } = await supabase.functions.invoke('duitku-qris', { body: { action: 'pos_status', ref: ref.current } });
+      const { data } = await supabase.functions.invoke('midtrans-qris', { body: { action: 'pos_status', ref: ref.current } });
       if (data?.paid && !done.current) {
         done.current = true;
         setPaid(true);

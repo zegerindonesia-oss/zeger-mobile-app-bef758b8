@@ -38,7 +38,7 @@ export default function CustomerPaymentMethod({
 
   const createQris = async () => {
     setQrState('loading');
-    const { data, error } = await supabase.functions.invoke('duitku-qris', { body: { action: 'create', order_id: orderId } });
+    const { data, error } = await supabase.functions.invoke('midtrans-qris', { body: { action: 'create', order_id: orderId } });
     if (error || !data?.qr_string) {
       setQrState('error');
       toast({ title: 'QRIS gagal dibuat', description: data?.error || 'Coba lagi sebentar.', variant: 'destructive' });
@@ -50,7 +50,7 @@ export default function CustomerPaymentMethod({
 
   const checkStatus = async (manual = false) => {
     if (doneRef.current) return;
-    const { data } = await supabase.functions.invoke('duitku-qris', { body: { action: 'status', order_id: orderId } });
+    const { data } = await supabase.functions.invoke('midtrans-qris', { body: { action: 'status', order_id: orderId } });
     if (data?.paid && !doneRef.current) {
       doneRef.current = true;
       setShowQRISModal(false);
