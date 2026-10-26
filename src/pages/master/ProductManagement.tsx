@@ -331,6 +331,13 @@ const ProductManagement = () => {
               ))}
             </SelectContent>
           </Select>
+          <Select value={subCatFilter} onValueChange={setSubCatFilter}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Semua Sub Kategori" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Sub Kategori</SelectItem>
+              {subCategories.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
@@ -341,6 +348,33 @@ const ProductManagement = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Daftar Produk ({filtered.length})</CardTitle>
+          {brandFilter !== "all" && (
+            <div className="mt-3 rounded-lg border bg-muted/40 p-3 space-y-2">
+              <p className="text-sm font-medium">Atur sekaligus brand <span className="text-primary">{brandFilter}</span> ({brandIds.length} menu)</p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(brandIds, "show_in_customer_app", false)}>App Customer: Matikan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(brandIds, "show_in_customer_app", true)}>App Customer: Nyalakan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(brandIds, "show_in_rider_app", false)}>App Rider: Matikan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(brandIds, "show_in_rider_app", true)}>App Rider: Nyalakan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(brandIds, "is_active", false)}>Nonaktifkan Semua</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(brandIds, "is_active", true)}>Aktifkan Semua</Button>
+              </div>
+            </div>
+          )}
+          {selectedIds.length > 0 && (
+            <div className="sticky top-0 z-10 mt-3 rounded-lg border border-primary/40 bg-card p-3 space-y-2 shadow-sm">
+              <p className="text-sm font-medium">{selectedIds.length} menu dipilih</p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(selectedIds, "show_in_customer_app", false)}>App Customer: Matikan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(selectedIds, "show_in_customer_app", true)}>App Customer: Nyalakan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(selectedIds, "show_in_rider_app", false)}>App Rider: Matikan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(selectedIds, "show_in_rider_app", true)}>App Rider: Nyalakan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(selectedIds, "is_active", false)}>Nonaktifkan</Button>
+                <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkUpdate(selectedIds, "is_active", true)}>Aktifkan</Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Batal pilih</Button>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -350,11 +384,18 @@ const ProductManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <input type="checkbox" className="h-4 w-4 accent-primary" checked={allVisibleSelected} onChange={() => setSelected(allVisibleSelected ? new Set() : new Set(filtered.map((p) => p.id)))} aria-label="Pilih semua" />
+                    </TableHead>
                     <TableHead>Foto</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Brand / Kategori</TableHead>
-                    <TableHead className="text-right">Harga Jual</TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("code")}>Code{sortIcon("code")}</TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>Nama{sortIcon("name")}</TableHead>
+                    <TableHead>
+                      <span className="cursor-pointer select-none" onClick={() => toggleSort("brand")}>Brand{sortIcon("brand")}</span>{" / "}
+                      <span className="cursor-pointer select-none" onClick={() => toggleSort("category")}>Kategori{sortIcon("category")}</span>{" / "}
+                      <span className="cursor-pointer select-none" onClick={() => toggleSort("sub_category")}>Sub{sortIcon("sub_category")}</span>
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("price")}>Harga Jual{sortIcon("price")}</TableHead>
                     <TableHead className="text-right">HPP</TableHead>
                     <TableHead className="text-right">HPP CK</TableHead>
                     <TableHead>Status</TableHead>
@@ -366,6 +407,9 @@ const ProductManagement = () => {
                 <TableBody>
                   {filtered.map((p) => (
                     <TableRow key={p.id}>
+                      <TableCell>
+                        <input type="checkbox" className="h-4 w-4 accent-primary" checked={selected.has(p.id)} onChange={() => setSelected((s) => { const n = new Set(s); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} aria-label={`Pilih ${p.name}`} />
+                      </TableCell>
                       <TableCell>
                         {p.image_url ? (
                           <img src={p.image_url} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
