@@ -138,5 +138,9 @@ export const usePOSShift = () => {
     await fetchActiveShift();
   };
 
-  return { activeShift, loading, openShift, closeShift, addCashMovement, refresh: fetchActiveShift };
+  // A shift opened on a previous Jakarta business day must be closed (cash counted) before selling again.
+  const jakartaDay = (d: Date) => new Date(d.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+  const isStale = !!activeShift && jakartaDay(new Date(activeShift.opened_at)) !== jakartaDay(new Date());
+
+  return { activeShift, isStale, loading, openShift, closeShift, addCashMovement, refresh: fetchActiveShift };
 };
