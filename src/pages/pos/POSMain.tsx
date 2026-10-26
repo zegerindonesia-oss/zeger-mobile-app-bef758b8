@@ -52,7 +52,7 @@ const lineNotes = (i: POSCartItem) =>
 const POSMain = () => {
   const { userProfile, signOut } = useAuth();
   const navigate = useNavigate();
-  const { activeShift, loading: shiftLoading, openShift, closeShift, addCashMovement } = usePOSShift();
+  const { activeShift, isStale: shiftStale, loading: shiftLoading, openShift, closeShift, addCashMovement } = usePOSShift();
   const cart = usePOSCart();
   const [riderOpen, setRiderOpen] = useState(false);
   const riderAlerts = useRiderRequestAlerts(userProfile?.branch_id, () => navigate('/pos/rider-orders'));
@@ -691,6 +691,19 @@ const POSMain = () => {
     <>
       {!cashier && <POSPinLock branchId={userProfile?.branch_id || null} branchName={branchName} onUnlock={() => setCashier(getActiveCashier(userProfile?.branch_id || null))} />}
       <OpenShiftModal open={!!cashier && !activeShift && !shiftLoading} onOpen={handleOpenShift} />
+      {!!cashier && !shiftLoading && shiftStale && activeShift && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/95 backdrop-blur-md p-4">
+          <div className="w-full max-w-md rounded-3xl border bg-card p-6 shadow-2xl space-y-4 text-center">
+            <h1 className="text-2xl font-bold">Shift Sebelumnya Belum Ditutup</h1>
+            <p className="text-sm text-muted-foreground">
+              Shift dibuka {new Date(activeShift.opened_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}. Tutup shift lama dan hitung uang di laci, lalu buka kasir baru dengan modal awal hari ini.
+            </p>
+            <button type="button" onClick={() => navigate('/pos/cashier?tab=shift')} className="w-full rounded-xl bg-primary py-3 font-semibold text-primary-foreground">
+              Tutup Shift Lama
+            </button>
+          </div>
+        </div>
+      )}
       <POSPayment
         open={paymentOpen}
         total={paymentTotal}
