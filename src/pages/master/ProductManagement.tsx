@@ -55,6 +55,8 @@ const emptyForm = {
   is_pos_favorite: false,
 };
 
+type SortKey = "name" | "code" | "brand" | "category" | "sub_category" | "price";
+
 const ProductManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,11 @@ const ProductManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
   const [saving, setSaving] = useState(false);
+  const [subCatFilter, setSubCatFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("category");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -94,16 +101,48 @@ const ProductManagement = () => {
   const subCategories = useMemo(() => Array.from(new Set(products.map((p) => p.sub_category).filter(Boolean))).sort() as string[], [products]);
 
   const filtered = useMemo(() => {
-    return products.filter((p) => {
+    const list = products.filter((p) => {
       const matchSearch =
         !search ||
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.code.toLowerCase().includes(search.toLowerCase());
       const matchCat = categoryFilter === "all" || p.category === categoryFilter;
       const matchBrand = brandFilter === "all" || p.brand === brandFilter;
-      return matchSearch && matchCat && matchBrand;
+      const matchSub = subCatFilter === "all" || p.sub_category === subCatFilter;
+      return matchSearch && matchCat && matchBrand && matchSub;
     });
-  }, [products, search, categoryFilter, brandFilter]);
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...list].sort((a, b) => {
+      if (sortKey === "price") return (Number(a.price) - Number(b.price)) * dir;
+      const av = String((a as any)[sortKey] ?? "");
+      const bv = String((b as any)[sortKey] ?? "");
+      return av.localeCompare(bv, "id") * dir;
+    });
+  }, [products, search, categoryFilter, brandFilter, subCatFilter, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+  const sortIcon = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
+
+  const bulkUpdate = async (ids: string[], field: "show_in_customer_app" | "show_in_rider_app" | "is_active", value: boolean) => {
+    if (!ids.length) return;
+    setBulkBusy(true);
+    let failed = 0;
+    for (let i = 0; i < ids.length; i += 200) {
+      const { error } = await supabase.from("products").update({ [field]: value } as any).in("id", ids.slice(i, i + 200));
+      if (error) failed++;
+    }
+    setBulkBusy(false);
+    if (failed) toast.error("Sebagian produk gagal diperbarui");
+    else toast.success(`${ids.length} produk diperbarui`);
+    setProducts((prev) => prev.map((p) => (ids.includes(p.id) ? { ...p, [field]: value } : p)));
+  };
+
+  const brandIds = useMemo(() => (brandFilter === "all" ? [] : products.filter((p) => p.brand === brandFilter).map((p) => p.id)), [products, brandFilter]);
+  const selectedIds = Array.from(selected);
+  const allVisibleSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
 
   const generateCode = (name: string) => {
     const prefix = name
