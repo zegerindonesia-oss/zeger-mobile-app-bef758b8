@@ -54,6 +54,13 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
   const [notes, setNotes] = useState('');
   const [ready, setReady] = useState(false);
   useEffect(() => { loadMasterModifierGroups(supabase).catch(() => null).finally(() => setReady(true)); }, []);
+  const [scrollY, setScrollY] = useState(0);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const onScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const allGroups = useMemo(() => (ready ? getModifierGroups(product as any) : []), [ready, product]);
   const groups = useMemo(() => allGroups.filter((g) => !isTempGroup(g)), [allGroups]);
@@ -85,14 +92,16 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
   const variantImg = temperature === 'hot' ? opts.image_hot : opts.image_iced;
   const hero = normalizeImageUrl(variantImg) || normalizeImageUrl(product.image_url) || artFallback;
 
+  const collapsed = scrollY > 300;
+
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-[hsl(var(--cx-canvas))] pb-36">
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-b-3xl bg-white">
-        <img key={hero} src={hero} onError={onArtError(artFallback)} alt={product.name} className="absolute inset-0 h-full w-full object-cover" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[hsl(var(--cx-shadow)/0.3)] to-transparent" />
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
-          <button onClick={onBack} aria-label="Kembali" className="cx-icon-btn h-9 w-9"><ChevronLeft className="h-5 w-5" /></button>
-          <button onClick={onViewCart} aria-label="Keranjang" className="cx-icon-btn relative h-9 w-9">
+    <div className="mx-auto min-h-screen max-w-md bg-white pb-36">
+      {/* Sticky top bar: transparent over the photo, solid with the menu name once scrolled */}
+      <div className={cn('fixed inset-x-0 top-0 z-40 mx-auto max-w-md transition-colors duration-200', collapsed ? 'border-b border-[hsl(var(--cx-line))] bg-white/95 backdrop-blur-xl' : 'bg-transparent')}>
+        <div className="flex items-center gap-2 px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <button onClick={onBack} aria-label="Kembali" className={cn('h-9 w-9 shrink-0', collapsed ? 'flex items-center justify-center' : 'cx-icon-btn')}><ChevronLeft className="h-5 w-5" /></button>
+          <h2 className={cn('flex-1 truncate text-center text-[15px] font-semibold transition-all duration-200', collapsed ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0')}>{product.name}</h2>
+          <button onClick={onViewCart} aria-label="Keranjang" className={cn('relative h-9 w-9 shrink-0', collapsed ? 'flex items-center justify-center' : 'cx-icon-btn')}>
             <ShoppingBag className="h-4 w-4" />
             {cartItemCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-zeger px-1 text-[9px] font-semibold text-zeger-foreground ring-2 ring-white">{cartItemCount}</span>
@@ -101,9 +110,21 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
         </div>
       </div>
 
-      <section className="px-4 pt-4">
-        <h1 className="text-base font-semibold leading-snug">{product.name}</h1>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{describeMenu(product.name, product.description)}</p>
+      {/* Full drink photo (zoomed out) with parallax */}
+      <div className="relative aspect-square w-full overflow-hidden bg-white">
+        <img
+          key={hero}
+          src={hero}
+          onError={onArtError(artFallback)}
+          alt={product.name}
+          style={{ transform: `translateY(${Math.min(scrollY, 400) * 0.4}px) scale(${1 - Math.min(scrollY, 400) / 4000})`, opacity: 1 - Math.min(scrollY, 400) / 600 }}
+          className="absolute inset-0 h-full w-full object-contain px-6 pb-2 pt-12 will-change-transform"
+        />
+      </div>
+
+      <section className="relative z-10 bg-white px-5 pt-5">
+        <h1 className="text-lg font-semibold leading-snug">{product.name}</h1>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{describeMenu(product.name, product.description)}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="cx-num text-sm font-semibold text-zeger">{formatRupiah(unit)}</span>
           {pointsFor(total) > 0 && (
