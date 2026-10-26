@@ -126,7 +126,7 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
         <h1 className="text-lg font-semibold leading-snug">{product.name}</h1>
         <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{describeMenu(product.name, product.description)}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="cx-num text-sm font-semibold text-zeger">{formatRupiah(unit)}</span>
+          <span className="cx-num text-base font-semibold text-zeger">{formatRupiah(unit)}</span>
           {pointsFor(total) > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-zeger-cream px-2 py-0.5 text-[10px] font-medium text-[hsl(30_60%_26%)]">
               <img src={cxArt.coin} alt="" aria-hidden className="h-3 w-3 object-contain" /> +{pointsFor(total)} Poin
@@ -147,7 +147,7 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
         </div>
       </section>
 
-      <div className="space-y-4 px-4 pt-4">
+      <div className="space-y-5 px-5 pt-5">
         {showTemp && (
           <div className="flex gap-2">
             <button onClick={() => setTemperature('cold')} data-active={temperature === 'cold'} aria-label="Iced" className="cx-opt flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-xs">
@@ -166,7 +166,7 @@ export function CustomerProductDetail({ product, onBack, onAddToCart, cartItemCo
                 const on = (picked[g.name] || []).includes(o.name);
                 return (
                   <button key={o.name} onClick={() => pick(g, o.name)} className="flex w-full items-center gap-3 py-2.5 text-left">
-                    <span className="flex-1 text-xs">{o.name}</span>
+                    <span className="flex-1 text-[13px]">{o.name}</span>
                     {o.price > 0 && <span className="cx-num text-[11px] text-muted-foreground">+{formatRupiah(o.price)}</span>}
                     <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center border-2', g.multi ? 'rounded-md' : 'rounded-full', on ? 'border-zeger bg-zeger' : 'border-[hsl(var(--cx-line))]')}>
                       {on && (g.multi ? <Check className="h-2.5 w-2.5 text-zeger-foreground" /> : <span className="h-1.5 w-1.5 rounded-full bg-zeger-foreground" />)}
@@ -208,7 +208,7 @@ function Group({ title, hint, required, children }: { title: string; hint?: stri
   return (
     <section>
       <div className="mb-2.5 flex items-baseline gap-2">
-        <h2 className="text-[13px] font-semibold">{title}</h2>
+        <h2 className="text-[15px] font-semibold">{title}</h2>
         {required && <span className="rounded-full bg-zeger-soft px-2 py-0.5 text-[10px] font-bold text-zeger">Wajib</span>}
         {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
       </div>
