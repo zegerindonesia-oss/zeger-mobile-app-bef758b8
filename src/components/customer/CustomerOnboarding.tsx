@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import s1 from '@/assets/onboarding/onb-1.png.asset.json';
-import s2 from '@/assets/onboarding/onb-2.png.asset.json';
-import s3 from '@/assets/onboarding/onb-3.png.asset.json';
+import s1 from '@/assets/onboarding/onb-v2-1.webp.asset.json';
+import s2 from '@/assets/onboarding/onb-v2-2.webp.asset.json';
+import s3 from '@/assets/onboarding/onb-v2-3.webp.asset.json';
+import s4 from '@/assets/onboarding/onb-v2-4.webp.asset.json';
 
-const SLIDES = [s1.url, s2.url, s3.url];
-export const ONBOARDING_KEY = 'zeger_cx_onboarded_v1';
+const SLIDES = [s1.url, s2.url, s3.url, s4.url];
+export const ONBOARDING_KEY = 'zeger_cx_onboarded_v2';
 
 /** Three full-screen intro posters shown once on first open of the Customer app. */
 export function CustomerOnboarding({ onDone }: { onDone: () => void }) {
