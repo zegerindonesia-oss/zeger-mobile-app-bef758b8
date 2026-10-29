@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Perbaiki sisa stok pesanan rider agar memakai retur shift terakhir (Pak Tri Z-005: 25, bukan 64); uji regresi pencocokan shift.
 - [x] Back Office Customer App Settings: urutan kategori tersimpan dan diterapkan ke filter serta bagian menu, termasuk tamu QR.
 - [ ] Uji simpan urutan kategori dengan akun admin asli — sesi terautentikasi tidak tersedia pada Supabase eksternal.
 - [x] QR meja langsung membuka menu tanpa login; checkout nama + nomor HP, bayar di kasir; bill dan tiket dapur diuji tanpa meninggalkan data uji.
