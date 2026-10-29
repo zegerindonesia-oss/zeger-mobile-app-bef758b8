@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CupStickerButton } from "./CupStickerPrint";
+import { latestShiftLeftover } from "@/lib/rider-leftover";
 import { Bell, History, Minus, Pencil, Plus, Send, Trash2, Truck } from "lucide-react";
 
 const db = supabase as any;
@@ -228,54 +229,48 @@ export function HubRiderRequestQueue({ branchId }: { branchId?: string }) {
   // Sisa stok = stok kembali pada shift terakhir rider (sama dengan Rincian Per Shift di Stock Card Rider)
   const [leftover, setLeftover] = useState<Record<string, Record<string, { qty: number; name: string; product: any }>>>({});
   const loadLeftover = async (riderId: string, _before: string) => {
-    // Sama dengan Stock Card Rider: shift terakhir = shift_date terbaru, lalu urut jam mulai / nomor shift
-    const { data: shifts, error: se } = await db.from("shift_management")
-      .select("id, shift_date, shift_number, shift_start_time")
-      .eq("rider_id", riderId).order("shift_date", { ascending: false }).limit(10);
-    if (se) return toast.error(se.message);
-    if (!shifts?.length) { setLeftover((s) => ({ ...s, [riderId]: {} })); return toast.info("Rider belum punya shift"); }
-    // Telusuri mundur per tanggal sampai ketemu shift terakhir yang punya stok kembali
-    const days = Array.from(new Set(shifts.map((s: any) => s.shift_date)));
+    // Read complete days, not a row-limited set of shifts that can split one day.
+    const { data: recent, error: recentError } = await db.from("shift_management")
+      .select("shift_date").eq("rider_id", riderId)
+      .order("shift_date", { ascending: false }).limit(10);
+    if (recentError) return toast.error(recentError.message);
+    if (!recent?.length) {
+      setLeftover((s) => ({ ...s, [riderId]: {} }));
+      return toast.info("Rider belum punya shift");
+    }
+    const days = Array.from(new Set(recent.map((s: any) => s.shift_date))) as string[];
     for (const day of days) {
-      const sameDay = shifts.filter((s: any) => s.shift_date === day).sort((a: any, b: any) => {
-        const ta = a.shift_start_time ? new Date(a.shift_start_time).getTime() : (a.shift_number || 0);
-        const tb = b.shift_start_time ? new Date(b.shift_start_time).getTime() : (b.shift_number || 0);
-        return ta - tb;
-      });
-      const { data, error } = await db.from("stock_movements")
-        .select("product_id, quantity, notes, created_at, actual_delivery_date, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
-        .eq("rider_id", riderId).in("movement_type", ["return", "out"])
-        .gte("created_at", `${day}T00:00:00+07:00`).lte("created_at", `${day}T23:59:59+07:00`).limit(500);
-      if (error) return toast.error(error.message);
-      if (!data?.length) continue;
-      const pick = (when: string) => {
-        const t = new Date(when).getTime(); let chosen = sameDay[0];
-        for (const s of sameDay) { const st = s.shift_start_time ? new Date(s.shift_start_time).getTime() : 0; if (st <= t) chosen = s; }
-        return chosen;
+      const readPages = async (query: () => any) => {
+        const rows: any[] = [];
+        for (let offset = 0; ; offset += 500) {
+          const { data, error } = await query().range(offset, offset + 499);
+          if (error) throw error;
+          rows.push(...(data || []));
+          if (!data || data.length < 500) return rows;
+        }
       };
-      // shift terakhir di hari itu yang benar-benar punya retur
-      const withRet = new Set(data.map((m: any) => pick(m.actual_delivery_date || m.created_at)?.id));
-      const last = [...sameDay].reverse().find((s: any) => withRet.has(s.id)) || sameDay[sameDay.length - 1];
-      const map: Record<string, { qty: number; name: string; product: any }> = {};
-      const verified = new Set<string>();
-      data.forEach((m: any) => {
-        if (pick(m.actual_delivery_date || m.created_at)?.id !== last.id) return;
-        const cur = map[m.product_id] || { qty: 0, name: m.products?.name, product: m.products };
-        // Pakai stok fisik hasil verifikasi Hub bila ada (sudah final setelah waste)
-        const mv = /Verified quantity:\s*(\d+)/i.exec(m.notes || "");
-        if (mv) verified.add(m.product_id);
-        cur.qty += mv ? Number(mv[1]) : Number(m.quantity || 0); map[m.product_id] = cur;
-      });
-      const since = last.shift_start_time || `${day}T00:00:00+07:00`;
-      const { data: waste } = await db.from("product_waste").select("product_id, quantity").eq("rider_id", riderId).gte("created_at", since).limit(500);
-      (waste || []).forEach((w: any) => {
-        const cur = map[w.product_id];
-        if (cur && !verified.has(w.product_id)) cur.qty = Math.max(0, cur.qty - Number(w.quantity || 0));
-      });
-      Object.keys(map).forEach((k) => { if (map[k].qty <= 0) delete map[k]; });
-      if (!Object.keys(map).length) continue;
-      setLeftover((s) => ({ ...s, [riderId]: map }));
-      return toast.success(`Sisa stok shift #${last.shift_number} (${day}) ditambahkan`);
+      try {
+        const [shifts, movements, waste] = await Promise.all([
+          readPages(() => db.from("shift_management")
+            .select("id, rider_id, shift_date, shift_number, shift_start_time, shift_end_time")
+            .eq("rider_id", riderId).eq("shift_date", day).order("id")),
+          readPages(() => db.from("stock_movements")
+            .select("product_id, quantity, notes, created_at, products(name, cost_price, price, ck_price, short_name, shelf_life_days)")
+            .eq("rider_id", riderId).in("movement_type", ["return", "out"])
+            .gte("created_at", `${day}T00:00:00+07:00`).lte("created_at", `${day}T23:59:59.999999+07:00`).order("id")),
+          readPages(() => db.from("product_waste").select("product_id, quantity, created_at")
+            .eq("rider_id", riderId)
+            .gte("created_at", `${day}T00:00:00+07:00`).lte("created_at", `${day}T23:59:59.999999+07:00`).order("id")),
+        ]);
+        const result = latestShiftLeftover(shifts, movements, waste);
+        if (!result) continue;
+        setLeftover((s) => ({ ...s, [riderId]: result.items }));
+        return Object.keys(result.items).length
+          ? toast.success(`Sisa stok shift #${result.shift.shift_number} (${day}) ditambahkan`)
+          : toast.info(`Sisa stok shift #${result.shift.shift_number} (${day}) sudah habis`);
+      } catch (error: any) {
+        return toast.error(error.message || "Sisa stok gagal dimuat. Coba lagi.");
+      }
     }
     setLeftover((s) => ({ ...s, [riderId]: {} }));
     toast.info("Tidak ada stok kembali di shift sebelumnya — isi manual lewat ikon pensil");
