@@ -34,6 +34,8 @@ interface User {
   branch_id: string;
 }
 
+const TYPE_LABEL: Record<string, string> = { small: 'Outlet Dine-in', street: 'Zeger on the Street' };
+
 const BranchManagement = () => {
   const { userProfile } = useAuth();
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -44,29 +46,37 @@ const BranchManagement = () => {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [hubs, setHubs] = useState<{ id: string; name: string }[]>([]);
+  const isHO = ['ho_admin', '1_HO_Admin', 'ho_owner', '1_HO_Owner'].includes(String(userProfile?.role));
   const [formData, setFormData] = useState({
     name: "",
     code: "",
     address: "",
     phone: "",
-    description: ""
+    description: "",
+    branch_type: "small",
+    parent_branch_id: "",
   });
 
   useEffect(() => {
+    if (!userProfile) return;
     fetchBranches();
     fetchUsers();
-  }, []);
+    supabase.from('branches').select('id, name').eq('level', 2).eq('is_active', true).order('name')
+      .then(({ data }) => setHubs(data || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id]);
 
   const fetchBranches = async () => {
     try {
       let query = supabase
         .from('branches')
         .select('*')
-        .eq('branch_type', 'small')
-        .eq('level', 3);
+        .eq('level', 3)
+        .order('name');
 
-      if (userProfile?.role !== 'ho_admin' && userProfile?.role !== '1_HO_Admin') {
-        query = query.eq('parent_branch_id', userProfile?.branch_id);
+      if (!isHO && userProfile?.branch_id) {
+        query = query.eq('parent_branch_id', userProfile.branch_id);
       }
 
       const { data, error } = await query;
@@ -79,11 +89,10 @@ const BranchManagement = () => {
           .from('profiles')
           .select('id', { count: 'exact', head: true })
           .eq('branch_id', branch.id);
-        
         return { ...branch, user_count: count || 0 };
       }));
 
-      setBranches(branchesWithCount);
+      setBranches(branchesWithCount as any);
     } catch (error: any) {
       toast.error("Gagal memuat data cabang: " + error.message);
     } finally {
@@ -93,11 +102,12 @@ const BranchManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      let q = supabase
         .from('profiles')
         .select('id, full_name, role, branch_id')
-        .eq('branch_id', userProfile?.branch_id)
         .neq('role', 'rider');
+      if (userProfile?.branch_id) q = q.eq('branch_id', userProfile.branch_id);
+      const { data, error } = await q;
 
       if (error) throw error;
       setUsers(data || []);
@@ -110,11 +120,12 @@ const BranchManagement = () => {
     e.preventDefault();
     
     try {
+      const parent = formData.parent_branch_id || userProfile?.branch_id;
+      if (!parent) { toast.error("Pilih Cabang Induk (Brand Hub) dulu"); return; }
       const branchData = {
         ...formData,
-        branch_type: 'small',
         level: 3,
-        parent_branch_id: userProfile?.branch_id,
+        parent_branch_id: parent,
         is_active: true
       };
 
@@ -137,7 +148,7 @@ const BranchManagement = () => {
       
       setIsDialogOpen(false);
       setSelectedBranch(null);
-      setFormData({ name: "", code: "", address: "", phone: "", description: "" });
+      setFormData({ name: "", code: "", address: "", phone: "", description: "", branch_type: "small", parent_branch_id: hubs[0]?.id || "" });
       fetchBranches();
     } catch (error: any) {
       toast.error("Gagal menyimpan cabang: " + error.message);
@@ -173,7 +184,9 @@ const BranchManagement = () => {
       code: branch.code,
       address: branch.address,
       phone: branch.phone,
-      description: branch.description
+      description: branch.description,
+      branch_type: branch.branch_type || 'small',
+      parent_branch_id: branch.parent_branch_id || '',
     });
     setIsDialogOpen(true);
   };
@@ -194,7 +207,7 @@ const BranchManagement = () => {
           <Building2 className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold text-foreground">Branch Management</h1>
-            <p className="text-muted-foreground">Kelola small branch dan assign user</p>
+            <p className="text-muted-foreground">Kelola outlet dine-in & Zeger on the Street di bawah Brand Hub</p>
           </div>
         </div>
         
@@ -202,15 +215,15 @@ const BranchManagement = () => {
           <DialogTrigger asChild>
             <Button onClick={() => {
               setSelectedBranch(null);
-              setFormData({ name: "", code: "", address: "", phone: "", description: "" });
+              setFormData({ name: "", code: "", address: "", phone: "", description: "", branch_type: "small", parent_branch_id: hubs[0]?.id || "" });
             }}>
               <Plus className="h-4 w-4 mr-2" />
-              Tambah Small Branch
+              Tambah Cabang
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{selectedBranch ? 'Edit Small Branch' : 'Tambah Small Branch Baru'}</DialogTitle>
+              <DialogTitle>{selectedBranch ? 'Edit Cabang' : 'Tambah Cabang Baru'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -234,6 +247,28 @@ const BranchManagement = () => {
                 </div>
               </div>
               
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Tipe Cabang</Label>
+                  <Select value={formData.branch_type} onValueChange={(v) => setFormData({ ...formData, branch_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">Outlet Dine-in</SelectItem>
+                      <SelectItem value="street">Zeger on the Street</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Cabang Induk (Brand Hub)</Label>
+                  <Select value={formData.parent_branch_id} onValueChange={(v) => setFormData({ ...formData, parent_branch_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih Brand Hub" /></SelectTrigger>
+                    <SelectContent>
+                      {hubs.map((h) => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="address">Alamat</Label>
                 <Textarea
@@ -264,7 +299,7 @@ const BranchManagement = () => {
               </div>
               
               <Button type="submit" className="w-full">
-                {selectedBranch ? 'Perbarui' : 'Tambah'} Small Branch
+                {selectedBranch ? 'Perbarui' : 'Tambah'} Cabang
               </Button>
             </form>
           </DialogContent>
@@ -274,7 +309,7 @@ const BranchManagement = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Daftar Small Branch</CardTitle>
+            <CardTitle>Daftar Cabang</CardTitle>
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -294,7 +329,7 @@ const BranchManagement = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{branch.name}</h3>
-                      <p className="text-sm text-muted-foreground font-mono">{branch.code}</p>
+                      <p className="text-sm text-muted-foreground font-mono">{branch.code} · {TYPE_LABEL[branch.branch_type] || branch.branch_type}</p>
                     </div>
                     <Badge variant={branch.is_active ? "default" : "secondary"}>
                       {branch.is_active ? "Aktif" : "Tidak Aktif"}
@@ -338,7 +373,7 @@ const BranchManagement = () => {
           {filteredBranches.length === 0 && (
             <div className="text-center py-8">
               <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Tidak ada small branch ditemukan</p>
+              <p className="text-muted-foreground">Tidak ada cabang ditemukan</p>
             </div>
           )}
         </CardContent>

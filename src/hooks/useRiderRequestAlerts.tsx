@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ensureUnlockListeners } from "@/lib/audio";
-import jingleAsset from "@/assets/notification-jingle.mp3.asset.json";
+import { ensureUnlockListeners, playAlertBeep } from "@/lib/audio";
 
 let jingle: HTMLAudioElement | null = null;
 export function stopRiderJingle() {
@@ -10,9 +9,10 @@ export function stopRiderJingle() {
   toast.dismiss("rider-jingle");
 }
 function playRiderJingle() {
-  if (!jingle) { jingle = new Audio(jingleAsset.url); jingle.loop = true; }
+  if (!jingle) { jingle = new Audio("/sounds/zeger-notification.mp3"); jingle.loop = true; }
   jingle.currentTime = 0;
-  jingle.play().catch(() => {});
+  // Fallback to a synthesized beep when the browser blocks or fails the MP3.
+  jingle.play().catch(() => { try { playAlertBeep({ times: 5 }); } catch { /* ignore */ } });
   const stop = () => { stopRiderJingle(); window.removeEventListener("pointerdown", stop, true); window.removeEventListener("keydown", stop, true); };
   setTimeout(() => { window.addEventListener("pointerdown", stop, true); window.addEventListener("keydown", stop, true); }, 300);
 }
