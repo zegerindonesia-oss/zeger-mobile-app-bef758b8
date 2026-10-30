@@ -44,29 +44,37 @@ const BranchManagement = () => {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [hubs, setHubs] = useState<{ id: string; name: string }[]>([]);
+  const isHO = ['ho_admin', '1_HO_Admin', 'ho_owner', '1_HO_Owner'].includes(String(userProfile?.role));
   const [formData, setFormData] = useState({
     name: "",
     code: "",
     address: "",
     phone: "",
-    description: ""
+    description: "",
+    branch_type: "small",
+    parent_branch_id: "",
   });
 
   useEffect(() => {
+    if (!userProfile) return;
     fetchBranches();
     fetchUsers();
-  }, []);
+    supabase.from('branches').select('id, name').eq('level', 2).eq('is_active', true).order('name')
+      .then(({ data }) => setHubs(data || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id]);
 
   const fetchBranches = async () => {
     try {
       let query = supabase
         .from('branches')
         .select('*')
-        .eq('branch_type', 'small')
-        .eq('level', 3);
+        .eq('level', 3)
+        .order('name');
 
-      if (userProfile?.role !== 'ho_admin' && userProfile?.role !== '1_HO_Admin') {
-        query = query.eq('parent_branch_id', userProfile?.branch_id);
+      if (!isHO && userProfile?.branch_id) {
+        query = query.eq('parent_branch_id', userProfile.branch_id);
       }
 
       const { data, error } = await query;
@@ -79,11 +87,10 @@ const BranchManagement = () => {
           .from('profiles')
           .select('id', { count: 'exact', head: true })
           .eq('branch_id', branch.id);
-        
         return { ...branch, user_count: count || 0 };
       }));
 
-      setBranches(branchesWithCount);
+      setBranches(branchesWithCount as any);
     } catch (error: any) {
       toast.error("Gagal memuat data cabang: " + error.message);
     } finally {
@@ -93,11 +100,12 @@ const BranchManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      let q = supabase
         .from('profiles')
         .select('id, full_name, role, branch_id')
-        .eq('branch_id', userProfile?.branch_id)
         .neq('role', 'rider');
+      if (userProfile?.branch_id) q = q.eq('branch_id', userProfile.branch_id);
+      const { data, error } = await q;
 
       if (error) throw error;
       setUsers(data || []);
@@ -110,11 +118,12 @@ const BranchManagement = () => {
     e.preventDefault();
     
     try {
+      const parent = formData.parent_branch_id || userProfile?.branch_id;
+      if (!parent) { toast.error("Pilih Cabang Induk (Brand Hub) dulu"); return; }
       const branchData = {
         ...formData,
-        branch_type: 'small',
         level: 3,
-        parent_branch_id: userProfile?.branch_id,
+        parent_branch_id: parent,
         is_active: true
       };
 
