@@ -170,6 +170,26 @@ const MODULES_CONFIG: ModulePermission[] = [
   }
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  sb_kasir: 'Kasir Outlet / Zeger on the Street (POS)',
+  sb_branch_manager: 'Manager / PIC Outlet & Street',
+  sb_report: 'Laporan Outlet (lihat saja)',
+  sb_rider: 'Rider Outlet',
+  bh_kasir: 'Kasir Branch Hub (POS)',
+  bh_staff: 'Staff / Barista Branch Hub',
+  bh_report: 'Laporan Branch Hub (lihat saja)',
+  bh_rider: 'Rider Branch Hub',
+  rider: 'Rider Zeger on the Wheels',
+  branch_manager: 'Branch Hub Manager',
+  ho_staff: 'HO Staff / Purchasing',
+  finance: 'Finance & Accounting',
+  ho_admin: 'HO Admin',
+  ho_owner: 'HO Owner',
+};
+const ROLE_ACCESS: Record<string, 'web_backoffice' | 'pos_app' | 'rider_app'> = {
+  sb_kasir: 'pos_app', bh_kasir: 'pos_app', rider: 'rider_app', bh_rider: 'rider_app', sb_rider: 'rider_app',
+};
+
 export const ComprehensiveUserForm: React.FC<ComprehensiveUserFormProps> = ({
   isOpen,
   onClose,
@@ -232,16 +252,15 @@ export const ComprehensiveUserForm: React.FC<ComprehensiveUserFormProps> = ({
   };
 
   const getAvailableRoles = (): UserRole[] => {
-    const baseRoles: UserRole[] = ['ho_admin', 'ho_owner', 'branch_manager', 'sb_branch_manager', 'bh_staff', 'bh_report', 'rider'];
-    
-    if (userRole === 'ho_admin') {
-      return baseRoles;
+    const outletRoles: UserRole[] = ['sb_kasir', 'sb_branch_manager', 'sb_report'];
+    const hubRoles: UserRole[] = ['bh_kasir', 'bh_staff', 'bh_report', 'bh_rider'];
+    if (userRole === 'ho_admin' || userRole === 'ho_owner') {
+      return [...outletRoles, ...hubRoles, 'branch_manager', 'ho_staff', 'finance', 'ho_admin', 'ho_owner', 'rider'] as UserRole[];
     } else if (userRole === 'branch_manager') {
-      return ['sb_branch_manager', 'bh_staff', 'bh_report', 'rider'];
+      return [...outletRoles, ...hubRoles, 'rider'];
     } else if (userRole === 'sb_branch_manager') {
-      return ['rider'];
+      return ['sb_kasir', 'sb_report', 'sb_rider'];
     }
-    
     return ['rider'];
   };
 
@@ -408,6 +427,12 @@ export const ComprehensiveUserForm: React.FC<ComprehensiveUserFormProps> = ({
                   }
                 }
               }
+            }
+          }
+
+          if (['sb_kasir', 'bh_kasir'].includes(newUser.role)) {
+            for (const m of ['pos', 'reports']) {
+              permissionInserts.push({ user_id: createdProfile.id, module_name: m, permission_type: 'view', is_granted: true, resource_filter: JSON.stringify({ type: 'all' }) });
             }
           }
 
@@ -587,7 +612,7 @@ export const ComprehensiveUserForm: React.FC<ComprehensiveUserFormProps> = ({
         <div>
           <Label htmlFor="role">Role/Jabatan *</Label>
           <Select value={newUser.role} onValueChange={(value) => {
-            setNewUser({ ...newUser, role: value as UserRole });
+            setNewUser({ ...newUser, role: value as UserRole, app_access_type: ROLE_ACCESS[value] || 'web_backoffice' });
             applyRoleDefaults(value as UserRole);
           }}>
             <SelectTrigger>
@@ -596,7 +621,7 @@ export const ComprehensiveUserForm: React.FC<ComprehensiveUserFormProps> = ({
             <SelectContent>
               {getAvailableRoles().map((role) => (
                 <SelectItem key={role} value={role}>
-                  {role.replace(/_/g, ' ').toUpperCase()}
+                  {ROLE_LABELS[role] || role.replace(/_/g, ' ').toUpperCase()}
                 </SelectItem>
               ))}
             </SelectContent>
