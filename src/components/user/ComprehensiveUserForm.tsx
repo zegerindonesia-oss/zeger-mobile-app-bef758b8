@@ -232,16 +232,15 @@ export const ComprehensiveUserForm: React.FC<ComprehensiveUserFormProps> = ({
   };
 
   const getAvailableRoles = (): UserRole[] => {
-    const baseRoles: UserRole[] = ['ho_admin', 'ho_owner', 'branch_manager', 'sb_branch_manager', 'bh_staff', 'bh_report', 'rider'];
-    
-    if (userRole === 'ho_admin') {
-      return baseRoles;
+    const outletRoles: UserRole[] = ['sb_kasir', 'sb_branch_manager', 'sb_report'];
+    const hubRoles: UserRole[] = ['bh_kasir', 'bh_staff', 'bh_report', 'bh_rider'];
+    if (userRole === 'ho_admin' || userRole === 'ho_owner') {
+      return [...outletRoles, ...hubRoles, 'branch_manager', 'ho_staff', 'finance', 'ho_admin', 'ho_owner', 'rider'] as UserRole[];
     } else if (userRole === 'branch_manager') {
-      return ['sb_branch_manager', 'bh_staff', 'bh_report', 'rider'];
+      return [...outletRoles, ...hubRoles, 'rider'];
     } else if (userRole === 'sb_branch_manager') {
-      return ['rider'];
+      return ['sb_kasir', 'sb_report', 'sb_rider'];
     }
-    
     return ['rider'];
   };
 
