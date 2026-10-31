@@ -10,7 +10,8 @@ import { usePOSPromo } from '@/hooks/usePOSPromo';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { POSSidebar } from '@/components/pos/POSSidebar';
-import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart, LayoutGrid, QrCode, UserRound, Phone, BarChart3 } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Monitor, Armchair, ShoppingCart, LayoutGrid, QrCode, UserRound, Phone, BarChart3, Tag } from 'lucide-react';
+import { CustomLabelButton } from '@/components/stock/CupStickerPrint';
 import { POSQuickMember } from '@/components/pos/POSQuickMember';
 import { POSReportsDialog } from '@/components/pos/POSReportsDialog';
 import { POSPinLock } from '@/components/pos/POSPinLock';
@@ -553,6 +554,7 @@ const POSMain = () => {
             {online ? 'Online' : 'Offline — mode lokal'}
           </span>
           {!online && <WifiOff className="lg:hidden h-4 w-4 text-destructive shrink-0" />}
+          <CustomLabelButton trigger={<button className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Label Custom"><Tag className="h-4 w-4" /> <span className="hidden sm:inline">Label</span></button>} />
           <button onClick={() => setTableMapOpen(true)} className="pos-raised-control h-10 px-2.5 md:px-3 rounded-xl flex items-center gap-1.5 text-sm font-semibold shrink-0" title="Meja">
             <Armchair className="h-4 w-4" /> <span className="hidden sm:inline">Meja</span>
             {liveTables.length > 0 && (
