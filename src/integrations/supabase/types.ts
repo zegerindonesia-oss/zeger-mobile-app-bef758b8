@@ -5744,6 +5744,7 @@ export type Database = {
           status: string
         }[]
       }
+      manager_branch_scope: { Args: { _branch: string }; Returns: boolean }
       member_benefits: {
         Args: { _member_id: string }
         Returns: {
