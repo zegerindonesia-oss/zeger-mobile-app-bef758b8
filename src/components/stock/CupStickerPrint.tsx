@@ -30,9 +30,9 @@ async function drawStickerCanvas(it: StickerItem, rider: string, sd: Date, qr: s
   const nl = lines.slice(0, 2); nl.forEach((t, i) => g.fillText(t, lx, T + i * nS * c.line, lw));
   const ed = addDays(sd, it.shelf_life_days || DEFAULT_DAYS);
   const dS = pt(5.2), pS = pt(9.5);
-  font(700, dS); g.fillText(`ED : ${fmt(ed)}`, lx, B - dS, lw); g.fillText(`SD : ${fmt(sd)}`, lx, B - dS * 2 * c.line, lw);
-  const top = T + nl.length * nS * c.line, bot = B - dS * 2 * c.line;
-  font(900, pS); g.fillText(Math.round(it.price || 0).toLocaleString("id-ID"), lx, top + (bot - top - pS) / 2, lw);
+  if (!it.hide_dates) { font(700, dS); g.fillText(`ED : ${fmt(ed)}`, lx, B - dS, lw); g.fillText(`SD : ${fmt(sd)}`, lx, B - dS * 2 * c.line, lw); }
+  const top = T + nl.length * nS * c.line, bot = it.hide_dates ? B : B - dS * 2 * c.line;
+  if (!it.hide_price) { font(900, pS); g.fillText(Math.round(it.price || 0).toLocaleString("id-ID"), lx, top + (bot - top - pS) / 2, lw); }
   // right column
   const cx = rx + sideW / 2; g.textAlign = "center";
   const logo = await loadImg(ZEGER_BEAN_LOGO); const bS = pt(4.4), sS = pt(2.3), lh = pt(5.5);
@@ -56,7 +56,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { ZEGER_BEAN_LOGO } from "@/assets/zeger-bean-logo";
 
-export interface StickerItem { name: string; short_name?: string | null; price?: number | null; shelf_life_days?: number | null; qty: number; }
+export interface StickerItem { name: string; short_name?: string | null; price?: number | null; shelf_life_days?: number | null; qty: number; hide_price?: boolean; hide_dates?: boolean; }
 
 const fmt = (d: Date) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -69,9 +69,9 @@ export function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string;
     <div className="stk">
       <div className="l">
         <div className="n">{it.short_name || it.name}</div>
-        <div className="p">{Math.round(it.price || 0).toLocaleString("id-ID")}</div>
-        <div className="d">SD : {fmt(sd)}</div>
-        <div className="d">ED : {fmt(ed)}</div>
+        {it.hide_price ? <div /> : <div className="p">{Math.round(it.price || 0).toLocaleString("id-ID")}</div>}
+        {!it.hide_dates && <div className="d">SD : {fmt(sd)}</div>}
+        {!it.hide_dates && <div className="d">ED : {fmt(ed)}</div>}
       </div>
       <div className="r">
         <div className="bw"><img className="lg" src={ZEGER_BEAN_LOGO} alt="" /><div className="b">Zeger!<small>COFFEE</small></div></div>
