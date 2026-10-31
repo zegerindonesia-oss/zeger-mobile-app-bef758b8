@@ -1,3 +1,4 @@
+import { adminSignupClient } from "@/lib/admin-signup-client";
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -357,7 +358,7 @@ export const ComprehensiveUserForm: React.FC<ComprehensiveUserFormProps> = ({
     setCreating(true);
     try {
       // Create Supabase auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await adminSignupClient.auth.signUp({
         email: newUser.email,
         password: newUser.password,
         options: {

@@ -1,3 +1,4 @@
+import { adminSignupClient } from "@/lib/admin-signup-client";
 import { MODULE_ACCESS_OPTIONS, ROLE_MODULE_DEFAULTS, defaultModulesForRole } from "@/lib/role-presets";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
@@ -299,7 +300,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
     setCreating(true);
     try {
       // Create Supabase auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await adminSignupClient.auth.signUp({
         email: newUser.email,
         password: newUser.password,
         options: {
