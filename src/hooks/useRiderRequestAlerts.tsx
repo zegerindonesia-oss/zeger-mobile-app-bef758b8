@@ -9,7 +9,7 @@ export function stopRiderJingle() {
   toast.dismiss("rider-jingle");
 }
 function playRiderJingle() {
-  if (!jingle) { jingle = new Audio("/sounds/zeger-notification.mp3"); jingle.loop = true; }
+  if (!jingle) { jingle = new Audio("/sounds/rider-order-jingle.mp3"); jingle.loop = true; }
   jingle.currentTime = 0;
   // Fallback to a synthesized beep when the browser blocks or fails the MP3.
   jingle.play().catch(() => { try { playAlertBeep({ times: 5 }); } catch { /* ignore */ } });
