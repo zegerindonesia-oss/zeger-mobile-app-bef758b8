@@ -185,3 +185,85 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
     </Dialog>
   );
 }
+
+export const COPY_PRESETS = [1, 5, 10, 25, 50, 100];
+/** Clamps a requested copy count to a safe printable range (1–999). */
+export const clampCopies = (n: number) => Math.min(999, Math.max(1, Math.floor(Number(n) || 1)));
+
+/** Free-form label: any text, any price, any number of copies — no order needed. */
+export function CustomLabelButton({ trigger }: { trigger?: React.ReactNode }) {
+  const today = new Date();
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [note, setNote] = useState(() => localStorage.getItem("zeger_custom_label_note") || "");
+  const [hidePrice, setHidePrice] = useState(false);
+  const [showDates, setShowDates] = useState(true);
+  const [days, setDays] = useState(3);
+  const [qr, setQr] = useState(() => localStorage.getItem("zeger_sticker_qr") || "https://shorturl.at/d5luh");
+  const [copies, setCopies] = useState(1);
+  const [sdStr, setSdStr] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`);
+  const sd = new Date(sdStr + "T00:00:00");
+  const cfg = loadStickerCfg(); const css = stickerCss(cfg);
+  const [mode, setMode] = useState<"pc" | "bt">(() => (localStorage.getItem("zeger_sticker_mode") as any) || "pc");
+  const { userProfile } = useAuth() as any;
+  const [busy, setBusy] = useState(false);
+  const item: StickerItem = { name: name.trim() || "Nama Label", price: Number(price.replace(/\D/g, "")) || 0, shelf_life_days: days, qty: clampCopies(copies), hide_price: hidePrice, hide_dates: !showDates };
+
+  const print = async () => {
+    if (!name.trim()) { toast.error("Isi nama label dulu"); return; }
+    localStorage.setItem("zeger_custom_label_note", note); localStorage.setItem("zeger_sticker_qr", qr); localStorage.setItem("zeger_sticker_mode", mode);
+    setBusy(true);
+    try {
+      if (mode === "bt") {
+        const ok = await printBytesToSticker(userProfile?.branch_id || null, async () => {
+          const c = await drawStickerCanvas(item, note, sd, qr, cfg);
+          return tsplBitmapLabels(Array.from({ length: item.qty }, () => c), cfg.w, cfg.h);
+        });
+        if (ok) { toast.success(`${item.qty} label terkirim ke printer Bluetooth`); return; }
+        toast.info("Printer stiker Bluetooth belum diatur. Membuka dialog cetak.");
+      }
+      const one = renderToStaticMarkup(<Sticker it={item} rider={note} sd={sd} qr={qr} />);
+      await printHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Label ${esc(item.name)}</title><style>${css}</style></head><body>${one.repeat(item.qty)}</body></html>`);
+    } catch (e) { toast.error("Gagal mencetak label"); console.error(e); } finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>{trigger || <Button size="sm" variant="outline"><Tag className="mr-1 h-4 w-4" />Label Custom</Button>}</DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogHeader><DialogTitle>Cetak Label Custom</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <label className="block text-xs">Nama / Tulisan Label<Input value={name} maxLength={40} placeholder="mis. Biji Kopi Robusta 250g" onChange={(e) => setName(e.target.value)} /></label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs">Harga (Rp)<Input inputMode="numeric" value={price} disabled={hidePrice} placeholder="25000" onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} /></label>
+            <label className="text-xs">Tulisan kanan bawah<Input value={note} maxLength={20} placeholder="mis. Kemiri" onChange={(e) => setNote(e.target.value)} /></label>
+          </div>
+          <div className="flex flex-wrap gap-4 text-xs">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={hidePrice} onChange={(e) => setHidePrice(e.target.checked)} />Tanpa harga</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={showDates} onChange={(e) => setShowDates(e.target.checked)} />Tampilkan SD / ED</label>
+          </div>
+          {showDates && <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs">Tanggal Produksi (SD)<Input type="date" value={sdStr} onChange={(e) => setSdStr(e.target.value)} /></label>
+            <label className="text-xs">Masa simpan (hari)<Input type="number" min={1} value={days} onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))} /></label>
+          </div>}
+          <label className="block text-xs">Link QR (kosongkan = tanpa QR)<Input value={qr} onChange={(e) => setQr(e.target.value)} /></label>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold">Jumlah cetak</p>
+            <div className="flex flex-wrap gap-2">
+              {COPY_PRESETS.map((n) => <Button key={n} size="sm" variant={copies === n ? "default" : "outline"} onClick={() => setCopies(n)}>{n}×</Button>)}
+              <Input type="number" min={1} max={999} className="w-24 h-9" value={copies} onChange={(e) => setCopies(clampCopies(Number(e.target.value)))} aria-label="Jumlah cetak bebas" />
+            </div>
+          </div>
+          <style>{`.stk-prev .stk{transform:scale(2.2);transform-origin:top left;border:1px dashed hsl(var(--border));border-radius:2mm}${css.replace(/@page[^}]*}/, "").replace(/\*\{[^}]*}/, "").replace(/body\{[^}]*}/, "")}`}</style>
+          <div className="stk-prev rounded-lg bg-muted p-3" style={{ height: `${cfg.h * 2.2 + 8}mm` }}><Sticker it={item} rider={note} sd={sd} qr={qr} /></div>
+          <div className="flex gap-2">
+            {([["pc", "Printer PC / USB"], ["bt", "Bluetooth (POS)"]] as const).map(([v, l]) => (
+              <Button key={v} size="sm" variant={mode === v ? "default" : "outline"} onClick={() => setMode(v)}>{l}</Button>
+            ))}
+          </div>
+          <Button className="w-full" onClick={print} disabled={busy}><Printer className="mr-2 h-4 w-4" />Cetak {item.qty} Label ({cfg.w}×{cfg.h}mm)</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
