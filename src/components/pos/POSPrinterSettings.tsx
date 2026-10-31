@@ -20,6 +20,7 @@ import {
 import { btPair, btForget, btSavedName, btSupported, btSend, btCanScan, btScan, btStopScan, btConnectTo, btListPaired, type BtFound } from '@/lib/bt-printer';
 import { ReceiptDesigner } from './ReceiptDesigner';
 import { StickerPreview } from './StickerPreview';
+import { CustomLabelButton } from '@/components/stock/CupStickerPrint';
 
 interface Props {
   open: boolean;
@@ -127,7 +128,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
   return (
     <Shell inline={inline} open={open} onOpenChange={onOpenChange}>
         {designer && <ReceiptDesigner settings={s} onChange={setS} branchName={branchName} />}
-        {designer && <div className="mt-6"><StickerPreview /></div>}
+        {designer && <div className="mt-6 space-y-3"><div className="flex justify-end"><CustomLabelButton /></div><StickerPreview /></div>}
         {!designer && <>
 
 

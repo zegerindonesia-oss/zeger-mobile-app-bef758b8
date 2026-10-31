@@ -30,9 +30,9 @@ async function drawStickerCanvas(it: StickerItem, rider: string, sd: Date, qr: s
   const nl = lines.slice(0, 2); nl.forEach((t, i) => g.fillText(t, lx, T + i * nS * c.line, lw));
   const ed = addDays(sd, it.shelf_life_days || DEFAULT_DAYS);
   const dS = pt(5.2), pS = pt(9.5);
-  font(700, dS); g.fillText(`ED : ${fmt(ed)}`, lx, B - dS, lw); g.fillText(`SD : ${fmt(sd)}`, lx, B - dS * 2 * c.line, lw);
-  const top = T + nl.length * nS * c.line, bot = B - dS * 2 * c.line;
-  font(900, pS); g.fillText(Math.round(it.price || 0).toLocaleString("id-ID"), lx, top + (bot - top - pS) / 2, lw);
+  if (!it.hide_dates) { font(700, dS); g.fillText(`ED : ${fmt(ed)}`, lx, B - dS, lw); g.fillText(`SD : ${fmt(sd)}`, lx, B - dS * 2 * c.line, lw); }
+  const top = T + nl.length * nS * c.line, bot = it.hide_dates ? B : B - dS * 2 * c.line;
+  if (!it.hide_price) { font(900, pS); g.fillText(Math.round(it.price || 0).toLocaleString("id-ID"), lx, top + (bot - top - pS) / 2, lw); }
   // right column
   const cx = rx + sideW / 2; g.textAlign = "center";
   const logo = await loadImg(ZEGER_BEAN_LOGO); const bS = pt(4.4), sS = pt(2.3), lh = pt(5.5);
@@ -56,7 +56,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { ZEGER_BEAN_LOGO } from "@/assets/zeger-bean-logo";
 
-export interface StickerItem { name: string; short_name?: string | null; price?: number | null; shelf_life_days?: number | null; qty: number; }
+export interface StickerItem { name: string; short_name?: string | null; price?: number | null; shelf_life_days?: number | null; qty: number; hide_price?: boolean; hide_dates?: boolean; }
 
 const fmt = (d: Date) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -69,9 +69,9 @@ export function Sticker({ it, rider, sd, qr }: { it: StickerItem; rider: string;
     <div className="stk">
       <div className="l">
         <div className="n">{it.short_name || it.name}</div>
-        <div className="p">{Math.round(it.price || 0).toLocaleString("id-ID")}</div>
-        <div className="d">SD : {fmt(sd)}</div>
-        <div className="d">ED : {fmt(ed)}</div>
+        {it.hide_price ? <div /> : <div className="p">{Math.round(it.price || 0).toLocaleString("id-ID")}</div>}
+        {!it.hide_dates && <div className="d">SD : {fmt(sd)}</div>}
+        {!it.hide_dates && <div className="d">ED : {fmt(ed)}</div>}
       </div>
       <div className="r">
         <div className="bw"><img className="lg" src={ZEGER_BEAN_LOGO} alt="" /><div className="b">Zeger!<small>COFFEE</small></div></div>
@@ -181,6 +181,88 @@ export function CupStickerButton({ items, rider }: { items: StickerItem[]; rider
         </div>
         <Button onClick={print} disabled={busy}><Printer className="mr-2 h-4 w-4" />Cetak {total} Stiker ({cfg.w}×{cfg.h}mm)</Button>
         <p className="text-xs text-muted-foreground"><Bluetooth className="inline h-3 w-3" /> Mode PC: pilih printer stiker di dialog cetak, ukuran kertas sama dengan lebar×tinggi di atas, margin None, skala 100%. Mode Bluetooth: pakai printer stiker yang sudah dihubungkan di Pengaturan Printer POS. Pengaturan tersimpan otomatis.</p>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export const COPY_PRESETS = [1, 5, 10, 25, 50, 100];
+/** Clamps a requested copy count to a safe printable range (1–999). */
+export const clampCopies = (n: number) => Math.min(999, Math.max(1, Math.floor(Number(n) || 1)));
+
+/** Free-form label: any text, any price, any number of copies — no order needed. */
+export function CustomLabelButton({ trigger }: { trigger?: React.ReactNode }) {
+  const today = new Date();
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [note, setNote] = useState(() => localStorage.getItem("zeger_custom_label_note") || "");
+  const [hidePrice, setHidePrice] = useState(false);
+  const [showDates, setShowDates] = useState(true);
+  const [days, setDays] = useState(3);
+  const [qr, setQr] = useState(() => localStorage.getItem("zeger_sticker_qr") || "https://shorturl.at/d5luh");
+  const [copies, setCopies] = useState(1);
+  const [sdStr, setSdStr] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`);
+  const sd = new Date(sdStr + "T00:00:00");
+  const cfg = loadStickerCfg(); const css = stickerCss(cfg);
+  const [mode, setMode] = useState<"pc" | "bt">(() => (localStorage.getItem("zeger_sticker_mode") as any) || "pc");
+  const { userProfile } = useAuth() as any;
+  const [busy, setBusy] = useState(false);
+  const item: StickerItem = { name: name.trim() || "Nama Label", price: Number(price.replace(/\D/g, "")) || 0, shelf_life_days: days, qty: clampCopies(copies), hide_price: hidePrice, hide_dates: !showDates };
+
+  const print = async () => {
+    if (!name.trim()) { toast.error("Isi nama label dulu"); return; }
+    localStorage.setItem("zeger_custom_label_note", note); localStorage.setItem("zeger_sticker_qr", qr); localStorage.setItem("zeger_sticker_mode", mode);
+    setBusy(true);
+    try {
+      if (mode === "bt") {
+        const ok = await printBytesToSticker(userProfile?.branch_id || null, async () => {
+          const c = await drawStickerCanvas(item, note, sd, qr, cfg);
+          return tsplBitmapLabels(Array.from({ length: item.qty }, () => c), cfg.w, cfg.h);
+        });
+        if (ok) { toast.success(`${item.qty} label terkirim ke printer Bluetooth`); return; }
+        toast.info("Printer stiker Bluetooth belum diatur. Membuka dialog cetak.");
+      }
+      const one = renderToStaticMarkup(<Sticker it={item} rider={note} sd={sd} qr={qr} />);
+      await printHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Label ${esc(item.name)}</title><style>${css}</style></head><body>${one.repeat(item.qty)}</body></html>`);
+    } catch (e) { toast.error("Gagal mencetak label"); console.error(e); } finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>{trigger || <Button size="sm" variant="outline"><Tag className="mr-1 h-4 w-4" />Label Custom</Button>}</DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogHeader><DialogTitle>Cetak Label Custom</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <label className="block text-xs">Nama / Tulisan Label<Input value={name} maxLength={40} placeholder="mis. Biji Kopi Robusta 250g" onChange={(e) => setName(e.target.value)} /></label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs">Harga (Rp)<Input inputMode="numeric" value={price} disabled={hidePrice} placeholder="25000" onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} /></label>
+            <label className="text-xs">Tulisan kanan bawah<Input value={note} maxLength={20} placeholder="mis. Kemiri" onChange={(e) => setNote(e.target.value)} /></label>
+          </div>
+          <div className="flex flex-wrap gap-4 text-xs">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={hidePrice} onChange={(e) => setHidePrice(e.target.checked)} />Tanpa harga</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={showDates} onChange={(e) => setShowDates(e.target.checked)} />Tampilkan SD / ED</label>
+          </div>
+          {showDates && <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs">Tanggal Produksi (SD)<Input type="date" value={sdStr} onChange={(e) => setSdStr(e.target.value)} /></label>
+            <label className="text-xs">Masa simpan (hari)<Input type="number" min={1} value={days} onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))} /></label>
+          </div>}
+          <label className="block text-xs">Link QR (kosongkan = tanpa QR)<Input value={qr} onChange={(e) => setQr(e.target.value)} /></label>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold">Jumlah cetak</p>
+            <div className="flex flex-wrap gap-2">
+              {COPY_PRESETS.map((n) => <Button key={n} size="sm" variant={copies === n ? "default" : "outline"} onClick={() => setCopies(n)}>{n}×</Button>)}
+              <Input type="number" min={1} max={999} className="w-24 h-9" value={copies} onChange={(e) => setCopies(clampCopies(Number(e.target.value)))} aria-label="Jumlah cetak bebas" />
+            </div>
+          </div>
+          <style>{`.stk-prev .stk{transform:scale(2.2);transform-origin:top left;border:1px dashed hsl(var(--border));border-radius:2mm}${css.replace(/@page[^}]*}/, "").replace(/\*\{[^}]*}/, "").replace(/body\{[^}]*}/, "")}`}</style>
+          <div className="stk-prev rounded-lg bg-muted p-3" style={{ height: `${cfg.h * 2.2 + 8}mm` }}><Sticker it={item} rider={note} sd={sd} qr={qr} /></div>
+          <div className="flex gap-2">
+            {([["pc", "Printer PC / USB"], ["bt", "Bluetooth (POS)"]] as const).map(([v, l]) => (
+              <Button key={v} size="sm" variant={mode === v ? "default" : "outline"} onClick={() => setMode(v)}>{l}</Button>
+            ))}
+          </div>
+          <Button className="w-full" onClick={print} disabled={busy}><Printer className="mr-2 h-4 w-4" />Cetak {item.qty} Label ({cfg.w}×{cfg.h}mm)</Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
