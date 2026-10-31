@@ -1,3 +1,4 @@
+import { adminSignupClient } from "@/lib/admin-signup-client";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,7 +140,7 @@ export const UserManagement = ({ role, branchId }: UserManagementProps) => {
     setLoading(true);
     try {
       // Create Supabase auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await adminSignupClient.auth.signUp({
         email: newUser.email,
         password: newUser.password,
         options: {
