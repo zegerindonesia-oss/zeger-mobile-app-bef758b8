@@ -53,6 +53,17 @@ export const POSPinLock = ({ branchId, branchName, onUnlock }: { branchId: strin
           </button>
         </div>
         <p className="text-xs text-muted-foreground">Belum punya PIN? Minta manager mengatur PIN di Back Office → Konfigurasi POS Cabang.</p>
+        <button
+          type="button"
+          onClick={async () => {
+            try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* ignore */ }
+            Object.keys(localStorage).forEach((k) => { if (k.startsWith('sb-') || k.startsWith('supabase.auth.')) localStorage.removeItem(k); });
+            window.location.replace('/auth');
+          }}
+          className="w-full rounded-xl border py-2.5 text-sm font-semibold text-muted-foreground hover:bg-muted"
+        >
+          Keluar / Ganti Akun
+        </button>
       </div>
     </div>
   );
