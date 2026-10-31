@@ -1341,19 +1341,20 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
                 </Select>
               </div>
 
-              {(role === 'ho_admin' || role === 'ho_owner') && 
-               !['ho_admin', 'ho_owner', 'ho_staff'].includes(editingUser.role) && (
+              {!['ho_admin', 'ho_owner', 'ho_staff'].includes(editingUser.role) && (
                 <div className="space-y-2">
-                  <Label htmlFor="edit-branch">Branch</Label>
+                  <Label htmlFor="edit-branch">Cabang</Label>
                   <Select 
                     value={editingUser.branch_id || ''} 
                     onValueChange={(value) => setEditingUser(prev => prev ? {...prev, branch_id: value} : null)}
                   >
                     <SelectTrigger className="form-glass">
-                      <SelectValue />
+                      <SelectValue placeholder="Pilih cabang" />
                     </SelectTrigger>
                     <SelectContent className="dropdown-content">
-                      {branches.map((branch) => (
+                      {branches
+                        .filter((b) => ['ho_admin', 'ho_owner'].includes(role) || !branchId || b.id === branchId || b.parent_branch_id === branchId)
+                        .map((branch) => (
                         <SelectItem key={branch.id} value={branch.id} className="select-item">
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4" />
