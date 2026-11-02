@@ -36,7 +36,7 @@ interface RiderProfile {
 }
 
 const MobileRiderDashboard = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalStock: 0,
@@ -57,7 +57,9 @@ const MobileRiderDashboard = () => {
   const watchIdRef = useRef<number | null>(null);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
-  const [riderProfile, setRiderProfile] = useState<RiderProfile | null>(null);
+  const [riderProfile, setRiderProfile] = useState<RiderProfile | null>(
+    userProfile?.id ? { id: userProfile.id, full_name: (userProfile as any).full_name || "" } : null
+  );
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [riderLocation, setRiderLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showSoundBanner, setShowSoundBanner] = useState(false);
