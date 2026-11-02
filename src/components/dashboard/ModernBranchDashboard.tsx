@@ -987,17 +987,19 @@ export const ModernBranchDashboard = () => {
     }
   };
   const handleCardClick = (type: string) => {
+    const lockBranch = (userProfile?.role === 'branch_manager' || userProfile?.role === 'sb_branch_manager') ? userProfile?.branch_id : (selectedBranch !== 'all' ? selectedBranch : '');
+    const qs = `?start_date=${startDate}&end_date=${endDate}${lockBranch ? `&branch=${lockBranch}` : ''}${selectedUser !== 'all' ? `&rider=${selectedUser}` : ''}`;
     switch (type) {
       case 'transactions':
       case 'revenue':
       case 'avgTransaction':
-        navigate('/transactions');
+        navigate('/transactions' + qs);
         break;
       case 'profit':
         navigate('/finance/profit-loss');
         break;
       case 'foodCost':
-        navigate('/transactions');
+        navigate('/transactions' + qs);
         break;
       case 'members':
         navigate('/customers');
@@ -1006,7 +1008,7 @@ export const ModernBranchDashboard = () => {
         navigate('/riders');
         break;
       case 'itemsSold':
-        navigate('/transactions');
+        navigate('/transaction-details' + qs);
         break;
       default:
         break;
