@@ -174,7 +174,6 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, bran
         <div className="rounded-xl border p-3 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><UserPlus className="h-3.5 w-3.5" /> Kirim struk & simpan customer</div>
           <Input placeholder="Nama customer" value={cName} onChange={(e) => setCName(e.target.value)} />
-          <Input placeholder="No. WhatsApp (08…)" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={lookup} />
           <Input placeholder="Email (opsional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <DialogFooter className="gap-2 flex-wrap">
