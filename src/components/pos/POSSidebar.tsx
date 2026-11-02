@@ -55,6 +55,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
     ...(onRiderOrders ? [{ label: 'Pesanan Rider', icon: Truck, action: onRiderOrders, levels: all, badge: true }] : []),
     { label: 'Kitchen Display', icon: Monitor, path: '/pos/kds', levels: all, module: 'kds' },
     { label: 'Layar Antrean TV', icon: Tv, path: '/pos/queue', levels: all, module: 'queue' },
+    { label: 'Riwayat Transaksi', icon: Receipt, path: '/pos/transactions', levels: all },
     { label: 'Laporan Penjualan', icon: FileBarChart, path: '/pos/reports', levels: all },
     { label: 'Pengaturan Kasir', icon: Banknote, path: '/pos/cashier', levels: all },
     { label: 'Pengaturan POS', icon: Printer, path: '/pos/settings', levels: all },
