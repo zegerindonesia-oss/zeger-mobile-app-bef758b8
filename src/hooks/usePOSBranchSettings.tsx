@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { DEFAULT_PAYMENT_METHODS, type PaymentMethodConfig } from '@/lib/pos-payment-methods';
 
 export interface POSBranchSettings {
   branch_id: string;
@@ -7,6 +8,7 @@ export interface POSBranchSettings {
   hidden_product_ids: string[];
   cash_in_categories: string[];
   cash_out_categories: string[];
+  payment_methods: PaymentMethodConfig[];
 }
 
 export const DEFAULT_BRANCH_SETTINGS: Omit<POSBranchSettings, 'branch_id'> = {
@@ -14,6 +16,7 @@ export const DEFAULT_BRANCH_SETTINGS: Omit<POSBranchSettings, 'branch_id'> = {
   hidden_product_ids: [],
   cash_in_categories: ['Modal Tambahan', 'Tukar Uang Kecil', 'Pendapatan Lain', 'Lain-lain'],
   cash_out_categories: ['Belanja Bahan Darurat', 'Operasional & Kebersihan', 'Kasbon Staf', 'Setor ke Brankas', 'Lain-lain'],
+  payment_methods: DEFAULT_PAYMENT_METHODS,
 };
 
 export const fetchBranchSettings = async (branchId: string): Promise<POSBranchSettings> => {
