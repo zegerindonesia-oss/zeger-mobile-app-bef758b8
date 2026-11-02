@@ -64,6 +64,8 @@ const POSMain = () => {
   const [pax, setPax] = useState(1);
   const [modeOpen, setModeOpen] = useState(false);
   const { settings: branchPos } = usePOSBranchSettings(userProfile?.branch_id || null);
+  const modeRule = branchPos?.order_mode_pricing?.[orderType] || null;
+  useEffect(() => { cart.setPricingRule(modeRule); }, [JSON.stringify(modeRule)]); // eslint-disable-line
   const [tableNumber, setTableNumber] = useState('');
   const [externalOrderId, setExternalOrderId] = useState('');
   const [customerName, setCustomerName] = useState('');
