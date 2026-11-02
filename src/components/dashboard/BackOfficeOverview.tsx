@@ -101,6 +101,7 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
   }, [tx, range]);
 
   const total = tx.reduce((s, t) => s + Number(t.final_amount || 0), 0);
+  const txCount = tx.filter((t) => t._pos !== false).length;
   const pay = useMemo(() => {
     const m: Record<string, number> = {};
     tx.forEach((t) => {
