@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPosSales } from "@/lib/financial-utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +43,7 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
     (async () => {
       setLoading(true);
       try {
-        const [txRows, poRes] = await Promise.all([
+        const [txRows, poRes, posRows] = await Promise.all([
           fetchAll(() => {
             let q = supabase
               .from("transactions")
@@ -65,9 +66,19 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
             if (effectiveBranch) q = q.eq("branch_id", effectiveBranch);
             return q;
           })(),
+          fetchPosSales(range.start, range.end, effectiveBranch || undefined),
         ]);
         if (cancelled) return;
-        setTx(txRows);
+        // Normalise POS cashier rows into the same shape as rider transactions
+        const posAsTx = posRows.flatMap((t: any) => {
+          const parts: [string | null, number][] = t.payment_method_2
+            ? [[t.payment_method_1, Number(t.amount_1 || 0)], [t.payment_method_2, Number(t.amount_2 || 0)]]
+            : [[t.payment_method_1, Number(t.total || 0)]];
+          return parts.map(([m, amt], i) => ({
+            final_amount: amt, payment_method: m || "lainnya", transaction_date: t.created_at, _pos: i === 0,
+          }));
+        });
+        setTx([...txRows, ...posAsTx]);
         setPos((poRes.data || []).filter((p: any) => Number(p.total_amount) - Number(p.paid_amount || 0) > 0));
       } catch (e) {
         console.error("Overview load error", e);
@@ -90,6 +101,7 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
   }, [tx, range]);
 
   const total = tx.reduce((s, t) => s + Number(t.final_amount || 0), 0);
+  const txCount = tx.filter((t) => t._pos !== false).length;
   const pay = useMemo(() => {
     const m: Record<string, number> = {};
     tx.forEach((t) => {
@@ -123,8 +135,8 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
 
   const kpis = [
     { label: "Total Penjualan", value: rp(total), icon: TrendingUp },
-    { label: "Transaksi", value: tx.length.toLocaleString("id-ID"), icon: Receipt },
-    { label: "Rata-rata / Struk", value: rp(tx.length ? total / tx.length : 0), icon: Wallet },
+    { label: "Transaksi", value: txCount.toLocaleString("id-ID"), icon: Receipt },
+    { label: "Rata-rata / Struk", value: rp(txCount ? total / txCount : 0), icon: Wallet },
     { label: "Hutang Supplier", value: rp(totalDebt), icon: CalendarClock, warn: overdue.length > 0 },
   ];
 

@@ -1,0 +1,2 @@
+CREATE POLICY "HO users can view all pos transactions" ON public.pos_transactions FOR SELECT TO authenticated USING (public.is_ho_user());
+CREATE POLICY "HO users can view all pos transaction items" ON public.pos_transaction_items FOR SELECT TO authenticated USING (public.is_ho_user());
