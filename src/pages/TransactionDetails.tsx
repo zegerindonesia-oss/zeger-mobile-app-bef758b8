@@ -90,9 +90,20 @@ export const TransactionDetails = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const canPickBranch = ['ho_admin', 'ho_owner', 'ho_staff', 'finance', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff'].includes(userProfile?.role || '');
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState(() => new URLSearchParams(window.location.search).get('branch') || 'all');
+  const branchFilter: string | undefined = canPickBranch
+    ? (selectedBranch === 'all' ? undefined : selectedBranch)
+    : (userProfile?.branch_id || undefined);
+
   useEffect(() => {
     if (userProfile?.role !== 'bh_report') {
       fetchRiders();
+    }
+    if (canPickBranch) {
+      supabase.from('branches').select('id, name').eq('is_active', true).order('name')
+        .then(({ data }) => setBranches(data || []));
     }
   }, [userProfile]);
 
@@ -105,7 +116,7 @@ export const TransactionDetails = () => {
 
   useEffect(() => {
     fetchTransactionDetails();
-  }, [startDate, endDate, selectedRider]);
+  }, [startDate, endDate, selectedRider, branchFilter]);
 
   const fetchRiders = async () => {
     try {
@@ -133,7 +144,8 @@ export const TransactionDetails = () => {
       const salesData = await calculateSalesData(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedRider === "all" ? undefined : selectedRider
+        selectedRider === "all" ? undefined : selectedRider,
+        branchFilter
       );
 
       // Fetch detailed transaction items for the table
