@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LayoutGrid, Users, Store } from 'lucide-react';
@@ -25,28 +25,29 @@ export const POSModeDialog = ({ open, onOpenChange, orderType, pax, externalOrde
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-3xl p-0 overflow-hidden [&>button]:hidden">
-        <div className="bg-primary text-primary-foreground px-5 py-4 flex items-center gap-2 font-bold text-lg">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90dvh] rounded-3xl p-0 overflow-hidden flex flex-col gap-0 [&>button]:hidden">
+        <DialogTitle className="bg-primary text-primary-foreground px-5 py-4 flex items-center gap-2 font-bold text-lg shrink-0">
           <LayoutGrid className="h-5 w-5" /> Mode Transaksi
-        </div>
-        <div className="p-5 space-y-5">
-          <div>
+        </DialogTitle>
+        <DialogDescription className="sr-only">Pilih jumlah pax dan mode penjualan</DialogDescription>
+        <div className="p-4 sm:p-5 space-y-5 overflow-y-auto min-w-0">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 font-semibold text-sm mb-3"><Users className="h-4 w-4 text-primary" /> Jumlah Pax</div>
             <Input type="number" min={1} value={p} onChange={(e) => setP(Math.max(1, Number(e.target.value) || 1))}
               className="mx-auto w-32 h-14 text-center text-2xl font-bold rounded-2xl" />
             <div className="flex gap-2 overflow-x-auto mt-3 pb-1 custom-scroll">
               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                 <button key={n} onClick={() => setP(n)}
-                  className={cn('h-12 w-14 shrink-0 rounded-xl border text-base font-semibold transition', p === n ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted')}>{n}</button>
+                  className={cn('h-12 w-12 sm:w-14 shrink-0 rounded-xl border text-base font-semibold transition', p === n ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted')}>{n}</button>
               ))}
             </div>
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 font-semibold text-sm mb-3"><Store className="h-4 w-4 text-primary" /> Mode Penjualan</div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {modes.map((m, i) => (
                 <button key={m.id} onClick={() => setMode(m.id)}
-                  className={cn('h-14 rounded-2xl border text-sm font-bold uppercase transition', mode === m.id ? 'bg-primary text-primary-foreground border-primary shadow' : 'border-border hover:bg-muted')}>
+                  className={cn('min-w-0 h-12 sm:h-14 px-2 rounded-2xl border text-xs sm:text-sm font-bold uppercase truncate transition', mode === m.id ? 'bg-primary text-primary-foreground border-primary shadow' : 'border-border hover:bg-muted')}>
                   {String.fromCharCode(65 + i)}. {m.label}
                 </button>
               ))}
@@ -55,9 +56,9 @@ export const POSModeDialog = ({ open, onOpenChange, orderType, pax, externalOrde
               <Input className="mt-3 h-11 rounded-xl" placeholder="ID pemesanan platform" value={ext} onChange={(e) => setExt(e.target.value)} />
             )}
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" className="h-12 w-36 rounded-2xl text-destructive border-destructive/50" onClick={() => onOpenChange(false)}>Batal</Button>
-            <Button className="h-12 w-36 rounded-2xl" disabled={!mode} onClick={() => { onConfirm({ orderType: mode, pax: p, externalOrderId: ext }); onOpenChange(false); }}>Proses</Button>
+          <div className="grid grid-cols-2 sm:flex sm:justify-end gap-2">
+            <Button variant="outline" className="h-12 sm:w-36 rounded-2xl text-destructive border-destructive/50" onClick={() => onOpenChange(false)}>Batal</Button>
+            <Button className="h-12 sm:w-36 rounded-2xl" disabled={!mode} onClick={() => { onConfirm({ orderType: mode, pax: p, externalOrderId: ext }); onOpenChange(false); }}>Proses</Button>
           </div>
         </div>
       </DialogContent>
