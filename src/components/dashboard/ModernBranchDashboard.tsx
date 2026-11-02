@@ -141,6 +141,9 @@ export const ModernBranchDashboard = () => {
     if (dateFilter === 'today') {
       setStartDate(today);
       setEndDate(today);
+    } else if (dateFilter === 'yesterday') {
+      const y = new Date(now); y.setDate(now.getDate() - 1);
+      setStartDate(formatYMD(y)); setEndDate(formatYMD(y));
     } else if (dateFilter === 'weekly') {
       const weekAgo = new Date(now);
       weekAgo.setDate(now.getDate() - 7);
