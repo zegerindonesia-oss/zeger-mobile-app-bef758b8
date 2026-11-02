@@ -102,7 +102,14 @@ export const TransactionsEnhanced = () => {
     }
     return searchParams.get('rider') || "all";
   });
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(searchParams.get('method') || "all");
+  const role = userProfile?.role || '';
+  const canPickBranch = ['ho_admin', 'ho_owner', 'ho_staff', 'finance', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff'].includes(role);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState(searchParams.get('branch') || "all");
+  const branchFilter: string | undefined = canPickBranch
+    ? (selectedBranch === 'all' ? undefined : selectedBranch)
+    : (userProfile?.branch_id || undefined);
   const getJakartaDate = () => {
     return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
   };
@@ -115,12 +122,14 @@ export const TransactionsEnhanced = () => {
   };
 
   const [startDate, setStartDate] = useState(() => {
+    const p = searchParams.get('start_date');
+    if (p) return p;
     const now = getJakartaDate();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     return formatYMD(monthStart);
   });
   const [endDate, setEndDate] = useState(() => {
-    return formatYMD(getJakartaDate());
+    return searchParams.get('end_date') || formatYMD(getJakartaDate());
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -137,6 +146,10 @@ export const TransactionsEnhanced = () => {
     if (userProfile?.role !== 'bh_report') {
       fetchRiders();
     }
+    if (canPickBranch) {
+      supabase.from('branches').select('id, name').eq('is_active', true).order('name')
+        .then(({ data }) => setBranches(data || []));
+    }
   }, [userProfile]);
 
   useEffect(() => {
@@ -152,7 +165,7 @@ export const TransactionsEnhanced = () => {
     } else {
       fetchVoidedTransactions();
     }
-  }, [selectedRider, selectedPaymentMethod, startDate, endDate, activeTab]);
+  }, [selectedRider, selectedPaymentMethod, startDate, endDate, activeTab, branchFilter]);
 
   const fetchRiders = async () => {
     try {
