@@ -330,12 +330,11 @@ const MobileRiderDashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch rider profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
+      // Reuse profile id from login session (no extra round-trip)
+      const cachedId = userProfile?.id || profileIdRef.current;
+      const { data: profile, error: profileError } = cachedId
+        ? { data: { id: cachedId }, error: null as any }
+        : await supabase.from('profiles').select('id').eq('user_id', user?.id).single();
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
@@ -379,16 +378,18 @@ const MobileRiderDashboard = () => {
       });
       setChartData(Object.entries(chartDataMap).map(([date, sales]) => ({ date, sales })));
 
-      // Fetch top products from transaction items
-      const transactionIds = weekData?.map(tx => tx.id) || [];
-      if (transactionIds.length > 0) {
+      // Fetch top products via join (avoids huge id lists that fail on long URLs)
+      if ((weekData?.length || 0) > 0) {
         const { data: topProductsData } = await supabase
           .from('transaction_items')
           .select(`
             quantity,
-            products(name)
+            products(name),
+            transactions!inner(rider_id, is_voided, transaction_date)
           `)
-          .in('transaction_id', transactionIds);
+          .eq('transactions.rider_id', riderId)
+          .eq('transactions.is_voided', false)
+          .gte('transactions.transaction_date', thirtyDaysAgo.toISOString());
 
         // Aggregate top products
         const productMap: Record<string, number> = {};
