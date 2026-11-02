@@ -6,10 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { POSQrisDialog } from './POSQrisDialog';
+import { resolvePaymentMethods, type PaymentMethodConfig } from '@/lib/pos-payment-methods';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
   total: number;
+  methods?: PaymentMethodConfig[];
   onClose: () => void;
   onConfirm: (payload: {
     method1: string;
@@ -21,16 +24,27 @@ interface Props {
   }) => Promise<void>;
 }
 
-const METHODS = [
-  { value: 'cash', label: 'Tunai' },
-  { value: 'qris', label: 'QRIS' },
-  { value: 'transfer', label: 'Transfer Bank' },
-  { value: 'edc', label: 'EDC / Debit / Kredit' },
-  { value: 'gopay', label: 'GoPay' },
-  { value: 'ovo', label: 'OVO' },
-];
+const MethodGrid = ({ items, value, onChange }: { items: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) => (
+  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    {items.map((m) => {
+      const active = m.value === value;
+      return (
+        <button key={m.value} type="button" onClick={() => onChange(m.value)}
+          className={cn(
+            'h-12 rounded-xl px-2 text-sm font-semibold truncate border-2 transition-all active:scale-[0.97]',
+            active
+              ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30'
+              : 'bg-background text-primary border-primary/30 hover:border-primary hover:bg-primary/5',
+          )}>
+          {m.label}
+        </button>
+      );
+    })}
+  </div>
+);
 
-export const POSPayment = ({ open, total, onClose, onConfirm }: Props) => {
+export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) => {
+  const METHODS = resolvePaymentMethods(methods).filter((m) => m.enabled);
   const [method1, setMethod1] = useState('cash');
   const [amount1, setAmount1] = useState<number>(0);
   const [mixed, setMixed] = useState(false);
