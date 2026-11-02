@@ -17,6 +17,7 @@ import { POSReportsDialog } from '@/components/pos/POSReportsDialog';
 import { POSPinLock } from '@/components/pos/POSPinLock';
 import { getActiveCashier, setActiveCashier } from '@/lib/pos-cashier';
 import { Lock } from 'lucide-react';
+import { ruleSummary } from '@/lib/pos-mode-pricing';
 import { POSModeDialog } from '@/components/pos/POSModeDialog';
 import { modeLabel } from '@/lib/pos-order-modes';
 import { usePOSBranchSettings } from '@/hooks/usePOSBranchSettings';
@@ -587,6 +588,7 @@ const POSMain = () => {
             <POSProductGrid
               branchId={userProfile?.branch_id || null}
               onAdd={cart.addItem}
+              priceRule={modeRule}
               onAddBundle={cart.addBundle}
               onAddCustom={cart.addCustomItem}
               hiddenProductIds={branchPos?.hidden_product_ids}
@@ -594,7 +596,7 @@ const POSMain = () => {
                 <div className="flex gap-2">
                   <button onClick={() => setModeOpen(true)} className="pos-raised-control h-11 px-3 rounded-xl flex items-center gap-2 text-sm font-semibold shrink-0">
                     <LayoutGrid className="h-4 w-4 text-primary" />
-                    <span className="truncate max-w-[9rem]">{modeLabel(orderType)}{orderType === 'dine_in' ? ` · ${pax} pax` : ''}</span>
+                    <span className="truncate max-w-[9rem]">{modeLabel(orderType)}{orderType === 'dine_in' ? ` · ${pax} pax` : ''}{modeRule && modeRule.model !== 'none' ? ` · ${ruleSummary(modeRule)}` : ''}</span>
                   </button>
                   <div className="relative flex-1 min-w-0">
                     <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
