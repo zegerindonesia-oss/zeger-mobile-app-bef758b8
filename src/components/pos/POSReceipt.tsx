@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Printer, MessageCircle, CheckCircle, Mail, UserPlus, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -96,6 +96,12 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, bran
     window.open(`https://wa.me/${wa}?text=${encodeURIComponent(lines)}`, '_blank');
     saveCustomer();
   };
+  // One tap: send receipt by WhatsApp, save the number as member, close for the next order.
+  const quickWa = () => {
+    if (toWa(phone).length < 10) return toast.error('Isi nomor WhatsApp customer dulu');
+    handleWhatsApp();
+    onClose();
+  };
   const receiptText = () => [
     data.branch_name, `Struk: ${data.transaction_number}`, new Date(data.created_at).toLocaleString('id-ID'), `Kasir: ${data.kasir_name}`, '',
     ...data.items.map((i) => `${i.qty}x ${i.product_name}  ${fmt(i.subtotal)}`), '',
@@ -110,12 +116,24 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, bran
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-sm max-h-[92dvh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-success">
             <CheckCircle className="h-5 w-5 text-primary" /> Pembayaran Berhasil
           </DialogTitle>
+          <DialogDescription className="sr-only">Kirim struk ke WhatsApp customer</DialogDescription>
         </DialogHeader>
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+          <Input placeholder="No. WhatsApp customer (08…)" inputMode="tel" autoFocus value={phone}
+            onChange={(e) => setPhone(e.target.value)} onBlur={lookup}
+            onKeyDown={(e) => { if (e.key === 'Enter') quickWa(); }} className="h-12 text-base" />
+          <div className="grid grid-cols-2 gap-2">
+            <Button className="h-12 font-bold" onClick={quickWa}>
+              <MessageCircle className="h-4 w-4" /> Kirim WA
+            </Button>
+            <Button variant="outline" className="h-12 font-bold" onClick={() => { saveCustomer(); onClose(); }}>Selesai</Button>
+          </div>
+        </div>
         <div id="pos-receipt-print" className="font-mono text-xs leading-tight border rounded p-3 bg-card">
           <div className="text-center mb-2">
             <div className="font-bold text-sm">{data.branch_name}</div>
