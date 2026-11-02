@@ -144,6 +144,19 @@ const POSMain = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.branch_id]);
 
+  // "Pesan Lagi" from transaction history: refill the cart once.
+  useEffect(() => {
+    const raw = sessionStorage.getItem('pos_reorder');
+    if (!raw) return;
+    sessionStorage.removeItem('pos_reorder');
+    try {
+      const rows = JSON.parse(raw) as any[];
+      rows.forEach((r) => cart.addItem({ product_id: r.product_id, product_code: r.product_code, product_name: r.product_name, category: r.category, price: r.price } as any, { qty: r.qty, notes: r.notes }));
+      if (rows.length) toast.success(`${rows.length} menu dimasukkan ke keranjang`);
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Apply a member reward: free menus are added to the cart first so the discount covers them.
   const applyBenefit = async (b: MemberBenefit) => {
     let base = Math.max(0, cart.totals.total - totalPromoDiscount);

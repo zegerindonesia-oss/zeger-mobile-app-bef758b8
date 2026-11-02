@@ -62,6 +62,7 @@ import POSQueueDisplay from "./pages/pos/POSQueueDisplay";
 import POSDashboard from "./pages/pos/POSDashboard";
 import POSSettings from "./pages/pos/POSSettings";
 import POSReportsPage from "./pages/pos/POSReportsPage";
+import POSTransactionsPage from "./pages/pos/POSTransactionsPage";
 import POSCashierPage from "./pages/pos/POSCashierPage";
 import StockCardRider from "./pages/inventory/StockCardRider";
 import SettingsUserManagement from "./pages/settings/UserManagement";
@@ -164,6 +165,7 @@ const App = () => (
                 <POSDashboard />
               </RoleBasedRoute>
             } />
+            <Route path="/pos/transactions" element={<RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}><POSTransactionsPage /></RoleBasedRoute>} />
             <Route path="/pos/reports" element={<RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}><POSReportsPage /></RoleBasedRoute>} />
             <Route path="/pos/cashier" element={<RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}><POSCashierPage /></RoleBasedRoute>} />
             <Route path="/pos/settings" element={

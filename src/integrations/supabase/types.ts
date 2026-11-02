@@ -6538,6 +6538,10 @@ export type Database = {
           profile_id: string
         }[]
       }
+      void_pos_transaction: {
+        Args: { _reason: string; _tx: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_access_type: "web_backoffice" | "pos_app" | "rider_app"
