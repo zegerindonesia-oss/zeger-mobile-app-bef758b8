@@ -163,6 +163,9 @@ export const TransactionDetails = () => {
       if (selectedRider !== "all") {
         query = query.eq('rider_id', selectedRider);
       }
+      if (branchFilter) {
+        query = query.eq('branch_id', branchFilter);
+      }
 
       const { data: transactions, error } = await query;
 
@@ -194,6 +197,41 @@ export const TransactionDetails = () => {
         });
       });
 
+      // Outlet / cashier POS items (only when not filtered to a single rider)
+      if (selectedRider === "all") {
+        for (let from = 0; ; from += 1000) {
+          let pq = supabase
+            .from('pos_transactions')
+            .select('id, transaction_number, created_at, payment_method_1, pos_transaction_items(product_name, qty, price, product_id)')
+            .eq('status', 'paid')
+            .is('void_at', null)
+            .gte('created_at', startDate + 'T00:00:00+07:00')
+            .lte('created_at', endDate + 'T23:59:59+07:00')
+            .order('created_at', { ascending: false });
+          if (branchFilter) pq = pq.eq('branch_id', branchFilter);
+          const { data: page } = await pq.range(from, from + 999);
+          (page || []).forEach((t: any) => {
+            (t.pos_transaction_items || []).forEach((i: any, idx: number) => {
+              const qty = Number(i.qty || 0);
+              const price = Number(i.price || 0);
+              details.push({
+                id: `${t.id}-${idx}`,
+                transaction_number: t.transaction_number || '-',
+                transaction_date: t.created_at,
+                menu_name: i.product_name || 'Unknown Product',
+                quantity: qty,
+                cost_price: 0,
+                selling_price: price,
+                profit: price * qty,
+                payment_method: t.payment_method_1 || 'Unknown',
+              });
+            });
+          });
+          if (!page || page.length < 1000) break;
+        }
+        details.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
+      }
+
       // Filter by search term
       const filteredDetails = details.filter(detail => 
         searchTerm === "" || 
@@ -207,7 +245,8 @@ export const TransactionDetails = () => {
       const rawMaterialCost = await calculateRawMaterialCost(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedRider === "all" ? undefined : selectedRider
+        selectedRider === "all" ? undefined : selectedRider,
+        branchFilter
       );
 
       const totalQuantity = filteredDetails.reduce((sum, item) => sum + item.quantity, 0);
@@ -387,7 +426,19 @@ export const TransactionDetails = () => {
                     </div>
                   </div>
                 )}
-                
+                {canPickBranch && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Cabang</label>
+                    <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                      <SelectTrigger><SelectValue placeholder="Semua cabang" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Cabang</SelectItem>
+                        {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
                   <div className="relative">
