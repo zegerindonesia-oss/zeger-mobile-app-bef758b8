@@ -134,8 +134,8 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
 
   const kpis = [
     { label: "Total Penjualan", value: rp(total), icon: TrendingUp },
-    { label: "Transaksi", value: tx.length.toLocaleString("id-ID"), icon: Receipt },
-    { label: "Rata-rata / Struk", value: rp(tx.length ? total / tx.length : 0), icon: Wallet },
+    { label: "Transaksi", value: txCount.toLocaleString("id-ID"), icon: Receipt },
+    { label: "Rata-rata / Struk", value: rp(txCount ? total / txCount : 0), icon: Wallet },
     { label: "Hutang Supplier", value: rp(totalDebt), icon: CalendarClock, warn: overdue.length > 0 },
   ];
 
