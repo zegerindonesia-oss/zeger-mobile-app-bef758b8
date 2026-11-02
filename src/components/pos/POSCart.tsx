@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -75,6 +75,8 @@ export const POSCart = ({
   const [promoDialogTarget, setPromoDialogTarget] = useState<POSCartItem | null>(null);
   const [showAdjust, setShowAdjust] = useState(false);
   const [editing, setEditing] = useState<POSCartItem | null>(null);
+  const editProduct = useMemo(() => editing ? { name: editing.product_name, price: editing.base_price ?? editing.price, category: editing.category, custom_options: editing.custom_options } : null, [editing]);
+  const editInitial = useMemo(() => editing ? { qty: editing.qty, modifiers: editing.modifiers || [], notes: editing.notes } : null, [editing]);
 
   const voucher = appliedPromos.find((p) => p.source === 'voucher');
   const redemptionDiscount = redemption?.discount || 0;
@@ -336,8 +338,8 @@ export const POSCart = ({
         onApply={handlePromoApply}
       />
       <POSModifierDialog
-        product={editing ? { name: editing.product_name, price: editing.base_price ?? editing.price, category: editing.category, custom_options: editing.custom_options } : null}
-        initial={editing ? { qty: editing.qty, modifiers: editing.modifiers || [], notes: editing.notes } : null}
+        product={editProduct}
+        initial={editInitial}
         onClose={() => setEditing(null)}
         onConfirm={(opts) => { if (editing && updateLine) updateLine(editing.line_id, opts); setEditing(null); }}
       />
