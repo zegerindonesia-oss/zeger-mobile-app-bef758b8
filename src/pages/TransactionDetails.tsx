@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Download, Filter, Search } from "lucide-react";
@@ -90,9 +91,20 @@ export const TransactionDetails = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const canPickBranch = ['ho_admin', 'ho_owner', 'ho_staff', 'finance', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff'].includes(userProfile?.role || '');
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState(() => new URLSearchParams(window.location.search).get('branch') || 'all');
+  const branchFilter: string | undefined = canPickBranch
+    ? (selectedBranch === 'all' ? undefined : selectedBranch)
+    : (userProfile?.branch_id || undefined);
+
   useEffect(() => {
     if (userProfile?.role !== 'bh_report') {
       fetchRiders();
+    }
+    if (canPickBranch) {
+      supabase.from('branches').select('id, name').eq('is_active', true).order('name')
+        .then(({ data }) => setBranches(data || []));
     }
   }, [userProfile]);
 
@@ -105,7 +117,7 @@ export const TransactionDetails = () => {
 
   useEffect(() => {
     fetchTransactionDetails();
-  }, [startDate, endDate, selectedRider]);
+  }, [startDate, endDate, selectedRider, branchFilter]);
 
   const fetchRiders = async () => {
     try {
@@ -133,7 +145,8 @@ export const TransactionDetails = () => {
       const salesData = await calculateSalesData(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedRider === "all" ? undefined : selectedRider
+        selectedRider === "all" ? undefined : selectedRider,
+        branchFilter
       );
 
       // Fetch detailed transaction items for the table
@@ -162,6 +175,9 @@ export const TransactionDetails = () => {
 
       if (selectedRider !== "all") {
         query = query.eq('rider_id', selectedRider);
+      }
+      if (branchFilter) {
+        query = query.eq('branch_id', branchFilter);
       }
 
       const { data: transactions, error } = await query;
@@ -194,6 +210,41 @@ export const TransactionDetails = () => {
         });
       });
 
+      // Outlet / cashier POS items (only when not filtered to a single rider)
+      if (selectedRider === "all") {
+        for (let from = 0; ; from += 1000) {
+          let pq = supabase
+            .from('pos_transactions')
+            .select('id, transaction_number, created_at, payment_method_1, pos_transaction_items(product_name, qty, price, product_id)')
+            .eq('status', 'paid')
+            .is('void_at', null)
+            .gte('created_at', startDate + 'T00:00:00+07:00')
+            .lte('created_at', endDate + 'T23:59:59+07:00')
+            .order('created_at', { ascending: false });
+          if (branchFilter) pq = pq.eq('branch_id', branchFilter);
+          const { data: page } = await pq.range(from, from + 999);
+          (page || []).forEach((t: any) => {
+            (t.pos_transaction_items || []).forEach((i: any, idx: number) => {
+              const qty = Number(i.qty || 0);
+              const price = Number(i.price || 0);
+              details.push({
+                id: `${t.id}-${idx}`,
+                transaction_number: t.transaction_number || '-',
+                transaction_date: t.created_at,
+                menu_name: i.product_name || 'Unknown Product',
+                quantity: qty,
+                cost_price: 0,
+                selling_price: price,
+                profit: price * qty,
+                payment_method: t.payment_method_1 || 'Unknown',
+              });
+            });
+          });
+          if (!page || page.length < 1000) break;
+        }
+        details.sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
+      }
+
       // Filter by search term
       const filteredDetails = details.filter(detail => 
         searchTerm === "" || 
@@ -207,7 +258,8 @@ export const TransactionDetails = () => {
       const rawMaterialCost = await calculateRawMaterialCost(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedRider === "all" ? undefined : selectedRider
+        selectedRider === "all" ? undefined : selectedRider,
+        branchFilter
       );
 
       const totalQuantity = filteredDetails.reduce((sum, item) => sum + item.quantity, 0);
@@ -387,7 +439,19 @@ export const TransactionDetails = () => {
                     </div>
                   </div>
                 )}
-                
+                {canPickBranch && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Cabang</label>
+                    <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                      <SelectTrigger><SelectValue placeholder="Semua cabang" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Cabang</SelectItem>
+                        {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
                   <div className="relative">

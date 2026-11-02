@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPosSales } from "@/lib/financial-utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from "recharts";
@@ -29,6 +30,7 @@ interface Props { startDate: string; endDate: string; branchId: string; refreshK
 
 export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 0 }: Props) => {
   const { userProfile } = useAuth();
+  const navigate = useNavigate();
   const role = userProfile?.role || "";
   const isHO = ["ho_admin", "ho_owner", "ho_staff", "1_HO_Admin", "1_HO_Owner", "1_HO_Staff", "finance"].includes(role);
   const lockedBranch = !isHO ? userProfile?.branch_id || null : null;
@@ -75,10 +77,10 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
             ? [[t.payment_method_1, Number(t.amount_1 || 0)], [t.payment_method_2, Number(t.amount_2 || 0)]]
             : [[t.payment_method_1, Number(t.total || 0)]];
           return parts.map(([m, amt], i) => ({
-            final_amount: amt, payment_method: m || "lainnya", transaction_date: t.created_at, _pos: i === 0,
+            final_amount: amt, payment_method: m || "lainnya", transaction_date: t.created_at, _pos: i === 0, _src: "outlet",
           }));
         });
-        setTx([...txRows, ...posAsTx]);
+        setTx([...txRows.map((t: any) => ({ ...t, _src: "rider" })), ...posAsTx]);
         setPos((poRes.data || []).filter((p: any) => Number(p.total_amount) - Number(p.paid_amount || 0) > 0));
       } catch (e) {
         console.error("Overview load error", e);
@@ -90,14 +92,16 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
   }, [range, effectiveBranch, refreshKey]);
 
   const daily = useMemo(() => {
-    const m = new Map<string, number>();
+    const m = new Map<string, { rider: number; outlet: number }>();
     const s = new Date(range.start + "T00:00:00"), e = new Date(range.end + "T00:00:00");
-    for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) m.set(ymd(d), 0);
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) m.set(ymd(d), { rider: 0, outlet: 0 });
     tx.forEach((t) => {
       const k = ymd(new Date(new Date(t.transaction_date).toLocaleString("en-US", { timeZone: "Asia/Jakarta" })));
-      m.set(k, (m.get(k) || 0) + Number(t.final_amount || 0));
+      const row = m.get(k) || { rider: 0, outlet: 0 };
+      row[t._src === "outlet" ? "outlet" : "rider"] += Number(t.final_amount || 0);
+      m.set(k, row);
     });
-    return Array.from(m, ([date, sales]) => ({ date: date.slice(8) + "/" + date.slice(5, 7), sales }));
+    return Array.from(m, ([date, v]) => ({ date: date.slice(8) + "/" + date.slice(5, 7), ...v, sales: v.rider + v.outlet }));
   }, [tx, range]);
 
   const total = tx.reduce((s, t) => s + Number(t.final_amount || 0), 0);
@@ -133,39 +137,47 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
     });
   }, [pos, avgDaily]);
 
+  const txLink = `/transactions?start_date=${range.start}&end_date=${range.end}${effectiveBranch ? `&branch=${effectiveBranch}` : ""}`;
   const kpis = [
-    { label: "Total Penjualan", value: rp(total), icon: TrendingUp },
-    { label: "Transaksi", value: txCount.toLocaleString("id-ID"), icon: Receipt },
-    { label: "Rata-rata / Struk", value: rp(txCount ? total / txCount : 0), icon: Wallet },
-    { label: "Hutang Supplier", value: rp(totalDebt), icon: CalendarClock, warn: overdue.length > 0 },
+    { label: "Total Penjualan", value: rp(total), icon: TrendingUp, to: txLink },
+    { label: "Transaksi", value: txCount.toLocaleString("id-ID"), icon: Receipt, to: txLink },
+    { label: "Rata-rata / Struk", value: rp(txCount ? total / txCount : 0), icon: Wallet, to: txLink },
+    { label: "Hutang Supplier", value: rp(totalDebt), icon: CalendarClock, warn: overdue.length > 0, to: "/inventory/procurement" },
   ];
 
   return (
     <section className="space-y-5 bo-fade-up">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((k) => (
-          <div key={k.label} className="bo-card bo-card-hover p-5">
+          <button type="button" key={k.label} onClick={() => navigate(k.to)} className="bo-card bo-card-hover p-5 text-left cursor-pointer">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{k.label}</span>
               <span className={`h-9 w-9 rounded-xl grid place-items-center ${k.warn ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}><k.icon className="h-4 w-4" /></span>
             </div>
             {loading ? <Skeleton className="h-7 w-32" /> : <div className="text-xl md:text-2xl font-bold text-foreground">{k.value}</div>}
-          </div>
+            <div className="text-[11px] text-primary mt-2">Lihat rincian →</div>
+          </button>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="bo-card bo-card-hover p-5 lg:col-span-2">
-          <h3 className="font-semibold mb-4">Grafik Penjualan Harian</h3>
+          <h3 className="font-semibold">Grafik Penjualan Harian</h3>
+          <p className="text-xs text-muted-foreground mb-3">Rider dan Outlet (kasir) ditumpuk — tinggi total = penjualan gabungan</p>
           {loading ? <Skeleton className="h-64 w-full" /> : (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={daily}>
-                <defs><linearGradient id="boSales" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="hsl(var(--primary))" stopOpacity={0.35} /><stop offset="1" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs>
+                <defs>
+                  <linearGradient id="boSales" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="hsl(var(--primary))" stopOpacity={0.35} /><stop offset="1" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="boOutlet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="hsl(var(--warning))" stopOpacity={0.4} /><stop offset="1" stopColor="hsl(var(--warning))" stopOpacity={0} /></linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={short} tick={{ fontSize: 11 }} width={48} />
                 <Tooltip formatter={(v: number) => rp(v)} />
-                <Area type="monotone" dataKey="sales" name="Penjualan" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#boSales)" />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Area type="monotone" stackId="s" dataKey="rider" name="Rider" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#boSales)" />
+                <Area type="monotone" stackId="s" dataKey="outlet" name="Outlet / Kasir" stroke="hsl(var(--warning))" strokeWidth={2.5} fill="url(#boOutlet)" />
               </AreaChart>
             </ResponsiveContainer>
           )}

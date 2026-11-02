@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
 import { chunkArray } from "@/lib/array-utils";
 import { toast } from "sonner";
-import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
+import { calculateSalesData, calculateRawMaterialCost, posPaymentBucket, type SalesData } from "@/lib/financial-utils";
 import { DateFilter } from "@/components/common/DateFilter";
 import { getTodayJakarta } from "@/lib/date";
 
@@ -50,6 +50,7 @@ interface Transaction {
   is_voided?: boolean;
   voided_at?: string;
   void_reason?: string;
+  _pos?: boolean;
   customers?: { name: string };
   profiles?: { full_name: string };
   transaction_items?: TransactionItem[];
@@ -102,7 +103,14 @@ export const TransactionsEnhanced = () => {
     }
     return searchParams.get('rider') || "all";
   });
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(searchParams.get('method') || "all");
+  const role = userProfile?.role || '';
+  const canPickBranch = ['ho_admin', 'ho_owner', 'ho_staff', 'finance', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff'].includes(role);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState(searchParams.get('branch') || "all");
+  const branchFilter: string | undefined = canPickBranch
+    ? (selectedBranch === 'all' ? undefined : selectedBranch)
+    : (userProfile?.branch_id || undefined);
   const getJakartaDate = () => {
     return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
   };
@@ -115,12 +123,14 @@ export const TransactionsEnhanced = () => {
   };
 
   const [startDate, setStartDate] = useState(() => {
+    const p = searchParams.get('start_date');
+    if (p) return p;
     const now = getJakartaDate();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     return formatYMD(monthStart);
   });
   const [endDate, setEndDate] = useState(() => {
-    return formatYMD(getJakartaDate());
+    return searchParams.get('end_date') || formatYMD(getJakartaDate());
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -137,6 +147,10 @@ export const TransactionsEnhanced = () => {
     if (userProfile?.role !== 'bh_report') {
       fetchRiders();
     }
+    if (canPickBranch) {
+      supabase.from('branches').select('id, name').eq('is_active', true).order('name')
+        .then(({ data }) => setBranches(data || []));
+    }
   }, [userProfile]);
 
   useEffect(() => {
@@ -152,7 +166,7 @@ export const TransactionsEnhanced = () => {
     } else {
       fetchVoidedTransactions();
     }
-  }, [selectedRider, selectedPaymentMethod, startDate, endDate, activeTab]);
+  }, [selectedRider, selectedPaymentMethod, startDate, endDate, activeTab, branchFilter]);
 
   const fetchRiders = async () => {
     try {
@@ -288,31 +302,17 @@ export const TransactionsEnhanced = () => {
       if (selectedRider !== "all") {
         query = query.eq('rider_id', selectedRider);
       }
+      if (branchFilter) {
+        query = query.eq('branch_id', branchFilter);
+      }
 
       if (selectedPaymentMethod !== "all") {
         query = query.eq('payment_method', selectedPaymentMethod);
       }
 
-      const { data, error } = await query;
-      console.log("📊 Fetched transactions:", data?.length || 0);
+      const { data: riderData, error } = await query;
       if (error) throw error;
-
-      if (!data || data.length === 0) {
-        setTransactions([]);
-        setSummary({
-          grossSales: 0,
-          netSales: 0,
-          totalDiscounts: 0,
-          totalTransactions: 0,
-          avgPerTransaction: 0,
-          totalItemsSold: 0,
-          totalFoodCost: 0,
-          cashSales: 0,
-          qrisSales: 0,
-          transferSales: 0
-        });
-        return;
-      }
+      const data = riderData || [];
 
       // Bulk fetch all related data to avoid N+1 queries
       const transactionIds = data.map(t => t.id);
@@ -413,12 +413,54 @@ export const TransactionsEnhanced = () => {
       console.log(`📊 Verification - Total Items: ${totalItemsCount}, Food Cost: Rp ${totalFoodCostCalc.toLocaleString()}`);
 
       // Combine all data efficiently
-      const transactionsWithDetails = data.map(transaction => ({
+      const riderRows: any[] = data.map(transaction => ({
         ...transaction,
         customers: { name: customersMap.get(transaction.customer_id)?.name || '-' },
         profiles: { full_name: ridersMap.get(transaction.rider_id)?.full_name || '-' },
         transaction_items: itemsMap.get(transaction.id) || []
       }));
+
+      // Outlet / cashier POS sales (only when not filtered to a single rider)
+      let posRows: any[] = [];
+      if (selectedRider === "all") {
+        for (let from = 0; ; from += 1000) {
+          let pq = supabase
+            .from('pos_transactions')
+            .select('id, transaction_number, created_at, total, status, payment_method_1, payment_method_2, customer_name, cashier_name, pos_transaction_items(id, product_id, product_name, qty, price, subtotal_item)')
+            .eq('status', 'paid')
+            .is('void_at', null)
+            .gte('created_at', `${startDate}T00:00:00+07:00`)
+            .lte('created_at', `${endDate}T23:59:59+07:00`)
+            .order('created_at', { ascending: false });
+          if (branchFilter) pq = pq.eq('branch_id', branchFilter);
+          const { data: page, error: pErr } = await pq.range(from, from + 999);
+          if (pErr) { console.error(pErr); break; }
+          posRows.push(...(page || []));
+          if (!page || page.length < 1000) break;
+        }
+        if (selectedPaymentMethod !== "all") {
+          posRows = posRows.filter((t) => [t.payment_method_1, t.payment_method_2].some((m) => m && posPaymentBucket(m) === selectedPaymentMethod));
+        }
+      }
+      const posMapped = posRows.map((t) => ({
+        id: t.id,
+        _pos: true,
+        transaction_number: t.transaction_number || '-',
+        transaction_date: t.created_at,
+        final_amount: Number(t.total || 0),
+        status: 'completed',
+        payment_method: [t.payment_method_1, t.payment_method_2].filter(Boolean).join(' + '),
+        customers: { name: t.customer_name || '-' },
+        profiles: { full_name: t.cashier_name || 'Kasir' },
+        transaction_items: (t.pos_transaction_items || []).map((i: any) => ({
+          id: i.id, product_id: i.product_id, quantity: Number(i.qty || 0), unit_price: Number(i.price || 0),
+          total_price: Number(i.subtotal_item || 0), products: { name: i.product_name },
+        })),
+      }));
+
+      const transactionsWithDetails = [...riderRows, ...posMapped].sort(
+        (a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+      );
 
       // Apply search filter
       const filteredData = transactionsWithDetails.filter(transaction => 
@@ -437,14 +479,16 @@ export const TransactionsEnhanced = () => {
       const salesData = await calculateSalesData(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedRider === "all" ? undefined : selectedRider
+        selectedRider === "all" ? undefined : selectedRider,
+        branchFilter
       );
 
       // Use centralized raw material cost calculation for consistency
       const rawMaterialCost = await calculateRawMaterialCost(
         new Date(startDate + 'T00:00:00+07:00'),
         new Date(endDate + 'T23:59:59+07:00'),
-        selectedRider === "all" ? undefined : selectedRider
+        selectedRider === "all" ? undefined : selectedRider,
+        branchFilter
       );
 
       console.log(`📊 Centralized calculations - Sales: ${formatCurrency(salesData.netSales)}, Raw Material Cost: ${formatCurrency(rawMaterialCost)}`);
@@ -744,6 +788,19 @@ export const TransactionsEnhanced = () => {
                   </div>
                 )}
 
+                {canPickBranch && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Cabang</label>
+                    <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                      <SelectTrigger><SelectValue placeholder="Semua cabang" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Cabang</SelectItem>
+                        {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Metode Bayar</label>
                   <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
@@ -825,7 +882,7 @@ export const TransactionsEnhanced = () => {
                     <th className="text-left py-3 px-4 font-medium text-gray-600">No. Transaksi</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Tanggal</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Pelanggan</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Rider</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Rider / Kasir</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Jumlah</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Metode Bayar</th>
@@ -853,7 +910,10 @@ export const TransactionsEnhanced = () => {
                         <td className="py-3 px-4 font-medium text-primary">{transaction.transaction_number}</td>
                         <td className="py-3 px-4 text-gray-600">{formatDate(transaction.transaction_date)}</td>
                         <td className="py-3 px-4 text-gray-600">{transaction.customers?.name || '-'}</td>
-                        <td className="py-3 px-4 text-gray-600">{transaction.profiles?.full_name || '-'}</td>
+                        <td className="py-3 px-4 text-gray-600">
+                          <Badge variant="outline" className="mr-2">{transaction._pos ? 'Outlet' : 'Rider'}</Badge>
+                          {transaction.profiles?.full_name || '-'}
+                        </td>
                         <td className="py-3 px-4 font-medium text-gray-900">{formatCurrency(transaction.final_amount)}</td>
                         <td className="py-3 px-4">
                           <Badge variant={transaction.status === 'completed' ? 'default' : 'secondary'}>
@@ -892,7 +952,7 @@ export const TransactionsEnhanced = () => {
                           ) : (
                             <div className="flex items-center gap-2">
                               <span>{transaction.payment_method || '-'}</span>
-                              {(userProfile?.role === 'ho_admin' || userProfile?.role === 'branch_manager') && (
+                              {!transaction._pos && (userProfile?.role === 'ho_admin' || userProfile?.role === 'branch_manager') && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
