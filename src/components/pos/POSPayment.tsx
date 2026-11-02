@@ -104,12 +104,7 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
 
           <div>
             <Label className="text-xs">Metode 1</Label>
-            <Select value={method1} onValueChange={setMethod1}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MethodGrid items={METHODS} value={method1} onChange={setMethod1} />
             {(mixed || method1 === 'cash') && (
               <>
                 <Input
@@ -136,14 +131,7 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
           {mixed && (
             <div>
               <Label className="text-xs">Metode 2</Label>
-              <Select value={method2} onValueChange={setMethod2}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {METHODS.filter((m) => m.value !== method1).map((m) => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MethodGrid items={METHODS.filter((m) => m.value !== method1)} value={method2} onChange={setMethod2} />
               <Input
                 type="number"
                 className="mt-2"
