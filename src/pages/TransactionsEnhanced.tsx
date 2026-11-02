@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
 import { chunkArray } from "@/lib/array-utils";
 import { toast } from "sonner";
-import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
+import { calculateSalesData, calculateRawMaterialCost, posPaymentBucket, type SalesData } from "@/lib/financial-utils";
 import { DateFilter } from "@/components/common/DateFilter";
 import { getTodayJakarta } from "@/lib/date";
 
@@ -50,6 +50,7 @@ interface Transaction {
   is_voided?: boolean;
   voided_at?: string;
   void_reason?: string;
+  _pos?: boolean;
   customers?: { name: string };
   profiles?: { full_name: string };
   transaction_items?: TransactionItem[];
