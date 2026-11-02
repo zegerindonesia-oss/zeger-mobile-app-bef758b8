@@ -11,7 +11,7 @@ import { PieChart3D } from '@/components/charts/PieChart3D';
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { chunkArray } from "@/lib/array-utils";
-import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
+import { calculateSalesData, calculateRawMaterialCost, fetchPosSales, type SalesData } from "@/lib/financial-utils";
 import { useAuth } from "@/hooks/useAuth";
 import { BackOfficeOverview } from "./BackOfficeOverview";
 interface DashboardStats {
