@@ -11,7 +11,7 @@ import { PieChart3D } from '@/components/charts/PieChart3D';
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { chunkArray } from "@/lib/array-utils";
-import { calculateSalesData, calculateRawMaterialCost, type SalesData } from "@/lib/financial-utils";
+import { calculateSalesData, calculateRawMaterialCost, fetchPosSales, type SalesData } from "@/lib/financial-utils";
 import { useAuth } from "@/hooks/useAuth";
 import { BackOfficeOverview } from "./BackOfficeOverview";
 interface DashboardStats {
@@ -638,11 +638,15 @@ export const ModernBranchDashboard = () => {
 
         // Execute all daily queries in parallel
         const results = await Promise.all(dailyQueries.map(item => item.query));
+        const posDaily = selectedUser === 'all'
+          ? await Promise.all(dailyQueries.map(d => fetchPosSales(d.dateStr, d.dateStr, branchIdFilter)))
+          : dailyQueries.map(() => [] as any[]);
         
         results.forEach((result, index) => {
           const { data: dailyTransactions } = result;
           const { date } = dailyQueries[index];
-          const dailySales = dailyTransactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
+          const dailySales = (dailyTransactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0)
+            + posDaily[index].reduce((s: number, t: any) => s + Number(t.total || 0), 0);
           chartData.push({
             month: date.toLocaleDateString('id-ID', {
               month: 'short',
@@ -680,11 +684,19 @@ export const ModernBranchDashboard = () => {
 
         // Execute all monthly queries in parallel
         const results = await Promise.all(monthlyQueries.map(item => item.query));
+        const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const posMonthly = selectedUser === 'all'
+          ? await Promise.all(monthlyQueries.map(m => {
+              const me = new Date(m.monthStart); me.setMonth(me.getMonth() + 1); me.setDate(0);
+              return fetchPosSales(ymd(m.monthStart), ymd(me), branchIdFilter);
+            }))
+          : monthlyQueries.map(() => [] as any[]);
         
         results.forEach((result, index) => {
           const { data: monthlyTransactions } = result;
           const { monthStart } = monthlyQueries[index];
-          const monthlySales = monthlyTransactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0;
+          const monthlySales = (monthlyTransactions?.reduce((sum, t) => sum + parseFloat(t.final_amount.toString()), 0) || 0)
+            + posMonthly[index].reduce((s: number, t: any) => s + Number(t.total || 0), 0);
           chartData.unshift({
             month: months[monthStart.getMonth()],
             sales: monthlySales
