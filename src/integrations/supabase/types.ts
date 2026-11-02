@@ -1924,6 +1924,7 @@ export type Database = {
           created_at: string
           hidden_product_ids: string[]
           order_modes: string[]
+          payment_methods: Json
           updated_at: string
           updated_by: string | null
         }
@@ -1934,6 +1935,7 @@ export type Database = {
           created_at?: string
           hidden_product_ids?: string[]
           order_modes?: string[]
+          payment_methods?: Json
           updated_at?: string
           updated_by?: string | null
         }
@@ -1944,6 +1946,7 @@ export type Database = {
           created_at?: string
           hidden_product_ids?: string[]
           order_modes?: string[]
+          payment_methods?: Json
           updated_at?: string
           updated_by?: string | null
         }

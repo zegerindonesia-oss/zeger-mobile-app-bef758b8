@@ -1,0 +1,1 @@
+ALTER TABLE public.pos_branch_settings ADD COLUMN IF NOT EXISTS payment_methods jsonb NOT NULL DEFAULT '[]'::jsonb;

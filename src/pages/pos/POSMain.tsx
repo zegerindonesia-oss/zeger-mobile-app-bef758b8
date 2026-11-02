@@ -709,6 +709,7 @@ const POSMain = () => {
       <POSPayment
         open={paymentOpen}
         total={paymentTotal}
+        methods={branchPos?.payment_methods}
         onClose={() => {
           setPaymentOpen(false);
           if (pendingSplit) {
