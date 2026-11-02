@@ -1,0 +1,1 @@
+ALTER TABLE public.pos_branch_settings ADD COLUMN IF NOT EXISTS order_mode_pricing jsonb NOT NULL DEFAULT '{}'::jsonb;

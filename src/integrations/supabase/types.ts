@@ -1923,6 +1923,7 @@ export type Database = {
           cash_out_categories: string[]
           created_at: string
           hidden_product_ids: string[]
+          order_mode_pricing: Json
           order_modes: string[]
           payment_methods: Json
           updated_at: string
@@ -1934,6 +1935,7 @@ export type Database = {
           cash_out_categories?: string[]
           created_at?: string
           hidden_product_ids?: string[]
+          order_mode_pricing?: Json
           order_modes?: string[]
           payment_methods?: Json
           updated_at?: string
@@ -1945,6 +1947,7 @@ export type Database = {
           cash_out_categories?: string[]
           created_at?: string
           hidden_product_ids?: string[]
+          order_mode_pricing?: Json
           order_modes?: string[]
           payment_methods?: Json
           updated_at?: string
