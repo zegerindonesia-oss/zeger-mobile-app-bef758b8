@@ -76,7 +76,7 @@ export const ModernBranchDashboard = () => {
   
   const [startDate, setStartDate] = useState<string>(formatYMD(getFirstOfMonth()));
   const [endDate, setEndDate] = useState<string>(formatYMD(getJakartaNow()));
-  const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | 'weekly' | 'monthly'>('monthly');
+  const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | 'weekly' | 'monthly' | 'custom'>('monthly');
 
   // Individual filters for each section
   const [menuFilter, setMenuFilter] = useState<'today' | 'yesterday' | 'week' | 'month'>('today');
@@ -1251,15 +1251,16 @@ export const ModernBranchDashboard = () => {
                   <SelectItem value="yesterday">Yesterday</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="custom">Kustom</SelectItem>
                 </SelectContent>
               </Select>
               
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <Label htmlFor="start-date" className="text-xs text-gray-600">From:</Label>
-                <Input id="start-date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-32 h-8 text-xs border-gray-200 rounded-full" />
+                <Input id="start-date" type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setDateFilter('custom'); }} className="w-32 h-8 text-xs border-gray-200 rounded-full" />
                 
                 <Label htmlFor="end-date" className="text-xs text-gray-600">To:</Label>
-                <Input id="end-date" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-32 h-8 text-xs border-gray-200 rounded-full" />
+                <Input id="end-date" type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setDateFilter('custom'); }} className="w-32 h-8 text-xs border-gray-200 rounded-full" />
                 
                 <Button 
                   onClick={() => { setApplied(a => a + 1); fetchDashboardData(); }}
