@@ -15,6 +15,8 @@ import { Star3D } from './Star3D';
 import { normalizeImageUrl, thumbImageUrl } from '@/lib/image-url';
 import { normalizeCategoryOrder, orderCustomerCategories } from '@/lib/customer-category-order';
 
+import { applyModePrice, type ModePricingRule } from '@/lib/pos-mode-pricing';
+
 const FAV = '__favorit__';
 
 interface Product {
@@ -44,6 +46,7 @@ interface Props {
   onAddCustom: (d: { name: string; price: number; qty: number; notes: string }) => void;
   toolbar?: React.ReactNode;
   hiddenProductIds?: string[];
+  priceRule?: ModePricingRule | null;
 }
 
 const toCartProduct = (p: Product) => ({
@@ -52,7 +55,7 @@ const toCartProduct = (p: Product) => ({
   base_price: Number(p.price), custom_options: p.custom_options,
 });
 
-export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, toolbar, hiddenProductIds = [] }: Props) => {
+export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, toolbar, hiddenProductIds = [], priceRule = null }: Props) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [bundles, setBundles] = useState<BundleData[]>([]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
@@ -318,7 +321,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
                   <div className="text-xs font-bold line-clamp-2 leading-snug min-h-8">{p.name}</div>
                   <div className="flex items-center justify-between gap-1 mt-1">
                     <div className="pos-number text-xs font-bold text-primary">
-                      Rp{Number(p.price).toLocaleString('id-ID')}
+                      Rp{applyModePrice(Number(p.price), priceRule).toLocaleString('id-ID')}
                     </div>
                     <div className="h-7 w-7 rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20 flex items-center justify-center">
                       <Plus className="h-3.5 w-3.5" />

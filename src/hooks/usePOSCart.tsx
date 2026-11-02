@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import { applyModePrice, type ModePricingRule } from '@/lib/pos-mode-pricing';
 
 export interface POSCartItem {
   product_id: string;
@@ -20,6 +21,8 @@ export interface POSCartItem {
   base_price?: number;
   /** Product variant config, used to reopen the variant dialog. */
   custom_options?: any;
+  /** Variant surcharge at offline price, so mode pricing can be reapplied. */
+  extra_price?: number;
 }
 
 export interface AddItemOptions { qty?: number; modifiers?: string[]; notes?: string; extraPrice?: number }
@@ -32,6 +35,7 @@ export const usePOSCart = () => {
   const [discountBill, setDiscountBill] = useState(0);
   const [taxPercent, setTaxPercent] = useState(0);
   const [serviceChargePercent, setServiceChargePercent] = useState(0);
+  const ruleRef = useRef<ModePricingRule | null>(null);
 
   const addItem = useCallback(
     (product: Omit<POSCartItem, 'qty' | 'discount_item' | 'notes' | 'line_id' | 'modifiers'>, opts: AddItemOptions = {}) => {
@@ -44,7 +48,9 @@ export const usePOSCart = () => {
         if (existing) return prev.map((i) => (i === existing ? { ...i, qty: i.qty + qty } : i));
         return [...prev, {
           ...product,
-          price: product.price + (opts.extraPrice ?? 0),
+          base_price: product.base_price ?? product.price,
+          extra_price: opts.extraPrice ?? 0,
+          price: applyModePrice(product.price + (opts.extraPrice ?? 0), ruleRef.current),
           qty, discount_item: 0, notes, modifiers: mods, line_id: key,
         }];
       });
@@ -126,7 +132,8 @@ export const usePOSCart = () => {
       const mods = opts.modifiers ?? i.modifiers ?? [];
       const notes = opts.notes ?? i.notes;
       return { ...i, modifiers: mods, notes, qty: Math.max(1, opts.qty ?? i.qty),
-        price: base + (opts.extraPrice ?? 0), line_id: lineKey(i.product_id, mods, notes) + '::e' + Date.now() };
+        extra_price: opts.extraPrice ?? 0,
+        price: i.base_price != null ? applyModePrice(base + (opts.extraPrice ?? 0), ruleRef.current) : base + (opts.extraPrice ?? 0), line_id: lineKey(i.product_id, mods, notes) + '::e' + Date.now() };
     }));
   }, []);
 
@@ -173,8 +180,16 @@ export const usePOSCart = () => {
     setDiscountBill(bill);
   }, []);
 
+  /** Apply an order-mode price rule to the cart and to future items (offline price stays the base). */
+  const setPricingRule = useCallback((rule: ModePricingRule | null) => {
+    ruleRef.current = rule;
+    setItems((prev) => prev.map((i) => (i.base_price == null || i.bundle_id || i.is_custom ? i
+      : { ...i, price: applyModePrice(i.base_price + (i.extra_price ?? 0), rule) })));
+  }, []);
+
   return {
     items,
+    setPricingRule,
     loadItems,
     addItem,
     addCustomItem,

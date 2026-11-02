@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { ModePricingMap } from '@/lib/pos-mode-pricing';
 import { DEFAULT_PAYMENT_METHODS, type PaymentMethodConfig } from '@/lib/pos-payment-methods';
 
 export interface POSBranchSettings {
@@ -9,6 +10,7 @@ export interface POSBranchSettings {
   cash_in_categories: string[];
   cash_out_categories: string[];
   payment_methods: PaymentMethodConfig[];
+  order_mode_pricing: ModePricingMap;
 }
 
 export const DEFAULT_BRANCH_SETTINGS: Omit<POSBranchSettings, 'branch_id'> = {
@@ -17,6 +19,7 @@ export const DEFAULT_BRANCH_SETTINGS: Omit<POSBranchSettings, 'branch_id'> = {
   cash_in_categories: ['Modal Tambahan', 'Tukar Uang Kecil', 'Pendapatan Lain', 'Lain-lain'],
   cash_out_categories: ['Belanja Bahan Darurat', 'Operasional & Kebersihan', 'Kasbon Staf', 'Setor ke Brankas', 'Lain-lain'],
   payment_methods: DEFAULT_PAYMENT_METHODS,
+  order_mode_pricing: {},
 };
 
 export const fetchBranchSettings = async (branchId: string): Promise<POSBranchSettings> => {
