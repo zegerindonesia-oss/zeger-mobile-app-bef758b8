@@ -49,6 +49,7 @@ interface Props {
 const toCartProduct = (p: Product) => ({
   product_id: p.id, product_code: p.code, product_name: p.name,
   category: p.category, price: Number(p.price), image_url: p.image_url,
+  base_price: Number(p.price), custom_options: p.custom_options,
 });
 
 export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, toolbar, hiddenProductIds = [] }: Props) => {

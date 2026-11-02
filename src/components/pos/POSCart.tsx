@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X, Gift, History, Armchair, Save } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, Tag, Split, X, Gift, History, Armchair, Save, Pencil } from 'lucide-react';
 import { POSCartItem } from '@/hooks/usePOSCart';
 import { AppliedPromo } from '@/hooks/usePOSPromo';
 import { POSPromoDialog } from './POSPromoDialog';
 import { POSVoucherInput } from './POSVoucherInput';
+import { POSModifierDialog } from './POSModifierDialog';
+import type { AddItemOptions } from '@/hooks/usePOSCart';
 
 interface Totals {
   subtotal: number;
@@ -53,6 +55,7 @@ interface Props {
   memberMinTransaction?: number;
   onOpenTables?: () => void;
   onHoldToTable?: () => void;
+  updateLine?: (id: string, opts: AddItemOptions) => void;
 }
 
 export const POSCart = ({
@@ -62,7 +65,7 @@ export const POSCart = ({
   removeItem, onClear, onPay, onSplit, branchId,
   appliedPromos, onApplyVoucher, onRemovePromo, totalPromoDiscount,
   member, onScanMember, onClearMember, onRedeemPoints, onShowMemberHistory,
-  redemption, onClearRedemption, memberMinTransaction = 0, onOpenTables, onHoldToTable,
+  redemption, onClearRedemption, memberMinTransaction = 0, onOpenTables, onHoldToTable, updateLine,
 }: Props) => {
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
   const showExternal = ['gofood', 'grabfood', 'shopeefood'].includes(orderType);
@@ -71,6 +74,9 @@ export const POSCart = ({
   const [promoDialogScope, setPromoDialogScope] = useState<'item' | 'bill' | null>(null);
   const [promoDialogTarget, setPromoDialogTarget] = useState<POSCartItem | null>(null);
   const [showAdjust, setShowAdjust] = useState(false);
+  const [editing, setEditing] = useState<POSCartItem | null>(null);
+  const editProduct = useMemo(() => editing ? { name: editing.product_name, price: editing.base_price ?? editing.price, category: editing.category, custom_options: editing.custom_options } : null, [editing]);
+  const editInitial = useMemo(() => editing ? { qty: editing.qty, modifiers: editing.modifiers || [], notes: editing.notes } : null, [editing]);
 
   const voucher = appliedPromos.find((p) => p.source === 'voucher');
   const redemptionDiscount = redemption?.discount || 0;
@@ -170,6 +176,11 @@ export const POSCart = ({
                   )}
                 </div>
                  <div className="flex flex-col gap-1">
+                  {updateLine && !it.bundle_id && !it.is_custom && (
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-primary" title="Edit pesanan" onClick={() => setEditing(it)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
                   <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeItem(it.line_id)}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -325,6 +336,12 @@ export const POSCart = ({
         itemName={promoDialogTarget?.product_name}
         onClose={() => setPromoDialogScope(null)}
         onApply={handlePromoApply}
+      />
+      <POSModifierDialog
+        product={editProduct}
+        initial={editInitial}
+        onClose={() => setEditing(null)}
+        onConfirm={(opts) => { if (editing && updateLine) updateLine(editing.line_id, opts); setEditing(null); }}
       />
     </div>
   );

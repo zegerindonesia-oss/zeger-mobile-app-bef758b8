@@ -10,11 +10,13 @@ interface Props {
   product: { name: string; price: number; category: string | null; custom_options?: any } | null;
   onClose: () => void;
   onConfirm: (opts: AddItemOptions) => void;
+  /** Prefill when editing an existing cart line. */
+  initial?: { qty: number; modifiers: string[]; notes: string } | null;
 }
 
 const fmt = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
 
-export const POSModifierDialog = ({ product, onClose, onConfirm }: Props) => {
+export const POSModifierDialog = ({ product, onClose, onConfirm, initial }: Props) => {
   const groups = useMemo(() => (product ? getModifierGroups(product) : []), [product]);
   const [selected, setSelected] = useState<string[]>([]);
   const [qty, setQty] = useState(1);
@@ -22,11 +24,11 @@ export const POSModifierDialog = ({ product, onClose, onConfirm }: Props) => {
 
   useEffect(() => {
     if (product) {
-      setSelected(defaultSelection(groups));
-      setQty(1);
-      setNotes('');
+      setSelected(initial ? initial.modifiers : defaultSelection(groups));
+      setQty(initial?.qty ?? 1);
+      setNotes(initial?.notes ?? '');
     }
-  }, [product, groups]);
+  }, [product, groups, initial]);
 
   if (!product) return null;
 
@@ -90,7 +92,7 @@ export const POSModifierDialog = ({ product, onClose, onConfirm }: Props) => {
             <Button size="icon" variant="outline" onClick={() => setQty((q) => q + 1)}><Plus className="h-4 w-4" /></Button>
           </div>
           <Button className="flex-1 h-11" onClick={() => onConfirm({ qty, modifiers: selected, notes, extraPrice: extra })}>
-            Tambah • {fmt(unit * qty)}
+            {initial ? 'Simpan Perubahan' : 'Tambah'} • {fmt(unit * qty)}
           </Button>
         </div>
       </DialogContent>

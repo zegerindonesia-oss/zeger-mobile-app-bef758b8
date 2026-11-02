@@ -16,6 +16,10 @@ export interface POSCartItem {
   /** Unique cart line key (product + modifiers + notes). */
   line_id: string;
   modifiers?: string[];
+  /** Price before variant surcharges, used when editing a line. */
+  base_price?: number;
+  /** Product variant config, used to reopen the variant dialog. */
+  custom_options?: any;
 }
 
 export interface AddItemOptions { qty?: number; modifiers?: string[]; notes?: string; extraPrice?: number }
@@ -114,6 +118,18 @@ export const usePOSCart = () => {
     setItems((prev) => prev.map((i) => (i.line_id === line_id ? { ...i, notes } : i)));
   }, []);
 
+  /** Replace variants/notes/qty of an existing line (edit via pencil). */
+  const updateLine = useCallback((line_id: string, opts: AddItemOptions) => {
+    setItems((prev) => prev.map((i) => {
+      if (i.line_id !== line_id) return i;
+      const base = i.base_price ?? i.price;
+      const mods = opts.modifiers ?? i.modifiers ?? [];
+      const notes = opts.notes ?? i.notes;
+      return { ...i, modifiers: mods, notes, qty: Math.max(1, opts.qty ?? i.qty),
+        price: base + (opts.extraPrice ?? 0), line_id: lineKey(i.product_id, mods, notes) + '::e' + Date.now() };
+    }));
+  }, []);
+
   const setItemDiscount = useCallback((line_id: string, discountPerUnit: number) => {
     setItems((prev) =>
       prev.map((i) => (i.line_id === line_id ? { ...i, discount_item: discountPerUnit } : i))
@@ -163,6 +179,7 @@ export const usePOSCart = () => {
     addItem,
     addCustomItem,
     addBundle,
+    updateLine,
     updateQty,
     updateNotes,
     setItemDiscount,
