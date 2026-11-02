@@ -12,7 +12,7 @@ import { POSModifierDialog } from './POSModifierDialog';
 import { getModifierGroups, loadMasterModifierGroups } from '@/lib/pos-modifiers';
 import type { AddItemOptions } from '@/hooks/usePOSCart';
 import { Star3D } from './Star3D';
-import { normalizeImageUrl } from '@/lib/image-url';
+import { normalizeImageUrl, thumbImageUrl } from '@/lib/image-url';
 import { normalizeCategoryOrder, orderCustomerCategories } from '@/lib/customer-category-order';
 
 const FAV = '__favorit__';
@@ -278,7 +278,7 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
             <span>Tidak ada menu</span>
           </div>
         ) : (
-          <div className="grid grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2.5">
             {filteredBundles.map((b) => (
               <POSBundleCard key={b.id} bundle={b} onAdd={onAddBundle} />
             ))}
@@ -304,8 +304,10 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
                     <Star3D key={String(isFav(p))} size={20} active={isFav(p)} />
                   </button>
                   {p.image_url ? (
-                    <div className="aspect-[4/3] w-full bg-muted rounded-xl overflow-hidden mb-2">
-                      <img src={normalizeImageUrl(p.image_url) || p.image_url} alt={p.name} className="block w-full h-full object-cover object-center rounded-xl transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                    <div className="aspect-square w-full bg-background rounded-xl overflow-hidden mb-2">
+                      <img src={thumbImageUrl(p.image_url) || p.image_url} alt={p.name} width={240} height={240} decoding="async" loading="lazy"
+                        onError={(e) => { const f = normalizeImageUrl(p.image_url); if (f && e.currentTarget.src !== f) e.currentTarget.src = f; }}
+                        className="block w-full h-full object-contain p-1 rounded-xl" />
                     </div>
                   ) : (
                     <div className="aspect-[4/3] w-full bg-muted/70 rounded-xl mb-2 flex items-center justify-center text-xs font-bold text-muted-foreground">

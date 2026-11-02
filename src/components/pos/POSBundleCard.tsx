@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, Plus } from 'lucide-react';
+import { thumbImageUrl } from '@/lib/image-url';
 
 export interface BundleData {
   id: string;
@@ -26,8 +27,8 @@ export const POSBundleCard = ({ bundle, onAdd }: Props) => {
         BUNDLE
       </Badge>
       {bundle.image_url ? (
-        <div className="aspect-[4/3] w-full bg-muted rounded-xl overflow-hidden mb-3">
-          <img src={bundle.image_url} alt={bundle.name} className="block w-full h-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+        <div className="aspect-square w-full bg-background rounded-xl overflow-hidden mb-3">
+          <img src={thumbImageUrl(bundle.image_url) || bundle.image_url} alt={bundle.name} width={240} height={240} decoding="async" loading="lazy" className="block w-full h-full object-contain p-1 rounded-xl" />
         </div>
       ) : (
         <div className="aspect-[4/3] w-full bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl mb-3 flex items-center justify-center">
