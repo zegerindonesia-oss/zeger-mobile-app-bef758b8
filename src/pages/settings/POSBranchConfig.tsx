@@ -12,6 +12,7 @@ import { fetchBranchSettings, type POSBranchSettings } from '@/hooks/usePOSBranc
 import { useAuth } from '@/hooks/useAuth';
 import { CashierPinManager } from '@/components/pos/CashierPinManager';
 import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
+import { ModePricingEditor } from '@/components/pos/ModePricingEditor';
 import { PaymentMethodsEditor } from '@/components/pos/PaymentMethodsEditor';
 
 const TagEditor = ({ items, onChange }: { items: string[]; onChange: (v: string[]) => void }) => {
@@ -95,6 +96,8 @@ const POSBranchConfig = () => {
               </label>
             ))}
           </CardContent></Card>
+        <Card><CardHeader><CardTitle>Harga per Mode Transaksi</CardTitle></CardHeader>
+          <CardContent><ModePricingEditor modes={s.order_modes} value={s.order_mode_pricing || {}} onChange={(v) => up({ order_mode_pricing: v })} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Metode Pembayaran</CardTitle></CardHeader>
           <CardContent><PaymentMethodsEditor value={s.payment_methods} onChange={(v) => up({ payment_methods: v })} /></CardContent></Card>
         <div className="grid md:grid-cols-2 gap-4">
