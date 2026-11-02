@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { applyModePrice } from './pos-mode-pricing';
+import { describe, it, expect } from 'bun:test';
+import { applyModePrice } from '../src/lib/pos-mode-pricing';
 
 describe('applyModePrice', () => {
   it('gross-up 20% on 10.000 gives 12.500 so net equals offline', () => {
