@@ -596,7 +596,7 @@ const POSMain = () => {
                   </button>
                   <div className="relative flex-1 min-w-0">
                     <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Info tambahan / nama pelanggan"
+                    <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Pesanan atas nama… (tampil di struk, TV & dapur)"
                       className="w-full h-11 pl-9 pr-3 rounded-xl border border-border/70 bg-background/80 text-sm outline-none focus:ring-2 focus:ring-ring" />
                   </div>
                   <button onClick={() => setQuickMemberOpen(true)} title="Nomor HP Member"
@@ -660,6 +660,7 @@ const POSMain = () => {
             setDiscountBill={cart.setDiscountBill}
             updateQty={cart.updateQty}
             updateNotes={cart.updateNotes}
+            updateLine={cart.updateLine}
             setItemDiscount={cart.setItemDiscount}
             removeItem={cart.removeItem}
             onClear={cart.clear}
