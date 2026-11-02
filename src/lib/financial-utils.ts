@@ -491,7 +491,12 @@ export const calculateSalesData = async (
 
   const transactions = allTransactions;
 
-  if (!transactions || transactions.length === 0) {
+  // POS cashier sales (pos_transactions) - only when not filtering by a rider
+  const posRows = selectedRider && selectedRider !== 'all'
+    ? []
+    : await fetchPosSales(startStr, endStr, branchId);
+
+  if (transactions.length === 0 && posRows.length === 0) {
     return {
       grossSales: 0,
       netSales: 0,
@@ -546,7 +551,24 @@ export const calculateSalesData = async (
     }
   });
 
-  const totalTransactions = transactions.length;
+  posRows.forEach((t: any) => {
+    const total = Number(t.total || 0);
+    grossSales += Number(t.subtotal || 0);
+    netSales += total;
+    totalDiscounts += Number(t.discount_bill || 0) + Number(t.discount_item || 0);
+    totalItems += (t.pos_transaction_items || []).reduce((s: number, i: any) => s + Number(i.qty || 0), 0);
+    const parts: [string | null, number][] = t.payment_method_2
+      ? [[t.payment_method_1, Number(t.amount_1 || 0)], [t.payment_method_2, Number(t.amount_2 || 0)]]
+      : [[t.payment_method_1, total]];
+    parts.forEach(([m, amt]) => {
+      const k = posPaymentBucket(m);
+      if (k === 'cash') cashSales += amt;
+      else if (k === 'qris') qrisSales += amt;
+      else if (k === 'transfer') transferSales += amt;
+    });
+  });
+
+  const totalTransactions = transactions.length + posRows.length;
   const averageSalePerTransaction = totalTransactions > 0 ? netSales / totalTransactions : 0;
 
   return {
@@ -578,4 +600,34 @@ export const calculateNetProfit = (
     expenses.depreciation + expenses.interest + expenses.tax;
   
   return grossProfit - totalExpenses;
+};
+/** Map POS payment method labels to dashboard buckets. */
+export const posPaymentBucket = (m: string | null | undefined): 'cash' | 'qris' | 'transfer' | 'other' => {
+  const v = (m || '').toLowerCase();
+  if (v.includes('tunai') || v.includes('cash')) return 'cash';
+  if (v.includes('qris')) return 'qris';
+  if (v.includes('transfer') || v.includes('bank')) return 'transfer';
+  return 'other';
+};
+
+/** Paid, non-voided POS cashier transactions in a Jakarta date range (paginated). */
+export const fetchPosSales = async (startStr: string, endStr: string, branchId?: string) => {
+  const rows: any[] = [];
+  let from = 0;
+  while (true) {
+    let q = supabase
+      .from('pos_transactions')
+      .select('id, total, subtotal, discount_bill, discount_item, payment_method_1, payment_method_2, amount_1, amount_2, created_at, pos_transaction_items(qty)')
+      .eq('status', 'paid')
+      .is('void_at', null)
+      .gte('created_at', `${startStr}T00:00:00+07:00`)
+      .lte('created_at', `${endStr}T23:59:59+07:00`);
+    if (branchId) q = q.eq('branch_id', branchId);
+    const { data } = await q.range(from, from + 999);
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return rows;
 };
