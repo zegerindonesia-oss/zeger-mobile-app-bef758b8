@@ -206,7 +206,7 @@ function TxDetail({ tx, branchId, branchName, onClose, onVoided, onReorder }: {
   const printItems: PrintItem[] = items.map((i) => ({ product_id: i.product_id, product_name: i.product_name + (i.size ? ` (${i.size})` : ''), category: i.category, qty: Number(i.qty), price: Number(i.price), subtotal: Number(i.subtotal_item), notes: i.notes || undefined }));
   const receipt: ReceiptPrint = {
     transaction_number: tx.transaction_number, branch_name: branchName, kasir_name: tx.cashier_name || '-', created_at: tx.created_at,
-    order_type: tx.order_type, table_number: tx.table_number, customer_name: tx.customer_name, items: printItems,
+    order_type: tx.order_type, table_number: tx.table_number, customer_name: tx.customer_name, items: printItems, queue_number: tx.queue_number ?? null,
     subtotal: Number(tx.subtotal), discount: Number(tx.discount_item || 0) + Number(tx.discount_bill || 0), service_charge: Number(tx.service_charge || 0), tax: Number(tx.tax || 0), total: Number(tx.total),
     payment_method_1: tx.payment_method_1 || 'cash', amount_1: Number(tx.amount_1 || 0), payment_method_2: tx.payment_method_2, amount_2: Number(tx.amount_2 || 0), change_amount: Number(tx.change_amount || 0),
   };

@@ -140,7 +140,7 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, bran
         {printSettings ? (() => {
           const paper = ((printSettings.printers.find((p) => p.role === 'receipt')?.paper as PaperWidth) || '80');
           return <iframe title="Pratinjau struk" srcDoc={renderReceipt(data as any, printSettings, paper === ('label' as any) ? '80' : paper)}
-            className="w-full h-[420px] rounded-xl border bg-white" />;
+            className="w-full h-[420px] rounded-xl border bg-card" />;
         })() : null}
         <div className="rounded-xl border p-3 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><UserPlus className="h-3.5 w-3.5" /> Kirim struk & simpan customer</div>
