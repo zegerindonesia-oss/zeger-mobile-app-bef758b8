@@ -1080,59 +1080,90 @@ export type Database = {
       customer_users: {
         Row: {
           address: string | null
+          birthday: string | null
+          branch_id: string | null
           created_at: string
           email: string | null
+          gender: string | null
           id: string
+          is_active: boolean
           is_online: boolean | null
           latitude: number | null
           longitude: number | null
           member_code: string | null
           name: string
+          notes: string | null
           phone: string | null
           photo_url: string | null
           points: number
+          registered_by: string | null
+          registered_by_name: string | null
           role: string
+          source_channel: string | null
           tenant_id: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
           address?: string | null
+          birthday?: string | null
+          branch_id?: string | null
           created_at?: string
           email?: string | null
+          gender?: string | null
           id?: string
+          is_active?: boolean
           is_online?: boolean | null
           latitude?: number | null
           longitude?: number | null
           member_code?: string | null
           name: string
+          notes?: string | null
           phone?: string | null
           photo_url?: string | null
           points?: number
+          registered_by?: string | null
+          registered_by_name?: string | null
           role?: string
+          source_channel?: string | null
           tenant_id?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           address?: string | null
+          birthday?: string | null
+          branch_id?: string | null
           created_at?: string
           email?: string | null
+          gender?: string | null
           id?: string
+          is_active?: boolean
           is_online?: boolean | null
           latitude?: number | null
           longitude?: number | null
           member_code?: string | null
           name?: string
+          notes?: string | null
           phone?: string | null
           photo_url?: string | null
           points?: number
+          registered_by?: string | null
+          registered_by_name?: string | null
           role?: string
+          source_channel?: string | null
           tenant_id?: string
           updated_at?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_users_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_users_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -5454,6 +5485,48 @@ export type Database = {
         }
         Returns: string
       }
+      crm_can_access: { Args: never; Returns: boolean }
+      crm_customer_history: {
+        Args: { _customer: string }
+        Returns: {
+          amount: number
+          at: string
+          branch_name: string
+          channel: string
+          items: Json
+          payment: string
+          ref: string
+        }[]
+      }
+      crm_customer_list: {
+        Args: never
+        Returns: {
+          address: string
+          birthday: string
+          branch_id: string
+          branch_name: string
+          created_at: string
+          email: string
+          gender: string
+          id: string
+          is_active: boolean
+          last_order_at: string
+          member_code: string
+          name: string
+          notes: string
+          order_count: number
+          phone: string
+          points: number
+          registered_by_name: string
+          source_channel: string
+          spent_30d: number
+          total_spent: number
+        }[]
+      }
+      crm_upsert_customer: {
+        Args: { _data: Json; _id: string }
+        Returns: string
+      }
       current_tenant_id: { Args: never; Returns: string }
       decrement_rider_stock: {
         Args: { p_product_id: string; p_quantity: number; p_rider_id: string }
@@ -5791,7 +5864,12 @@ export type Database = {
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
       pos_quick_member: {
-        Args: { _name?: string; _phone: string }
+        Args: {
+          _branch_id?: string
+          _cashier_name?: string
+          _name?: string
+          _phone: string
+        }
         Returns: {
           email: string
           id: string
