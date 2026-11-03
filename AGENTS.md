@@ -26,3 +26,4 @@
 - Table QR guests browse a minimal-field tenant-scoped menu RPC and submit an atomic server-priced dine-in bill to POS/KDS; guest phone never grants member access, and guest checkout uses pay-at-counter rather than claiming gateway payment.
 - Customer phone sign-in uses Supabase SMS OTP and server-verified phone profile linking; existing email login remains as migration fallback, and SMS delivery requires the hosted phone provider to be enabled.
 - Customer menu category priority is stored in app_settings and read through the RLS-protected get_customer_category_order RPC; chips and sections share customer-category-order helpers so new categories remain visible and QR guests receive the same ordering.
+- CRM (/settings/app-management/crm) reads customer_users via crm_customer_list/crm_customer_history RPCs that aggregate POS, customer app and rider transactions, and writes only via crm_upsert_customer (phone-deduplicated), so all channels share one customer record.
