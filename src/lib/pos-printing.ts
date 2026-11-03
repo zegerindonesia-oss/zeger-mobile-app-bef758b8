@@ -175,7 +175,10 @@ export interface ReceiptPrint {
   order_type: string; table_number?: string | null; customer_name?: string | null;
   items: PrintItem[]; subtotal: number; discount: number; service_charge: number; tax: number; total: number;
   payment_method_1: string; amount_1: number; payment_method_2?: string | null; amount_2?: number; change_amount: number;
+  queue_number?: number | null;
 }
+export const queueLabel = (d: { queue_number?: number | null; transaction_number: string }) =>
+  d.queue_number ? String(d.queue_number).padStart(3, '0') : d.transaction_number.slice(-3);
 
 /** Decorative Code-128-look barcode built from the transaction number (CSS bars, printer-safe). */
 export const barcodeHtml = (code: string) => {
@@ -196,7 +199,7 @@ ${L.showLogo && L.logoUrl ? `<div class="c"><img src="${esc(L.logoUrl)}" style="
 <div class="c"><div class="big">${esc(L.brandName || d.branch_name)}</div>${L.brandName ? `<div>${esc(d.branch_name)}</div>` : ''}
 ${L.address ? `<div>${esc(L.address)}</div>` : ''}${L.phone ? `<div>${esc(L.phone)}</div>` : ''}${L.instagram ? `<div>${esc(L.instagram)}</div>` : ''}
 ${L.taxId ? `<div>NPWP: ${esc(L.taxId)}</div>` : ''}${s.receiptHeader ? `<div>${esc(s.receiptHeader)}</div>` : ''}</div>
-${L.showQueue ? `<div class="hr"></div><div class="c">No. Antrean</div><div class="c" style="font-size:2.2em;font-weight:bold">${esc(d.transaction_number.slice(-3))}</div>` : ''}
+${L.showQueue ? `<div class="hr"></div><div class="c">No. Antrean</div><div class="c" style="font-size:2.2em;font-weight:bold">${esc(queueLabel(d))}</div>` : ''}
 <div class="hr2"></div>
 ${row('<span class="mut">No. Struk</span>', esc(d.transaction_number))}${row('<span class="mut">Tanggal</span>', jkt(d.created_at))}
 ${L.showCashier ? row('<span class="mut">Kasir</span>', esc(d.kasir_name)) : ''}
@@ -284,7 +287,9 @@ export interface ShiftReportPrint {
   opening_cash: number; cash_in: number; cash_out: number;
   payments: { method: string; count: number; amount: number }[];
   categories: { category: string; qty: number; amount: number }[];
-  products?: { name: string; qty: number; amount: number }[];
+  products?: { name: string; qty: number; amount: number; brand?: string; category?: string }[];
+  order_types?: { type: string; count: number; amount: number }[];
+  discount_by_product?: number;
   gross: number; discount: number; service: number; tax: number; net: number;
   tx_count: number; void_count: number; expected_cash: number;
   closing_cash?: number | null; difference?: number | null; notes?: string | null;
@@ -358,7 +363,7 @@ export const escReceipt = (d: ReceiptPrint, s: PrintSettings, p: PrinterConfig) 
   e.align('c').bold(true).size(2, 2).line(L.brandName || d.branch_name).size(1, 1).bold(false);
   if (L.brandName) e.line(d.branch_name);
   [L.address, L.phone, L.instagram, s.receiptHeader].filter(Boolean).forEach((x) => e.line(x));
-  if (L.showQueue) e.hr().line('No. Antrean').bold(true).size(2, 2).line(d.transaction_number.slice(-3)).size(1, 1).bold(false);
+  if (L.showQueue) e.hr().line('No. Antrean').bold(true).size(2, 2).line(queueLabel(d)).size(1, 1).bold(false);
   e.align('l').hr('=').row('No. Struk', d.transaction_number).row('Tanggal', jkt(d.created_at));
   if (L.showCashier) e.row('Kasir', d.kasir_name);
   if (L.showOrderType) e.row('Tipe', d.order_type.replace('_', ' ').toUpperCase() + (d.table_number ? ` Meja ${d.table_number}` : ''));
@@ -472,31 +477,49 @@ export const printShiftReport = async (s: PrintSettings, r: ShiftReportPrint) =>
 };
 
 // ---------- Shift report data ----------
+/** Bill share per payment method. Single payments count the bill total (never cash tendered minus change). */
+export const shiftPaymentSplit = (t: any): [string, number][] => {
+  const total = Number(t.total || 0);
+  if (!t.payment_method_2) return t.payment_method_1 ? [[t.payment_method_1, total]] : [];
+  const a1 = Number(t.amount_1 || 0), a2 = Number(t.amount_2 || 0);
+  const over = Math.max(0, a1 + a2 - total);
+  // Overpayment (change) always comes out of the cash part.
+  const r1 = t.payment_method_1 === 'cash' ? a1 - over : a1;
+  const r2 = t.payment_method_1 !== 'cash' && t.payment_method_2 === 'cash' ? a2 - over : a2;
+  return [[t.payment_method_1, r1], [t.payment_method_2, r2]];
+};
 export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; branch_name: string; kasir_name: string }): Promise<ShiftReportPrint> => {
   const db = supabase as any;
   const { data: txs } = await db.from('pos_transactions')
-    .select('id,total,subtotal,discount_item,discount_bill,service_charge,tax,payment_method_1,amount_1,payment_method_2,amount_2,change_amount,status')
+    .select('id,total,subtotal,discount_item,discount_bill,service_charge,tax,payment_method_1,amount_1,payment_method_2,amount_2,change_amount,status,order_type')
     .eq('shift_id', shift.id);
   const all = txs || [];
   const paid = all.filter((t: any) => t.status === 'paid');
   const pay: Record<string, { count: number; amount: number }> = {};
   const add = (m: string | null, a: number) => { if (!m) return; pay[m] ??= { count: 0, amount: 0 }; pay[m].count++; pay[m].amount += a; };
   paid.forEach((t: any) => {
-    const cashNet = (m: string, a: number) => (m === 'cash' ? a - Number(t.change_amount || 0) : a);
-    add(t.payment_method_1, cashNet(t.payment_method_1, Number(t.amount_1 || 0)));
-    if (t.payment_method_2) add(t.payment_method_2, Number(t.amount_2 || 0));
+    const split = shiftPaymentSplit(t);
+    split.forEach(([m, a]) => add(m, a));
   });
   const ids = paid.map((t: any) => t.id);
   const cats: Record<string, { qty: number; amount: number }> = {};
-  const prods: Record<string, { qty: number; amount: number }> = {};
+  const prods: Record<string, { qty: number; amount: number; brand?: string; category?: string }> = {};
+  const brandOf: Record<string, string> = {};
+  const types: Record<string, { count: number; amount: number }> = {};
+  paid.forEach((t: any) => { const k = t.order_type || 'dine_in'; types[k] ??= { count: 0, amount: 0 }; types[k].count++; types[k].amount += Number(t.total || 0); });
   for (let i = 0; i < ids.length; i += 200) {
-    const { data: items } = await db.from('pos_transaction_items').select('category,product_name,qty,subtotal_item').in('transaction_id', ids.slice(i, i + 200));
+    const { data: items } = await db.from('pos_transaction_items').select('category,product_name,product_id,qty,subtotal_item').in('transaction_id', ids.slice(i, i + 200));
+    const pids = [...new Set((items || []).map((x: any) => x.product_id).filter((x: any) => x && !brandOf[x]))];
+    if (pids.length) {
+      const { data: ps } = await db.from('products').select('id,brand').in('id', pids);
+      (ps || []).forEach((p: any) => { brandOf[p.id] = p.brand || ''; });
+    }
     (items || []).forEach((it: any) => {
       const c = it.category || 'Lainnya';
       cats[c] ??= { qty: 0, amount: 0 };
       cats[c].qty += Number(it.qty || 0); cats[c].amount += Number(it.subtotal_item || 0);
       const n = it.product_name || 'Item';
-      prods[n] ??= { qty: 0, amount: 0 };
+      prods[n] ??= { qty: 0, amount: 0, brand: brandOf[it.product_id] || 'Lainnya', category: c };
       prods[n].qty += Number(it.qty || 0); prods[n].amount += Number(it.subtotal_item || 0);
     });
   }
@@ -509,6 +532,7 @@ export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; bran
     cash_in: Number(shift.total_cash_in || 0), cash_out: Number(shift.total_cash_out || 0),
     payments: Object.entries(pay).map(([method, v]) => ({ method, ...v })),
     products: Object.entries(prods).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.qty - a.qty),
+    order_types: Object.entries(types).map(([type, v]) => ({ type, ...v })).sort((a, b) => b.amount - a.amount),
     categories: Object.entries(cats).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.amount - a.amount),
     gross: sum('subtotal'), discount: sum('discount_item') + sum('discount_bill'), service: sum('service_charge'), tax: sum('tax'),
     net: sum('total'), tx_count: paid.length, void_count: all.filter((t: any) => t.status === 'void' || t.status === 'voided').length,

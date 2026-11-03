@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { renderReceipt, type PrintSettings, type PaperWidth } from '@/lib/pos-printing';
 
 export interface ReceiptData {
   id?: string;
@@ -27,6 +28,7 @@ export interface ReceiptData {
   amount_2?: number;
   cash_received: number;
   change_amount: number;
+  queue_number?: number | null;
 }
 
 interface Props {
@@ -37,11 +39,12 @@ interface Props {
   onPrintStickers?: () => void;
   branchId?: string | null;
   defaultPhone?: string | null;
+  printSettings?: PrintSettings;
 }
 
 const toWa = (p: string) => { const d = p.replace(/\D/g, ''); return d.startsWith('0') ? '62' + d.slice(1) : d.startsWith('62') ? d : d ? '62' + d : ''; };
 
-export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, branchId, defaultPhone }: Props) => {
+export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, branchId, defaultPhone, printSettings }: Props) => {
   const [cName, setCName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -134,43 +137,11 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, bran
             <Button variant="outline" className="h-12 font-bold" onClick={() => { saveCustomer(); onClose(); }}>Selesai</Button>
           </div>
         </div>
-        <div id="pos-receipt-print" className="font-mono text-xs leading-tight border rounded p-3 bg-card">
-          <div className="text-center mb-2">
-            <div className="font-bold text-sm">{data.branch_name}</div>
-            <div>Struk: {data.transaction_number}</div>
-            <div>{new Date(data.created_at).toLocaleString('id-ID')}</div>
-            <div>Kasir: {data.kasir_name}</div>
-            <div>Tipe: {data.order_type.toUpperCase()}</div>
-            {data.table_number && <div>Meja: {data.table_number}</div>}
-            {data.customer_name && <div>Customer: {data.customer_name}</div>}
-          </div>
-          <div className="border-t border-dashed py-2 space-y-1">
-            {data.items.map((i, idx) => (
-              <div key={idx}>
-                <div className="flex justify-between">
-                  <span>{i.qty}x {i.product_name}</span>
-                  <span>{fmt(i.subtotal)}</span>
-                </div>
-                {i.notes && <div className="text-muted-foreground italic">  &gt; {i.notes}</div>}
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-dashed pt-2 space-y-1">
-            <div className="flex justify-between"><span>Subtotal</span><span>{fmt(data.subtotal)}</span></div>
-            {data.discount > 0 && <div className="flex justify-between"><span>Diskon</span><span>-{fmt(data.discount)}</span></div>}
-            {data.service_charge > 0 && <div className="flex justify-between"><span>Service</span><span>{fmt(data.service_charge)}</span></div>}
-            {data.tax > 0 && <div className="flex justify-between"><span>Pajak</span><span>{fmt(data.tax)}</span></div>}
-            <div className="flex justify-between font-bold text-sm border-t pt-1"><span>TOTAL</span><span>{fmt(data.total)}</span></div>
-            <div className="flex justify-between"><span>{data.payment_method_1.toUpperCase()}</span><span>{fmt(data.amount_1)}</span></div>
-            {data.payment_method_2 && (
-              <div className="flex justify-between"><span>{data.payment_method_2.toUpperCase()}</span><span>{fmt(data.amount_2 || 0)}</span></div>
-            )}
-            {data.change_amount > 0 && <div className="flex justify-between"><span>Kembalian</span><span>{fmt(data.change_amount)}</span></div>}
-          </div>
-          <div className="text-center mt-3 border-t border-dashed pt-2">
-            Terima kasih atas kunjungan Anda!
-          </div>
-        </div>
+        {printSettings ? (() => {
+          const paper = ((printSettings.printers.find((p) => p.role === 'receipt')?.paper as PaperWidth) || '80');
+          return <iframe title="Pratinjau struk" srcDoc={renderReceipt(data as any, printSettings, paper === ('label' as any) ? '80' : paper)}
+            className="w-full h-[420px] rounded-xl border bg-card" />;
+        })() : null}
         <div className="rounded-xl border p-3 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><UserPlus className="h-3.5 w-3.5" /> Kirim struk & simpan customer</div>
           <Input placeholder="Nama customer" value={cName} onChange={(e) => setCName(e.target.value)} />

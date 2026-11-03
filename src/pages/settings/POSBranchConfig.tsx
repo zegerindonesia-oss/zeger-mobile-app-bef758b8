@@ -98,6 +98,15 @@ const POSBranchConfig = () => {
           </CardContent></Card>
         <Card><CardHeader><CardTitle>Harga per Mode Transaksi</CardTitle></CardHeader>
           <CardContent><ModePricingEditor modes={s.order_modes} value={s.order_mode_pricing || {}} onChange={(v) => up({ order_mode_pricing: v })} /></CardContent></Card>
+        <Card><CardHeader><CardTitle>Nomor Antrean</CardTitle></CardHeader>
+          <CardContent className="grid sm:grid-cols-3 gap-3">
+            {([['daily', 'Reset Harian', 'Mulai 001 setiap hari (standar F&B)'], ['shift', 'Reset per Shift', 'Mulai 001 setiap buka kasir'], ['continuous', 'Lanjut Terus', 'Tidak pernah reset']] as const).map(([id, t, d]) => (
+              <button key={id} type="button" onClick={() => up({ queue_reset: id } as any)}
+                className={`rounded-xl border-2 p-3 text-left transition ${(s.queue_reset || 'daily') === id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
+                <div className="font-semibold">{t}</div><div className="text-xs text-muted-foreground">{d}</div>
+              </button>
+            ))}
+          </CardContent></Card>
         <Card><CardHeader><CardTitle>Metode Pembayaran</CardTitle></CardHeader>
           <CardContent><PaymentMethodsEditor value={s.payment_methods} onChange={(v) => up({ payment_methods: v })} /></CardContent></Card>
         <div className="grid md:grid-cols-2 gap-4">

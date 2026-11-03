@@ -1926,6 +1926,7 @@ export type Database = {
           order_mode_pricing: Json
           order_modes: string[]
           payment_methods: Json
+          queue_reset: string
           updated_at: string
           updated_by: string | null
         }
@@ -1938,6 +1939,7 @@ export type Database = {
           order_mode_pricing?: Json
           order_modes?: string[]
           payment_methods?: Json
+          queue_reset?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -1950,6 +1952,7 @@ export type Database = {
           order_mode_pricing?: Json
           order_modes?: string[]
           payment_methods?: Json
+          queue_reset?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -2581,6 +2584,7 @@ export type Database = {
           payment_method_2: string | null
           point_earned: number
           point_redeemed: number
+          queue_number: number | null
           service_charge: number
           shift_id: string | null
           status: string
@@ -2619,6 +2623,7 @@ export type Database = {
           payment_method_2?: string | null
           point_earned?: number
           point_redeemed?: number
+          queue_number?: number | null
           service_charge?: number
           shift_id?: string | null
           status?: string
@@ -2657,6 +2662,7 @@ export type Database = {
           payment_method_2?: string | null
           point_earned?: number
           point_redeemed?: number
+          queue_number?: number | null
           service_charge?: number
           shift_id?: string | null
           status?: string

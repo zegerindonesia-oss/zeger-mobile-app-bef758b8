@@ -292,6 +292,7 @@ const POSMain = () => {
         notes: lineNotes(i) || null,
       }));
 
+      let queueNo: number | null = null;
       if (isOffline) {
         enqueueOfflineSale({
           id: tx.id, created_at: new Date().toISOString(), tx: txRow, items: itemsPayload,
@@ -299,8 +300,9 @@ const POSMain = () => {
           stock: cart.items.filter((i) => !i.is_custom).map((i) => ({ product_id: i.product_id, qty: i.qty })),
         });
       } else {
-        const { error: txErr } = await supabase.from('pos_transactions').insert(txRow as any);
+        const { data: txIns, error: txErr } = await supabase.from('pos_transactions').insert(txRow as any).select('queue_number' as any).maybeSingle();
         if (txErr) throw txErr;
+        queueNo = (txIns as any)?.queue_number ?? null;
         const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
         if (itemErr) throw itemErr;
 
@@ -326,6 +328,7 @@ const POSMain = () => {
       // Build receipt
       const receiptData: ReceiptData = {
         id: tx.id,
+        queue_number: queueNo,
         transaction_number: txNum,
         branch_name: branchName,
         kasir_name: cashier?.name || userProfile.full_name,
@@ -359,10 +362,13 @@ const POSMain = () => {
         qty: i.qty, price: i.price, subtotal: i.price * i.qty - i.discount_item * i.qty, notes: lineNotes(i),
       }));
       safePrint(async () => {
-        await printReceipt(printSettings, { ...receiptData, items: printItems }, true);
+        // Always print with the latest Back Office design (one master layout for every order mode).
+        const fresh = await loadPrintSettings(userProfile.branch_id).catch(() => printSettings);
+        setPrintSettings(fresh);
+        await printReceipt(fresh, { ...receiptData, items: printItems }, true);
         // Table orders already went to kitchen when held; others print kitchen tickets now
         if (!tableTxnId) {
-          await printKitchen(printSettings, {
+          await printKitchen(fresh, {
             ref: txNum, order_type: orderType, table_number: tableNumber || null,
             customer_name: customerName || null, created_at: new Date().toISOString(), items: printItems,
           });
@@ -746,7 +752,7 @@ const POSMain = () => {
         onSelect={handleSelectTable}
         onRecall={handleRecallTable}
       />
-      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} defaultPhone={member?.phone || receiptPhoneRef.current} branchId={userProfile?.branch_id || null}
+      <POSReceipt open={!!receipt} data={receipt} onClose={() => setReceipt(null)} defaultPhone={member?.phone || receiptPhoneRef.current} branchId={userProfile?.branch_id || null} printSettings={printSettings}
         onPrint={() => receipt && safePrint(() => printReceipt(printSettings, receipt, false))}
         onPrintStickers={() => receipt && safePrint(() => printStickersOnly(printSettings, {
           ref: receipt.transaction_number, order_type: receipt.order_type, table_number: receipt.table_number || null,
