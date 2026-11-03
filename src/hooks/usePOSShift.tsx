@@ -82,12 +82,8 @@ export const usePOSShift = () => {
 
     const totalSales = (txs || []).reduce((s, t: any) => s + Number(t.total || 0), 0);
     const totalTx = (txs || []).length;
-    const cashSales = (txs || []).reduce((s, t: any) => {
-      let c = 0;
-      if (t.payment_method_1 === 'cash') c += Number(t.amount_1 || 0);
-      if (t.payment_method_2 === 'cash') c += Number(t.amount_2 || 0);
-      return s + c;
-    }, 0);
+    const cashSales = (txs || []).reduce((s, t: any) =>
+      s + shiftPaymentSplit(t).filter(([m]) => m === 'cash').reduce((a, [, v]) => a + v, 0), 0);
 
     const expectedCash =
       Number(activeShift.opening_cash) +
