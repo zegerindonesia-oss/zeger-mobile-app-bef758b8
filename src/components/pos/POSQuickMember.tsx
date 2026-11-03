@@ -11,10 +11,12 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSelect: (m: LoyaltyMember) => void;
+  branchId?: string | null;
+  cashierName?: string | null;
 }
 
 /** Fast phone-number capture: big numpad, instant lookup, auto-register new members. */
-export function POSQuickMember({ open, onOpenChange, onSelect }: Props) {
+export function POSQuickMember({ open, onOpenChange, onSelect, branchId, cashierName }: Props) {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [found, setFound] = useState<LoyaltyMember | null>(null);
@@ -45,7 +47,7 @@ export function POSQuickMember({ open, onOpenChange, onSelect }: Props) {
     if (found) { onSelect(found); onOpenChange(false); toast.success(`Member: ${found.name}`); return; }
     if (phone.replace(/\D/g, '').length < 9) return toast.error('Nomor HP belum lengkap');
     setSaving(true);
-    const { data, error } = await (supabase as any).rpc('pos_quick_member', { _phone: phone, _name: name || null });
+    const { data, error } = await (supabase as any).rpc('pos_quick_member', { _phone: phone, _name: name || null, _branch_id: branchId || null, _cashier_name: cashierName || null });
     setSaving(false);
     if (error) return toast.error('Gagal daftar member: ' + error.message);
     const m = Array.isArray(data) ? data[0] : data;

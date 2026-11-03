@@ -779,7 +779,7 @@ const POSMain = () => {
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
       <POSModeDialog allowedModes={branchPos?.order_modes} open={modeOpen} onOpenChange={setModeOpen} orderType={orderType} pax={pax} externalOrderId={externalOrderId}
         onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); if (v.orderType === 'dine_in' && !tableNumber) setTableMapOpen(true); }} />
-      <POSQuickMember open={quickMemberOpen} onOpenChange={setQuickMemberOpen} onSelect={(m) => { setMember(m); if (!customerName && m.name) setCustomerName(m.name); }} />
+      <POSQuickMember branchId={userProfile?.branch_id || null} cashierName={cashier?.name || userProfile?.full_name || null} open={quickMemberOpen} onOpenChange={setQuickMemberOpen} onSelect={(m) => { setMember(m); if (!customerName && m.name) setCustomerName(m.name); }} />
       <POSReportsDialog open={reportsOpen} onOpenChange={setReportsOpen} branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} branchName={branchName} />
       <MemberScanDialog
         open={memberScanOpen}
