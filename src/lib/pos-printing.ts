@@ -358,9 +358,38 @@ const enabled = (s: PrintSettings, role: PrinterRole) => s.printers.filter((p) =
 const colsOf = (p: PrinterConfig) => (p.paper === '58' ? 32 : 48);
 const ascii = (x: unknown) => String(x ?? '');
 
-export const escReceipt = (d: ReceiptPrint, s: PrintSettings, p: PrinterConfig) => {
+const logoCache = new Map<string, HTMLCanvasElement | null>();
+/** Loads the logo into a printer-width canvas (white background); null when it can't be loaded. */
+const logoCanvas = async (url: string, dots: number) => {
+  const key = `${url}|${dots}`;
+  if (logoCache.has(key)) return logoCache.get(key)!;
+  const c = await new Promise<HTMLCanvasElement | null>((res) => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    const t = setTimeout(() => res(null), 4000);
+    img.onload = () => {
+      clearTimeout(t);
+      const w = Math.min(dots, Math.round(img.naturalWidth * (120 / Math.max(1, img.naturalHeight))));
+      const h = Math.max(1, Math.round(img.naturalHeight * (w / img.naturalWidth)));
+      const cv = document.createElement('canvas'); cv.width = Math.ceil(w / 8) * 8; cv.height = h;
+      const ctx = cv.getContext('2d')!; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      try { ctx.getImageData(0, 0, 1, 1); res(cv); } catch { res(null); }
+    };
+    img.onerror = () => { clearTimeout(t); res(null); };
+    img.src = url;
+  });
+  logoCache.set(key, c);
+  return c;
+};
+
+export const escReceipt = async (d: ReceiptPrint, s: PrintSettings, p: PrinterConfig) => {
   const L = layoutOf(s); const e = new EscPos(colsOf(p));
-  e.align('c').bold(true).size(2, 2).line(L.brandName || d.branch_name).size(1, 1).bold(false);
+  e.align('c');
+  if (L.showLogo && L.logoUrl) {
+    const cv = await logoCanvas(L.logoUrl, Math.round((p.paper === '58' ? 384 : 576) * 0.6));
+    if (cv) e.image(cv);
+  }
+  e.bold(true).size(2, 2).line(L.brandName || d.branch_name).size(1, 1).bold(false);
   if (L.brandName) e.line(d.branch_name);
   [L.address, L.phone, L.instagram, s.receiptHeader].filter(Boolean).forEach((x) => e.line(x));
   if (L.showQueue) e.hr().line('No. Antrean').bold(true).size(2, 2).line(queueLabel(d)).size(1, 1).bold(false);
@@ -384,9 +413,10 @@ export const escReceipt = (d: ReceiptPrint, s: PrintSettings, p: PrinterConfig) 
     if (d.payment_method_2) e.row(d.payment_method_2.toUpperCase(), rp(d.amount_2 || 0));
     if (d.change_amount > 0) e.row('Kembalian', rp(d.change_amount));
   }
-  e.align('c').hr('=').line(s.receiptFooter);
+  e.align('c').barcode(d.transaction_number).hr('=').line(s.receiptFooter);
   if (L.wifiName) e.line(`WiFi: ${L.wifiName}${L.wifiPass ? ` Pass: ${L.wifiPass}` : ''}`);
   if (L.policy) e.line(L.policy);
+  if (L.showQr && L.qrUrl) { e.line().qr(L.qrUrl, p.paper === '58' ? 5 : 7); if (L.qrCaption) e.bold(true).line(L.qrCaption).bold(false); }
   if (L.showPoweredBy) e.line('Powered by Flow F&B');
   return e.feed(4).cut().bytes();
 };
