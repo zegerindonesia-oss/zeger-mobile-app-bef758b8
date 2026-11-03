@@ -361,7 +361,7 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/settings/app-management/crm" element={
-              <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager']}>
+              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'branch_manager', 'sb_branch_manager', 'finance', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager', '3_SB_Branch_Manager']}>
                 <ModernLayout>
                   <CRMManagement />
                 </ModernLayout>
