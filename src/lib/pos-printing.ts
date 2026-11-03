@@ -175,7 +175,10 @@ export interface ReceiptPrint {
   order_type: string; table_number?: string | null; customer_name?: string | null;
   items: PrintItem[]; subtotal: number; discount: number; service_charge: number; tax: number; total: number;
   payment_method_1: string; amount_1: number; payment_method_2?: string | null; amount_2?: number; change_amount: number;
+  queue_number?: number | null;
 }
+export const queueLabel = (d: { queue_number?: number | null; transaction_number: string }) =>
+  d.queue_number ? String(d.queue_number).padStart(3, '0') : d.transaction_number.slice(-3);
 
 /** Decorative Code-128-look barcode built from the transaction number (CSS bars, printer-safe). */
 export const barcodeHtml = (code: string) => {
@@ -196,7 +199,7 @@ ${L.showLogo && L.logoUrl ? `<div class="c"><img src="${esc(L.logoUrl)}" style="
 <div class="c"><div class="big">${esc(L.brandName || d.branch_name)}</div>${L.brandName ? `<div>${esc(d.branch_name)}</div>` : ''}
 ${L.address ? `<div>${esc(L.address)}</div>` : ''}${L.phone ? `<div>${esc(L.phone)}</div>` : ''}${L.instagram ? `<div>${esc(L.instagram)}</div>` : ''}
 ${L.taxId ? `<div>NPWP: ${esc(L.taxId)}</div>` : ''}${s.receiptHeader ? `<div>${esc(s.receiptHeader)}</div>` : ''}</div>
-${L.showQueue ? `<div class="hr"></div><div class="c">No. Antrean</div><div class="c" style="font-size:2.2em;font-weight:bold">${esc(d.transaction_number.slice(-3))}</div>` : ''}
+${L.showQueue ? `<div class="hr"></div><div class="c">No. Antrean</div><div class="c" style="font-size:2.2em;font-weight:bold">${esc(queueLabel(d))}</div>` : ''}
 <div class="hr2"></div>
 ${row('<span class="mut">No. Struk</span>', esc(d.transaction_number))}${row('<span class="mut">Tanggal</span>', jkt(d.created_at))}
 ${L.showCashier ? row('<span class="mut">Kasir</span>', esc(d.kasir_name)) : ''}
@@ -358,7 +361,7 @@ export const escReceipt = (d: ReceiptPrint, s: PrintSettings, p: PrinterConfig) 
   e.align('c').bold(true).size(2, 2).line(L.brandName || d.branch_name).size(1, 1).bold(false);
   if (L.brandName) e.line(d.branch_name);
   [L.address, L.phone, L.instagram, s.receiptHeader].filter(Boolean).forEach((x) => e.line(x));
-  if (L.showQueue) e.hr().line('No. Antrean').bold(true).size(2, 2).line(d.transaction_number.slice(-3)).size(1, 1).bold(false);
+  if (L.showQueue) e.hr().line('No. Antrean').bold(true).size(2, 2).line(queueLabel(d)).size(1, 1).bold(false);
   e.align('l').hr('=').row('No. Struk', d.transaction_number).row('Tanggal', jkt(d.created_at));
   if (L.showCashier) e.row('Kasir', d.kasir_name);
   if (L.showOrderType) e.row('Tipe', d.order_type.replace('_', ' ').toUpperCase() + (d.table_number ? ` Meja ${d.table_number}` : ''));
@@ -472,6 +475,17 @@ export const printShiftReport = async (s: PrintSettings, r: ShiftReportPrint) =>
 };
 
 // ---------- Shift report data ----------
+/** Bill share per payment method. Single payments count the bill total (never cash tendered minus change). */
+export const shiftPaymentSplit = (t: any): [string, number][] => {
+  const total = Number(t.total || 0);
+  if (!t.payment_method_2) return t.payment_method_1 ? [[t.payment_method_1, total]] : [];
+  const a1 = Number(t.amount_1 || 0), a2 = Number(t.amount_2 || 0);
+  const over = Math.max(0, a1 + a2 - total);
+  // Overpayment (change) always comes out of the cash part.
+  const r1 = t.payment_method_1 === 'cash' ? a1 - over : a1;
+  const r2 = t.payment_method_1 !== 'cash' && t.payment_method_2 === 'cash' ? a2 - over : a2;
+  return [[t.payment_method_1, r1], [t.payment_method_2, r2]];
+};
 export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; branch_name: string; kasir_name: string }): Promise<ShiftReportPrint> => {
   const db = supabase as any;
   const { data: txs } = await db.from('pos_transactions')
@@ -482,9 +496,8 @@ export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; bran
   const pay: Record<string, { count: number; amount: number }> = {};
   const add = (m: string | null, a: number) => { if (!m) return; pay[m] ??= { count: 0, amount: 0 }; pay[m].count++; pay[m].amount += a; };
   paid.forEach((t: any) => {
-    const cashNet = (m: string, a: number) => (m === 'cash' ? a - Number(t.change_amount || 0) : a);
-    add(t.payment_method_1, cashNet(t.payment_method_1, Number(t.amount_1 || 0)));
-    if (t.payment_method_2) add(t.payment_method_2, Number(t.amount_2 || 0));
+    const split = shiftPaymentSplit(t);
+    split.forEach(([m, a]) => add(m, a));
   });
   const ids = paid.map((t: any) => t.id);
   const cats: Record<string, { qty: number; amount: number }> = {};
