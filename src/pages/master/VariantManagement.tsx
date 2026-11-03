@@ -38,6 +38,10 @@ export default function VariantManagement() {
   const [products, setProducts] = useState<Prod[]>([]);
   const [form, setForm] = useState<Group | null>(null);
   const [saving, setSaving] = useState(false);
+  const [q, setQ] = useState("");
+  const [fBrand, setFBrand] = useState("__all");
+  const [fCat, setFCat] = useState("__all");
+  useEffect(() => { setQ(""); setFBrand("__all"); setFCat("__all"); }, [form?.id, form?.scope_type]);
 
   const load = async () => {
     const [g, p] = await Promise.all([
@@ -98,9 +102,14 @@ export default function VariantManagement() {
 
   const setOpt = (i: number, patch: Partial<Opt>) => form && setForm({ ...form, options: form.options.map((o, j) => (j === i ? { ...o, ...patch } : o)) });
   const toggleVal = (v: string) => form && setForm({ ...form, scope_values: form.scope_values.includes(v) ? form.scope_values.filter((x) => x !== v) : [...form.scope_values, v] });
+  const catOf = (p: Prod) => p.sub_category || p.category || "";
+  const catOptions = useMemo(() => Array.from(new Set(products.filter((p) => fBrand === "__all" || p.brand === fBrand).map(catOf).filter(Boolean))).sort(), [products, fBrand]);
   const choices: { v: string; l: string }[] = !form || form.scope_type === "all" ? [] :
-    form.scope_type === "product" ? products.map((p) => ({ v: p.id, l: `${p.name} (${p.code})` })) :
-    values[form.scope_type].map((x) => ({ v: x, l: x }));
+    form.scope_type === "product"
+      ? products.filter((p) => (fBrand === "__all" || p.brand === fBrand) && (fCat === "__all" || catOf(p) === fCat))
+          .map((p) => ({ v: p.id, l: `${p.name} (${p.code})` }))
+      : values[form.scope_type].map((x) => ({ v: x, l: x }));
+  const visible = choices.filter((c) => !q.trim() || c.l.toLowerCase().includes(q.trim().toLowerCase()));
 
   return (
     <div className="space-y-4">
@@ -189,14 +198,38 @@ export default function VariantManagement() {
                   <SelectContent>{SCOPES.map((s) => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}</SelectContent>
                 </Select>
                 {form.scope_type !== "all" && (
-                  <div className="max-h-48 overflow-y-auto rounded-md border p-2 flex flex-wrap gap-1.5">
-                    {choices.length === 0 && <p className="text-xs text-muted-foreground">Belum ada data. Isi dulu brand/kategori di Produk / Menu.</p>}
-                    {choices.map((c) => (
-                      <button key={c.v} type="button" onClick={() => toggleVal(c.v)}
-                        className={`text-xs rounded-full border px-2.5 py-1 ${form.scope_values.includes(c.v) ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}>
-                        {c.l}
-                      </button>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Input className="flex-1 min-w-[140px] h-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari..." />
+                      {form.scope_type === "product" && (
+                        <>
+                          <Select value={fBrand} onValueChange={setFBrand}>
+                            <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Brand" /></SelectTrigger>
+                            <SelectContent><SelectItem value="__all">Semua Brand</SelectItem>{values.brand.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                          </Select>
+                          <Select value={fCat} onValueChange={setFCat}>
+                            <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Kategori" /></SelectTrigger>
+                            <SelectContent><SelectItem value="__all">Semua Kategori</SelectItem>{catOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{form.scope_values.length} dipilih · {visible.length} tampil</span>
+                      <div className="flex gap-2">
+                        <button type="button" className="text-primary font-medium" onClick={() => setForm({ ...form, scope_values: Array.from(new Set([...form.scope_values, ...visible.map((c) => c.v)])) })}>Pilih semua tampil</button>
+                        <button type="button" className="text-muted-foreground" onClick={() => setForm({ ...form, scope_values: form.scope_values.filter((v) => !visible.some((c) => c.v === v)) })}>Kosongkan</button>
+                      </div>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto rounded-md border p-2 flex flex-wrap gap-1.5">
+                      {visible.length === 0 && <p className="text-xs text-muted-foreground">Tidak ada data yang cocok.</p>}
+                      {visible.map((c) => (
+                        <button key={c.v} type="button" onClick={() => toggleVal(c.v)}
+                          className={`text-xs rounded-full border px-2.5 py-1 ${form.scope_values.includes(c.v) ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}>
+                          {c.l}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">Berlaku untuk {countFor({ ...form })} menu.</p>
