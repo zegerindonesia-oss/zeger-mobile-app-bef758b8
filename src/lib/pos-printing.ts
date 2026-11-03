@@ -454,7 +454,7 @@ const sendBt = async (p: PrinterConfig, bytes: Uint8Array) => {
 export const printReceipt = async (s: PrintSettings, d: ReceiptPrint, auto: boolean) => {
   for (const p of enabled(s, 'receipt')) {
     if (auto && !p.autoPrint) continue;
-    if (await sendBt(p, escReceipt(d, s, p))) continue;
+    if (await sendBt(p, await escReceipt(d, s, p))) continue;
     await printHtml(renderReceipt(d, s, p.paper), p.copies);
   }
 };
