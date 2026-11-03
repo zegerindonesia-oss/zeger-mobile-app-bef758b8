@@ -13,6 +13,7 @@ import { Users, Search, Download, Upload, Cake, Crown, AlertTriangle, UserPlus, 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { segmentOf, SEGMENT_LABEL, daysToBirthday, waPhone, type Segment } from "@/lib/crm-segments";
+import { BlastDialog } from "@/components/crm/BlastDialog";
 
 interface Cust {
   id: string; name: string; phone: string | null; email: string | null; address: string | null; birthday: string | null;
@@ -37,6 +38,7 @@ export default function CRMManagement() {
   const [tab, setTab] = useState("dashboard");
   const [openId, setOpenId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [blastOpen, setBlastOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -105,6 +107,7 @@ export default function CRMManagement() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" />Import Excel</Button>
           <Button variant="outline" onClick={exportXlsx} disabled={!filtered.length}><Download className="w-4 h-4 mr-2" />Export Excel</Button>
+          <Button variant="outline" onClick={() => setBlastOpen(true)} disabled={!filtered.length}><MessageCircle className="w-4 h-4 mr-2" />Kirim Promo</Button>
           <Button onClick={() => setOpenId("new")}><UserPlus className="w-4 h-4 mr-2" />Tambah</Button>
         </div>
       </header>
@@ -212,6 +215,7 @@ export default function CRMManagement() {
 
       <CustomerSheet id={openId} customer={rows.find((r) => r.id === openId) || null} branches={branches} onClose={() => setOpenId(null)} onSaved={load} />
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} branches={branches} onDone={load} />
+      <BlastDialog open={blastOpen} onOpenChange={setBlastOpen} targets={filtered} />
     </main>
   );
 }
