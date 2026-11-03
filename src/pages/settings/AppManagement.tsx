@@ -58,14 +58,6 @@ export default function AppManagement() {
       color: "text-purple-600 bg-purple-50"
     },
     {
-      title: "CRM",
-      description: "Customer Relationship Management",
-      icon: Users,
-      path: "/settings/app-management/crm",
-      stats: `${stats.totalCustomers} customers terdaftar`,
-      color: "text-green-600 bg-green-50"
-    },
-    {
       title: "Vouchers",
       description: "Kelola voucher & kupon diskon",
       icon: Ticket,

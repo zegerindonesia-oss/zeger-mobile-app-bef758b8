@@ -91,7 +91,6 @@ const getMenuItems = (userRole: string): MenuItem[] => [
       { id: "cash-deposit", label: "Cash Deposit", icon: Banknote, path: "/analytics/cash-deposit", module: "rider", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
       { id: "orders-management", label: "Online Orders", icon: ShoppingCart, path: "/orders-management", module: "customer_app", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "sb_branch_manager"] },
       { id: "crm-pelanggan", label: "CRM Pelanggan", icon: Users, path: "/settings/app-management/crm", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "ho_owner", "branch_manager", "sb_branch_manager", "finance"] },
-      { id: "customers", label: "Customers", icon: Database, path: "/customers", module: "loyalty" },
       { id: "rider-performance", label: "Performa Rider", icon: Users, path: "/rider-performance", module: "rider" },
       { id: "location-analytics", label: "Location Analytics", icon: LocationPin, path: "/location-analytics", roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "bh_report"] }
     ]
@@ -218,11 +217,6 @@ const getMenuItems = (userRole: string): MenuItem[] => [
             path: "/settings/app-management/loyalty"
           },
           {
-            id: "crm",
-            label: "CRM",
-            icon: Users,
-            path: "/settings/app-management/crm"
-          }
         ]
       },
       { 
