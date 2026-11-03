@@ -292,6 +292,7 @@ const POSMain = () => {
         notes: lineNotes(i) || null,
       }));
 
+      let queueNo: number | null = null;
       if (isOffline) {
         enqueueOfflineSale({
           id: tx.id, created_at: new Date().toISOString(), tx: txRow, items: itemsPayload,
@@ -299,8 +300,9 @@ const POSMain = () => {
           stock: cart.items.filter((i) => !i.is_custom).map((i) => ({ product_id: i.product_id, qty: i.qty })),
         });
       } else {
-        const { error: txErr } = await supabase.from('pos_transactions').insert(txRow as any);
+        const { data: txIns, error: txErr } = await supabase.from('pos_transactions').insert(txRow as any).select('queue_number' as any).maybeSingle();
         if (txErr) throw txErr;
+        queueNo = (txIns as any)?.queue_number ?? null;
         const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
         if (itemErr) throw itemErr;
 
