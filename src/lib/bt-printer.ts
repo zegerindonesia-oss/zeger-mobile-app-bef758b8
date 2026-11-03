@@ -243,6 +243,37 @@ export class EscPos {
   }
   feed(n = 3) { this.parts.push([0x1b, 0x64, n]); return this; }
   cut() { this.parts.push([0x1d, 0x56, 0x42, 0x00]); return this; }
+  /** Raster image (GS v 0) from a canvas — used for the logo. */
+  image(c: HTMLCanvasElement) {
+    const w = c.width, h = c.height, wb = Math.ceil(w / 8);
+    const px = c.getContext('2d')!.getImageData(0, 0, w, h).data;
+    const data = new Uint8Array(wb * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const lum = px[i + 3] < 128 ? 255 : 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+      if (lum < 150) data[y * wb + (x >> 3)] |= 0x80 >> (x & 7);
+    }
+    this.parts.push([0x1d, 0x76, 0x30, 0x00, wb & 0xff, wb >> 8, h & 0xff, h >> 8], data, [0x0a]);
+    return this;
+  }
+  /** Native CODE128 barcode with human-readable text below. */
+  barcode(code: string) {
+    const d = enc(code).slice(0, 40);
+    this.parts.push([0x1d, 0x68, 60, 0x1d, 0x77, 2, 0x1d, 0x48, 2, 0x1d, 0x6b, 73, d.length + 2, 0x7b, 0x42], d, [0x0a]);
+    return this;
+  }
+  /** Native QR code (GS ( k). */
+  qr(text: string, size = 6) {
+    const d = enc(text); const n = d.length + 3;
+    this.parts.push(
+      [0x1d, 0x28, 0x6b, 4, 0, 0x31, 0x41, 0x32, 0x00],
+      [0x1d, 0x28, 0x6b, 3, 0, 0x31, 0x43, size],
+      [0x1d, 0x28, 0x6b, 3, 0, 0x31, 0x45, 0x31],
+      [0x1d, 0x28, 0x6b, n & 0xff, n >> 8, 0x31, 0x50, 0x30], d,
+      [0x1d, 0x28, 0x6b, 3, 0, 0x31, 0x51, 0x30, 0x0a],
+    );
+    return this;
+  }
   bytes() { return concat(this.parts); }
 }
 

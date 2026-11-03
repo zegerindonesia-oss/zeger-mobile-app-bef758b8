@@ -103,7 +103,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
       const rec = { transaction_number: 'TEST-001', branch_name: 'TES PRINTER', kasir_name: 'Kasir', created_at: now, order_type: 'take_away', items, subtotal: 18000, discount: 0, service_charge: 0, tax: 0, total: 18000, payment_method_1: 'cash', amount_1: 20000, change_amount: 2000 };
       const k = { station: p.name, ref: 'TEST-001', order_type: 'take_away', created_at: now, customer_name: 'Budi', items };
       try {
-        await btSend(p.id, p.role === 'receipt' ? escReceipt(rec, s, p) : p.role === 'sticker' ? tsplCustomer(k, p) : escKitchen(k, p));
+        await btSend(p.id, p.role === 'receipt' ? await escReceipt(rec, s, p) : p.role === 'sticker' ? tsplCustomer(k, p) : escKitchen(k, p));
         return toast.success('Tes cetak terkirim via Bluetooth');
       } catch (e: any) { return toast.error(e.message); }
     }
