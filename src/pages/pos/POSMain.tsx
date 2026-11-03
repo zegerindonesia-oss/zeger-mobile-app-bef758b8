@@ -328,6 +328,7 @@ const POSMain = () => {
       // Build receipt
       const receiptData: ReceiptData = {
         id: tx.id,
+        queue_number: queueNo,
         transaction_number: txNum,
         branch_name: branchName,
         kasir_name: cashier?.name || userProfile.full_name,
