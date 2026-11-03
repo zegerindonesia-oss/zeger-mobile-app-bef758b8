@@ -216,7 +216,6 @@ const getMenuItems = (userRole: string): MenuItem[] => [
             icon: Award,
             path: "/settings/app-management/loyalty"
           },
-          {
         ]
       },
       { 
