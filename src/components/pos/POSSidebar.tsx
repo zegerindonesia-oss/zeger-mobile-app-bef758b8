@@ -64,7 +64,7 @@ export const POSSidebar = ({ collapsed, role, userName, branchName, onCashMoveme
     { label: 'Produk', icon: Package, path: '/master/products', levels: ['ho', 'manager'] },
     { label: 'Stok', icon: Boxes, path: '/inventory', levels: ['ho', 'manager'] },
     { label: 'Bahan & Resep', icon: Package, path: '/inventory/raw-materials', levels: ['ho', 'manager'], module: 'bom' },
-    { label: 'Pelanggan', icon: Users, path: '/customers', levels: ['ho', 'manager'], module: 'loyalty' },
+    { label: 'Pelanggan', icon: Users, path: '/settings/app-management/crm', levels: ['ho', 'manager'], module: 'loyalty' },
     { label: 'Promo', icon: Tag, path: '/settings/promo-management', levels: ['ho', 'manager'] },
     { label: 'Loyalty', icon: Gift, path: '/settings/app-management/loyalty', levels: ['ho', 'manager'], module: 'loyalty' },
     { label: 'Laporan', icon: BarChart3, path: '/finance/profit-loss', levels: ['ho', 'finance'], module: 'finance' },

@@ -1002,7 +1002,7 @@ export const ModernBranchDashboard = () => {
         navigate('/transactions' + qs);
         break;
       case 'members':
-        navigate('/customers');
+        navigate('/settings/app-management/crm');
         break;
       case 'riders':
         navigate('/riders');
