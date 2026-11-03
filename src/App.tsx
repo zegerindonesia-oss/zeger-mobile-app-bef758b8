@@ -209,7 +209,8 @@ const App = () => (
                 </ModernLayout>
               </RoleBasedRoute>
             } />
-            <Route path="/customers" element={
+            <Route path="/customers" element={<Navigate to="/settings/app-management/crm" replace />} />
+            <Route path="/customers-legacy" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'rider', 'sb_rider', 'bh_rider']}>
                 <ModernLayout>
                   <CustomerManager />
