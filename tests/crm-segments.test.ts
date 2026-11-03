@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { segmentOf, daysToBirthday } from './crm-segments';
+import { describe, it, expect } from 'bun:test';
+import { segmentOf, daysToBirthday } from '../src/lib/crm-segments';
 
 const now = new Date(2026, 10, 3);
 const ago = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
