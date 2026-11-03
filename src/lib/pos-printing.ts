@@ -287,7 +287,9 @@ export interface ShiftReportPrint {
   opening_cash: number; cash_in: number; cash_out: number;
   payments: { method: string; count: number; amount: number }[];
   categories: { category: string; qty: number; amount: number }[];
-  products?: { name: string; qty: number; amount: number }[];
+  products?: { name: string; qty: number; amount: number; brand?: string; category?: string }[];
+  order_types?: { type: string; count: number; amount: number }[];
+  discount_by_product?: number;
   gross: number; discount: number; service: number; tax: number; net: number;
   tx_count: number; void_count: number; expected_cash: number;
   closing_cash?: number | null; difference?: number | null; notes?: string | null;
@@ -489,7 +491,7 @@ export const shiftPaymentSplit = (t: any): [string, number][] => {
 export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; branch_name: string; kasir_name: string }): Promise<ShiftReportPrint> => {
   const db = supabase as any;
   const { data: txs } = await db.from('pos_transactions')
-    .select('id,total,subtotal,discount_item,discount_bill,service_charge,tax,payment_method_1,amount_1,payment_method_2,amount_2,change_amount,status')
+    .select('id,total,subtotal,discount_item,discount_bill,service_charge,tax,payment_method_1,amount_1,payment_method_2,amount_2,change_amount,status,order_type')
     .eq('shift_id', shift.id);
   const all = txs || [];
   const paid = all.filter((t: any) => t.status === 'paid');
@@ -501,15 +503,23 @@ export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; bran
   });
   const ids = paid.map((t: any) => t.id);
   const cats: Record<string, { qty: number; amount: number }> = {};
-  const prods: Record<string, { qty: number; amount: number }> = {};
+  const prods: Record<string, { qty: number; amount: number; brand?: string; category?: string }> = {};
+  const brandOf: Record<string, string> = {};
+  const types: Record<string, { count: number; amount: number }> = {};
+  paid.forEach((t: any) => { const k = t.order_type || 'dine_in'; types[k] ??= { count: 0, amount: 0 }; types[k].count++; types[k].amount += Number(t.total || 0); });
   for (let i = 0; i < ids.length; i += 200) {
-    const { data: items } = await db.from('pos_transaction_items').select('category,product_name,qty,subtotal_item').in('transaction_id', ids.slice(i, i + 200));
+    const { data: items } = await db.from('pos_transaction_items').select('category,product_name,product_id,qty,subtotal_item').in('transaction_id', ids.slice(i, i + 200));
+    const pids = [...new Set((items || []).map((x: any) => x.product_id).filter((x: any) => x && !brandOf[x]))];
+    if (pids.length) {
+      const { data: ps } = await db.from('products').select('id,brand').in('id', pids);
+      (ps || []).forEach((p: any) => { brandOf[p.id] = p.brand || ''; });
+    }
     (items || []).forEach((it: any) => {
       const c = it.category || 'Lainnya';
       cats[c] ??= { qty: 0, amount: 0 };
       cats[c].qty += Number(it.qty || 0); cats[c].amount += Number(it.subtotal_item || 0);
       const n = it.product_name || 'Item';
-      prods[n] ??= { qty: 0, amount: 0 };
+      prods[n] ??= { qty: 0, amount: 0, brand: brandOf[it.product_id] || 'Lainnya', category: c };
       prods[n].qty += Number(it.qty || 0); prods[n].amount += Number(it.subtotal_item || 0);
     });
   }
@@ -522,6 +532,7 @@ export const buildShiftReport = async (shift: any, meta: { kind: 'X' | 'Z'; bran
     cash_in: Number(shift.total_cash_in || 0), cash_out: Number(shift.total_cash_out || 0),
     payments: Object.entries(pay).map(([method, v]) => ({ method, ...v })),
     products: Object.entries(prods).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.qty - a.qty),
+    order_types: Object.entries(types).map(([type, v]) => ({ type, ...v })).sort((a, b) => b.amount - a.amount),
     categories: Object.entries(cats).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.amount - a.amount),
     gross: sum('subtotal'), discount: sum('discount_item') + sum('discount_bill'), service: sum('service_charge'), tax: sum('tax'),
     net: sum('total'), tx_count: paid.length, void_count: all.filter((t: any) => t.status === 'void' || t.status === 'voided').length,
