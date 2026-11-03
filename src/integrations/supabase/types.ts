@@ -1217,6 +1217,7 @@ export type Database = {
           address: string | null
           branch_id: string | null
           created_at: string
+          customer_user_id: string | null
           email: string | null
           id: string
           is_active: boolean | null
@@ -1230,6 +1231,7 @@ export type Database = {
           address?: string | null
           branch_id?: string | null
           created_at?: string
+          customer_user_id?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
@@ -1243,6 +1245,7 @@ export type Database = {
           address?: string | null
           branch_id?: string | null
           created_at?: string
+          customer_user_id?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
@@ -1258,6 +1261,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "customer_users"
             referencedColumns: ["id"]
           },
           {
