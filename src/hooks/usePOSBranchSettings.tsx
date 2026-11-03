@@ -11,6 +11,7 @@ export interface POSBranchSettings {
   cash_out_categories: string[];
   payment_methods: PaymentMethodConfig[];
   order_mode_pricing: ModePricingMap;
+  queue_reset?: 'daily' | 'shift' | 'continuous';
 }
 
 export const DEFAULT_BRANCH_SETTINGS: Omit<POSBranchSettings, 'branch_id'> = {
@@ -20,6 +21,7 @@ export const DEFAULT_BRANCH_SETTINGS: Omit<POSBranchSettings, 'branch_id'> = {
   cash_out_categories: ['Belanja Bahan Darurat', 'Operasional & Kebersihan', 'Kasbon Staf', 'Setor ke Brankas', 'Lain-lain'],
   payment_methods: DEFAULT_PAYMENT_METHODS,
   order_mode_pricing: {},
+  queue_reset: 'daily',
 };
 
 export const fetchBranchSettings = async (branchId: string): Promise<POSBranchSettings> => {
