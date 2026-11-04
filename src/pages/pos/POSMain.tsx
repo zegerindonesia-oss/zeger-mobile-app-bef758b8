@@ -550,18 +550,15 @@ const POSMain = () => {
 
   return (
     <div className="h-[100dvh] flex pos-canvas pos-touch overflow-hidden">
-      <div className="hidden md:flex">
-        <POSSidebar collapsed={collapsed} {...sidebarProps} />
-      </div>
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent side="left" className="p-0 w-[260px] border-0 [&>button]:hidden">
+        <SheetContent side="left" className="p-0 w-[280px] border-0 bg-transparent shadow-none [&>button]:hidden" onClick={(e) => { if ((e.target as HTMLElement).closest('nav button')) setMobileNavOpen(false); }}>
           <POSSidebar collapsed={false} {...sidebarProps} />
         </SheetContent>
       </Sheet>
       <main className="flex-1 min-w-0 flex flex-col gap-2 md:gap-3 p-2 md:p-3 overflow-hidden">
         <header className="pos-command-header rounded-2xl min-h-14 md:min-h-16 px-2 md:px-4 py-2 flex items-center gap-1.5 md:gap-3">
           <button
-            onClick={() => (window.innerWidth < 768 ? setMobileNavOpen(true) : setCollapsed((c) => !c))}
+            onClick={() => setMobileNavOpen((o) => !o)}
             className="pos-raised-control h-10 w-10 shrink-0 rounded-xl flex items-center justify-center"
             title="Menu"
           >

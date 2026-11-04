@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
-import { EscPos, btReady, btSend, tsplLabels, type TsplLabel } from './bt-printer';
+import { EscPos, btReady, btSend, tsplLabels, tsplBitmapLabels, type TsplLabel } from './bt-printer';
 
 export type PrinterRole = 'receipt' | 'kitchen' | 'sticker';
 export type PaperWidth = '58' | '80' | 'label';
@@ -258,27 +258,81 @@ ${k.addition ? '<div class="c b">** TAMBAHAN **</div>' : ''}
 ${k.items.map((i) => `<div class="b" style="font-size:1.3em">${i.qty}x ${esc(i.product_name)}</div>${i.notes ? `<div class="n">» ${esc(i.notes)}</div>` : ''}`).join('<div style="height:4px"></div>')}
 <div class="hr"></div><div class="c">Total item: ${k.items.reduce((s, i) => s + i.qty, 0)}</div>`);
 
-export const renderStickers = (k: KitchenPrint, p?: Partial<Pick<PrinterConfig, 'fontScale' | 'lineSpacing' | 'labelW' | 'labelH'>>) => {
+/** International label sizes (mm) for cup / food / bag stickers. */
+export const LABEL_SIZES: { w: number; h: number; label: string }[] = [
+  { w: 33, h: 15, label: '33×15 mm · Micro cup' },
+  { w: 40, h: 20, label: '40×20 mm · Compact cup' },
+  { w: 40, h: 30, label: '40×30 mm · Cup standar' },
+  { w: 50, h: 25, label: '50×25 mm · Cup lebar' },
+  { w: 50, h: 30, label: '50×30 mm · Starbucks/Toast' },
+  { w: 58, h: 40, label: '58×40 mm · Box makanan' },
+  { w: 60, h: 40, label: '60×40 mm · Full detail' },
+  { w: 80, h: 50, label: '80×50 mm · Segel delivery' },
+];
+
+type StickerCfg = Partial<Pick<PrinterConfig, 'fontScale' | 'lineSpacing' | 'labelW' | 'labelH'>>;
+const ORDER_MODE_NAMES: Record<string, string> = { take_away: 'TAKE AWAY', dine_in: 'DINE IN', delivery: 'DELIVERY', gofood: 'GOFOOD', grabfood: 'GRABFOOD', shopeefood: 'SHOPEEFOOD', pickup: 'PICK UP' };
+const modeText = (m: string) => ORDER_MODE_NAMES[m] || String(m || '').replace(/_/g, ' ').toUpperCase();
+
+/** One customer cup label at 203dpi. Same canvas feeds preview, system print and Bluetooth, so output always matches. */
+export const drawCustomerLabel = (k: KitchenPrint, item: KitchenPrint['items'][number], n: number, total: number, p?: StickerCfg) => {
+  const D = 8, Wmm = p?.labelW || 33, Hmm = p?.labelH || 15;
+  const W = Math.round(Wmm * D), H = Math.round(Hmm * D);
+  const cv = document.createElement('canvas'); cv.width = Math.ceil(W / 8) * 8; cv.height = H;
+  const g = cv.getContext('2d')!; g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, H); g.fillStyle = '#000'; g.textBaseline = 'top';
+  const k1 = ((p?.fontScale ?? 100) / 100) * Math.min(Hmm / 15, Wmm / 33 * 1.2);
+  const px = (pt: number) => pt * k1 * 0.3528 * D;
+  const LS = Math.min(Math.max(p?.lineSpacing ?? 1.15, 1), 1.5);
+  const font = (w: number, s: number) => (g.font = `${w} ${s}px Arial, Helvetica, sans-serif`);
+  const pad = Math.round(0.8 * D), R = W - pad, B = H - pad;
+  // Right block: queue number (big) + cup n/total
+  const q = k.table_number ? `M${k.table_number}` : `#${k.ref.slice(-3)}`;
+  const qS = px(11); font(900, qS); const qW = g.measureText(q).width;
+  const cS = px(5); font(800, cS); const cTxt = `${n}/${total}`; const cW = g.measureText(cTxt).width;
+  const rW = Math.max(qW, cW); const rx = R - rW;
+  g.textAlign = 'right'; font(900, qS); g.fillText(q, R, pad); font(800, cS); g.fillText(cTxt, R, pad + qS * 1.02); g.textAlign = 'left';
+  const lw = rx - pad - 0.8 * D;
+  // Left: order mode (inverted chip) + customer name
+  const mS = px(5); font(900, mS); const mode = modeText(k.order_type);
+  const mW = Math.min(g.measureText(mode).width + 0.8 * D, lw);
+  g.fillRect(pad, pad, mW, mS * 1.25); g.fillStyle = '#fff'; g.fillText(mode, pad + 0.4 * D, pad + mS * 0.13, mW - 0.8 * D); g.fillStyle = '#000';
+  let y = pad + mS * 1.25 + 0.3 * D;
+  const nS = px(6); font(800, nS);
+  if (k.customer_name) { g.fillText(k.customer_name, pad, y, lw); }
+  y = Math.max(y + nS * LS, pad + qS * 1.02 + cS * LS);
+  // Menu name (wrap up to 2 lines across full width)
+  const iS = px(7); font(900, iS);
+  const wrap = (txt: string, max: number, lines: number) => {
+    const out: string[] = []; let cur = '';
+    for (const w of txt.split(/\s+/)) { const t = cur ? `${cur} ${w}` : w; if (g.measureText(t).width > max && cur) { out.push(cur); cur = w; } else cur = t; }
+    if (cur) out.push(cur); return out.slice(0, lines);
+  };
+  const fullW = R - pad;
+  const footer = Hmm >= 25; const fS = px(4.5);
+  const limit = footer ? B - fS * LS : B;
+  for (const t of wrap(item.product_name, fullW, 2)) { if (y + iS > limit + 1) break; g.fillText(t, pad, y, fullW); y += iS * LS; }
+  if (item.notes) {
+    const tS = px(5); font(700, tS);
+    for (const t of wrap(item.notes, fullW, Hmm >= 25 ? 3 : 2)) { if (y + tS > limit + 1) break; g.fillText(t, pad, y, fullW); y += tS * LS; }
+  }
+  if (footer) { font(600, fS); g.fillText(jkt(k.created_at), pad, B - fS, fullW / 2); g.textAlign = 'right'; g.fillText(k.ref, R, B - fS, fullW / 2); g.textAlign = 'left'; }
+  return cv;
+};
+
+export const customerLabelCanvases = (k: KitchenPrint, p?: StickerCfg) => {
+  const total = k.items.reduce((s, i) => s + i.qty, 0); let n = 0;
+  const out: HTMLCanvasElement[] = [];
+  k.items.forEach((i) => { for (let x = 0; x < i.qty; x++) out.push(drawCustomerLabel(k, i, ++n, total, p)); });
+  return out;
+};
+
+export const renderStickers = (k: KitchenPrint, p?: StickerCfg) => {
   const W = p?.labelW || 33, H = p?.labelH || 15;
-  const f = (n: number) => +(n * ((p?.fontScale ?? 100) / 100) * (H / 15)).toFixed(2);
-  const L = Math.min(p?.lineSpacing ?? 1.1, 1.3);
-  const labels: string[] = [];
-  const total = k.items.reduce((s, i) => s + i.qty, 0);
-  let n = 0;
-  k.items.forEach((i) => {
-    for (let q = 0; q < i.qty; q++) {
-      n++;
-      labels.push(`<div class="lbl"><div class="row b"><span>${k.table_number ? `MEJA ${esc(k.table_number)}` : `#${esc(k.ref.slice(-3))}`}</span><span>${n}/${total}</span></div>
-<div class="nm">${esc(i.product_name)}</div>${i.notes ? `<div class="nt">${esc(i.notes)}</div>` : ''}
-<div class="row ft"><span>${esc(k.customer_name || '-')}</span><span>${jkt(k.created_at)}</span></div></div>`);
-    }
-  });
-  const css = `@page{size:${W}mm ${H}mm;margin:0}*{box-sizing:border-box;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
-.lbl{width:${W}mm;height:${H}mm;padding:.6mm .8mm;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;line-height:${L};page-break-after:always;break-after:page}
-.lbl:last-child{page-break-after:auto;break-after:auto}.row{display:flex;justify-content:space-between;gap:1mm;white-space:nowrap;overflow:hidden}
-.b{font-weight:900;font-size:${f(6.5)}pt}.nm{font-weight:900;font-size:${f(7.5)}pt;max-height:${2 * L}em;overflow:hidden;word-break:break-word}
-.nt{font-weight:700;font-size:${f(5)}pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ft{font-weight:700;font-size:${f(5)}pt}`;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Stiker ${esc(k.ref)}</title><style>${css}</style></head><body>${labels.join('')}</body></html>`;
+  const imgs = customerLabelCanvases(k, p).map((c) => `<div class="lbl"><img src="${c.toDataURL('image/png')}"/></div>`);
+  const css = `@page{size:${W}mm ${H}mm;margin:0}*{box-sizing:border-box;margin:0}body{margin:0}
+.lbl{width:${W}mm;height:${H}mm;overflow:hidden;page-break-after:always;break-after:page}.lbl:last-child{page-break-after:auto;break-after:auto}
+.lbl img{width:${W}mm;height:${H}mm;display:block;image-rendering:pixelated}`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Stiker ${esc(k.ref)}</title><style>${css}</style></head><body>${imgs.join('')}</body></html>`;
 };
 
 export interface ShiftReportPrint {
@@ -432,18 +486,9 @@ export const escKitchen = (k: KitchenPrint, p: PrinterConfig) => {
   return e.hr().align('c').line(`Total item: ${k.items.reduce((a, i) => a + i.qty, 0)}`).feed(4).cut().bytes();
 };
 
-/** Customer cup labels: queue/table, cup n/total, item, modifiers/notes. */
-export const tsplCustomer = (k: KitchenPrint, p: PrinterConfig) => {
-  const total = k.items.reduce((a, i) => a + i.qty, 0); let n = 0;
-  const labels: TsplLabel[] = [];
-  k.items.forEach((i) => { for (let x = 0; x < i.qty; x++) { n++; labels.push({ lines: [
-    { text: `${k.table_number ? `MEJA ${k.table_number}` : `#${k.ref.slice(-3)}`}  ${n}/${total}`, bold: true },
-    { text: ascii(i.product_name).slice(0, Math.floor(((p.labelW || 33) * 8 - 8) / 12)), big: true },
-    ...(i.notes ? [{ text: ascii(i.notes).slice(0, 30) }] : []),
-    { text: ascii(k.customer_name || '').slice(0, Math.floor(((p.labelW || 33) * 8 - 8) / 8)) },
-  ] }); } });
-  return tsplLabels(labels, p.labelW || 33, p.labelH || 15, 2, p.fontScale ?? 100, p.lineSpacing ?? 1.25);
-};
+/** Customer cup labels over Bluetooth: bitmap of the exact preview canvas. */
+export const tsplCustomer = (k: KitchenPrint, p: PrinterConfig) =>
+  tsplBitmapLabels(customerLabelCanvases(k, p), p.labelW || 33, p.labelH || 15, 2);
 
 const sendBt = async (p: PrinterConfig, bytes: Uint8Array) => {
   if (p.connection !== 'bluetooth' || !(await btReady(p.id))) return false;
