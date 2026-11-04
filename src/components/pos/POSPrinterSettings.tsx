@@ -157,7 +157,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
                 </div>
                 <div className="flex gap-5 text-sm">
                   <label className="flex items-center gap-2"><Switch checked={p.enabled} onCheckedChange={(v) => upd(p.id, { enabled: v })} /> Aktif</label>
-                  <label className="flex items-center gap-2"><Switch checked={p.autoPrint} onCheckedChange={(v) => upd(p.id, { autoPrint: v })} /> Cetak otomatis</label>
+                  <label className="flex items-center gap-2"><Switch checked={p.autoPrint} onCheckedChange={(v) => upd(p.id, { autoPrint: v })} /> <span className="font-semibold">Cetak otomatis</span> <span className="text-xs text-muted-foreground">{p.autoPrint ? '(langsung cetak saat bayar selesai)' : '(cetak manual saja)'}</span></label>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2 text-sm">
                   <Select value={p.connection || 'system'} onValueChange={(v: any) => upd(p.id, { connection: v })}>
