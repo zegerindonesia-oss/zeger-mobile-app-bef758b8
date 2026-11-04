@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import { EReceipt } from './EReceipt';
 import { TargetProgressCard } from './TargetProgressCard';
 
@@ -120,9 +121,12 @@ const MobileRiderAnalyticsEnhanced = () => {
   const [voidedTransactions, setVoidedTransactions] = useState<TransactionDetail[]>([]);
   const [pendingVoidIds, setPendingVoidIds] = useState<string[]>([]);
 
+  const { user: authUser, userProfile: authProfile } = useAuth();
+
   useEffect(() => {
+    if (!authUser) return;
     fetchAnalytics();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, authUser?.id, authProfile?.id]);
 
   const handleFilterChange = (period: string) => {
     setFilterPeriod(period);
@@ -196,14 +200,20 @@ const MobileRiderAnalyticsEnhanced = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, branch_id, full_name')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      let profile: any = authProfile?.id
+        ? { id: authProfile.id, branch_id: (authProfile as any).branch_id, full_name: (authProfile as any).full_name }
+        : null;
+      if (!profile) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id || authUser?.id;
+        if (!uid) return;
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, branch_id, full_name')
+          .eq('user_id', uid)
+          .maybeSingle();
+        profile = data;
+      }
 
       if (!profile) return;
       

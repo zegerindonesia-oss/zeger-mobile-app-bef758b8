@@ -382,16 +382,15 @@ const MobileRiderDashboard = () => {
 
       // Fetch top products via join (avoids huge id lists that fail on long URLs)
       if ((weekData?.length || 0) > 0) {
-        const { data: topProductsData } = await supabase
-          .from('transaction_items')
-          .select(`
-            quantity,
-            products(name),
-            transactions!inner(rider_id, is_voided, transaction_date)
-          `)
-          .eq('transactions.rider_id', riderId)
-          .eq('transactions.is_voided', false)
-          .gte('transactions.transaction_date', thirtyDaysAgo.toISOString());
+        const ids = (weekData || []).map((t: any) => t.id);
+        const topProductsData: any[] = [];
+        for (let i = 0; i < ids.length; i += 150) {
+          const { data } = await supabase
+            .from('transaction_items')
+            .select('quantity, products(name)')
+            .in('transaction_id', ids.slice(i, i + 150));
+          if (data) topProductsData.push(...data);
+        }
 
         // Aggregate top products
         const productMap: Record<string, number> = {};
@@ -711,20 +710,30 @@ const MobileRiderDashboard = () => {
       if (stockInError) throw stockInError;
 
       // Fetch transactions (stock sold)
-      const { data: transactions, error: transError } = await supabase
-        .from('transaction_items')
-        .select(`
-          transactions!inner(created_at, rider_id, final_amount, is_voided),
-          quantity,
-          product_id,
-          products(name, cost_price)
-        `)
-        .eq('transactions.rider_id', riderProfile.id)
-        .eq('transactions.is_voided', false)
-        .gte('transactions.created_at', `${start}T00:00:00+07:00`)
-        .lte('transactions.created_at', `${end}T23:59:59+07:00`);
+      // Fetch transactions first (indexed on rider_id), then their items by id.
+      // Joining transaction_items -> transactions!inner timed out on large data.
+      const { data: txRows, error: transError } = await supabase
+        .from('transactions')
+        .select('id, created_at, final_amount')
+        .eq('rider_id', riderProfile.id)
+        .eq('is_voided', false)
+        .gte('created_at', `${start}T00:00:00+07:00`)
+        .lte('created_at', `${end}T23:59:59+07:00`)
+        .limit(5000);
 
       if (transError) throw transError;
+
+      const txMap = new Map((txRows || []).map((t: any) => [t.id, t]));
+      const txIdList = Array.from(txMap.keys());
+      const transactions: any[] = [];
+      for (let i = 0; i < txIdList.length; i += 150) {
+        const { data: items, error: itemErr } = await supabase
+          .from('transaction_items')
+          .select('transaction_id, quantity, product_id, products(name, cost_price)')
+          .in('transaction_id', txIdList.slice(i, i + 150));
+        if (itemErr) throw itemErr;
+        (items || []).forEach((it: any) => transactions.push({ ...it, transactions: txMap.get(it.transaction_id) }));
+      }
 
       // Fetch current inventory
       const { data: inventory, error: invError } = await supabase
@@ -803,7 +812,7 @@ const MobileRiderDashboard = () => {
         productMap.set(productId, existing);
 
         // Count unique transactions
-        const txId = item.transactions.created_at; // Use as unique identifier
+        const txId = item.transaction_id;
         if (!transactionIds.has(txId)) {
           transactionIds.add(txId);
           totalTransactions++;
@@ -1329,23 +1338,6 @@ const MobileRiderDashboard = () => {
         </Card>
       )}
 
-      {/* Shift Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Manajemen Shift</CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-between items-center">
-          {hasActiveShift ? (
-            <Button variant="destructive" onClick={handleShiftEnd} size="sm" className="w-full">
-              Akhiri Shift
-            </Button>
-          ) : (
-            <Button onClick={handleShiftStart} size="sm" className="w-full">
-              Mulai Shift
-            </Button>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Incoming Order Dialog using MobileIncomingOrder component */}
       <MobileIncomingOrder
