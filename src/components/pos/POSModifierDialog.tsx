@@ -48,15 +48,15 @@ export const POSModifierDialog = ({ product, onClose, onConfirm, initial }: Prop
 
   return (
     <Dialog open={!!product} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[92vw] md:w-[80vw] max-w-5xl max-h-[88vh] p-6 md:p-8">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-baseline gap-2">
-            <span>{product.name}</span>
-            <span className="text-primary text-base">{fmt(unit)}</span>
+            <span className="text-xl md:text-2xl">{product.name}</span>
+            <span className="text-primary text-xl md:text-2xl">{fmt(unit)}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+        <div className="space-y-4 max-h-[62vh] overflow-y-auto pr-1">
           {groups.map((g, gi) => (
             <div key={g.name}>
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
@@ -72,7 +72,7 @@ export const POSModifierDialog = ({ product, onClose, onConfirm, initial }: Prop
                       size="sm"
                       variant={on ? 'default' : 'outline'}
                       onClick={() => toggle(gi, o.name)}
-                      className="h-10"
+                      className="h-14 px-5 text-base rounded-xl"
                     >
                       {o.name}
                       {o.price > 0 && <span className="ml-1 opacity-80 text-xs">+{fmt(o.price)}</span>}
@@ -91,7 +91,7 @@ export const POSModifierDialog = ({ product, onClose, onConfirm, initial }: Prop
             <span className="w-10 text-center font-semibold">{qty}</span>
             <Button size="icon" variant="outline" onClick={() => setQty((q) => q + 1)}><Plus className="h-4 w-4" /></Button>
           </div>
-          <Button className="flex-1 h-11" onClick={() => onConfirm({ qty, modifiers: selected, notes, extraPrice: extra })}>
+          <Button className="flex-1 h-14 text-base" onClick={() => onConfirm({ qty, modifiers: selected, notes, extraPrice: extra })}>
             {initial ? 'Simpan Perubahan' : 'Tambah'} • {fmt(unit * qty)}
           </Button>
         </div>

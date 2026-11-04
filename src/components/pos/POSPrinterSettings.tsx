@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import {
   PrintSettings, PrinterConfig, PrinterRole, loadPrintSettings, savePrintSettings, newPrinter,
   printHtml, renderKitchenTicket, renderReceipt, renderStickers,
-  escReceipt, escKitchen, tsplCustomer,
+  escReceipt, escKitchen, tsplCustomer, LABEL_SIZES,
 } from '@/lib/pos-printing';
 import { btPair, btForget, btSavedName, btSupported, btSend, btCanScan, btScan, btStopScan, btConnectTo, btListPaired, type BtFound } from '@/lib/bt-printer';
 import { ReceiptDesigner } from './ReceiptDesigner';
@@ -148,7 +148,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
                     <SelectContent>
                       <SelectItem value="58">58 mm</SelectItem>
                       <SelectItem value="80">80 mm</SelectItem>
-                      <SelectItem value="label">Label 50×30</SelectItem>
+                      <SelectItem value="label">Label stiker</SelectItem>
                     </SelectContent>
                   </Select>
                   <Input type="number" min={1} max={5} className="h-8 w-16" value={p.copies} title="Jumlah salinan" onChange={(e) => upd(p.id, { copies: Math.max(1, Number(e.target.value) || 1) })} />
@@ -174,7 +174,15 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
                     {!btSupported() && <span className="text-xs text-destructive basis-full">Aplikasi ini belum bisa mencari Bluetooth. Buka POS lewat Google Chrome di tablet (flowfnb.flowsstack.com/pos) lalu tekan Hubungkan — atau pilih "Printer Android / Windows terpasang".</span>}
                     {btSupported() && !btSavedName(p.id) && <span className="text-xs text-muted-foreground basis-full">Nyalakan printer & Bluetooth tablet, tekan Hubungkan, pilih nama printer (Xprinter, Hasmart, Kijang, dll), lalu tekan Tes.</span>}
                   </>}
-                  {p.role === 'sticker' && <span className="flex items-center gap-1 text-xs">Label
+                  {p.role === 'sticker' && <span className="flex flex-wrap items-center gap-1 text-xs">
+                    <Select value={LABEL_SIZES.some((z) => z.w === (p.labelW || 33) && z.h === (p.labelH || 15)) ? `${p.labelW || 33}x${p.labelH || 15}` : 'custom'}
+                      onValueChange={(v) => { if (v === 'custom') return; const [w, h] = v.split('x').map(Number); upd(p.id, { labelW: w, labelH: h }); }}>
+                      <SelectTrigger className="h-8 w-[210px]"><SelectValue placeholder="Ukuran label" /></SelectTrigger>
+                      <SelectContent>
+                        {LABEL_SIZES.map((z) => <SelectItem key={`${z.w}x${z.h}`} value={`${z.w}x${z.h}`}>{z.label}</SelectItem>)}
+                        <SelectItem value="custom">Kustom (isi manual)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Input type="number" className="h-8 w-14" value={p.labelW || 33} onChange={(e) => upd(p.id, { labelW: Number(e.target.value) || 33 })} />×
                     <Input type="number" className="h-8 w-14" value={p.labelH || 15} onChange={(e) => upd(p.id, { labelH: Number(e.target.value) || 15 })} />mm</span>}
                 </div>
@@ -188,8 +196,8 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
                       <div className="flex justify-between text-sm"><span>Jarak antar baris</span><b>{(p.lineSpacing ?? 1.25).toFixed(2)}</b></div>
                       <Slider min={1} max={2} step={0.05} value={[p.lineSpacing ?? 1.25]} onValueChange={([v]) => upd(p.id, { lineSpacing: v })} />
                     </div>
-                    <iframe title="Preview stiker" className="sm:col-span-2 mx-auto bg-card shadow rounded border-0" style={{ width: 220, height: 140 }}
-                      srcDoc={renderStickers({ station: p.name, ref: 'POS-0015', order_type: 'take_away', created_at: new Date().toISOString(), customer_name: 'Budi', items: [{ product_name: 'Aren Latte Large', qty: 1, notes: 'Less Ice, 50% Sugar' }] }, p)} />
+                    <iframe title="Preview stiker" className="sm:col-span-2 mx-auto bg-card shadow rounded border-0" style={{ width: Math.round((p.labelW || 33) * 8) + 20, height: Math.round((p.labelH || 15) * 8) + 20 }}
+                      srcDoc={renderStickers({ station: p.name, ref: 'POS-0015', order_type: 'gofood', created_at: new Date().toISOString(), customer_name: 'Budi', items: [{ product_name: 'Aren Latte Large', qty: 1, notes: 'Less Ice, 50% Sugar, Extra Shot' }] }, p).replace('</style>', 'body{padding:8px;background:#eee}.lbl{background:#fff;width:auto!important;height:auto!important}.lbl img{width:auto!important;height:auto!important}</style>')} />
                   </div>
                 )}
                 {showFilter && (
