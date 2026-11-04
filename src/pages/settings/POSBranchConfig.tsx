@@ -115,6 +115,9 @@ const POSBranchConfig = () => {
         </div>
         <Card><CardHeader><CardTitle>Kasir & PIN Login POS</CardTitle></CardHeader>
           <CardContent><CashierPinManager branchId={branchId} /></CardContent></Card>
+        <Card><CardHeader><CardTitle>Printer & Cetak Otomatis</CardTitle>
+          <p className="text-sm text-muted-foreground">Nyalakan "Cetak otomatis" per printer (struk, dapur, stiker). Saat kasir menyelesaikan pembayaran, printer tersebut langsung mencetak tanpa perlu ditekan.</p></CardHeader>
+          <CardContent><POSPrinterSettings key={`pr-${branchId}`} inline open onOpenChange={() => undefined} branchId={branchId} userId={userProfile?.id} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Desain Struk Cabang</CardTitle></CardHeader>
           <CardContent><POSPrinterSettings key={branchId} inline designer open onOpenChange={() => undefined} branchId={branchId} branchName={branches.find((b) => b.id === branchId)?.name} userId={userProfile?.id} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Menu Dijual di Cabang Ini ({products.filter((p) => !s.hidden_product_ids.includes(p.id)).length}/{products.length})</CardTitle></CardHeader>

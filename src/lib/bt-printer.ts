@@ -196,7 +196,7 @@ export const btSend = async (printerId: string, data: Uint8Array) => {
         if (ch.noResp) await BleClient.writeWithoutResponse(ch.deviceId, ch.service, ch.characteristic, dv);
         else await BleClient.write(ch.deviceId, ch.service, ch.characteristic, dv);
       }
-      await new Promise((r) => setTimeout(r, ch.noResp ? 30 : 10));
+      if (ch.noResp && (i / size) % 8 === 7) await new Promise((r) => setTimeout(r, 6));
     }
     return;
   }
@@ -206,7 +206,7 @@ export const btSend = async (printerId: string, data: Uint8Array) => {
     const part = data.slice(i, i + chunk);
     if (ch.properties.writeWithoutResponse) await ch.writeValueWithoutResponse(part);
     else await ch.writeValue(part);
-    await new Promise((r) => setTimeout(r, 15));
+    if (ch.properties.writeWithoutResponse) await new Promise((r) => setTimeout(r, 4));
   }
 };
 
@@ -281,7 +281,7 @@ const q = (s: string) => ascii(s).replace(/"/g, "'");
 
 /** TSPL BITMAP labels from canvases drawn at 8 dots/mm — prints exactly what the preview shows. */
 export const tsplBitmapLabels = (canvases: HTMLCanvasElement[], wMm: number, hMm: number, gapMm = 2) => {
-  const parts: (Uint8Array | number[])[] = [enc(`SIZE ${wMm} mm,${hMm} mm\r\nGAP ${gapMm} mm,0 mm\r\nDIRECTION 1\r\nREFERENCE 0,0\r\nDENSITY 12\r\nSPEED 2\r\n`)];
+  const parts: (Uint8Array | number[])[] = [enc(`SIZE ${wMm} mm,${hMm} mm\r\nGAP ${gapMm} mm,0 mm\r\nDIRECTION 1\r\nREFERENCE 0,0\r\nDENSITY 10\r\nSPEED 4\r\n`)];
   for (const c of canvases) {
     const w = c.width, h = c.height, wb = Math.ceil(w / 8);
     const px = c.getContext('2d')!.getImageData(0, 0, w, h).data;
