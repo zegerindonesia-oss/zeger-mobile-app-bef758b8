@@ -812,7 +812,7 @@ const MobileRiderDashboard = () => {
         productMap.set(productId, existing);
 
         // Count unique transactions
-        const txId = item.transactions.created_at; // Use as unique identifier
+        const txId = item.transaction_id;
         if (!transactionIds.has(txId)) {
           transactionIds.add(txId);
           totalTransactions++;
@@ -1338,23 +1338,6 @@ const MobileRiderDashboard = () => {
         </Card>
       )}
 
-      {/* Shift Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Manajemen Shift</CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-between items-center">
-          {hasActiveShift ? (
-            <Button variant="destructive" onClick={handleShiftEnd} size="sm" className="w-full">
-              Akhiri Shift
-            </Button>
-          ) : (
-            <Button onClick={handleShiftStart} size="sm" className="w-full">
-              Mulai Shift
-            </Button>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Incoming Order Dialog using MobileIncomingOrder component */}
       <MobileIncomingOrder
