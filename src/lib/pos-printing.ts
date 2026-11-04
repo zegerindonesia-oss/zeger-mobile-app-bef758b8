@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
-import { EscPos, btReady, btSend, tsplLabels, type TsplLabel } from './bt-printer';
+import { EscPos, btReady, btSend, tsplLabels, tsplBitmapLabels, type TsplLabel } from './bt-printer';
 
 export type PrinterRole = 'receipt' | 'kitchen' | 'sticker';
 export type PaperWidth = '58' | '80' | 'label';
@@ -486,18 +486,9 @@ export const escKitchen = (k: KitchenPrint, p: PrinterConfig) => {
   return e.hr().align('c').line(`Total item: ${k.items.reduce((a, i) => a + i.qty, 0)}`).feed(4).cut().bytes();
 };
 
-/** Customer cup labels: queue/table, cup n/total, item, modifiers/notes. */
-export const tsplCustomer = (k: KitchenPrint, p: PrinterConfig) => {
-  const total = k.items.reduce((a, i) => a + i.qty, 0); let n = 0;
-  const labels: TsplLabel[] = [];
-  k.items.forEach((i) => { for (let x = 0; x < i.qty; x++) { n++; labels.push({ lines: [
-    { text: `${k.table_number ? `MEJA ${k.table_number}` : `#${k.ref.slice(-3)}`}  ${n}/${total}`, bold: true },
-    { text: ascii(i.product_name).slice(0, Math.floor(((p.labelW || 33) * 8 - 8) / 12)), big: true },
-    ...(i.notes ? [{ text: ascii(i.notes).slice(0, 30) }] : []),
-    { text: ascii(k.customer_name || '').slice(0, Math.floor(((p.labelW || 33) * 8 - 8) / 8)) },
-  ] }); } });
-  return tsplLabels(labels, p.labelW || 33, p.labelH || 15, 2, p.fontScale ?? 100, p.lineSpacing ?? 1.25);
-};
+/** Customer cup labels over Bluetooth: bitmap of the exact preview canvas. */
+export const tsplCustomer = (k: KitchenPrint, p: PrinterConfig) =>
+  tsplBitmapLabels(customerLabelCanvases(k, p), p.labelW || 33, p.labelH || 15, 2);
 
 const sendBt = async (p: PrinterConfig, bytes: Uint8Array) => {
   if (p.connection !== 'bluetooth' || !(await btReady(p.id))) return false;
