@@ -86,7 +86,7 @@ export const CloseShiftModal = ({ open, expectedCash, onClose, onConfirm }: Clos
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="w-[94vw] max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Tutup Shift</DialogTitle>
         </DialogHeader>

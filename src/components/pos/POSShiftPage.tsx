@@ -26,7 +26,7 @@ const TABS: { id: Tab; label: string; icon: any }[] = [
 ];
 
 const Line = ({ l, v, strong, tone }: { l: string; v: string; strong?: boolean; tone?: 'neg' | 'pos' }) => (
-  <div className={cn('flex justify-between items-center px-5 py-3.5 border-b last:border-b-0 text-[15px]', strong && 'bg-primary/5 font-bold')}>
+  <div className={cn('flex justify-between items-center gap-3 px-4 md:px-5 py-3.5 border-b last:border-b-0 text-[15px]', strong && 'bg-primary/5 font-bold')}>
     <span className={cn(!strong && 'text-foreground/80')}>{l}</span>
     <span className={cn('tabular-nums font-semibold', tone === 'neg' && 'text-destructive', tone === 'pos' && 'text-success')}>{v}</span>
   </div>
@@ -100,7 +100,7 @@ export const POSShiftPage = ({ branchId, branchName, kasirName }: { branchId: st
           <div className="text-lg md:text-xl font-bold truncate">{branchName} · {r?.kasir_name || kasirName}</div>
           {r && <div className="text-xs opacity-90">Shift {r.shift_type} · buka {jkt(r.opened_at)}{r.closed_at ? ` · tutup ${jkt(r.closed_at)}` : ' · sedang berlangsung'}</div>}
         </div>
-        <div className="flex items-center gap-2 rounded-xl bg-primary-foreground/15 px-4 py-2">
+        <div className="hidden sm:flex items-center gap-2 rounded-xl bg-primary-foreground/15 px-4 py-2">
           <CalendarDays className="h-5 w-5" />
           <div className="leading-tight"><div className="font-semibold text-sm capitalize">{dateStr}</div><div className="text-xs opacity-90">{timeStr} WIB</div></div>
         </div>
@@ -222,14 +222,18 @@ export const POSShiftPage = ({ branchId, branchName, kasirName }: { branchId: st
                 {!isZ && !viewShift && (
                   <div className="rounded-2xl border-2 border-destructive/30 bg-card p-4 space-y-3">
                     <div className="font-bold flex items-center gap-2"><Lock className="h-4 w-4 text-destructive" /> Tutup Shift</div>
-                    <div className="grid sm:grid-cols-3 gap-3 items-center">
-                      <Input type="number" inputMode="numeric" placeholder="Uang fisik di laci (Rp)" value={counted} onChange={(e) => setCounted(e.target.value)} className="h-12 text-lg font-bold" />
-                      <Input placeholder="Catatan (opsional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="h-12" />
-                      <div className={cn('text-sm font-bold', diff == null ? 'text-muted-foreground' : diff < 0 ? 'text-destructive' : 'text-success')}>
+                    <div className="space-y-3">
+                      <Input type="text" inputMode="numeric" placeholder="Uang fisik di laci (Rp)" value={counted ? Number(counted).toLocaleString('id-ID') : ''} onChange={(e) => setCounted(e.target.value.replace(/\D/g, ''))} className="h-16 text-2xl font-bold text-center" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button type="button" variant="secondary" className="h-12 text-base" onClick={() => setCounted(String(Math.round(r.expected_cash)))}>Sesuai sistem</Button>
+                        <Button type="button" variant="outline" className="h-12 text-base" onClick={() => setCounted('')}>Hapus</Button>
+                      </div>
+                      <div className={cn('rounded-xl p-3 text-center text-lg font-bold', diff == null ? 'bg-muted text-muted-foreground' : diff < 0 ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>
                         {diff == null ? 'Selisih: -' : `Selisih: ${diff >= 0 ? '+' : ''}${rp(diff)}`}
                       </div>
+                      <Input placeholder="Catatan (opsional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="h-12 text-base" />
                     </div>
-                    <Button variant="destructive" className="h-12 w-full sm:w-72" disabled={busy} onClick={close}>{busy ? 'Memproses...' : 'Tutup Shift & Cetak Z-Report'}</Button>
+                    <Button variant="destructive" className="h-14 text-base w-full" disabled={busy} onClick={close}>{busy ? 'Memproses...' : 'Tutup Shift & Cetak Z-Report'}</Button>
                   </div>
                 )}
               </div>}
