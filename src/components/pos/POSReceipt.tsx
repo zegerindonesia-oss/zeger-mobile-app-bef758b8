@@ -55,18 +55,26 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, bran
   const saveCustomer = async () => {
     const wa = toWa(phone);
     if (!wa && !email.trim()) return;
+    if (wa.length < 9) return;
     try {
-      const { data: ex } = wa ? await supabase.from('customers').select('id').eq('phone', wa).limit(1).maybeSingle() : { data: null };
-      const row: any = { name: cName.trim() || 'Customer', phone: wa || null, email: email.trim() || null, branch_id: branchId || null, is_active: true };
-      if (ex?.id) await supabase.from('customers').update({ name: row.name, ...(row.email ? { email: row.email } : {}) }).eq('id', ex.id);
-      else await supabase.from('customers').insert(row);
-    } catch (e) { console.error('save customer failed', e); }
+      // Save to CRM (customer_users) — phone-deduplicated, becomes a member automatically.
+      const { data: res, error } = await (supabase as any).rpc('pos_quick_member', {
+        _phone: wa, _name: cName.trim() || null, _branch_id: branchId || null, _cashier_name: data.kasir_name || null,
+      });
+      if (error) throw error;
+      const m = Array.isArray(res) ? res[0] : res;
+      if (m?.id && data.id) {
+        await supabase.from('pos_transactions').update({ member_id: m.id, ...(cName.trim() ? { customer_name: cName.trim() } : {}) } as any)
+          .eq('id', data.id).is('member_id', null);
+      }
+    } catch (e: any) { console.error('save customer failed', e); toast.error('Gagal simpan pelanggan ke CRM: ' + (e?.message || '')); }
   };
   const lookup = async () => {
     const wa = toWa(phone);
     if (wa.length < 9) return;
-    const { data: c } = await supabase.from('customers').select('name,email').eq('phone', wa).limit(1).maybeSingle();
-    if (c) { if (!cName) setCName(c.name || ''); if (!email && (c as any).email) setEmail((c as any).email); toast.success('Customer lama ditemukan'); }
+    const { data: r } = await (supabase as any).rpc('lookup_member', { _code: wa });
+    const c = Array.isArray(r) ? r[0] : r;
+    if (c) { if (!cName) setCName(c.name || ''); if (!email && c.email) setEmail(c.email); toast.success('Pelanggan lama ditemukan'); }
   };
   const link = data.id ? `${window.location.origin}/r/${data.id}` : '';
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
