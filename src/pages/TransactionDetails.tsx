@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Filter, Search } from "lucide-react";
+import { Download, Filter, Search, FileText, MessageCircle, Mail } from "lucide-react";
+import jsPDF from "jspdf";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
@@ -347,6 +349,47 @@ export const TransactionDetails = () => {
     a.click();
   };
 
+  const buildPdf = () => {
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 10;
+    const branchName = selectedBranch === 'all' ? 'Semua Cabang' : (branches.find(b => b.id === selectedBranch)?.name || '-');
+    const riderName = selectedRider === 'all' ? 'Semua User' : (riders.find(r => r.id === selectedRider)?.full_name || assignedRiderName || '-');
+    let y = 14;
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(14); pdf.text("Laporan Penjualan - Detail Transaksi", m, y); y += 6;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+    pdf.text(`Periode: ${startDate} s/d ${endDate}  |  Cabang: ${branchName}  |  Brand: ${selectedBrand === 'all' ? 'Semua Brand' : selectedBrand}  |  User: ${riderName}`, m, y); y += 6;
+    pdf.text(`Penjualan Bersih: ${formatCurrency(summary.netSales)}   Kotor: ${formatCurrency(summary.grossSales)}   Biaya Bahan: ${formatCurrency(summary.totalCost)}   Profit: ${formatCurrency(summary.totalProfit)}   Item: ${summary.totalQuantity}`, m, y); y += 8;
+    const head = ['ID Transaksi', 'Tanggal', 'Menu', 'Brand', 'Qty', 'Harga Bahan', 'Harga Jual', 'Profit', 'Bayar'];
+    const widths = [38, 32, 60, 30, 12, 26, 26, 26, 27];
+    const row = (r: (string | number)[], bold = false) => {
+      if (y > H - 10) { pdf.addPage(); y = 14; }
+      pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(7.5);
+      let x = m;
+      r.forEach((c, i) => { pdf.text(pdf.splitTextToSize(String(c ?? ""), widths[i] - 1)[0] || "", x, y); x += widths[i]; });
+      y += 5;
+    };
+    row(head, true); pdf.line(m, y - 3.5, W - m, y - 3.5);
+    transactionDetails.forEach(d => row([d.transaction_number, formatDate(d.transaction_date), d.menu_name, d.brand, d.quantity, formatCurrency(d.cost_price), formatCurrency(d.selling_price), formatCurrency(d.profit), d.payment_method]));
+    return pdf;
+  };
+  const pdfName = () => `Laporan-Penjualan-${selectedBrand === 'all' ? 'Semua' : selectedBrand}-${startDate}_${endDate}.pdf`;
+
+  const exportPDF = () => buildPdf().save(pdfName());
+
+  const sharePDF = async (channel: 'wa' | 'email') => {
+    const pdf = buildPdf();
+    const file = new File([pdf.output('blob')], pdfName(), { type: 'application/pdf' });
+    const text = `Laporan Penjualan ${startDate} s/d ${endDate} - Penjualan Bersih ${formatCurrency(summary.netSales)}`;
+    const nav: any = navigator;
+    if (nav.canShare && nav.canShare({ files: [file] })) {
+      try { await nav.share({ files: [file], title: 'Laporan Penjualan', text }); return; } catch { return; }
+    }
+    pdf.save(pdfName());
+    toast.info('PDF sudah diunduh, lampirkan file tersebut di pesan.');
+    if (channel === 'wa') window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    else window.location.href = `mailto:?subject=${encodeURIComponent('Laporan Penjualan')}&body=${encodeURIComponent(text)}`;
+  };
+
   const getPaymentMethodBadge = (method: string) => {
     const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
       'cash': 'default',
@@ -365,10 +408,24 @@ export const TransactionDetails = () => {
           <h1 className="text-2xl font-bold text-gray-900">Detail Transaksi</h1>
           <p className="text-sm text-muted-foreground">Detail transaksi per menu dengan analisis profit</p>
         </div>
-        <Button onClick={exportToCSV} className="bg-primary hover:bg-primary-dark">
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button onClick={exportPDF} disabled={loading}>
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
+          <Button variant="outline" onClick={() => sharePDF('wa')} disabled={loading}>
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Kirim WhatsApp
+          </Button>
+          <Button variant="outline" onClick={() => sharePDF('email')} disabled={loading}>
+            <Mail className="h-4 w-4 mr-2" />
+            Kirim Email
+          </Button>
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            CSV
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -472,6 +529,17 @@ export const TransactionDetails = () => {
                     </Select>
                   </div>
                 )}
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Brand</label>
+                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                    <SelectTrigger><SelectValue placeholder="Semua brand" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Brand</SelectItem>
+                      {brands.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
