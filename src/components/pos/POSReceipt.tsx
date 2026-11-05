@@ -149,7 +149,7 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, onPr
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[94vw] md:w-[80vw] max-w-6xl max-h-[90dvh] overflow-y-auto rounded-3xl p-4 md:p-6">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-4 md:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
             <CheckCircle className="h-6 w-6 text-primary" /> Pembayaran Berhasil

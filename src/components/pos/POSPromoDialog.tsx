@@ -40,7 +40,7 @@ export const POSPromoDialog = ({ open, scope, baseAmount, itemName, onClose, onA
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader>
           <DialogTitle>
             {scope === 'item' ? `Diskon: ${itemName}` : 'Diskon Bill'}

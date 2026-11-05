@@ -112,7 +112,7 @@ export const POSTableMap = ({ open, onOpenChange, branchId, canManage, selectedT
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setActive(null); setMode(null); } }}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Armchair className="h-5 w-5 text-primary" /> Denah Meja</DialogTitle>
         </DialogHeader>
@@ -358,7 +358,7 @@ export const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
         ))}
       </div>
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
           <DialogHeader><DialogTitle>Edit Meja</DialogTitle></DialogHeader>
           <label className="space-y-1 text-sm">Nomor meja<Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} /></label>
           <label className="space-y-1 text-sm">Kapasitas kursi<Input type="number" min={1} value={editCapacity} onChange={(e) => setEditCapacity(e.target.value)} /></label>
@@ -368,7 +368,7 @@ export const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
         </DialogContent>
       </Dialog>
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
-        <DialogContent className="max-w-xs text-center">
+        <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
           <DialogHeader><DialogTitle>Meja {preview?.table_number}</DialogTitle></DialogHeader>
           {preview && <div className="flex flex-col items-center gap-3">
             <div className="rounded-xl bg-card p-3 border"><QRCodeSVG value={tableQrUrl(branchId, preview.table_number)} size={200} /></div>

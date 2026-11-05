@@ -214,7 +214,7 @@ export const POSVoiceOrder = ({ onAdd, onMember }: Props) => {
         <Mic className={`h-4 w-4 mr-1 ${listening ? 'animate-pulse' : ''}`} /> Voice
       </Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o && !auto) stop(); setOpen(o); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Voice Order AI</DialogTitle>
           </DialogHeader>

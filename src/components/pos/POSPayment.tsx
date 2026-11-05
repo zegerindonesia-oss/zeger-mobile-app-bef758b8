@@ -88,7 +88,7 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader>
           <DialogTitle>Pembayaran</DialogTitle>
         </DialogHeader>
