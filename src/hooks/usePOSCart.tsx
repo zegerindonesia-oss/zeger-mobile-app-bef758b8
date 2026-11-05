@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+const CART_KEY = 'pos_cart_draft_v1';
 import { applyModePrice, type ModePricingRule } from '@/lib/pos-mode-pricing';
 
 export interface POSCartItem {
@@ -35,7 +36,12 @@ const lineKey = (pid: string, mods: string[] = [], notes = '') =>
   `${pid}::${[...mods].sort().join('|')}::${notes.trim().toLowerCase()}`;
 
 export const usePOSCart = () => {
-  const [items, setItems] = useState<POSCartItem[]>([]);
+  const [items, setItems] = useState<POSCartItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(CART_KEY, JSON.stringify(items)); } catch { /* ignore */ }
+  }, [items]);
   const [discountBill, setDiscountBill] = useState(0);
   const [taxPercent, setTaxPercent] = useState(0);
   const [serviceChargePercent, setServiceChargePercent] = useState(0);

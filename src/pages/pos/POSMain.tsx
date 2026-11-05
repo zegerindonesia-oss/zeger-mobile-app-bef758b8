@@ -82,6 +82,7 @@ const POSMain = () => {
   const [splitOpen, setSplitOpen] = useState(false);
   const [pendingSplit, setPendingSplit] = useState<SplitResult | null>(null);
   const [splitIndex, setSplitIndex] = useState(0);
+  const [splitPay, setSplitPay] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [member, setMember] = useState<LoyaltyMember | null>(null);
   const [memberScanOpen, setMemberScanOpen] = useState(false);
@@ -387,6 +388,7 @@ const POSMain = () => {
       }
 
       setPaymentOpen(false);
+      setSplitPay(false);
       cart.clear();
       promo.clearPromos();
       setRedemption(null);
@@ -685,7 +687,7 @@ const POSMain = () => {
             removeItem={cart.removeItem}
             onClear={cart.clear}
             onPay={() => { setCartOpen(false); setPaymentOpen(true); }}
-            onSplit={() => { setCartOpen(false); setSplitOpen(true); }}
+            onSplit={() => { setCartOpen(false); setSplitPay(true); setPaymentOpen(true); }}
             branchId={userProfile?.branch_id || null}
             appliedPromos={promo.appliedPromos}
             onApplyVoucher={handleApplyVoucher}
@@ -731,8 +733,10 @@ const POSMain = () => {
         open={paymentOpen}
         total={paymentTotal}
         methods={branchPos?.payment_methods}
+        splitMode={splitPay}
         onClose={() => {
           setPaymentOpen(false);
+          setSplitPay(false);
           if (pendingSplit) {
             setPendingSplit(null);
             setSplitIndex(0);
