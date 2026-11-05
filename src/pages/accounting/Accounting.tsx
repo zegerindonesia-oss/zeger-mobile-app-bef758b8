@@ -13,6 +13,7 @@ import { Plus, Trash2, Pencil, ChevronRight, BookOpen, Search, RefreshCw } from 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import BankTransactionsTab from "./BankTransactionsTab";
+import UnitProfitLoss from "@/pages/finance/UnitProfitLoss";
 
 const db = supabase as any;
 const rp = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);
@@ -38,6 +39,7 @@ const TABS = [
   { id: "ledger", label: "Buku Besar" },
   { id: "trial-balance", label: "Neraca Saldo" },
   { id: "profit-loss", label: "Laba Rugi" },
+  { id: "profit-loss-journal", label: "Laba Rugi (Jurnal)" },
   { id: "transactions", label: "Data Transaksi" },
 ];
 const SOURCES: Record<string, string> = { manual: "Manual", pos_sales: "Penjualan", pos_cogs: "HPP Bahan Baku", purchase: "Pembelian Bahan", bank: "Mutasi Bank", opex: "Beban Outlet", rider_opex: "Beban Rider" };
@@ -81,7 +83,8 @@ export default function Accounting() {
       {tab === "journal" && <JournalTab accounts={accounts} branch={branch} />}
       {tab === "ledger" && <LedgerTab accounts={accounts} branch={branch} />}
       {tab === "trial-balance" && <TrialBalanceTab accounts={accounts} branch={branch} />}
-      {tab === "profit-loss" && <ProfitLossTab accounts={accounts} branch={branch} />}
+      {tab === "profit-loss" && <UnitProfitLoss />}
+      {tab === "profit-loss-journal" && <ProfitLossTab accounts={accounts} branch={branch} />}
       {tab === "transactions" && <BankTransactionsTab accounts={accounts} branch={branch} branches={branches} />}
     </div>
   );
