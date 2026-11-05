@@ -37,6 +37,8 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
   const [loading, setLoading] = useState(true);
   const [tx, setTx] = useState<any[]>([]);
   const [pos, setPos] = useState<any[]>([]);
+  const [byBranch, setByBranch] = useState<{ name: string; value: number }[]>([]);
+  const [byBrand, setByBrand] = useState<{ name: string; value: number }[]>([]);
   const effectiveBranch = lockedBranch || (branchId === "all" ? null : branchId);
   const range = useMemo(() => ({ start: startDate, end: endDate }), [startDate, endDate]);
 
@@ -49,7 +51,7 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
           fetchAll(() => {
             let q = supabase
               .from("transactions")
-              .select("final_amount, payment_method, transaction_date")
+              .select("id, final_amount, payment_method, transaction_date, branch_id")
               .eq("status", "completed")
               .eq("is_voided", false)
               .gte("transaction_date", `${range.start}T00:00:00+07:00`)
@@ -77,10 +79,30 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
             ? [[t.payment_method_1, Number(t.amount_1 || 0)], [t.payment_method_2, Number(t.amount_2 || 0)]]
             : [[t.payment_method_1, Number(t.total || 0)]];
           return parts.map(([m, amt], i) => ({
-            final_amount: amt, payment_method: m || "lainnya", transaction_date: t.created_at, _pos: i === 0, _src: "outlet",
+            final_amount: amt, payment_method: m || "lainnya", transaction_date: t.created_at, branch_id: t.branch_id, _pos: i === 0, _src: "outlet",
           }));
         });
         setTx([...txRows.map((t: any) => ({ ...t, _src: "rider" })), ...posAsTx]);
+        // Branch & brand contribution
+        const [{ data: br }, { data: prods }] = await Promise.all([
+          supabase.from("branches").select("id, name"),
+          supabase.from("products").select("id, brand"),
+        ]);
+        const bName = new Map((br || []).map((b: any) => [b.id, b.name]));
+        const pBrand = new Map((prods || []).map((p: any) => [p.id, p.brand || "Tanpa Brand"]));
+        const bm: Record<string, number> = {};
+        txRows.forEach((t: any) => { const k = bName.get(t.branch_id) || "Lainnya"; bm[k] = (bm[k] || 0) + Number(t.final_amount || 0); });
+        posRows.forEach((t: any) => { const k = bName.get(t.branch_id) || "Lainnya"; bm[k] = (bm[k] || 0) + Number(t.total || 0); });
+        const brm: Record<string, number> = {};
+        posRows.forEach((t: any) => (t.pos_transaction_items || []).forEach((i: any) => { const k = pBrand.get(i.product_id) || "Tanpa Brand"; brm[k] = (brm[k] || 0) + Number(i.subtotal_item || 0); }));
+        const ids = txRows.map((t: any) => t.id);
+        for (let i = 0; i < ids.length; i += 150) {
+          const { data } = await supabase.from("transaction_items").select("product_id, total_price").in("transaction_id", ids.slice(i, i + 150));
+          (data || []).forEach((it: any) => { const k = pBrand.get(it.product_id) || "Tanpa Brand"; brm[k] = (brm[k] || 0) + Number(it.total_price || 0); });
+        }
+        if (cancelled) return;
+        setByBranch(Object.entries(bm).map(([name, value]) => ({ name, value })));
+        setByBrand(Object.entries(brm).map(([name, value]) => ({ name, value })));
         setPos((poRes.data || []).filter((p: any) => Number(p.total_amount) - Number(p.paid_amount || 0) > 0));
       } catch (e) {
         console.error("Overview load error", e);
@@ -182,42 +204,12 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
             </ResponsiveContainer>
           )}
         </div>
-        <div className="bo-card bo-card-hover p-5">
-          <h3 className="font-semibold">Metode Pembayaran</h3>
-          <p className="text-xs text-muted-foreground mb-2">Porsi omset per metode</p>
-          {loading ? <Skeleton className="h-64 w-full" /> : pay.length === 0 ? <p className="text-sm text-muted-foreground py-20 text-center">Belum ada transaksi</p> : (
-            <>
-              <div className="relative">
-                <ResponsiveContainer width="100%" height={190}>
-                  <PieChart>
-                    <defs>{PIE.map((c, i) => <linearGradient key={i} id={`boPie${i}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor={c} stopOpacity={1} /><stop offset="1" stopColor={c} stopOpacity={0.7} /></linearGradient>)}</defs>
-                    <Pie data={pay} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={4} cornerRadius={8} stroke="none">
-                      {pay.map((_, i) => <Cell key={i} fill={`url(#boPie${i % PIE.length})`} />)}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => rp(v)} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 grid place-items-center pointer-events-none text-center">
-                  <div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div><div className="text-base font-bold">{short(total)}</div></div>
-                </div>
-              </div>
-              <div className="space-y-2 mt-2">
-                {pay.sort((a, b) => b.value - a.value).map((p, i) => {
-                  const pct = total ? (p.value / total) * 100 : 0;
-                  return (
-                    <div key={p.name}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="flex items-center gap-2 font-medium"><span className="h-2.5 w-2.5 rounded-full" style={{ background: PIE[i % PIE.length] }} />{p.name}</span>
-                        <span className="text-muted-foreground">{rp(p.value)} · <b className="text-foreground">{pct.toFixed(0)}%</b></span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: PIE[i % PIE.length] }} /></div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+        <DonutCard title="Metode Pembayaran" sub="Porsi omset per metode" data={pay} loading={loading} id="pay" />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <DonutCard title="Omset per Cabang" sub="Kontribusi tiap cabang terhadap total omset" data={byBranch} loading={loading} id="branch" />
+        <DonutCard title="Omset per Brand" sub="Kontribusi tiap brand terhadap omset menu" data={byBrand} loading={loading} id="brand" />
       </div>
 
       <div className="grid lg:grid-cols-5 gap-4">
@@ -275,5 +267,48 @@ export const BackOfficeOverview = ({ startDate, endDate, branchId, refreshKey = 
         </div>
       </div>
     </section>
+  );
+};
+
+const DonutCard = ({ title, sub, data, loading, id }: { title: string; sub: string; data: { name: string; value: number }[]; loading: boolean; id: string }) => {
+  const rows = [...data].sort((a, b) => b.value - a.value);
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  return (
+    <div className="bo-card bo-card-hover p-5">
+      <h3 className="font-semibold">{title}</h3>
+      <p className="text-xs text-muted-foreground mb-2">{sub}</p>
+      {loading ? <Skeleton className="h-64 w-full" /> : rows.length === 0 ? <p className="text-sm text-muted-foreground py-20 text-center">Belum ada transaksi</p> : (
+        <>
+          <div className="relative">
+            <ResponsiveContainer width="100%" height={190}>
+              <PieChart>
+                <defs>{PIE.map((c, i) => <linearGradient key={i} id={`bo${id}${i}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor={c} stopOpacity={1} /><stop offset="1" stopColor={c} stopOpacity={0.7} /></linearGradient>)}</defs>
+                <Pie data={rows} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={4} cornerRadius={8} stroke="none">
+                  {rows.map((_, i) => <Cell key={i} fill={`url(#bo${id}${i % PIE.length})`} />)}
+                </Pie>
+                <Tooltip formatter={(v: number) => rp(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 grid place-items-center pointer-events-none text-center">
+              <div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div><div className="text-base font-bold">{short(total)}</div></div>
+            </div>
+          </div>
+          <div className="space-y-2 mt-2">
+            {rows.map((p, i) => {
+              const pct = total ? (p.value / total) * 100 : 0;
+              return (
+                <div key={p.name}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="flex items-center gap-2 font-medium"><span className="h-2.5 w-2.5 rounded-full" style={{ background: PIE[i % PIE.length] }} />{p.name}</span>
+                    <span className="text-muted-foreground">{rp(p.value)} · <b className="text-foreground">{pct.toFixed(0)}%</b></span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: PIE[i % PIE.length] }} /></div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 };

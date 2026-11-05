@@ -170,6 +170,7 @@ const getMenuItems = (userRole: string): MenuItem[] => [
     icon: BarChart3,
     roles: ["1_HO_Admin", "1_HO_Owner", "2_Hub_Branch_Manager", "3_SB_Branch_Manager", "ho_admin", "branch_manager", "finance"],
     children: [
+      { id: "pos-report", label: "Laporan POS", icon: FileText, path: "/reports/pos" },
       { id: "sales-report", label: "Sales Report", icon: FileText, path: "/reports/sales" },
       { id: "inventory-report", label: "Inventory Report", icon: FileText, path: "/reports/inventory" },
       { id: "financial-report", label: "Financial Report", icon: FileText, path: "/reports/financial" }
