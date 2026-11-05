@@ -7,7 +7,7 @@ import { defaultSelection, getModifierGroups, modifierPrice } from '@/lib/pos-mo
 import type { AddItemOptions } from '@/hooks/usePOSCart';
 
 interface Props {
-  product: { name: string; price: number; category: string | null; custom_options?: any } | null;
+  product: { id?: string; code?: string; name: string; price: number; category: string | null; brand?: string | null; sub_category?: string | null; modifier_group_ids?: string[] | null; custom_options?: any } | null;
   onClose: () => void;
   onConfirm: (opts: AddItemOptions) => void;
   /** Prefill when editing an existing cart line. */
