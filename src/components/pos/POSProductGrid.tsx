@@ -53,6 +53,8 @@ const toCartProduct = (p: Product) => ({
   product_id: p.id, product_code: p.code, product_name: p.name,
   category: p.category, price: Number(p.price), image_url: p.image_url,
   base_price: Number(p.price), custom_options: p.custom_options,
+  brand: (p as any).brand ?? null, sub_category: (p as any).sub_category ?? null,
+  modifier_group_ids: (p as any).modifier_group_ids ?? null,
 });
 
 export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, toolbar, hiddenProductIds = [], priceRule = null }: Props) => {

@@ -23,6 +23,10 @@ export interface POSCartItem {
   custom_options?: any;
   /** Variant surcharge at offline price, so mode pricing can be reapplied. */
   extra_price?: number;
+  /** Product metadata so master variant groups resolve when editing. */
+  brand?: string | null;
+  sub_category?: string | null;
+  modifier_group_ids?: string[] | null;
 }
 
 export interface AddItemOptions { qty?: number; modifiers?: string[]; notes?: string; extraPrice?: number }

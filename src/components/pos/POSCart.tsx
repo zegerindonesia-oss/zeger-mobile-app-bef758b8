@@ -75,7 +75,7 @@ export const POSCart = ({
   const [promoDialogTarget, setPromoDialogTarget] = useState<POSCartItem | null>(null);
   const [showAdjust, setShowAdjust] = useState(false);
   const [editing, setEditing] = useState<POSCartItem | null>(null);
-  const editProduct = useMemo(() => editing ? { name: editing.product_name, price: editing.base_price ?? editing.price, category: editing.category, custom_options: editing.custom_options } : null, [editing]);
+  const editProduct = useMemo(() => editing ? { id: editing.product_id, code: editing.product_code, name: editing.product_name, price: editing.base_price ?? editing.price, category: editing.category, brand: editing.brand, sub_category: editing.sub_category, modifier_group_ids: editing.modifier_group_ids, custom_options: editing.custom_options } : null, [editing]);
   const editInitial = useMemo(() => editing ? { qty: editing.qty, modifiers: editing.modifiers || [], notes: editing.notes } : null, [editing]);
 
   const voucher = appliedPromos.find((p) => p.source === 'voucher');
