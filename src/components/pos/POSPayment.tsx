@@ -1,11 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { POSQrisDialog } from './POSQrisDialog';
 import { resolvePaymentMethods, type PaymentMethodConfig } from '@/lib/pos-payment-methods';
 import { cn } from '@/lib/utils';
 
@@ -51,7 +50,9 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
   const [method2, setMethod2] = useState('qris');
   const [amount2, setAmount2] = useState<number>(0);
   const [processing, setProcessing] = useState(false);
-  const [qrisOpen, setQrisOpen] = useState(false);
+  // Cash defaults to exact amount (uang pas) so the cashier can confirm immediately.
+  useEffect(() => { if (open) { setMethod1('cash'); setMixed(false); setAmount1(total); setAmount2(0); } }, [open, total]);
+  useEffect(() => { if (method1 === 'cash' && !mixed) setAmount1(total); }, [method1]);
 
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
 
@@ -109,7 +110,8 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
               <>
                 <Input
                   type="number"
-                  className="mt-2"
+                  inputMode="numeric"
+                  className="mt-2 h-12 text-lg font-bold border-2 border-primary focus-visible:ring-primary shadow-[0_4px_12px_-6px_hsl(var(--primary)/0.5)]"
                   placeholder="Nominal"
                   value={amount1 || ''}
                   onChange={(e) => setAmount1(Number(e.target.value) || 0)}
@@ -134,7 +136,8 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
               <MethodGrid items={METHODS.filter((m) => m.value !== method1)} value={method2} onChange={setMethod2} />
               <Input
                 type="number"
-                className="mt-2"
+                inputMode="numeric"
+                className="mt-2 h-12 text-lg font-bold border-2 border-primary focus-visible:ring-primary"
                 placeholder="Nominal"
                 value={amount2 || ''}
                 onChange={(e) => setAmount2(Number(e.target.value) || 0)}
@@ -151,23 +154,11 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={processing}>Batal</Button>
-          {method1 === 'qris' && !mixed ? (
-            <Button onClick={() => setQrisOpen(true)} disabled={processing}>
-              {processing ? 'Memproses...' : 'Tampilkan QRIS'}
-            </Button>
-          ) : (
-            <Button onClick={handleConfirm} disabled={processing}>
-              {processing ? 'Memproses...' : 'Konfirmasi Bayar'}
-            </Button>
-          )}
+          <Button onClick={handleConfirm} disabled={processing}>
+            {processing ? 'Memproses...' : 'Konfirmasi Bayar'}
+          </Button>
         </DialogFooter>
       </DialogContent>
-      <POSQrisDialog
-        open={qrisOpen}
-        amount={total}
-        onClose={() => setQrisOpen(false)}
-        onPaid={() => { setQrisOpen(false); handleConfirm(); }}
-      />
     </Dialog>
   );
 };

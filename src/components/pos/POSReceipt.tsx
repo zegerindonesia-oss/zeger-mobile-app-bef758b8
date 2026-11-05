@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, MessageCircle, CheckCircle, Mail, UserPlus, Tag } from 'lucide-react';
+import { Printer, MessageCircle, CheckCircle, Mail, UserPlus, Tag, ChefHat, FileDown, RotateCcw, Undo2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +37,8 @@ interface Props {
   onClose: () => void;
   onPrint?: () => void;
   onPrintStickers?: () => void;
+  onPrintKitchen?: () => void;
+  onVoid?: () => void;
   branchId?: string | null;
   defaultPhone?: string | null;
   printSettings?: PrintSettings;
@@ -44,7 +46,7 @@ interface Props {
 
 const toWa = (p: string) => { const d = p.replace(/\D/g, ''); return d.startsWith('0') ? '62' + d.slice(1) : d.startsWith('62') ? d : d ? '62' + d : ''; };
 
-export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, branchId, defaultPhone, printSettings }: Props) => {
+export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, onPrintKitchen, onVoid, branchId, defaultPhone, printSettings }: Props) => {
   const [cName, setCName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -125,52 +127,73 @@ export const POSReceipt = ({ open, data, onClose, onPrint, onPrintStickers, bran
     saveCustomer();
   };
 
+  const receiptHtml = printSettings ? (() => {
+    const paper = ((printSettings.printers.find((p) => p.role === 'receipt')?.paper as PaperWidth) || '80');
+    return renderReceipt(data as any, printSettings, paper === ('label' as any) ? '80' : paper);
+  })() : '';
+  const savePdf = () => {
+    if (!receiptHtml) return link ? window.open(link, '_blank') : toast.error('Struk belum siap');
+    const w = window.open('', '_blank');
+    if (!w) return toast.error('Izinkan pop-up untuk simpan PDF');
+    w.document.write(receiptHtml); w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 400);
+  };
+  const actions = [
+    { label: 'Cetak Struk', icon: Printer, onClick: handlePrint, show: true },
+    { label: 'Cetak Dapur', icon: ChefHat, onClick: onPrintKitchen, show: !!onPrintKitchen },
+    { label: 'Cetak Stiker', icon: Tag, onClick: onPrintStickers, show: !!onPrintStickers },
+    { label: 'Simpan PDF', icon: FileDown, onClick: savePdf, show: true },
+    { label: 'Pesan Lagi', icon: RotateCcw, onClick: () => { saveCustomer(); onClose(); }, show: true },
+    { label: 'Void / Refund', icon: Undo2, onClick: onVoid, show: !!onVoid, danger: true },
+  ].filter((a) => a.show);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-sm max-h-[92dvh] overflow-y-auto rounded-2xl">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-6xl max-h-[90dvh] overflow-y-auto rounded-3xl p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-success">
-            <CheckCircle className="h-5 w-5 text-primary" /> Pembayaran Berhasil
+          <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <CheckCircle className="h-6 w-6 text-primary" /> Pembayaran Berhasil
+            <span className="ml-auto mr-6 text-base font-extrabold text-primary">{fmt(data.total)}</span>
           </DialogTitle>
           <DialogDescription className="sr-only">Kirim struk ke WhatsApp customer</DialogDescription>
         </DialogHeader>
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
-          <Input placeholder="No. WhatsApp customer (08…)" inputMode="tel" autoFocus value={phone}
-            onChange={(e) => setPhone(e.target.value)} onBlur={lookup}
-            onKeyDown={(e) => { if (e.key === 'Enter') quickWa(); }} className="h-12 text-base" />
-          <div className="grid grid-cols-2 gap-2">
-            <Button className="h-12 font-bold" onClick={quickWa}>
-              <MessageCircle className="h-4 w-4" /> Kirim WA
-            </Button>
-            <Button variant="outline" className="h-12 font-bold" onClick={() => { saveCustomer(); onClose(); }}>Selesai</Button>
+        <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+          <div className="space-y-3 min-w-0">
+            <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-3 space-y-2 shadow-sm">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-primary"><UserPlus className="h-3.5 w-3.5" /> Kirim struk WA & simpan pelanggan</div>
+              <Input placeholder="No. WhatsApp customer (08…)" inputMode="tel" autoFocus value={phone}
+                onChange={(e) => setPhone(e.target.value)} onBlur={lookup}
+                onKeyDown={(e) => { if (e.key === 'Enter') quickWa(); }} className="h-12 text-base border-2 border-primary/50" />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Nama customer" value={cName} onChange={(e) => setCName(e.target.value)} className="h-11" />
+                <Input placeholder="Email (opsional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" className="pos-3d-btn pos-3d-primary h-12" onClick={quickWa}>
+                  <MessageCircle className="h-4 w-4" /> Kirim WA
+                </button>
+                <button type="button" className="pos-3d-btn h-12" onClick={handleEmail}>
+                  <Mail className="h-4 w-4 text-primary" /> Email
+                </button>
+              </div>
+            </div>
+            {receiptHtml && <iframe title="Pratinjau struk" srcDoc={receiptHtml} className="w-full h-[300px] md:h-[46vh] rounded-2xl border bg-card shadow-inner" />}
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {actions.map((a) => (
+                <button key={a.label} type="button" onClick={a.onClick}
+                  className={`pos-3d-btn flex-col h-24 md:h-28 text-sm ${a.danger ? 'pos-3d-danger' : ''}`}>
+                  <span className="pos-3d-icon"><a.icon className="h-5 w-5" /></span>
+                  {a.label}
+                </button>
+              ))}
+            </div>
+            <button type="button" className="pos-3d-btn pos-3d-primary h-14 text-base mt-auto" onClick={() => { saveCustomer(); onClose(); }}>
+              Selesai
+            </button>
           </div>
         </div>
-        {printSettings ? (() => {
-          const paper = ((printSettings.printers.find((p) => p.role === 'receipt')?.paper as PaperWidth) || '80');
-          return <iframe title="Pratinjau struk" srcDoc={renderReceipt(data as any, printSettings, paper === ('label' as any) ? '80' : paper)}
-            className="w-full h-[420px] rounded-xl border bg-card" />;
-        })() : null}
-        <div className="rounded-xl border p-3 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><UserPlus className="h-3.5 w-3.5" /> Kirim struk & simpan customer</div>
-          <Input placeholder="Nama customer" value={cName} onChange={(e) => setCName(e.target.value)} />
-          <Input placeholder="Email (opsional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <DialogFooter className="gap-2 flex-wrap">
-          <Button variant="outline" onClick={handleWhatsApp}>
-            <MessageCircle className="h-3 w-3" /> WhatsApp
-          </Button>
-          <Button variant="outline" onClick={handleEmail}>
-            <Mail className="h-3 w-3" /> Email
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-3 w-3" /> Print
-          </Button>
-          {onPrintStickers && <Button variant="outline" onClick={onPrintStickers}>
-            <Tag className="h-3 w-3" /> Stiker Cup
-          </Button>}
-          {link && <Button variant="outline" onClick={() => window.open(link, '_blank')}>Struk Digital</Button>}
-          <Button onClick={() => { saveCustomer(); onClose(); }}>Selesai</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

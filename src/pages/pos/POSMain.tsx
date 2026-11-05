@@ -755,7 +755,13 @@ const POSMain = () => {
           ref: receipt.transaction_number, order_type: receipt.order_type, table_number: receipt.table_number || null,
           customer_name: receipt.customer_name || null, created_at: receipt.created_at,
           items: receipt.items.map((i) => ({ product_name: i.product_name, qty: i.qty, notes: i.notes })),
-        }))} />
+        }))}
+        onPrintKitchen={() => receipt && safePrint(() => printKitchen(printSettings, {
+          ref: receipt.transaction_number, order_type: receipt.order_type, table_number: receipt.table_number || null,
+          customer_name: receipt.customer_name || null, created_at: receipt.created_at,
+          items: receipt.items.map((i) => ({ product_name: i.product_name, qty: i.qty, notes: i.notes })) as any,
+        }, false))}
+        onVoid={() => { setReceipt(null); navigate('/pos/transactions'); }} />
       <POSPrinterSettings open={printerOpen} onOpenChange={setPrinterOpen} branchId={userProfile?.branch_id || null}
         userId={userProfile?.id} onSaved={setPrintSettings} />
       <POSShiftReport open={!!report} onOpenChange={(o) => !o && setReport(null)} shift={report?.shift || null}
