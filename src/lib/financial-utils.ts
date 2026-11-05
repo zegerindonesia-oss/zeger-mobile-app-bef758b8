@@ -116,7 +116,7 @@ export const calculateRawMaterialCost = async (
 };
 
 // Map existing granular expense types to standardized categories
-const mapExpenseToCategory = (expenseType: string): keyof ExpenseBreakdown => {
+export const mapExpenseToCategory = (expenseType: string): keyof ExpenseBreakdown => {
   const type = expenseType.toLowerCase();
   
   // Beban Operasional Harian (daily operational expenses)
