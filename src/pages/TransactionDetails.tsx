@@ -23,6 +23,7 @@ interface TransactionDetailItem {
   selling_price: number;
   profit: number;
   payment_method: string;
+  brand: string;
 }
 
 interface Summary {
@@ -89,6 +90,8 @@ export const TransactionDetails = () => {
     return params.get('end_date') || formatYMD(getJakartaDate());
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [brands, setBrands] = useState<string[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState("all");
   const [loading, setLoading] = useState(true);
 
   const canPickBranch = ['ho_admin', 'ho_owner', 'ho_staff', 'finance', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff'].includes(userProfile?.role || '');
@@ -117,7 +120,7 @@ export const TransactionDetails = () => {
 
   useEffect(() => {
     fetchTransactionDetails();
-  }, [startDate, endDate, selectedRider, branchFilter]);
+  }, [startDate, endDate, selectedRider, branchFilter, selectedBrand]);
 
   const fetchRiders = async () => {
     try {
@@ -163,7 +166,8 @@ export const TransactionDetails = () => {
             unit_price,
             products (
               name,
-              cost_price
+              cost_price,
+              brand
             )
           )
         `)
@@ -205,12 +209,18 @@ export const TransactionDetails = () => {
             cost_price: costPrice,
             selling_price: sellingPrice,
             profit: profit,
-            payment_method: transaction.payment_method || 'Unknown'
+            payment_method: transaction.payment_method || 'Unknown',
+            brand: item.products?.brand || 'Tanpa Brand'
           });
         });
       });
 
       // Outlet / cashier POS items (only when not filtered to a single rider)
+      const brandMap = new Map<string, string>();
+      if (selectedRider === "all") {
+        const { data: prods } = await supabase.from('products').select('id, brand');
+        (prods || []).forEach((p: any) => brandMap.set(p.id, p.brand || 'Tanpa Brand'));
+      }
       if (selectedRider === "all") {
         for (let from = 0; ; from += 1000) {
           let pq = supabase
@@ -237,6 +247,7 @@ export const TransactionDetails = () => {
                 selling_price: price,
                 profit: price * qty,
                 payment_method: t.payment_method_1 || 'Unknown',
+                brand: brandMap.get(i.product_id) || 'Tanpa Brand',
               });
             });
           });
@@ -246,7 +257,10 @@ export const TransactionDetails = () => {
       }
 
       // Filter by search term
+      setBrands(Array.from(new Set(details.map(d => d.brand))).sort());
       const filteredDetails = details.filter(detail => 
+        (selectedBrand === 'all' || detail.brand === selectedBrand)
+      ).filter(detail =>
         searchTerm === "" || 
         detail.transaction_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         detail.menu_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -266,6 +280,13 @@ export const TransactionDetails = () => {
       const totalProfit = salesData.netSales - rawMaterialCost;
 
       console.log(`📊 Transaction Details - Sales: ${formatCurrency(salesData.netSales)}, Raw Material Cost: ${formatCurrency(rawMaterialCost)}`);
+
+      if (selectedBrand !== 'all') {
+        const sales = filteredDetails.reduce((s, d) => s + d.selling_price * d.quantity, 0);
+        const cost = filteredDetails.reduce((s, d) => s + d.cost_price * d.quantity, 0);
+        setSummary({ grossSales: sales, netSales: sales, totalDiscounts: 0, totalCost: cost, totalProfit: sales - cost, totalQuantity });
+        return;
+      }
 
       setSummary({
         grossSales: salesData.grossSales,
