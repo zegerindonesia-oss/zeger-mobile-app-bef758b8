@@ -68,7 +68,7 @@ export const POSShiftReport = ({ open, onOpenChange, shift, kind, branchName, ka
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileBarChart className="h-5 w-5 text-primary" /> {kind}-Report {kind === 'X' ? '(Sementara)' : '(Tutup Shift)'}

@@ -48,7 +48,7 @@ export const POSModifierDialog = ({ product, onClose, onConfirm, initial }: Prop
 
   return (
     <Dialog open={!!product} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[92vw] md:w-[80vw] max-w-5xl max-h-[88vh] p-6 md:p-8">
+      <DialogContent className="w-[92vw] md:w-[80vw] max-w-none max-h-[90dvh] p-6 md:p-8">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-baseline gap-2">
             <span className="text-xl md:text-2xl">{product.name}</span>

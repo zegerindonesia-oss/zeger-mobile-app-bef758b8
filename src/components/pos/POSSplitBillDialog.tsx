@@ -84,7 +84,7 @@ export const POSSplitBillDialog = ({ open, items, total, onClose, onConfirm }: P
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader>
           <DialogTitle>Split Bill — Total {fmt(total)}</DialogTitle>
         </DialogHeader>

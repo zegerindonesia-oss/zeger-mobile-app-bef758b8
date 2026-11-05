@@ -59,7 +59,7 @@ export function POSQuickMember({ open, onOpenChange, onSelect, branchId, cashier
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clr', '0', 'del'];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader><DialogTitle>Nomor HP Pelanggan</DialogTitle></DialogHeader>
         <div className="rounded-xl border bg-muted/40 px-4 py-3 text-center text-3xl font-bold tracking-wider min-h-[60px] font-mono">
           {phone || <span className="text-muted-foreground text-lg font-normal">08xx xxxx xxxx</span>}

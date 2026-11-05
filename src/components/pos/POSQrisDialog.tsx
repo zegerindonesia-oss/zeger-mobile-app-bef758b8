@@ -53,7 +53,7 @@ export const POSQrisDialog = ({ open, amount, onClose, onPaid }: Props) => {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o && !paid) onClose(); }}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader><DialogTitle>Scan QRIS</DialogTitle></DialogHeader>
         <div className="flex flex-col items-center gap-3 py-2">
           <div className="text-3xl font-bold text-primary">{fmt(amount)}</div>

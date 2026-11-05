@@ -165,7 +165,7 @@ export function POSReportsDialog({ open, onOpenChange, branchId, shiftId, branch
   if (inline) return <div className="space-y-3">{body}</div>;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader><DialogTitle>Laporan & Riwayat</DialogTitle></DialogHeader>
         {body}
       </DialogContent>

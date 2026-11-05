@@ -25,7 +25,7 @@ export const POSModeDialog = ({ open, onOpenChange, orderType, pax, externalOrde
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90dvh] rounded-3xl p-0 overflow-hidden flex flex-col gap-0 [&>button]:hidden">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] rounded-3xl p-0 overflow-hidden flex flex-col gap-0 [&>button]:hidden">
         <DialogTitle className="bg-primary text-primary-foreground px-5 py-4 flex items-center gap-2 font-bold text-lg shrink-0">
           <LayoutGrid className="h-5 w-5" /> Mode Transaksi
         </DialogTitle>

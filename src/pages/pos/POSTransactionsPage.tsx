@@ -321,7 +321,7 @@ function TxDetail({ tx, branchId, branchName, onClose, onVoided, onReorder }: {
       </div>
 
       <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
           <DialogHeader>
             <DialogTitle>Batalkan transaksi {tx.transaction_number}?</DialogTitle>
             <DialogDescription>Total {rp(tx.total)} akan dikeluarkan dari laporan penjualan. Tindakan ini tercatat atas nama Anda.</DialogDescription>
