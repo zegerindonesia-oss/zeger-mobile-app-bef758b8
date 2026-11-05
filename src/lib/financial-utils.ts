@@ -617,7 +617,7 @@ export const fetchPosSales = async (startStr: string, endStr: string, branchId?:
   while (true) {
     let q = supabase
       .from('pos_transactions')
-      .select('id, total, subtotal, discount_bill, discount_item, payment_method_1, payment_method_2, amount_1, amount_2, created_at, pos_transaction_items(qty)')
+      .select('id, total, subtotal, discount_bill, discount_item, payment_method_1, payment_method_2, amount_1, amount_2, created_at, branch_id, pos_transaction_items(qty, product_id, subtotal_item)')
       .eq('status', 'paid')
       .is('void_at', null)
       .gte('created_at', `${startStr}T00:00:00+07:00`)
