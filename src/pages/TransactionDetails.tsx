@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Filter, Search } from "lucide-react";
+import { Download, Filter, Search, FileText, MessageCircle, Mail } from "lucide-react";
+import jsPDF from "jspdf";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRiderFilter } from "@/hooks/useRiderFilter";
@@ -23,6 +25,7 @@ interface TransactionDetailItem {
   selling_price: number;
   profit: number;
   payment_method: string;
+  brand: string;
 }
 
 interface Summary {
@@ -89,6 +92,8 @@ export const TransactionDetails = () => {
     return params.get('end_date') || formatYMD(getJakartaDate());
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [brands, setBrands] = useState<string[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState("all");
   const [loading, setLoading] = useState(true);
 
   const canPickBranch = ['ho_admin', 'ho_owner', 'ho_staff', 'finance', '1_HO_Admin', '1_HO_Owner', '1_HO_Staff'].includes(userProfile?.role || '');
@@ -117,7 +122,7 @@ export const TransactionDetails = () => {
 
   useEffect(() => {
     fetchTransactionDetails();
-  }, [startDate, endDate, selectedRider, branchFilter]);
+  }, [startDate, endDate, selectedRider, branchFilter, selectedBrand]);
 
   const fetchRiders = async () => {
     try {
@@ -163,7 +168,8 @@ export const TransactionDetails = () => {
             unit_price,
             products (
               name,
-              cost_price
+              cost_price,
+              brand
             )
           )
         `)
@@ -205,12 +211,18 @@ export const TransactionDetails = () => {
             cost_price: costPrice,
             selling_price: sellingPrice,
             profit: profit,
-            payment_method: transaction.payment_method || 'Unknown'
+            payment_method: transaction.payment_method || 'Unknown',
+            brand: item.products?.brand || 'Tanpa Brand'
           });
         });
       });
 
       // Outlet / cashier POS items (only when not filtered to a single rider)
+      const brandMap = new Map<string, string>();
+      if (selectedRider === "all") {
+        const { data: prods } = await supabase.from('products').select('id, brand');
+        (prods || []).forEach((p: any) => brandMap.set(p.id, p.brand || 'Tanpa Brand'));
+      }
       if (selectedRider === "all") {
         for (let from = 0; ; from += 1000) {
           let pq = supabase
@@ -237,6 +249,7 @@ export const TransactionDetails = () => {
                 selling_price: price,
                 profit: price * qty,
                 payment_method: t.payment_method_1 || 'Unknown',
+                brand: brandMap.get(i.product_id) || 'Tanpa Brand',
               });
             });
           });
@@ -246,7 +259,10 @@ export const TransactionDetails = () => {
       }
 
       // Filter by search term
+      setBrands(Array.from(new Set(details.map(d => d.brand))).sort());
       const filteredDetails = details.filter(detail => 
+        (selectedBrand === 'all' || detail.brand === selectedBrand)
+      ).filter(detail =>
         searchTerm === "" || 
         detail.transaction_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         detail.menu_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -266,6 +282,13 @@ export const TransactionDetails = () => {
       const totalProfit = salesData.netSales - rawMaterialCost;
 
       console.log(`📊 Transaction Details - Sales: ${formatCurrency(salesData.netSales)}, Raw Material Cost: ${formatCurrency(rawMaterialCost)}`);
+
+      if (selectedBrand !== 'all') {
+        const sales = filteredDetails.reduce((s, d) => s + d.selling_price * d.quantity, 0);
+        const cost = filteredDetails.reduce((s, d) => s + d.cost_price * d.quantity, 0);
+        setSummary({ grossSales: sales, netSales: sales, totalDiscounts: 0, totalCost: cost, totalProfit: sales - cost, totalQuantity });
+        return;
+      }
 
       setSummary({
         grossSales: salesData.grossSales,
@@ -326,6 +349,47 @@ export const TransactionDetails = () => {
     a.click();
   };
 
+  const buildPdf = () => {
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 10;
+    const branchName = selectedBranch === 'all' ? 'Semua Cabang' : (branches.find(b => b.id === selectedBranch)?.name || '-');
+    const riderName = selectedRider === 'all' ? 'Semua User' : (riders.find(r => r.id === selectedRider)?.full_name || assignedRiderName || '-');
+    let y = 14;
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(14); pdf.text("Laporan Penjualan - Detail Transaksi", m, y); y += 6;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+    pdf.text(`Periode: ${startDate} s/d ${endDate}  |  Cabang: ${branchName}  |  Brand: ${selectedBrand === 'all' ? 'Semua Brand' : selectedBrand}  |  User: ${riderName}`, m, y); y += 6;
+    pdf.text(`Penjualan Bersih: ${formatCurrency(summary.netSales)}   Kotor: ${formatCurrency(summary.grossSales)}   Biaya Bahan: ${formatCurrency(summary.totalCost)}   Profit: ${formatCurrency(summary.totalProfit)}   Item: ${summary.totalQuantity}`, m, y); y += 8;
+    const head = ['ID Transaksi', 'Tanggal', 'Menu', 'Brand', 'Qty', 'Harga Bahan', 'Harga Jual', 'Profit', 'Bayar'];
+    const widths = [38, 32, 60, 30, 12, 26, 26, 26, 27];
+    const row = (r: (string | number)[], bold = false) => {
+      if (y > H - 10) { pdf.addPage(); y = 14; }
+      pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(7.5);
+      let x = m;
+      r.forEach((c, i) => { pdf.text(pdf.splitTextToSize(String(c ?? ""), widths[i] - 1)[0] || "", x, y); x += widths[i]; });
+      y += 5;
+    };
+    row(head, true); pdf.line(m, y - 3.5, W - m, y - 3.5);
+    transactionDetails.forEach(d => row([d.transaction_number, formatDate(d.transaction_date), d.menu_name, d.brand, d.quantity, formatCurrency(d.cost_price), formatCurrency(d.selling_price), formatCurrency(d.profit), d.payment_method]));
+    return pdf;
+  };
+  const pdfName = () => `Laporan-Penjualan-${selectedBrand === 'all' ? 'Semua' : selectedBrand}-${startDate}_${endDate}.pdf`;
+
+  const exportPDF = () => buildPdf().save(pdfName());
+
+  const sharePDF = async (channel: 'wa' | 'email') => {
+    const pdf = buildPdf();
+    const file = new File([pdf.output('blob')], pdfName(), { type: 'application/pdf' });
+    const text = `Laporan Penjualan ${startDate} s/d ${endDate} - Penjualan Bersih ${formatCurrency(summary.netSales)}`;
+    const nav: any = navigator;
+    if (nav.canShare && nav.canShare({ files: [file] })) {
+      try { await nav.share({ files: [file], title: 'Laporan Penjualan', text }); return; } catch { return; }
+    }
+    pdf.save(pdfName());
+    toast.info('PDF sudah diunduh, lampirkan file tersebut di pesan.');
+    if (channel === 'wa') window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    else window.location.href = `mailto:?subject=${encodeURIComponent('Laporan Penjualan')}&body=${encodeURIComponent(text)}`;
+  };
+
   const getPaymentMethodBadge = (method: string) => {
     const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
       'cash': 'default',
@@ -344,10 +408,24 @@ export const TransactionDetails = () => {
           <h1 className="text-2xl font-bold text-gray-900">Detail Transaksi</h1>
           <p className="text-sm text-muted-foreground">Detail transaksi per menu dengan analisis profit</p>
         </div>
-        <Button onClick={exportToCSV} className="bg-primary hover:bg-primary-dark">
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button onClick={exportPDF} disabled={loading}>
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
+          <Button variant="outline" onClick={() => sharePDF('wa')} disabled={loading}>
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Kirim WhatsApp
+          </Button>
+          <Button variant="outline" onClick={() => sharePDF('email')} disabled={loading}>
+            <Mail className="h-4 w-4 mr-2" />
+            Kirim Email
+          </Button>
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            CSV
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -451,6 +529,17 @@ export const TransactionDetails = () => {
                     </Select>
                   </div>
                 )}
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Brand</label>
+                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                    <SelectTrigger><SelectValue placeholder="Semua brand" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Brand</SelectItem>
+                      {brands.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
