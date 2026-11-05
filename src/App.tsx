@@ -62,6 +62,7 @@ import POSQueueDisplay from "./pages/pos/POSQueueDisplay";
 import POSDashboard from "./pages/pos/POSDashboard";
 import POSSettings from "./pages/pos/POSSettings";
 import POSReportsPage from "./pages/pos/POSReportsPage";
+import POSBackOfficeReports from "./pages/reports/POSBackOfficeReports";
 import POSTransactionsPage from "./pages/pos/POSTransactionsPage";
 import POSCashierPage from "./pages/pos/POSCashierPage";
 import StockCardRider from "./pages/inventory/StockCardRider";
@@ -517,6 +518,13 @@ const App = () => (
               <RoleBasedRoute allowedRoles={['sb_branch_manager']}>
                 <ModernLayout>
                   <SmallBranchStockManagement />
+                </ModernLayout>
+              </RoleBasedRoute>
+            } />
+            <Route path="/reports/pos" element={
+              <RoleBasedRoute allowedRoles={['ho_admin', 'ho_owner', 'finance', 'branch_manager', 'sb_branch_manager', '1_HO_Admin', '1_HO_Owner', '2_Hub_Branch_Manager', '3_SB_Branch_Manager']}>
+                <ModernLayout>
+                  <POSBackOfficeReports />
                 </ModernLayout>
               </RoleBasedRoute>
             } />
