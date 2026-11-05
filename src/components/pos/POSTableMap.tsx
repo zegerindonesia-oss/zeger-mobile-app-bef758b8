@@ -368,7 +368,7 @@ export const TableSetup = ({ branchId, sections, tables, db, reload }: any) => {
         </DialogContent>
       </Dialog>
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
-        <DialogContent className="max-w-xs text-center">
+        <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
           <DialogHeader><DialogTitle>Meja {preview?.table_number}</DialogTitle></DialogHeader>
           {preview && <div className="flex flex-col items-center gap-3">
             <div className="rounded-xl bg-card p-3 border"><QRCodeSVG value={tableQrUrl(branchId, preview.table_number)} size={200} /></div>

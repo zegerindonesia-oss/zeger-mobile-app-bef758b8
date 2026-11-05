@@ -86,7 +86,7 @@ export const CloseShiftModal = ({ open, expectedCash, onClose, onConfirm }: Clos
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[94vw] max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader>
           <DialogTitle>Tutup Shift</DialogTitle>
         </DialogHeader>
@@ -153,7 +153,7 @@ export const CashMovementModal = ({ open, onClose, onSubmit }: CashProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader>
           <DialogTitle>Kas Masuk / Keluar</DialogTitle>
         </DialogHeader>

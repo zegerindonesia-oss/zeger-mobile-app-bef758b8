@@ -811,7 +811,7 @@ const POSMain = () => {
         }}
       />
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
           <DialogHeader>
             <DialogTitle>Riwayat Poin {member?.name || ''}</DialogTitle>
           </DialogHeader>

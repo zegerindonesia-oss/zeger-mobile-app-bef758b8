@@ -265,7 +265,7 @@ export const POSPrinterSettings = ({ open, onOpenChange, branchId, userId, onSav
           <Button onClick={save} disabled={saving} className="h-11 px-6">{saving ? 'Menyimpan...' : designer ? 'Simpan Desain Struk' : 'Simpan Pengaturan Printer'}</Button>
         </div>
         <Dialog open={!!scanFor} onOpenChange={(o) => { if (!o) { btStopScan(); setScanFor(null); } }}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
             <DialogHeader><DialogTitle className="flex items-center gap-2"><Bluetooth className="h-5 w-5 text-primary" /> Pilih Printer Bluetooth</DialogTitle></DialogHeader>
             <p className="text-xs text-muted-foreground">{scanning ? 'Mencari perangkat di sekitar...' : 'Pencarian selesai.'} Ketuk nama printer untuk menyambungkan. Printer yang sudah dipairing di Pengaturan Bluetooth tablet tampil paling atas.</p>
             <div className="max-h-80 overflow-y-auto space-y-2">
@@ -293,7 +293,7 @@ const Shell = ({ inline, open, onOpenChange, children }: { inline?: boolean; ope
     </div>
   ) : (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto rounded-3xl p-5 md:p-8">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Printer className="h-5 w-5 text-primary" /> Pengaturan Printer</DialogTitle>
         </DialogHeader>
