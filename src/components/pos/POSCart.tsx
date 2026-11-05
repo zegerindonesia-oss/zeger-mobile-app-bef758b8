@@ -148,7 +148,7 @@ export const POSCart = ({
         )}
       </div>
 
-       <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll">
+       <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scroll">
         {items.length === 0 ? (
            <div className="h-full min-h-40 flex flex-col items-center justify-center text-center text-muted-foreground">
              <div className="h-14 w-14 rounded-2xl bg-muted/70 shadow-inner flex items-center justify-center mb-3"><ShoppingCart className="h-6 w-6 opacity-40" /></div>
@@ -157,10 +157,10 @@ export const POSCart = ({
            </div>
         ) : (
           items.map((it) => (
-             <div key={it.line_id} className="rounded-2xl border border-border/60 bg-background/75 p-3 space-y-2 shadow-sm">
+             <div key={it.line_id} className="rounded-xl border border-border/60 bg-background/75 px-2.5 py-2 space-y-1.5 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                   <div className="text-sm font-bold leading-tight">{it.product_name}</div>
+                   <div className="text-[15px] font-extrabold leading-tight text-foreground">{it.product_name}</div>
                   {it.modifiers && it.modifiers.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {it.modifiers.map((m) => (
@@ -175,45 +175,45 @@ export const POSCart = ({
                     </div>
                   )}
                 </div>
-                 <div className="flex flex-col gap-1">
+                 <div className="flex gap-1">
                   {updateLine && !it.bundle_id && !it.is_custom && (
-                    <Button size="icon" variant="ghost" className="h-6 w-6 text-primary" title="Edit pesanan" onClick={() => setEditing(it)}>
-                      <Pencil className="h-3 w-3" />
+                    <Button size="icon" variant="ghost" className="pos-3d-icon-sm bg-gradient-to-br from-warning to-warning/70 hover:opacity-90" title="Edit pesanan" onClick={() => setEditing(it)}>
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   )}
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeItem(it.line_id)}>
-                    <Trash2 className="h-3 w-3" />
+                  <Button size="icon" variant="ghost" className="pos-3d-icon-sm bg-gradient-to-br from-primary-light to-primary-dark hover:opacity-90" title="Hapus" onClick={() => removeItem(it.line_id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                   {!it.bundle_id && it.price > 0 && (
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6"
+                      className="pos-3d-icon-sm bg-gradient-to-br from-foreground/80 to-foreground hover:opacity-90"
                       title="Diskon item"
                       onClick={() => {
                         setPromoDialogTarget(it);
                         setPromoDialogScope('item');
                       }}
                     >
-                      <Tag className="h-3 w-3" />
+                      <Tag className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                 <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-1">
-                   <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(it.line_id, it.qty - 1)}>
-                    <Minus className="h-3 w-3" />
+                 <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-0.5">
+                   <Button size="icon" variant="ghost" className="pos-3d-icon-sm bg-gradient-to-b from-primary-light to-primary-dark hover:opacity-90" onClick={() => updateQty(it.line_id, it.qty - 1)}>
+                    <Minus className="h-3.5 w-3.5" />
                   </Button>
                    <span className="w-8 text-center text-sm font-bold">{it.qty}</span>
-                   <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(it.line_id, it.qty + 1)}>
-                    <Plus className="h-3 w-3" />
+                   <Button size="icon" variant="ghost" className="pos-3d-icon-sm bg-gradient-to-b from-primary-light to-primary-dark hover:opacity-90" onClick={() => updateQty(it.line_id, it.qty + 1)}>
+                    <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
                  <div className="pos-number text-sm font-bold">{fmt(it.price * it.qty - it.discount_item * it.qty)}</div>
               </div>
               <Input
-                 className="h-8 rounded-xl bg-muted/40 border-transparent text-xs focus-visible:bg-background"
+                 className="h-7 rounded-lg bg-muted/40 border-transparent text-xs focus-visible:bg-background"
                 placeholder="Catatan (less sugar, no ice...)"
                 value={it.notes}
                 onChange={(e) => updateNotes(it.line_id, e.target.value)}

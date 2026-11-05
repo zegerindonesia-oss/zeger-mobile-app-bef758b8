@@ -927,3 +927,24 @@ button[class*="bg-red-"]:not(:disabled):active { transform: translateY(1px); }
 .table-head-raised > tr > th:first-child { border-radius: 0.9rem 0 0 0.9rem; }
 .table-head-raised > tr > th:last-child { border-radius: 0 0.9rem 0.9rem 0; }
 .table-head-raised > tr > th { background: inherit; }
+
+@layer components {
+  .pos-3d-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-border/70 bg-gradient-to-b from-background to-muted/70 font-bold text-foreground transition-all active:translate-y-0.5 active:shadow-sm;
+    box-shadow: 0 6px 14px -6px hsl(var(--foreground) / 0.25), inset 0 1px 0 hsl(var(--background));
+  }
+  .pos-3d-btn:hover { @apply border-primary/50; }
+  .pos-3d-icon {
+    @apply flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground bg-gradient-to-br from-primary-light to-primary-dark;
+    box-shadow: 0 4px 10px -3px hsl(var(--primary) / 0.6), inset 0 1px 0 hsl(var(--primary-foreground) / 0.35);
+  }
+  .pos-3d-primary {
+    @apply border-primary-dark bg-gradient-to-b from-primary-light to-primary-dark text-primary-foreground;
+    box-shadow: 0 8px 18px -6px hsl(var(--primary) / 0.65), inset 0 1px 0 hsl(var(--primary-foreground) / 0.35);
+  }
+  .pos-3d-danger { @apply border-primary/40 from-primary/10 to-primary/20 text-primary; }
+  .pos-3d-icon-sm {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg text-primary-foreground transition-all active:translate-y-px;
+    box-shadow: 0 3px 7px -2px hsl(var(--foreground) / 0.35), inset 0 1px 0 hsl(var(--primary-foreground) / 0.35);
+  }
+}
