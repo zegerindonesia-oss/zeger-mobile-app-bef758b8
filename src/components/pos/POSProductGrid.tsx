@@ -226,6 +226,9 @@ export const POSProductGrid = ({ branchId, onAdd, onAddBundle, onAddCustom, tool
               placeholder="Cari menu (nama / kode)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              type="search"
+              enterKeyHint="search"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
               className="pl-9 h-10 rounded-xl bg-background/80 border-border/70 shadow-inner"
             />
           </div>

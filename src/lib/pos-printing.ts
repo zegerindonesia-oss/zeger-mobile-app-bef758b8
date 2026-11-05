@@ -218,7 +218,7 @@ ${L.showDiscount && d.discount > 0 ? row('Diskon', `-${rp(d.discount)}`) : ''}
 ${L.showTaxService && d.service_charge > 0 ? row('Service', rp(d.service_charge)) : ''}
 ${L.showTaxService && d.tax > 0 ? row('Pajak', rp(d.tax)) : ''}
 <div class="row" style="font-size:1.45em;font-weight:800;margin:4px 0"><span>Total</span><span>${rp(d.total)}</span></div><div class="hr"></div>
-${L.showPayment ? `${row(esc(d.payment_method_1.toUpperCase()), rp(d.amount_1))}
+${L.showPayment ? `${d.payment_method_2 ? '<div style="text-align:center;font-weight:800">** SPLIT BILL **</div>' : ''}${row(esc(d.payment_method_1.toUpperCase()), rp(d.amount_1))}
 ${d.payment_method_2 ? row(esc(d.payment_method_2.toUpperCase()), rp(d.amount_2 || 0)) : ''}
 ${d.change_amount > 0 ? row('Kembalian', rp(d.change_amount)) : ''}` : ''}
 ${barcodeHtml(d.transaction_number)}<div class="hr2"></div><div class="c" style="font-size:1.15em;margin:4px 0">${esc(s.receiptFooter)}</div>
@@ -463,6 +463,7 @@ export const escReceipt = async (d: ReceiptPrint, s: PrintSettings, p: PrinterCo
   if (L.showTaxService && d.tax > 0) e.row('Pajak', rp(d.tax));
   e.bold(true).size(1, 2).row('TOTAL', rp(d.total)).size(1, 1).bold(false).hr();
   if (L.showPayment) {
+    if (d.payment_method_2) e.bold(true).row('SPLIT BILL', '').bold(false);
     e.row(d.payment_method_1.toUpperCase(), rp(d.amount_1));
     if (d.payment_method_2) e.row(d.payment_method_2.toUpperCase(), rp(d.amount_2 || 0));
     if (d.change_amount > 0) e.row('Kembalian', rp(d.change_amount));

@@ -42,7 +42,7 @@ const MethodGrid = ({ items, value, onChange }: { items: { value: string; label:
   </div>
 );
 
-export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) => {
+export const POSPayment = ({ open, total, methods, onClose, onConfirm, splitMode }: Props & { splitMode?: boolean }) => {
   const METHODS = resolvePaymentMethods(methods).filter((m) => m.enabled);
   const [method1, setMethod1] = useState('cash');
   const [amount1, setAmount1] = useState<number>(0);
@@ -51,7 +51,7 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
   const [amount2, setAmount2] = useState<number>(0);
   const [processing, setProcessing] = useState(false);
   // Cash defaults to exact amount (uang pas) so the cashier can confirm immediately.
-  useEffect(() => { if (open) { setMethod1('cash'); setMixed(false); setAmount1(total); setAmount2(0); } }, [open, total]);
+  useEffect(() => { if (open) { setMethod1('cash'); setMixed(!!splitMode); setAmount1(total); setAmount2(0); } }, [open, total]);
   useEffect(() => { if (method1 === 'cash' && !mixed) setAmount1(total); }, [method1]);
 
   const fmt = (n: number) => `Rp${Math.round(n).toLocaleString('id-ID')}`;
@@ -99,7 +99,7 @@ export const POSPayment = ({ open, total, methods, onClose, onConfirm }: Props) 
           </div>
 
           <div className="flex items-center justify-between">
-            <Label>Mixed Payment (2 metode)</Label>
+            <Label>Split Bill (1 nota, 2 metode bayar)</Label>
             <Switch checked={mixed} onCheckedChange={setMixed} />
           </div>
 
