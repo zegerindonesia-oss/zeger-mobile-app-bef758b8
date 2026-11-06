@@ -4,8 +4,23 @@ import { queueAnnouncement, speakFriendly } from '@/lib/queue-voice';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { playAlertBeep, unlockAudio } from '@/lib/audio';
-import { TvMediaItem, detectMediaType, gdriveId, spotifyEmbed, youtubeId } from '@/lib/tv-media';
-import { ChefHat, BellRing, Maximize, Volume2, ArrowLeft } from 'lucide-react';
+import { TvMediaItem, detectMediaType, gdriveId, spotifyEmbed, youtubeId, youtubePlaylistId } from '@/lib/tv-media';
+import { Maximize, Volume2, ArrowLeft, Users, Clock } from 'lucide-react';
+import zegerEmblem from '@/assets/zeger-emblem.png.asset.json';
+
+/**
+ * React doesn't reliably set the `muted` attribute, so browsers/Android TV
+ * block autoplay. Force muted + play() via ref.
+ */
+const AutoVideo = ({ src, loop, onEnded }: { src: string; loop?: boolean; onEnded?: () => void }) => {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current; if (!v) return;
+    v.muted = true; v.defaultMuted = true; v.setAttribute('muted', '');
+    v.play().catch(() => undefined);
+  }, [src]);
+  return <video ref={ref} className="h-full w-full object-cover" src={src} autoPlay muted playsInline loop={loop} onEnded={onEnded} onError={onEnded} />;
+};
 
 interface Ticket {
   id: string;
@@ -53,7 +68,7 @@ const MediaPlaylist = ({ items, fallback }: { items: TvMediaItem[]; fallback: st
     const id = gdriveId(cur.url);
     return id ? <iframe key={key} className="h-full w-full" src={`https://drive.google.com/file/d/${id}/preview?autoplay=1`} allow="autoplay" title="Promo" /> : <PromoVideo url={null} />;
   }
-  if (cur.type === 'video') return <video key={key} className="h-full w-full object-cover" src={cur.url} autoPlay muted playsInline loop={list.length < 2} onEnded={next} />;
+  if (cur.type === 'video') return <AutoVideo key={key} src={cur.url} loop={list.length < 2} onEnded={list.length < 2 ? undefined : next} />;
   return <PromoVideo key={key} url={cur.url} />;
 };
 
@@ -61,6 +76,7 @@ const PromoVideo = ({ url }: { url: string | null }) => {
   if (!url) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+        <img src={zegerEmblem.url} alt="Zeger" className="h-32 w-32 object-contain drop-shadow-2xl mb-4" />
         <p className="text-6xl font-black tracking-tight">ZEGER</p>
         <p className="mt-2 text-lg opacity-80">Happiness in every cup ☕</p>
       </div>
@@ -88,7 +104,7 @@ const PromoVideo = ({ url }: { url: string | null }) => {
       />
     );
   }
-  return <video className="h-full w-full object-cover" src={url} autoPlay muted loop playsInline />;
+  return <AutoVideo src={url} loop />;
 };
 
 /**
