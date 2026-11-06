@@ -99,11 +99,11 @@ export const KDSTicketCard = ({ ticket, station = 'all', onUpdateStatus, onToggl
           </Button>
         )}
         {ticket.status === 'ready' && (
-          <Button size="lg" variant="secondary" className="flex-1" onClick={() => onUpdateStatus(ticket.id, 'served')}>
+          <Button size="lg" variant="secondary" className="flex-1 h-14 rounded-2xl text-lg" onClick={() => onUpdateStatus(ticket.id, 'served')}>
             <CheckCircle2 className="h-5 w-5 mr-1" /> Sajikan
           </Button>
         )}
-        <Button size="lg" variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10" onClick={() => onUpdateStatus(ticket.id, 'cancelled')} title="Batalkan">
+        <Button size="lg" variant="ghost" className="h-14 w-14 rounded-2xl text-white/70 hover:text-white hover:bg-white/10" onClick={() => onUpdateStatus(ticket.id, 'cancelled')} title="Batalkan">
           <X className="h-5 w-5" />
         </Button>
       </div>
