@@ -398,7 +398,7 @@ const POSMain = () => {
       cart.clear();
       promo.clearPromos();
       setRedemption(null);
-      setTableNumber('');
+      setTableNumber(''); setOrderType(defaultModeRef.current);
       setExternalOrderId('');
       setCustomerName('');
       if (member?.id && !isOffline) {
@@ -505,7 +505,7 @@ const POSMain = () => {
       toast.success(`Pesanan disimpan ke Meja ${selectedTable.table_number}${newLines.length ? ' & dikirim ke dapur' : ''}`);
       cart.clear();
       setSelectedTable(null);
-      setTableNumber('');
+      setTableNumber(''); setOrderType(defaultModeRef.current);
       setCustomerName('');
       sentLineIds.current = new Set();
       sentQty.current = {};
