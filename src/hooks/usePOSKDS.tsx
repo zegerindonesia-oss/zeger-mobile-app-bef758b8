@@ -31,6 +31,7 @@ export interface KDSTicket {
   ready_at: string | null;
   served_at: string | null;
   created_at: string;
+  queue_number?: number | null;
   items: KDSTicketItem[];
 }
 
@@ -39,13 +40,30 @@ const FOOD_RE = /(makan|food|snack|roti|cake|pastry|nasi|mie|toast|kentang|desse
 export const stationOf = (category?: string | null): Exclude<KDSStation, 'all'> =>
   category && FOOD_RE.test(category) ? 'kitchen' : 'bar';
 
-export const usePOSKDS = (branchId: string | null) => {
+export const usePOSKDS = (branchId: string | null, kioskToken?: string | null) => {
+  const [kioskBranch, setKioskBranch] = useState<{ id: string; name: string } | null>(null);
+  const [kioskError, setKioskError] = useState<string | null>(null);
   const [tickets, setTickets] = useState<KDSTicket[]>([]);
   const [recent, setRecent] = useState<KDSTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const lastCountRef = useRef(0);
 
   const fetchTickets = useCallback(async () => {
+    if (kioskToken) {
+      const { data, error } = await (supabase as any).rpc('kds_kiosk_tickets', { _token: kioskToken });
+      if (error || !data) { setKioskError('QR dapur tidak valid atau sudah diganti. Scan ulang QR dari kasir.'); setLoading(false); return; }
+      setKioskError(null);
+      setKioskBranch({ id: data.branch_id, name: data.branch_name });
+      const merged = (data.tickets || []) as KDSTicket[];
+      setTickets(merged);
+      if (merged.length > lastCountRef.current && lastCountRef.current > 0) {
+        try { playAlertBeep({ times: 2, freq: 900, durationMs: 250, intervalMs: 350 }); } catch {}
+      }
+      lastCountRef.current = merged.length;
+      setRecent((data.recent || []) as KDSTicket[]);
+      setLoading(false);
+      return;
+    }
     if (!branchId) return;
     const { data: tk } = await supabase
       .from('pos_kds_tickets')
@@ -90,14 +108,20 @@ export const usePOSKDS = (branchId: string | null) => {
       .limit(20);
     setRecent(((rc || []) as any[]).map((t) => ({ ...t, items: [] })));
     setLoading(false);
-  }, [branchId]);
+  }, [branchId, kioskToken]);
 
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
 
   useEffect(() => {
-    if (!branchId) return;
+    if (!kioskToken) return;
+    const id = setInterval(fetchTickets, 5000);
+    return () => clearInterval(id);
+  }, [kioskToken, fetchTickets]);
+
+  useEffect(() => {
+    if (!branchId || kioskToken) return;
     const ch = supabase
       .channel(`kds_${branchId}`)
       .on(
@@ -114,39 +138,52 @@ export const usePOSKDS = (branchId: string | null) => {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [branchId, fetchTickets]);
+  }, [branchId, kioskToken, fetchTickets]);
 
   const updateStatus = useCallback(async (ticketId: string, status: KDSStatus) => {
+    if (kioskToken) {
+      await (supabase as any).rpc('kds_kiosk_update', { _token: kioskToken, _ticket_id: ticketId, _status: status });
+      return fetchTickets();
+    }
     const patch: any = { status };
     if (status === 'cooking') patch.started_at = new Date().toISOString();
     if (status === 'ready') patch.ready_at = new Date().toISOString();
     if (status === 'served') patch.served_at = new Date().toISOString();
     await supabase.from('pos_kds_tickets').update(patch).eq('id', ticketId);
     await fetchTickets();
-  }, [fetchTickets]);
+  }, [fetchTickets, kioskToken]);
 
   const recallTicket = useCallback(async (ticketId: string) => {
+    if (kioskToken) {
+      await (supabase as any).rpc('kds_kiosk_update', { _token: kioskToken, _ticket_id: ticketId, _status: 'ready' });
+      return fetchTickets();
+    }
     await supabase.from('pos_kds_tickets').update({ status: 'ready', served_at: null }).eq('id', ticketId);
     await fetchTickets();
-  }, [fetchTickets]);
+  }, [fetchTickets, kioskToken]);
 
   const toggleItemDone = useCallback(async (itemId: string, isDone: boolean) => {
-    await supabase
-      .from('pos_kds_ticket_items')
-      .update({ is_done: isDone, done_at: isDone ? new Date().toISOString() : null })
-      .eq('id', itemId);
+    if (kioskToken) {
+      await (supabase as any).rpc('kds_kiosk_toggle_item', { _token: kioskToken, _item_id: itemId, _done: isDone });
+    } else {
+      await supabase
+        .from('pos_kds_ticket_items')
+        .update({ is_done: isDone, done_at: isDone ? new Date().toISOString() : null })
+        .eq('id', itemId);
+    }
     // Auto-bump ticket to ready when every item is done
     const ticket = tickets.find((t) => t.items.some((i) => i.id === itemId));
     if (ticket && isDone && ticket.status !== 'ready') {
       const allDone = ticket.items.every((i) => i.id === itemId || i.is_done);
       if (allDone) {
-        await supabase.from('pos_kds_tickets')
+        if (kioskToken) await (supabase as any).rpc('kds_kiosk_update', { _token: kioskToken, _ticket_id: ticket.id, _status: 'ready' });
+        else await supabase.from('pos_kds_tickets')
           .update({ status: 'ready', ready_at: new Date().toISOString() })
           .eq('id', ticket.id);
       }
     }
     await fetchTickets();
-  }, [fetchTickets, tickets]);
+  }, [fetchTickets, tickets, kioskToken]);
 
-  return { tickets, recent, loading, updateStatus, recallTicket, toggleItemDone, refetch: fetchTickets };
+  return { kioskBranch, kioskError, tickets, recent, loading, updateStatus, recallTicket, toggleItemDone, refetch: fetchTickets };
 };
