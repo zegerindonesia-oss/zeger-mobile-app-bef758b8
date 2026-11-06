@@ -67,7 +67,7 @@ const POSSettings = () => {
   const addItem = () => {
     const url = newUrl.trim();
     if (!url) return;
-    if (isDriveFolder(url)) { toast.error('Itu link folder. Buka videonya di Drive → Bagikan → salin link file (akses: siapa saja yang memiliki link).'); return; }
+    if (isDriveFolder(url)) { toast.error('Folder Drive tidak bisa diputar otomatis di TV. Untuk banyak video, buat Playlist YouTube (boleh Tidak Publik) lalu tempel link playlist-nya — akan berputar terus seperti iklan TV.'); return; }
     const type = newType === 'auto' ? detectMediaType(url) : newType;
     setItems((l) => [...l, { type, url, duration: type === 'image' ? 8 : type === 'video' ? undefined : 60 }]);
     setNewUrl('');

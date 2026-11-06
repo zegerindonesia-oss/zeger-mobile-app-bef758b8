@@ -4,8 +4,23 @@ import { queueAnnouncement, speakFriendly } from '@/lib/queue-voice';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { playAlertBeep, unlockAudio } from '@/lib/audio';
-import { TvMediaItem, detectMediaType, gdriveId, spotifyEmbed, youtubeId } from '@/lib/tv-media';
-import { ChefHat, BellRing, Maximize, Volume2, ArrowLeft } from 'lucide-react';
+import { TvMediaItem, detectMediaType, gdriveId, spotifyEmbed, youtubeId, youtubePlaylistId } from '@/lib/tv-media';
+import { Maximize, Volume2, ArrowLeft, Users, Clock } from 'lucide-react';
+import zegerEmblem from '@/assets/zeger-emblem.png.asset.json';
+
+/**
+ * React doesn't reliably set the `muted` attribute, so browsers/Android TV
+ * block autoplay. Force muted + play() via ref.
+ */
+const AutoVideo = ({ src, loop, onEnded }: { src: string; loop?: boolean; onEnded?: () => void }) => {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current; if (!v) return;
+    v.muted = true; v.defaultMuted = true; v.setAttribute('muted', '');
+    v.play().catch(() => undefined);
+  }, [src]);
+  return <video ref={ref} className="h-full w-full object-cover" src={src} autoPlay muted playsInline loop={loop} onEnded={onEnded} onError={onEnded} />;
+};
 
 interface Ticket {
   id: string;
@@ -53,7 +68,7 @@ const MediaPlaylist = ({ items, fallback }: { items: TvMediaItem[]; fallback: st
     const id = gdriveId(cur.url);
     return id ? <iframe key={key} className="h-full w-full" src={`https://drive.google.com/file/d/${id}/preview?autoplay=1`} allow="autoplay" title="Promo" /> : <PromoVideo url={null} />;
   }
-  if (cur.type === 'video') return <video key={key} className="h-full w-full object-cover" src={cur.url} autoPlay muted playsInline loop={list.length < 2} onEnded={next} />;
+  if (cur.type === 'video') return <AutoVideo key={key} src={cur.url} loop={list.length < 2} onEnded={list.length < 2 ? undefined : next} />;
   return <PromoVideo key={key} url={cur.url} />;
 };
 
@@ -61,9 +76,21 @@ const PromoVideo = ({ url }: { url: string | null }) => {
   if (!url) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+        <img src={zegerEmblem.url} alt="Zeger" className="h-32 w-32 object-contain drop-shadow-2xl mb-4" />
         <p className="text-6xl font-black tracking-tight">ZEGER</p>
         <p className="mt-2 text-lg opacity-80">Happiness in every cup ☕</p>
       </div>
+    );
+  }
+  const list = youtubePlaylistId(url);
+  if (list) {
+    return (
+      <iframe
+        className="h-full w-full pointer-events-none"
+        src={`https://www.youtube.com/embed/videoseries?list=${list}&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0`}
+        allow="autoplay; encrypted-media"
+        title="Promo"
+      />
     );
   }
   const yt = youtubeId(url);
@@ -77,7 +104,7 @@ const PromoVideo = ({ url }: { url: string | null }) => {
       />
     );
   }
-  return <video className="h-full w-full object-cover" src={url} autoPlay muted loop playsInline />;
+  return <AutoVideo src={url} loop />;
 };
 
 /**
@@ -182,71 +209,81 @@ const POSQueueDisplay = () => {
     );
   }
 
+  // Ready first (newest call on top), then preparing oldest-first.
+  const rows = [...ready, ...preparing].slice(0, 9);
+  const waitMin = Math.max(preparing.length * 2, preparing.length ? 3 : 0);
+  const time = now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+  const date = now.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden select-none">
-      <header className="m-3 mb-0 rounded-3xl flex items-center justify-between px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg">
-        <div className="flex items-center gap-4">
+    <div className="tv-glass-canvas h-screen flex flex-col overflow-hidden select-none p-4 gap-4">
+      <header className="tv-glass rounded-[2rem] flex items-center justify-between gap-6 px-6 py-3">
+        <div className="flex items-center gap-4 min-w-0">
           {userProfile && (
-            <button onClick={() => navigate('/pos')} className="h-11 w-11 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 flex items-center justify-center" title="Kembali ke POS (Esc)">
+            <button onClick={() => navigate('/pos')} className="tv-glass-chip h-11 w-11 rounded-2xl flex items-center justify-center" title="Kembali ke POS (Esc)">
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">ZEGER</h1>
-            <p className="text-sm opacity-80">{branchName}</p>
+          <div className="tv-glass-chip h-16 w-16 rounded-2xl grid place-items-center shrink-0">
+            <img src={zegerEmblem.url} alt="Logo Zeger" className="h-12 w-12 object-contain drop-shadow-lg" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-3xl font-black tracking-tight text-foreground">ZEGER</h1>
+            <p className="text-sm text-muted-foreground truncate">{branchName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="tv-glass-chip rounded-2xl px-5 py-2 flex items-center gap-3">
+            <Users className="h-7 w-7 text-primary" />
+            <div><p className="text-xs text-muted-foreground">Total antrean saat ini</p><p className="text-2xl font-black tabular-nums">{preparing.length} <span className="text-base font-semibold">pesanan</span></p></div>
+          </div>
+          <div className="tv-glass-chip rounded-2xl px-5 py-2 flex items-center gap-3">
+            <Clock className="h-7 w-7 text-primary" />
+            <div><p className="text-xs text-muted-foreground">Estimasi waktu tunggu</p><p className="text-2xl font-black tabular-nums">{waitMin ? `± ${waitMin}` : '0'} <span className="text-base font-semibold">menit</span></p></div>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-4xl font-bold tabular-nums">{now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })}</p>
-          <p className="text-sm opacity-80">{now.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <p className="text-5xl font-black tabular-nums text-foreground">{time}</p>
+          <p className="text-sm text-muted-foreground">{date}</p>
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 grid grid-cols-[1fr_2fr_1fr] gap-3 p-3">
-        <section className="flex flex-col rounded-3xl bg-card border shadow-sm p-4 min-h-0">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-muted-foreground mb-3"><ChefHat className="h-7 w-7" /> Disiapkan</h2>
-          <div className="grid grid-cols-2 gap-2 content-start overflow-hidden">
-            {preparing.slice(0, 14).map((t) => (
-              <div key={t.id} className="rounded-2xl bg-muted/60 py-3 text-center">
-                <p className="text-3xl font-extrabold tabular-nums">{queueNo(t)}</p>
-                {t.customer_name && <p className="text-sm font-medium text-muted-foreground truncate px-2">{t.customer_name}</p>}
-              </div>
-            ))}
-            {!preparing.length && <p className="col-span-2 text-muted-foreground">Tidak ada antrean</p>}
+      <div className="flex-1 min-h-0 grid grid-cols-[1.6fr_1fr] gap-4">
+        <section className="tv-glass rounded-[2rem] p-3 min-h-0 flex">
+          <div className="flex-1 rounded-[1.5rem] overflow-hidden bg-foreground shadow-2xl"><MediaPlaylist items={mediaItems} fallback={videoUrl} /></div>
+        </section>
+
+        <section className="tv-glass rounded-[2rem] p-5 min-h-0 flex flex-col">
+          <div className="grid grid-cols-[110px_1fr_auto] gap-3 px-4 pb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            <span>No.</span><span>Nama</span><span>Status</span>
           </div>
-        </section>
-
-        <section className="min-h-0 flex flex-col bg-foreground rounded-3xl overflow-hidden shadow-lg">
-          <div className="flex-1 min-h-0"><MediaPlaylist items={mediaItems} fallback={videoUrl} /></div>
-          {runningText && (
-            <div className="overflow-hidden bg-primary text-primary-foreground py-2">
-              <p className="text-center truncate px-4 text-lg font-semibold">{runningText}</p>
-            </div>
-          )}
-        </section>
-
-        <section className="flex flex-col p-4 rounded-3xl bg-success/10 border border-success/20 min-h-0">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-success mb-3"><BellRing className="h-7 w-7" /> Siap Diambil</h2>
-          <div className="grid gap-3 content-start overflow-hidden">
-            {ready.slice(0, 6).map((t) => (
-              <div key={t.id} className={`rounded-3xl bg-success text-success-foreground py-5 text-center shadow-lg transition ${highlight === t.id ? 'animate-pulse scale-105 ring-8 ring-success/30' : ''}`}>
-                <p className="text-6xl font-black tabular-nums">{queueNo(t)}</p>
-                {t.customer_name && <p className="text-xl font-semibold truncate px-3">Kak {t.customer_name}</p>}
-              </div>
-            ))}
-            {!ready.length && <p className="text-muted-foreground">Belum ada pesanan siap</p>}
+          <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden" style={{ perspective: '1000px' }}>
+            {rows.map((t, i) => {
+              const isReady = t.status === 'ready';
+              return (
+                <div key={t.id} style={{ animationDelay: `${i * 70}ms` }}
+                  className={`tv-row-drop tv-glass-row grid grid-cols-[110px_1fr_auto] items-center gap-3 rounded-2xl px-4 py-3 ${isReady ? 'tv-row-ready' : ''} ${highlight === t.id ? 'tv-row-call' : ''}`}>
+                  <span className="text-4xl font-black tabular-nums text-foreground">{queueNo(t)}</span>
+                  <span className="text-2xl font-semibold truncate text-foreground">{t.customer_name ? `Kak ${t.customer_name}` : t.table_number ? `Meja ${t.table_number}` : '—'}</span>
+                  <span className={`tv-badge ${isReady ? 'tv-badge-ready' : 'tv-badge-process'}`}>{isReady ? 'Siap Diambil' : 'Sedang Diproses'}</span>
+                </div>
+              );
+            })}
+            {!rows.length && <div className="flex-1 grid place-items-center text-xl text-muted-foreground">Belum ada antrean ☕</div>}
           </div>
         </section>
       </div>
 
-      <footer className="mx-3 mb-3 rounded-2xl bg-card border px-6 py-2 flex items-center justify-between text-sm text-muted-foreground">
-        <span>Silakan ambil pesanan saat nomor Anda muncul di kolom hijau.</span>
+      <footer className="tv-glass rounded-full pl-2 pr-2 py-2 flex items-center gap-3">
+        <div className="flex-1 overflow-hidden">
+          <p className="tv-marquee whitespace-nowrap text-lg font-semibold text-foreground">{runningText || 'Silakan ambil pesanan saat nama Anda dipanggil dan status berubah menjadi Siap Diambil. Terima kasih! ☕'}</p>
+        </div>
         {!soundOn ? (
-          <button onClick={enable} className="flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 font-medium">
+          <button onClick={enable} className="shrink-0 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 font-medium">
             <Maximize className="h-4 w-4" /> Aktifkan Suara & Layar Penuh
           </button>
         ) : (
-          <span className="flex items-center gap-1 text-success"><Volume2 className="h-4 w-4" /> Suara aktif</span>
+          <span className="shrink-0 flex items-center gap-1 text-success px-3"><Volume2 className="h-4 w-4" /> Suara aktif</span>
         )}
       </footer>
     </div>

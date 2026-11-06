@@ -11,6 +11,8 @@ export const TV_MEDIA_LABEL: Record<TvMediaType, string> = {
 
 export const youtubeId = (url: string) =>
   url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/|live\/)([\w-]{11})/)?.[1];
+/** YouTube playlist id (`list=`), used to loop many promo videos like TV ads. */
+export const youtubePlaylistId = (url: string) => url.match(/[?&]list=([\w-]{10,})/)?.[1];
 export const gdriveId = (url: string) =>
   url.match(/\/d\/([\w-]{10,})/)?.[1] || url.match(/[?&]id=([\w-]{10,})/)?.[1];
 export const spotifyEmbed = (url: string) => {
