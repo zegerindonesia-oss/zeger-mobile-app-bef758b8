@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { queueAnnouncement, speakFriendly } from '@/lib/queue-voice';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { playAlertBeep, unlockAudio } from '@/lib/audio';
@@ -24,14 +25,7 @@ const queueNo = (t: Ticket) => {
   return digits.slice(-3).padStart(3, '0');
 };
 
-const speak = (text: string) => {
-  try {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'id-ID';
-    u.rate = 0.9;
-    window.speechSynthesis.speak(u);
-  } catch { /* speech not supported */ }
-};
+const speak = speakFriendly;
 
 /** Rotates through the cashier-configured playlist (video, live, drive, banner, spotify). */
 const MediaPlaylist = ({ items, fallback }: { items: TvMediaItem[]; fallback: string | null }) => {
@@ -94,8 +88,17 @@ const POSQueueDisplay = () => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const paired = params.get('branch');
+  const { code: routeCode } = useParams();
+  const [paired, setPaired] = useState<string | null>(params.get('branch'));
   const branchId = paired || localStorage.getItem('flow_tv_branch') || userProfile?.branch_id || null;
+  const [codeInput, setCodeInput] = useState('');
+  const [pairErr, setPairErr] = useState('');
+  const pairWith = useCallback(async (c: string) => {
+    setPairErr('');
+    const { data } = await (supabase as any).rpc('tv_pair', { _code: c });
+    if (data) setPaired(data); else setPairErr('Kode salah. Cek kode di POS kasir → Pengaturan → Layar TV.');
+  }, []);
+  useEffect(() => { if (routeCode) pairWith(routeCode); }, [routeCode, pairWith]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [branchName, setBranchName] = useState('');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -126,9 +129,7 @@ const POSQueueDisplay = () => {
         setTimeout(() => setHighlight(null), 8000);
         if (soundOn) {
           playAlertBeep();
-          const no = queueNo(t);
-          const spoken = no.startsWith('M') ? `meja ${no.slice(1)}` : `nomor ${no.split('').join(' ')}`;
-          setTimeout(() => speak(`Pesanan ${spoken}${t.customer_name ? `, atas nama ${t.customer_name}` : ''}, silakan diambil.`), 600);
+          setTimeout(() => speak(queueAnnouncement(t.queue_number ?? null, t.customer_name, t.table_number)), 700);
         }
       }
     }
@@ -154,17 +155,28 @@ const POSQueueDisplay = () => {
 
   const enable = () => {
     unlockAudio();
-    speak('Layar antrean aktif');
+    speak('Halo! Layar antrian sudah aktif ya.');
     setSoundOn(true);
     document.documentElement.requestFullscreen?.().catch(() => undefined);
   };
 
   if (!branchId) {
+    const press = (d: string) => setCodeInput((v) => (d === '⌫' ? v.slice(0, -1) : (v + d).slice(0, 6)));
     return (
-      <div className="h-screen flex items-center justify-center bg-background text-center p-8">
-        <div>
-          <p className="text-2xl font-bold">Layar TV belum terhubung</p>
-          <p className="text-muted-foreground mt-2">Buka Pengaturan POS di kasir → "Layar TV Antrean", lalu scan QR atau ketik link-nya di browser TV.</p>
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-background p-6">
+        <div className="w-full max-w-md rounded-[2rem] bg-card border shadow-2xl p-8 text-center space-y-5">
+          <p className="text-2xl font-extrabold">Hubungkan Layar TV</p>
+          <p className="text-muted-foreground text-sm">Masukkan 6 angka kode TV yang tampil di POS kasir (Pengaturan → Layar TV Antrean).</p>
+          <input autoFocus inputMode="numeric" value={codeInput} onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onKeyDown={(e) => e.key === 'Enter' && codeInput.length === 6 && pairWith(codeInput)}
+            className="w-full text-center text-5xl font-black tracking-[0.4em] rounded-2xl border-2 bg-background py-4 focus:outline-none focus:ring-4 focus:ring-primary/30" placeholder="••••••" />
+          <div className="grid grid-cols-3 gap-3">
+            {['1','2','3','4','5','6','7','8','9','⌫','0','OK'].map((d) => (
+              <button key={d} onClick={() => (d === 'OK' ? codeInput.length === 6 && pairWith(codeInput) : press(d))}
+                className={`h-16 rounded-2xl text-2xl font-bold transition focus:outline-none focus:ring-4 focus:ring-primary/40 ${d === 'OK' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}>{d}</button>
+            ))}
+          </div>
+          {pairErr && <p className="text-destructive text-sm">{pairErr}</p>}
         </div>
       </div>
     );
@@ -172,7 +184,7 @@ const POSQueueDisplay = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden select-none">
-      <header className="flex items-center justify-between px-6 py-3 bg-primary text-primary-foreground">
+      <header className="m-3 mb-0 rounded-3xl flex items-center justify-between px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg">
         <div className="flex items-center gap-4">
           {userProfile && (
             <button onClick={() => navigate('/pos')} className="h-11 w-11 rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 flex items-center justify-center" title="Kembali ke POS (Esc)">
@@ -190,21 +202,21 @@ const POSQueueDisplay = () => {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 grid grid-cols-[1fr_2fr_1fr]">
-        <section className="flex flex-col border-r p-4 min-h-0">
+      <div className="flex-1 min-h-0 grid grid-cols-[1fr_2fr_1fr] gap-3 p-3">
+        <section className="flex flex-col rounded-3xl bg-card border shadow-sm p-4 min-h-0">
           <h2 className="flex items-center gap-2 text-xl font-bold text-muted-foreground mb-3"><ChefHat className="h-7 w-7" /> Disiapkan</h2>
           <div className="grid grid-cols-2 gap-2 content-start overflow-hidden">
             {preparing.slice(0, 14).map((t) => (
-              <div key={t.id} className="rounded-2xl border-2 bg-card py-3 text-center shadow-sm">
+              <div key={t.id} className="rounded-2xl bg-muted/60 py-3 text-center">
                 <p className="text-3xl font-extrabold tabular-nums">{queueNo(t)}</p>
-                {t.customer_name && <p className="text-xs text-muted-foreground truncate px-2">{t.customer_name}</p>}
+                {t.customer_name && <p className="text-sm font-medium text-muted-foreground truncate px-2">{t.customer_name}</p>}
               </div>
             ))}
             {!preparing.length && <p className="col-span-2 text-muted-foreground">Tidak ada antrean</p>}
           </div>
         </section>
 
-        <section className="min-h-0 flex flex-col bg-foreground">
+        <section className="min-h-0 flex flex-col bg-foreground rounded-3xl overflow-hidden shadow-lg">
           <div className="flex-1 min-h-0"><MediaPlaylist items={mediaItems} fallback={videoUrl} /></div>
           {runningText && (
             <div className="overflow-hidden bg-primary text-primary-foreground py-2">
@@ -213,13 +225,13 @@ const POSQueueDisplay = () => {
           )}
         </section>
 
-        <section className="flex flex-col p-4 bg-success/5 min-h-0 border-l">
+        <section className="flex flex-col p-4 rounded-3xl bg-success/10 border border-success/20 min-h-0">
           <h2 className="flex items-center gap-2 text-xl font-bold text-success mb-3"><BellRing className="h-7 w-7" /> Siap Diambil</h2>
           <div className="grid gap-3 content-start overflow-hidden">
             {ready.slice(0, 6).map((t) => (
               <div key={t.id} className={`rounded-3xl bg-success text-success-foreground py-5 text-center shadow-lg transition ${highlight === t.id ? 'animate-pulse scale-105 ring-8 ring-success/30' : ''}`}>
                 <p className="text-6xl font-black tabular-nums">{queueNo(t)}</p>
-                {t.customer_name && <p className="text-lg font-medium truncate px-3">{t.customer_name}</p>}
+                {t.customer_name && <p className="text-xl font-semibold truncate px-3">Kak {t.customer_name}</p>}
               </div>
             ))}
             {!ready.length && <p className="text-muted-foreground">Belum ada pesanan siap</p>}
@@ -227,7 +239,7 @@ const POSQueueDisplay = () => {
         </section>
       </div>
 
-      <footer className="px-6 py-2 border-t flex items-center justify-between text-sm text-muted-foreground">
+      <footer className="mx-3 mb-3 rounded-2xl bg-card border px-6 py-2 flex items-center justify-between text-sm text-muted-foreground">
         <span>Silakan ambil pesanan saat nomor Anda muncul di kolom hijau.</span>
         {!soundOn ? (
           <button onClick={enable} className="flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 font-medium">

@@ -161,6 +161,7 @@ const App = () => (
               </RoleBasedRoute>
             } />
             <Route path="/tv" element={<POSQueueDisplay />} />
+            <Route path="/tv/:code" element={<POSQueueDisplay />} />
             <Route path="/kds" element={<POSKitchen kiosk />} />
             <Route path="/pos/dashboard" element={
               <RoleBasedRoute allowedRoles={['ho_admin', 'branch_manager', 'sb_branch_manager', 'bh_kasir', 'sb_kasir', '2_Hub_Kasir', '3_SB_Kasir']}>

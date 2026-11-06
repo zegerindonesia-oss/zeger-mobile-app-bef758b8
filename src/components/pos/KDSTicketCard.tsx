@@ -29,7 +29,7 @@ export const KDSTicketCard = ({ ticket, station = 'all', onUpdateStatus, onToggl
   const doneCount = ticket.items.filter((i) => i.is_done).length;
 
   return (
-    <div data-sla={sla} className="pos-kds-ticket rounded-2xl p-4 flex flex-col gap-3">
+    <div data-sla={sla} className="pos-kds-ticket rounded-3xl p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap text-xs font-semibold">
@@ -57,11 +57,11 @@ export const KDSTicketCard = ({ ticket, station = 'all', onUpdateStatus, onToggl
         {items.map((it) => {
           const st = stationOf(it.category);
           return (
-            <label key={it.id} className="flex items-start gap-3 cursor-pointer">
+            <label key={it.id} className="flex items-start gap-3 cursor-pointer rounded-xl p-2 -mx-2 active:bg-white/5 min-h-12">
               <Checkbox
                 checked={it.is_done}
                 onCheckedChange={(v) => onToggleItem(it.id, !!v)}
-                className="mt-0.5 h-5 w-5 border-white/40"
+                className="mt-0.5 h-7 w-7 rounded-lg border-white/40"
               />
               <div className={`flex-1 min-w-0 ${it.is_done ? 'line-through opacity-50' : ''}`}>
                 <div className="text-base font-semibold leading-tight flex items-center gap-1.5">
@@ -89,21 +89,21 @@ export const KDSTicketCard = ({ ticket, station = 'all', onUpdateStatus, onToggl
 
       <div className="flex gap-2">
         {ticket.status === 'queued' && (
-          <Button size="lg" className="flex-1" onClick={() => onUpdateStatus(ticket.id, 'cooking')}>
+          <Button size="lg" className="flex-1 h-14 rounded-2xl text-lg" onClick={() => onUpdateStatus(ticket.id, 'cooking')}>
             <ChefHat className="h-5 w-5 mr-1" /> Mulai
           </Button>
         )}
         {ticket.status === 'cooking' && (
-          <Button size="lg" className="flex-1 bg-success text-success-foreground hover:bg-success/90" onClick={() => onUpdateStatus(ticket.id, 'ready')}>
+          <Button size="lg" className="flex-1 h-14 rounded-2xl text-lg bg-success text-success-foreground hover:bg-success/90" onClick={() => onUpdateStatus(ticket.id, 'ready')}>
             <Bell className="h-5 w-5 mr-1" /> Siap
           </Button>
         )}
         {ticket.status === 'ready' && (
-          <Button size="lg" variant="secondary" className="flex-1" onClick={() => onUpdateStatus(ticket.id, 'served')}>
+          <Button size="lg" variant="secondary" className="flex-1 h-14 rounded-2xl text-lg" onClick={() => onUpdateStatus(ticket.id, 'served')}>
             <CheckCircle2 className="h-5 w-5 mr-1" /> Sajikan
           </Button>
         )}
-        <Button size="lg" variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10" onClick={() => onUpdateStatus(ticket.id, 'cancelled')} title="Batalkan">
+        <Button size="lg" variant="ghost" className="h-14 w-14 rounded-2xl text-white/70 hover:text-white hover:bg-white/10" onClick={() => onUpdateStatus(ticket.id, 'cancelled')} title="Batalkan">
           <X className="h-5 w-5" />
         </Button>
       </div>

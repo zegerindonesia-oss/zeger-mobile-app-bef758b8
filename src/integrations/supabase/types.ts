@@ -2777,6 +2777,32 @@ export type Database = {
           },
         ]
       }
+      pos_tv_pair_codes: {
+        Row: {
+          branch_id: string
+          code: string
+          created_at: string
+        }
+        Insert: {
+          branch_id: string
+          code: string
+          created_at?: string
+        }
+        Update: {
+          branch_id?: string
+          code?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_tv_pair_codes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_vouchers: {
         Row: {
           code: string
@@ -6642,6 +6668,11 @@ export type Database = {
       sync_accounting_inventory: {
         Args: { _from: string; _to: string }
         Returns: Json
+      }
+      tv_pair: { Args: { _code: string }; Returns: string }
+      tv_pairing_code: {
+        Args: { _branch_id: string; _rotate?: boolean }
+        Returns: string
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
