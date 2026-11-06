@@ -24,6 +24,7 @@ import CxLab from "./pages/dev/CxLab";
 import NotFound from "./pages/NotFound";
 import DigitalReceipt from "./pages/DigitalReceipt";
 import FlowLanding from "./pages/flow/FlowLanding";
+import FlowPitchDeck from "./pages/flow/FlowPitchDeck";
 import FlowOnboarding from "./pages/flow/FlowOnboarding";
 import FlowSignup from "./pages/flow/FlowSignup";
 import FlowAuthCallback from "./pages/flow/FlowAuthCallback";
@@ -106,6 +107,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/landing" element={<FlowLanding />} />
+            <Route path="/pitch" element={<FlowPitchDeck />} />
             <Route path="/onboarding" element={<FlowOnboarding />} />
             <Route path="/daftar" element={<FlowSignup />} />
             <Route path="/auth/callback" element={<FlowAuthCallback />} />
