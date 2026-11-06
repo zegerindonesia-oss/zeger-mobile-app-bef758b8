@@ -19,6 +19,7 @@ import { getActiveCashier, setActiveCashier } from '@/lib/pos-cashier';
 import { Lock } from 'lucide-react';
 import { ruleSummary } from '@/lib/pos-mode-pricing';
 import { POSModeDialog } from '@/components/pos/POSModeDialog';
+import { getCachedDefaultMode, loadDefaultMode } from '@/components/pos/POSQuickSettings';
 import { modeLabel } from '@/lib/pos-order-modes';
 import { usePOSBranchSettings } from '@/hooks/usePOSBranchSettings';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
