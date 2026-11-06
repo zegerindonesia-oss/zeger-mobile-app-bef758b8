@@ -66,6 +66,17 @@ const PromoVideo = ({ url }: { url: string | null }) => {
       </div>
     );
   }
+  const list = youtubePlaylistId(url);
+  if (list) {
+    return (
+      <iframe
+        className="h-full w-full pointer-events-none"
+        src={`https://www.youtube.com/embed/videoseries?list=${list}&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0`}
+        allow="autoplay; encrypted-media"
+        title="Promo"
+      />
+    );
+  }
   const yt = youtubeId(url);
   if (yt) {
     return (
