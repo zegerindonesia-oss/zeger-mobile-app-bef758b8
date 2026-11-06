@@ -10,6 +10,7 @@ import { X, Plus, Store } from 'lucide-react';
 import { ALL_ORDER_MODES } from '@/lib/pos-order-modes';
 import { fetchBranchSettings, type POSBranchSettings } from '@/hooks/usePOSBranchSettings';
 import { useAuth } from '@/hooks/useAuth';
+import { POSQuickSettings } from '@/components/pos/POSQuickSettings';
 import { CashierPinManager } from '@/components/pos/CashierPinManager';
 import { POSPrinterSettings } from '@/components/pos/POSPrinterSettings';
 import { ModePricingEditor } from '@/components/pos/ModePricingEditor';
@@ -96,6 +97,8 @@ const POSBranchConfig = () => {
               </label>
             ))}
           </CardContent></Card>
+        <Card><CardHeader><CardTitle>Default Transaksi & Urutan Kategori POS</CardTitle></CardHeader>
+          <CardContent><POSQuickSettings key={`qs-${branchId}`} branchId={branchId} allowedModes={s.order_modes} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Harga per Mode Transaksi</CardTitle></CardHeader>
           <CardContent><ModePricingEditor modes={s.order_modes} value={s.order_mode_pricing || {}} onChange={(v) => up({ order_mode_pricing: v })} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Nomor Antrean</CardTitle></CardHeader>

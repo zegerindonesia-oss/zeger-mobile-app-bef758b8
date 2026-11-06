@@ -135,15 +135,60 @@ export const POSVoiceOrder = ({ onAdd, onMember }: Props) => {
     wantRef.current = false;
     clearTimeout(timerRef.current);
     recRef.current?.stop();
+    if (mediaRef.current?.state === 'recording') mediaRef.current.stop();
     setListening(false);
   }, []);
 
-  const start = useCallback(() => {
-    const rec = getRecognition();
-    if (!rec) {
-      toast.error('Perangkat tidak mendukung input suara. Gunakan Chrome / Edge, atau ketik pesanan.');
+  // Fallback for devices without built-in speech recognition (Android app WebView, Safari, etc.):
+  // record audio, transcribe on the server, then parse like normal.
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const micError = (e: any) => {
+    const n = e?.name || e?.error || '';
+    if (n === 'NotAllowedError' || n === 'not-allowed' || n === 'service-not-allowed' || n === 'SecurityError')
+      toast.error('Mikrofon diblokir. Ketuk ikon gembok di kolom alamat (atau Pengaturan HP → Aplikasi → izin Mikrofon), pilih Izinkan, lalu tekan mic lagi.', { duration: 8000 });
+    else if (n === 'NotFoundError') toast.error('Mikrofon tidak ditemukan di perangkat ini.');
+    else toast.error('Mikrofon tidak bisa dibuka. Coba lagi.');
+  };
+
+  const startRecorder = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      toast.error('Perangkat tidak mendukung input suara. Silakan ketik pesanan.');
       return;
     }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const chunks: Blob[] = [];
+      const mr = new MediaRecorder(stream);
+      mr.ondataavailable = (ev) => ev.data.size && chunks.push(ev.data);
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setListening(false);
+        const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
+        if (blob.size < 1000) return;
+        setProcessing(true);
+        try {
+          const fd = new FormData();
+          fd.append('file', blob, 'voice.webm');
+          const { data, error } = await supabase.functions.invoke('pos-voice-transcribe', { body: fd });
+          if (error || data?.error) throw new Error(data?.error || error?.message);
+          const text = String(data?.text || '');
+          finalRef.current += text + ' ';
+          setTranscript(finalRef.current.trim());
+          setProcessing(false);
+          if (text) await parse(text, false);
+        } catch (e: any) { toast.error(e.message || 'Gagal mengenali suara'); setProcessing(false); }
+      };
+      mediaRef.current = mr;
+      mr.start();
+      setListening(true);
+    } catch (e) { micError(e); }
+  }, [parse]);
+
+  const start = useCallback(() => {
+    const rec = getRecognition();
+    if (!rec) { startRecorder(); return; }
     wantRef.current = true;
     rec.lang = 'id-ID';
     rec.continuous = true;
@@ -166,8 +211,10 @@ export const POSVoiceOrder = ({ onAdd, onMember }: Props) => {
     };
     rec.onerror = (e: any) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        toast.error('Izin mikrofon ditolak. Aktifkan mikrofon di pengaturan.');
         wantRef.current = false;
+        setListening(false);
+        // Built-in recognition refused (common in Android app): fall back to recording.
+        if (e.error === 'service-not-allowed') startRecorder(); else micError(e);
       }
     };
     rec.onend = () => {
@@ -179,7 +226,7 @@ export const POSVoiceOrder = ({ onAdd, onMember }: Props) => {
     recRef.current = rec;
     try { rec.start(); } catch { /* already started */ }
     setListening(true);
-  }, [flushAuto]);
+  }, [flushAuto, startRecorder]);
 
   useEffect(() => () => { wantRef.current = false; recRef.current?.stop(); clearTimeout(timerRef.current); }, []);
 
@@ -189,7 +236,7 @@ export const POSVoiceOrder = ({ onAdd, onMember }: Props) => {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.code === 'F2') {
         e.preventDefault();
-        if (!open) { setOpen(true); setTimeout(start, 150); }
+        if (!open) { setOpen(true); start(); }
         else listening ? stop() : start();
       }
     };
@@ -210,7 +257,7 @@ export const POSVoiceOrder = ({ onAdd, onMember }: Props) => {
 
   return (
     <>
-      <Button size="sm" variant={listening ? 'destructive' : 'secondary'} onClick={() => { setOpen(true); if (!listening) setTimeout(start, 150); }} title="Pesan via suara (F2)">
+      <Button size="sm" variant={listening ? 'destructive' : 'secondary'} onClick={() => { setOpen(true); if (!listening) start(); }} title="Pesan via suara (F2)">
         <Mic className={`h-4 w-4 mr-1 ${listening ? 'animate-pulse' : ''}`} /> Voice
       </Button>
       <Dialog open={open} onOpenChange={(o) => { if (!o && !auto) stop(); setOpen(o); }}>

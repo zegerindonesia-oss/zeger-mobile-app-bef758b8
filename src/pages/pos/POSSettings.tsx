@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { TvMediaItem, TvMediaType, TV_MEDIA_LABEL, detectMediaType, isDriveFolder } from '@/lib/tv-media';
 import { Plus, Trash2, ArrowUp, RefreshCw } from 'lucide-react';
 import { POSDataSync } from '@/components/pos/POSDataSync';
+import { POSQuickSettings } from '@/components/pos/POSQuickSettings';
 import { UtensilsCrossed, FileText, Wallet, SlidersHorizontal, Globe, ScrollText } from 'lucide-react';
 
 type Tab = 'printer' | 'tv' | 'sync' | 'menu' | 'cetakan' | 'kas' | 'shift' | 'lainnya' | 'bahasa' | 'log';
@@ -139,6 +140,7 @@ const POSSettings = () => {
           {tab === 'shift' && <POSShiftPage branchId={branchId} branchName={branchName} kasirName={userProfile?.full_name || 'Kasir'} />}
           {tab === 'lainnya' && (
             <div className="space-y-3"><h2 className="text-lg font-bold">Pengaturan Lainnya</h2>
+              <POSQuickSettings branchId={branchId} />
               <p className="text-sm text-muted-foreground">Mode transaksi, menu yang dijual dan kategori kas cabang ini diatur oleh Back Office (Settings → Pengaturan POS Cabang).</p>
               <Shortcut title="Pengaturan POS Cabang" desc="Khusus manager / admin pusat" to="/settings/pos-branches" />
             </div>

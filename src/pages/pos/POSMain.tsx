@@ -19,6 +19,7 @@ import { getActiveCashier, setActiveCashier } from '@/lib/pos-cashier';
 import { Lock } from 'lucide-react';
 import { ruleSummary } from '@/lib/pos-mode-pricing';
 import { POSModeDialog } from '@/components/pos/POSModeDialog';
+import { getCachedDefaultMode, loadDefaultMode } from '@/components/pos/POSQuickSettings';
 import { modeLabel } from '@/lib/pos-order-modes';
 import { usePOSBranchSettings } from '@/hooks/usePOSBranchSettings';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -61,7 +62,12 @@ const POSMain = () => {
   const promo = usePOSPromo();
 
   const [branchName, setBranchName] = useState('Cabang');
-  const [orderType, setOrderType] = useState('take_away');
+  const [orderType, setOrderType] = useState(() => getCachedDefaultMode(userProfile?.branch_id || null));
+  const defaultModeRef = useRef(orderType);
+  useEffect(() => {
+    const b = userProfile?.branch_id;
+    if (b) loadDefaultMode(b).then((m) => { defaultModeRef.current = m; setOrderType((cur) => (cur === 'take_away' || cur === 'dine_in' ? m : cur)); });
+  }, [userProfile?.branch_id]);
   const [pax, setPax] = useState(1);
   const [modeOpen, setModeOpen] = useState(false);
   const { settings: branchPos } = usePOSBranchSettings(userProfile?.branch_id || null);
@@ -392,7 +398,7 @@ const POSMain = () => {
       cart.clear();
       promo.clearPromos();
       setRedemption(null);
-      setTableNumber('');
+      setTableNumber(''); setOrderType(defaultModeRef.current);
       setExternalOrderId('');
       setCustomerName('');
       if (member?.id && !isOffline) {
@@ -499,7 +505,7 @@ const POSMain = () => {
       toast.success(`Pesanan disimpan ke Meja ${selectedTable.table_number}${newLines.length ? ' & dikirim ke dapur' : ''}`);
       cart.clear();
       setSelectedTable(null);
-      setTableNumber('');
+      setTableNumber(''); setOrderType(defaultModeRef.current);
       setCustomerName('');
       sentLineIds.current = new Set();
       sentQty.current = {};
@@ -785,7 +791,7 @@ const POSMain = () => {
       />
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
       <POSModeDialog allowedModes={branchPos?.order_modes} open={modeOpen} onOpenChange={setModeOpen} orderType={orderType} pax={pax} externalOrderId={externalOrderId}
-        onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); if (v.orderType === 'dine_in' && !tableNumber) setTableMapOpen(true); }} />
+        onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); }} />
       <POSQuickMember branchId={userProfile?.branch_id || null} cashierName={cashier?.name || userProfile?.full_name || null} open={quickMemberOpen} onOpenChange={setQuickMemberOpen} onSelect={(m) => { setMember(m); if (!customerName && m.name) setCustomerName(m.name); }} />
       <POSReportsDialog open={reportsOpen} onOpenChange={setReportsOpen} branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} branchName={branchName} />
       <MemberScanDialog
