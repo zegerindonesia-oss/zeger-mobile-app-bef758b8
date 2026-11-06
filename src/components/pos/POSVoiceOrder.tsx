@@ -236,7 +236,7 @@ export const POSVoiceOrder = ({ onAdd, onMember }: Props) => {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.code === 'F2') {
         e.preventDefault();
-        if (!open) { setOpen(true); setTimeout(start, 150); }
+        if (!open) { setOpen(true); start(); }
         else listening ? stop() : start();
       }
     };
