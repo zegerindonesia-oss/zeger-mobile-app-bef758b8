@@ -2,6 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Maximize2 } from "lucide-react";
 import { PLANS, formatPrice } from "@/lib/flow-plans";
+import modelImg from "@/assets/flow-model.png.asset.json";
+import devicesImg from "@/assets/flow-devices.png.asset.json";
+import { CafeSimulation } from "@/components/flow/CafeSimulation";
 
 /* ---------- Slide frame ---------- */
 const Frame = ({ children, n }: { children: ReactNode; n: number }) => (
@@ -33,12 +36,26 @@ const Card = ({ t, d }: { t: string; d: string }) => (
 const slides: { title: string; render: (n: number) => ReactNode }[] = [
   { title: "Cover", render: (n) => (
     <Frame n={n}>
-      <div className="flex-1 flex flex-col justify-center gap-10 max-w-[1300px]">
-        <Kicker>Proposal Kemitraan · FlowF&amp;B</Kicker>
-        <h1 className="pitch-title-lg font-black">Satu sistem untuk seluruh bisnis F&amp;B Anda.</h1>
-        <p className="pitch-body-lg text-muted-foreground max-w-[1100px]">Kasir, dapur, layar antrean, aplikasi pelanggan, armada keliling, stok, hingga laba rugi — terhubung otomatis dalam satu ekosistem.</p>
-        <div className="flex gap-4">{["POS", "KDS", "TV Antrean", "Customer App", "Rider", "HPP & Stok", "Laba Rugi"].map((x) => <span key={x} className="pitch-pill pitch-chrome font-bold">{x}</span>)}</div>
+      <div className="flex-1 flex items-center gap-10">
+        <div className="flex flex-col gap-10 w-[980px]">
+          <Kicker>Proposal Kemitraan · FlowF&amp;B</Kicker>
+          <h1 className="pitch-title-lg font-extrabold">Satu sistem untuk seluruh bisnis F&amp;B Anda.</h1>
+          <p className="pitch-body text-muted-foreground">Kasir, dapur, layar antrean, aplikasi pelanggan, armada keliling, stok, hingga laba rugi — terhubung otomatis.</p>
+        </div>
+        <img src={modelImg.url} alt="" className="absolute right-0 bottom-0 h-[1000px] object-contain" />
       </div>
+    </Frame>) },
+  { title: "Perangkat", render: (n) => (
+    <Frame n={n}>
+      <Kicker>Satu ekosistem, semua perangkat</Kicker>
+      <h2 className="pitch-title font-extrabold mt-8">Mac untuk owner. iPad untuk kasir. iPhone untuk pelanggan.</h2>
+      <div className="flex-1 flex items-center justify-center mt-4"><img src={devicesImg.url} alt="" className="max-h-[700px] object-contain" /></div>
+    </Frame>) },
+  { title: "Simulasi Kafe", render: (n) => (
+    <Frame n={n}>
+      <Kicker>Simulasi solusi · hulu ke hilir</Kicker>
+      <h2 className="pitch-subtitle font-extrabold mt-6">Dari truk barang masuk sampai laporan laba rugi.</h2>
+      <div className="flex-1 mt-6 flex items-center justify-center"><div className="w-[1380px]"><CafeSimulation large /></div></div>
     </Frame>) },
   { title: "Masalah", render: (n) => (
     <Frame n={n}>

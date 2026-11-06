@@ -330,7 +330,7 @@ const FlowLanding = () => {
   useEffect(() => { document.title = 'FlowF&B — The Operating System for F&B'; window.scrollTo(0, 0); }, []);
   return (
     <FlowShell>
-      <Hero /><Marquee /><Channels /><DeviceShowcase /><Coverflow /><Tabs /><AISection /><AppBanner /><Industries /><Compare /><FinalCTA />
+      <Hero /><Marquee /><Channels /><SimulationSection /><DeviceShowcase /><Coverflow /><Tabs /><AISection /><AppBanner /><Industries /><Compare /><FinalCTA />
     </FlowShell>
   );
 };

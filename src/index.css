@@ -1010,7 +1010,7 @@ button[class*="bg-red-"]:not(:disabled):active { transform: translateY(1px); }
 /* ---------- FlowF&B pitch deck (Apple glass, 1920x1080) ---------- */
 .pitch-app { background: radial-gradient(60% 60% at 15% 10%, hsl(var(--primary) / 0.10), transparent 70%), linear-gradient(160deg, hsl(var(--background)), hsl(var(--muted))); color: hsl(var(--foreground)); }
 .pitch-wrapper { position: absolute; width: 1920px; height: 1080px; left: 50%; top: 50%; margin-left: -960px; margin-top: -540px; transform-origin: center center; }
-.pitch-slide { position: relative; width: 1920px; height: 1080px; overflow: hidden; border-radius: 48px; color: hsl(var(--foreground));
+.pitch-slide { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif; position: relative; width: 1920px; height: 1080px; overflow: hidden; border-radius: 48px; color: hsl(var(--foreground));
   background: linear-gradient(150deg, hsl(var(--background)), hsl(var(--muted) / 0.7)); box-shadow: 0 40px 120px -40px hsl(var(--foreground) / 0.25); }
 .pitch-blob { position: absolute; border-radius: 9999px; filter: blur(90px); }
 .pitch-blob-a { width: 900px; height: 900px; right: -250px; top: -300px; background: hsl(var(--primary) / 0.22); }
