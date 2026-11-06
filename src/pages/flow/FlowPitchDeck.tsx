@@ -166,7 +166,7 @@ const slides: { title: string; render: (n: number) => ReactNode }[] = [
     <Frame n={n}>
       <Kicker>Paket Harga</Kicker>
       <h2 className="pitch-title font-black mt-8">Mulai gratis, tumbuh sesuai bisnis.</h2>
-      <div className="grid grid-cols-4 gap-6 mt-12 flex-1">
+      <div className="grid grid-cols-4 gap-6 mt-12">
         {PLANS.map((p) => (
           <div key={p.id} className={`pitch-glass rounded-[36px] p-8 flex flex-col gap-4 ${p.hot ? "ring-4 ring-primary" : ""}`}>
             <span className="pitch-caption font-extrabold">{p.name}</span>
