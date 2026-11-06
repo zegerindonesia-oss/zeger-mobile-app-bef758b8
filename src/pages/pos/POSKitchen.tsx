@@ -1,20 +1,43 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { usePOSKDS, KDSStation, stationOf, KDSTicket } from '@/hooks/usePOSKDS';
 import { KDSTicketCard } from '@/components/pos/KDSTicketCard';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ArrowLeft, Volume2, History, RotateCcw, Coffee, Utensils, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Volume2, History, RotateCcw, QrCode, Coffee, Utensils, LayoutGrid } from 'lucide-react';
 import { unlockAudio } from '@/lib/audio';
 
 const ONLINE = ['gofood', 'grabfood', 'shopeefood', 'zeger_app'];
 
-const POSKitchen = () => {
+const KIOSK_KEY = 'flow_kds_kiosk_token';
+
+const POSKitchen = ({ kiosk = false }: { kiosk?: boolean }) => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
-  const branchId = userProfile?.branch_id || null;
-  const { tickets, recent, loading, updateStatus, recallTicket, toggleItemDone } = usePOSKDS(branchId);
+  const [params] = useSearchParams();
+  const kioskToken = useMemo(() => {
+    if (!kiosk) return null;
+    const k = params.get('k');
+    if (k) { localStorage.setItem(KIOSK_KEY, k); return k; }
+    return localStorage.getItem(KIOSK_KEY);
+  }, [kiosk, params]);
+  const branchId = kiosk ? null : userProfile?.branch_id || null;
+  const { tickets, recent, loading, updateStatus, recallTicket, toggleItemDone, kioskBranch, kioskError } = usePOSKDS(branchId, kioskToken);
+  const [pairOpen, setPairOpen] = useState(false);
+  const [pairToken, setPairToken] = useState<string | null>(null);
+  const openPair = async (rotate = false) => {
+    if (!userProfile?.branch_id) return toast.error('Akun ini belum terhubung ke cabang');
+    const { data, error } = await (supabase as any).rpc('kds_pairing_token', { _branch_id: userProfile.branch_id, _rotate: rotate });
+    if (error) return toast.error(error.message);
+    setPairToken(data); setPairOpen(true);
+    if (rotate) toast.success('QR baru dibuat. Tablet lama harus scan ulang.');
+  };
+  const pairUrl = pairToken ? `${window.location.origin}/kds?k=${pairToken}` : '';
   const [filter, setFilter] = useState<'all' | 'dine_in' | 'online'>('all');
   const [station, setStation] = useState<KDSStation>('all');
   const [recallOpen, setRecallOpen] = useState(false);
@@ -57,15 +80,27 @@ const POSKitchen = () => {
     </button>
   );
 
+  if (kiosk && (!kioskToken || kioskError)) {
+    return (
+      <div className="pos-kds-shell h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <QrCode className="h-16 w-16 text-primary" />
+        <div className="text-2xl font-bold">Hubungkan Layar Dapur</div>
+        <p className="pos-kds-muted max-w-md">{kioskError || 'Buka Kitchen Display di POS kasir, tekan tombol "QR Tablet Dapur", lalu scan QR-nya dengan kamera tablet ini.'}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="pos-kds-shell h-screen flex flex-col font-sans">
       <div className="pos-kds-bar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3">
-          <Button size="icon" variant="ghost" className="text-white hover:bg-white/10" onClick={() => navigate('/pos')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          {!kiosk && (
+            <Button size="icon" variant="ghost" className="text-white hover:bg-white/10" onClick={() => navigate('/pos')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
           <div>
-            <div className="font-bold text-lg">Kitchen Display</div>
+            <div className="font-bold text-lg">Kitchen Display{kioskBranch?.name ? ` · ${kioskBranch.name}` : ''}</div>
             <div className="text-xs pos-kds-muted">
               {filtered.length} tiket aktif{lateCount > 0 && <span className="text-primary font-semibold"> · {lateCount} terlambat</span>}
             </div>
@@ -82,6 +117,7 @@ const POSKitchen = () => {
           <span className="w-px h-6 bg-white/15 mx-1" />
           <Chip active={false} onClick={() => setRecallOpen(true)}><History className="h-4 w-4" />Recall</Chip>
           <Chip active={false} onClick={unlockAudio}><Volume2 className="h-4 w-4" /></Chip>
+          {!kiosk && <Chip active={false} onClick={() => openPair()}><QrCode className="h-4 w-4" />QR Tablet Dapur</Chip>}
         </div>
       </div>
 
@@ -105,7 +141,7 @@ const POSKitchen = () => {
             {recent.map((t) => (
               <div key={t.id} className="flex items-center justify-between rounded-xl border p-3">
                 <div className="min-w-0">
-                  <div className="font-semibold">#{(t.transaction_number || t.id).slice(-6)}</div>
+                  <div className="font-semibold">#{t.queue_number ? String(t.queue_number).padStart(3, '0') : (t.transaction_number || t.id).slice(-6)}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {t.customer_name || (t.table_number ? `Meja ${t.table_number}` : t.order_type)} ·{' '}
                     {t.served_at && new Date(t.served_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}
@@ -119,6 +155,25 @@ const POSKitchen = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      <Dialog open={pairOpen} onOpenChange={setPairOpen}>
+        <DialogContent className="w-[94vw] md:w-[80vw] max-w-none max-h-[90dvh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Hubungkan Tablet Dapur</DialogTitle></DialogHeader>
+          <div className="flex flex-col md:flex-row items-center gap-6 py-2">
+            {pairUrl && <div className="bg-background p-4 rounded-2xl border"><QRCodeSVG value={pairUrl} size={260} /></div>}
+            <div className="space-y-3 text-sm">
+              <p>1. Buka kamera tablet dapur, lalu scan QR ini.</p>
+              <p>2. Tablet langsung membuka Kitchen Display cabang ini, tanpa login dan tanpa akses kasir.</p>
+              <p>3. Tablet tetap terhubung walau dimatikan atau di-refresh.</p>
+              <p className="text-muted-foreground">Jika tablet hilang atau ganti perangkat, tekan "Buat QR Baru" agar tablet lama terputus.</p>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(pairUrl); toast.success('Link disalin'); }}>Salin Link</Button>
+                <Button variant="destructive" onClick={() => openPair(true)}>Buat QR Baru</Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
