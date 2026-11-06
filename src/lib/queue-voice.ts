@@ -1,5 +1,5 @@
 /** Friendly female Indonesian voice for calling queue numbers on the TV screen. */
-const FEMALE_HINTS = ['female', 'wanita', 'perempuan', 'gadis', 'damayanti', 'google bahasa indonesia', 'ardi'.replace('ardi', 'gita'), 'siti', 'natural'];
+const FEMALE_HINTS = ['female', 'wanita', 'perempuan', 'gadis', 'damayanti', 'google bahasa indonesia', 'gita', 'siti', 'natural'];
 const MALE_HINTS = ['male', 'ardi', 'pria'];
 
 let cached: SpeechSynthesisVoice | null = null;
