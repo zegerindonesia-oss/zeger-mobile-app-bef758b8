@@ -1,3 +1,4 @@
+import { CafeSimulation } from "@/components/flow/CafeSimulation";
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
@@ -334,5 +335,14 @@ const FlowLanding = () => {
     </FlowShell>
   );
 };
+
+const SimulationSection = () => (
+  <section className="mx-auto max-w-7xl px-5 py-20">
+    <div className="text-center"><div className="text-xs font-bold tracking-[0.3em] flow-red">SIMULASI SOLUSI</div>
+    <h2 className="mt-3 text-4xl md:text-5xl font-extrabold flow-ink">Lihat FlowF&B bekerja <span className="flow-red">dari hulu ke hilir.</span></h2>
+    <p className="mt-3 flow-muted">Arahkan kursor ke angka di gambar untuk melihat masalah dan solusinya.</p></div>
+    <div className="mt-10"><CafeSimulation /></div>
+  </section>
+);
 
 export default FlowLanding;
