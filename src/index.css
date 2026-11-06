@@ -993,3 +993,16 @@ button[class*="bg-red-"]:not(:disabled):active { transform: translateY(1px); }
 .tv-badge-process { background: linear-gradient(180deg, hsl(var(--warning, 38 92% 50%)), hsl(var(--warning, 38 92% 50%) / .8)); color: hsl(var(--warning-foreground, 0 0% 100%)); }
 .tv-marquee { display: inline-block; padding-left: 100%; animation: tv-marquee 25s linear infinite; }
 @keyframes tv-marquee { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+/* TV: Zeger red 3D wave background */
+.tv-waves { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.tv-wave { position: absolute; inset: 0; width: 200%; height: 100%; filter: blur(2px); }
+.tv-wave path { fill: hsl(var(--primary)); }
+.tv-wave-1 { opacity: .28; animation: tv-wave-move 22s ease-in-out infinite alternate; }
+.tv-wave-2 { opacity: .45; filter: blur(6px) drop-shadow(0 -20px 40px hsl(var(--primary) / .5)); animation: tv-wave-move 30s ease-in-out infinite alternate-reverse; }
+.tv-wave-3 { opacity: .2; filter: blur(10px); animation: tv-wave-move 26s ease-in-out infinite alternate; }
+.tv-orb { position: absolute; border-radius: 9999px; filter: blur(70px); }
+.tv-orb-a { width: 40vw; height: 40vw; left: -8vw; top: 20vh; background: hsl(var(--primary) / .35); animation: tv-orb 18s ease-in-out infinite alternate; }
+.tv-orb-b { width: 34vw; height: 34vw; right: -6vw; bottom: -6vh; background: hsl(var(--primary) / .45); animation: tv-orb 24s ease-in-out infinite alternate-reverse; }
+@keyframes tv-wave-move { from { transform: translateX(0) skewY(0deg); } to { transform: translateX(-35%) skewY(-3deg); } }
+@keyframes tv-orb { from { transform: translate(0,0) scale(1); } to { transform: translate(6vw,-4vh) scale(1.15); } }

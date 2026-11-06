@@ -6,19 +6,25 @@ import { useAuth } from '@/hooks/useAuth';
 import { playAlertBeep, unlockAudio } from '@/lib/audio';
 import { TvMediaItem, detectMediaType, gdriveId, spotifyEmbed, youtubeId, youtubePlaylistId } from '@/lib/tv-media';
 import { Maximize, Volume2, ArrowLeft, Users, Clock } from 'lucide-react';
-import zegerEmblem from '@/assets/zeger-emblem.png.asset.json';
+import zegerEmblem from '@/assets/zeger-logo-3d.png.asset.json';
+import { Volume1, VolumeX, Type } from 'lucide-react';
 
 /**
  * React doesn't reliably set the `muted` attribute, so browsers/Android TV
  * block autoplay. Force muted + play() via ref.
  */
-const AutoVideo = ({ src, loop, onEnded }: { src: string; loop?: boolean; onEnded?: () => void }) => {
+const AutoVideo = ({ src, loop, onEnded, audible }: { src: string; loop?: boolean; onEnded?: () => void; audible?: boolean }) => {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = ref.current; if (!v) return;
     v.muted = true; v.defaultMuted = true; v.setAttribute('muted', '');
     v.play().catch(() => undefined);
   }, [src]);
+  useEffect(() => {
+    const v = ref.current; if (!v) return;
+    v.muted = !audible; if (audible) { v.removeAttribute('muted'); v.volume = 1; }
+    v.play().catch(() => { v.muted = true; v.play().catch(() => undefined); });
+  }, [audible, src]);
   return <video ref={ref} className="h-full w-full object-cover" src={src} autoPlay muted playsInline loop={loop} onEnded={onEnded} onError={onEnded} />;
 };
 
@@ -43,7 +49,7 @@ const queueNo = (t: Ticket) => {
 const speak = speakFriendly;
 
 /** Rotates through the cashier-configured playlist (video, live, drive, banner, spotify). */
-const MediaPlaylist = ({ items, fallback }: { items: TvMediaItem[]; fallback: string | null }) => {
+const MediaPlaylist = ({ items, fallback, audible }: { items: TvMediaItem[]; fallback: string | null; audible?: boolean }) => {
   const list = items.length ? items : fallback ? [{ type: detectMediaType(fallback), url: fallback }] : [];
   const [idx, setIdx] = useState(0);
   const cur = list[idx % Math.max(list.length, 1)];
@@ -68,16 +74,17 @@ const MediaPlaylist = ({ items, fallback }: { items: TvMediaItem[]; fallback: st
     const id = gdriveId(cur.url);
     return id ? <iframe key={key} className="h-full w-full" src={`https://drive.google.com/file/d/${id}/preview?autoplay=1`} allow="autoplay" title="Promo" /> : <PromoVideo url={null} />;
   }
-  if (cur.type === 'video') return <AutoVideo key={key} src={cur.url} loop={list.length < 2} onEnded={list.length < 2 ? undefined : next} />;
-  return <PromoVideo key={key} url={cur.url} />;
+  if (cur.type === 'video') return <AutoVideo key={key} audible={audible} src={cur.url} loop={list.length < 2} onEnded={list.length < 2 ? undefined : next} />;
+  return <PromoVideo key={`${key}-${audible}`} url={cur.url} audible={audible} />;
 };
 
-const PromoVideo = ({ url }: { url: string | null }) => {
+const PromoVideo = ({ url, audible }: { url: string | null; audible?: boolean }) => {
+  const m = audible ? 0 : 1;
   if (!url) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
         <img src={zegerEmblem.url} alt="Zeger" className="h-32 w-32 object-contain drop-shadow-2xl mb-4" />
-        <p className="text-6xl font-black tracking-tight">ZEGER</p>
+        <p className="text-6xl font-black tracking-tight">ZEGER COFFEE</p>
         <p className="mt-2 text-lg opacity-80">Happiness in every cup ☕</p>
       </div>
     );
@@ -87,7 +94,7 @@ const PromoVideo = ({ url }: { url: string | null }) => {
     return (
       <iframe
         className="h-full w-full pointer-events-none"
-        src={`https://www.youtube.com/embed/videoseries?list=${list}&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0`}
+        src={`https://www.youtube.com/embed/videoseries?list=${list}&autoplay=1&mute=${m}&loop=1&controls=0&modestbranding=1&rel=0`}
         allow="autoplay; encrypted-media"
         title="Promo"
       />
@@ -98,13 +105,13 @@ const PromoVideo = ({ url }: { url: string | null }) => {
     return (
       <iframe
         className="h-full w-full pointer-events-none"
-        src={`https://www.youtube.com/embed/${yt}?autoplay=1&mute=1&loop=1&playlist=${yt}&controls=0&modestbranding=1&rel=0`}
+        src={`https://www.youtube.com/embed/${yt}?autoplay=1&mute=${m}&loop=1&playlist=${yt}&controls=0&modestbranding=1&rel=0`}
         allow="autoplay; encrypted-media"
         title="Promo"
       />
     );
   }
-  return <AutoVideo src={url} loop />;
+  return <AutoVideo src={url} loop audible={audible} />;
 };
 
 /**
@@ -133,6 +140,11 @@ const POSQueueDisplay = () => {
   const [runningText, setRunningText] = useState('');
   const [now, setNow] = useState(new Date());
   const [soundOn, setSoundOn] = useState(false);
+  const [videoSound, setVideoSound] = useState(localStorage.getItem('flow_tv_video_sound') !== '0');
+  const [textSize, setTextSize] = useState(Number(localStorage.getItem('flow_tv_text_size') || 1));
+  useEffect(() => { localStorage.setItem('flow_tv_video_sound', videoSound ? '1' : '0'); }, [videoSound]);
+  useEffect(() => { localStorage.setItem('flow_tv_text_size', String(textSize)); }, [textSize]);
+  const TEXT_SIZES = ['text-lg', 'text-2xl', 'text-4xl', 'text-5xl'];
   const [highlight, setHighlight] = useState<string | null>(null);
   const readyIds = useRef<Set<string> | null>(null);
 
@@ -216,7 +228,13 @@ const POSQueueDisplay = () => {
   const date = now.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="tv-glass-canvas h-screen flex flex-col overflow-hidden select-none p-4 gap-4">
+    <div className="tv-glass-canvas relative isolate h-screen flex flex-col overflow-hidden select-none p-4 gap-4">
+      <div aria-hidden className="tv-waves">
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="none" className="tv-wave tv-wave-1"><path d="M0,620 C240,480 420,760 720,600 C1020,440 1200,700 1440,560 L1440,900 L0,900 Z" /></svg>
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="none" className="tv-wave tv-wave-2"><path d="M0,700 C300,560 520,820 820,660 C1100,520 1260,760 1440,640 L1440,900 L0,900 Z" /></svg>
+        <svg viewBox="0 0 1440 900" preserveAspectRatio="none" className="tv-wave tv-wave-3"><path d="M0,0 L1440,0 L1440,220 C1180,360 980,120 700,260 C430,390 220,170 0,300 Z" /></svg>
+        <div className="tv-orb tv-orb-a" /><div className="tv-orb tv-orb-b" />
+      </div>
       <header className="tv-glass rounded-[2rem] flex items-center justify-between gap-6 px-6 py-3">
         <div className="flex items-center gap-4 min-w-0">
           {userProfile && (
@@ -224,11 +242,9 @@ const POSQueueDisplay = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="tv-glass-chip h-16 w-16 rounded-2xl grid place-items-center shrink-0">
-            <img src={zegerEmblem.url} alt="Logo Zeger" className="h-12 w-12 object-contain drop-shadow-lg" />
-          </div>
+          <img src={zegerEmblem.url} alt="Logo Zeger Coffee" className="h-16 w-16 object-contain drop-shadow-xl shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-3xl font-black tracking-tight text-foreground">ZEGER</h1>
+            <h1 className="text-3xl font-black tracking-tight text-foreground">ZEGER COFFEE</h1>
             <p className="text-sm text-muted-foreground truncate">{branchName}</p>
           </div>
         </div>
@@ -250,7 +266,7 @@ const POSQueueDisplay = () => {
 
       <div className="flex-1 min-h-0 grid grid-cols-[1.6fr_1fr] gap-4">
         <section className="tv-glass rounded-[2rem] p-3 min-h-0 flex">
-          <div className="flex-1 rounded-[1.5rem] overflow-hidden bg-foreground shadow-2xl"><MediaPlaylist items={mediaItems} fallback={videoUrl} /></div>
+          <div className="flex-1 rounded-[1.5rem] overflow-hidden bg-foreground shadow-2xl"><MediaPlaylist items={mediaItems} fallback={videoUrl} audible={soundOn && videoSound} /></div>
         </section>
 
         <section className="tv-glass rounded-[2rem] p-5 min-h-0 flex flex-col">
@@ -276,8 +292,10 @@ const POSQueueDisplay = () => {
 
       <footer className="tv-glass rounded-full pl-2 pr-2 py-2 flex items-center gap-3">
         <div className="flex-1 overflow-hidden">
-          <p className="tv-marquee whitespace-nowrap text-lg font-semibold text-foreground">{runningText || 'Silakan ambil pesanan saat nama Anda dipanggil dan status berubah menjadi Siap Diambil. Terima kasih! ☕'}</p>
+          <p className={`tv-marquee whitespace-nowrap ${TEXT_SIZES[textSize] || 'text-lg'} font-semibold text-foreground`}>{runningText || 'Silakan ambil pesanan saat nama Anda dipanggil dan status berubah menjadi Siap Diambil. Terima kasih! ☕'}</p>
         </div>
+        <button onClick={() => setTextSize((n) => (n + 1) % TEXT_SIZES.length)} className="tv-glass-chip shrink-0 h-10 px-3 rounded-full flex items-center gap-1 text-sm font-semibold" title="Ukuran teks berjalan"><Type className="h-4 w-4" /> {['S','M','L','XL'][textSize]}</button>
+        <button onClick={() => setVideoSound((v) => !v)} className="tv-glass-chip shrink-0 h-10 px-3 rounded-full flex items-center gap-1 text-sm font-semibold" title="Suara video">{videoSound ? <Volume1 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />} Video {videoSound ? 'On' : 'Mute'}</button>
         {!soundOn ? (
           <button onClick={enable} className="shrink-0 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 font-medium">
             <Maximize className="h-4 w-4" /> Aktifkan Suara & Layar Penuh
