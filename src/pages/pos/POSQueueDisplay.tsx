@@ -12,11 +12,13 @@ interface Ticket {
   table_number: string | null;
   customer_name: string | null;
   transaction_number: string | null;
+  queue_number?: number | null;
   created_at: string;
 }
 
 /** Short, easy-to-call number shown on the TV. */
 const queueNo = (t: Ticket) => {
+  if (t.queue_number) return String(t.queue_number).padStart(3, '0');
   if (t.table_number) return `M${t.table_number}`;
   const digits = (t.transaction_number || t.id).replace(/\D/g, '');
   return digits.slice(-3).padStart(3, '0');

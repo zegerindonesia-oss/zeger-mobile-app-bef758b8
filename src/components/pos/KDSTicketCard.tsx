@@ -40,10 +40,11 @@ export const KDSTicketCard = ({ ticket, station = 'all', onUpdateStatus, onToggl
               <span className="pos-kds-chip rounded-full px-2.5 py-0.5">Meja {ticket.table_number}</span>
             )}
           </div>
-          <div className="font-bold text-xl mt-1.5 truncate">
-            #{(ticket.transaction_number || ticket.id).slice(-6)}
+          <div className="font-black text-4xl leading-none mt-2 tracking-tight">
+            #{ticket.queue_number ? String(ticket.queue_number).padStart(3, '0') : (ticket.transaction_number || ticket.id).slice(-4)}
           </div>
-          {ticket.customer_name && <div className="text-sm pos-kds-muted truncate">{ticket.customer_name}</div>}
+          {ticket.customer_name && <div className="text-base font-semibold truncate mt-1">{ticket.customer_name}</div>}
+          {ticket.transaction_number && <div className="text-[11px] pos-kds-muted truncate">{ticket.transaction_number} · {new Date(ticket.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}</div>}
           {ticket.external_order_id && <div className="text-xs pos-kds-muted truncate">Order: {ticket.external_order_id}</div>}
         </div>
         <div className={`flex items-center gap-1 text-sm font-mono font-bold px-2.5 py-1 rounded-lg pos-kds-sla-${sla}`}>
@@ -70,11 +71,19 @@ export const KDSTicketCard = ({ ticket, station = 'all', onUpdateStatus, onToggl
                     ? <Coffee className="h-3.5 w-3.5 pos-kds-muted shrink-0" />
                     : <Utensils className="h-3.5 w-3.5 pos-kds-muted shrink-0" />)}
                 </div>
-                {it.notes && <div className="text-xs pos-kds-note px-2 py-1 rounded-md mt-1 inline-block">{it.notes}</div>}
+                {it.notes && (
+                  <ul className="mt-1 space-y-0.5">
+                    {it.notes.split(/\s*[,;|]\s*/).filter(Boolean).map((n, idx) => (
+                      <li key={idx} className="text-sm pos-kds-note px-2 py-0.5 rounded-md inline-block mr-1">• {n}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </label>
           );
         })}
+        {ticket.items.length === 0 && <div className="text-sm pos-kds-muted">Menu belum masuk, tunggu sebentar…</div>}
+        {ticket.notes && <div className="text-sm pos-kds-note px-2 py-1 rounded-md">Catatan: {ticket.notes}</div>}
         <div className="text-xs pos-kds-muted">{doneCount}/{ticket.items.length} item selesai</div>
       </div>
 
