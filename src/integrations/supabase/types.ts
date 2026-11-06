@@ -2139,6 +2139,32 @@ export type Database = {
           },
         ]
       }
+      pos_kds_devices: {
+        Row: {
+          branch_id: string
+          created_at: string
+          token: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          token?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_kds_devices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_kds_ticket_items: {
         Row: {
           created_at: string
@@ -2192,6 +2218,7 @@ export type Database = {
           id: string
           notes: string | null
           order_type: string | null
+          queue_number: number | null
           ready_at: string | null
           served_at: string | null
           started_at: string | null
@@ -2210,6 +2237,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_type?: string | null
+          queue_number?: number | null
           ready_at?: string | null
           served_at?: string | null
           started_at?: string | null
@@ -2228,6 +2256,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_type?: string | null
+          queue_number?: number | null
           ready_at?: string | null
           served_at?: string | null
           started_at?: string | null
@@ -5802,6 +5831,19 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant: string; _uid: string }
         Returns: boolean
+      }
+      kds_kiosk_tickets: { Args: { _token: string }; Returns: Json }
+      kds_kiosk_toggle_item: {
+        Args: { _done: boolean; _item_id: string; _token: string }
+        Returns: undefined
+      }
+      kds_kiosk_update: {
+        Args: { _status: string; _ticket_id: string; _token: string }
+        Returns: undefined
+      }
+      kds_pairing_token: {
+        Args: { _branch_id: string; _rotate?: boolean }
+        Returns: string
       }
       list_branch_cashiers: {
         Args: { _branch_id: string }
