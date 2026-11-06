@@ -952,16 +952,16 @@ button[class*="bg-red-"]:not(:disabled):active { transform: translateY(1px); }
 /* ===== TV queue screen: Apple-style liquid glass ===== */
 .tv-glass-canvas {
   background:
-    radial-gradient(60% 50% at 10% 10%, hsl(var(--primary) / 0.22), transparent 60%),
-    radial-gradient(50% 50% at 90% 90%, hsl(var(--primary) / 0.15), transparent 60%),
-    linear-gradient(135deg, hsl(var(--muted)), hsl(var(--background)));
+    radial-gradient(45% 40% at 0% 0%, hsl(var(--primary) / 0.12), transparent 70%),
+    radial-gradient(40% 45% at 100% 100%, hsl(var(--primary) / 0.10), transparent 70%),
+    linear-gradient(160deg, hsl(var(--background)), hsl(var(--muted) / 0.6));
 }
 .tv-glass {
-  background: hsl(var(--background) / 0.45);
-  backdrop-filter: blur(28px) saturate(1.6);
-  -webkit-backdrop-filter: blur(28px) saturate(1.6);
-  border: 1px solid hsl(var(--background) / 0.7);
-  box-shadow: 0 20px 50px -20px hsl(var(--foreground) / 0.25), inset 0 1px 0 hsl(var(--background) / 0.9);
+  background: linear-gradient(145deg, hsl(var(--background) / 0.7), hsl(var(--background) / 0.4));
+  backdrop-filter: blur(32px) saturate(1.8);
+  -webkit-backdrop-filter: blur(32px) saturate(1.8);
+  border: 1px solid hsl(var(--background) / 0.9);
+  box-shadow: 0 24px 60px -28px hsl(var(--foreground) / 0.22), inset 0 1px 1px hsl(var(--background)), inset 0 -1px 1px hsl(var(--foreground) / 0.04);
 }
 .tv-glass-chip {
   background: hsl(var(--background) / 0.6);
@@ -998,11 +998,11 @@ button[class*="bg-red-"]:not(:disabled):active { transform: translateY(1px); }
 .tv-waves { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .tv-wave { position: absolute; inset: 0; width: 200%; height: 100%; filter: blur(2px); }
 .tv-wave path { fill: hsl(var(--primary)); }
-.tv-wave-1 { opacity: .28; animation: tv-wave-move 22s ease-in-out infinite alternate; }
-.tv-wave-2 { opacity: .45; filter: blur(6px) drop-shadow(0 -20px 40px hsl(var(--primary) / .5)); animation: tv-wave-move 30s ease-in-out infinite alternate-reverse; }
-.tv-wave-3 { opacity: .2; filter: blur(10px); animation: tv-wave-move 26s ease-in-out infinite alternate; }
+.tv-wave-1 { opacity: .1; animation: tv-wave-move 22s ease-in-out infinite alternate; }
+.tv-wave-2 { opacity: .16; filter: blur(8px) drop-shadow(0 -20px 40px hsl(var(--primary) / .25)); animation: tv-wave-move 30s ease-in-out infinite alternate-reverse; }
+.tv-wave-3 { opacity: .07; filter: blur(10px); animation: tv-wave-move 26s ease-in-out infinite alternate; }
 .tv-orb { position: absolute; border-radius: 9999px; filter: blur(70px); }
-.tv-orb-a { width: 40vw; height: 40vw; left: -8vw; top: 20vh; background: hsl(var(--primary) / .35); animation: tv-orb 18s ease-in-out infinite alternate; }
-.tv-orb-b { width: 34vw; height: 34vw; right: -6vw; bottom: -6vh; background: hsl(var(--primary) / .45); animation: tv-orb 24s ease-in-out infinite alternate-reverse; }
+.tv-orb-a { width: 40vw; height: 40vw; left: -8vw; top: 20vh; background: hsl(var(--primary) / .12); animation: tv-orb 18s ease-in-out infinite alternate; }
+.tv-orb-b { width: 34vw; height: 34vw; right: -6vw; bottom: -6vh; background: hsl(var(--primary) / .14); animation: tv-orb 24s ease-in-out infinite alternate-reverse; }
 @keyframes tv-wave-move { from { transform: translateX(0) skewY(0deg); } to { transform: translateX(-35%) skewY(-3deg); } }
 @keyframes tv-orb { from { transform: translate(0,0) scale(1); } to { transform: translate(6vw,-4vh) scale(1.15); } }

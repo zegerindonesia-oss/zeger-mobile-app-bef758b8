@@ -264,13 +264,13 @@ const POSQueueDisplay = () => {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 grid grid-cols-[1.6fr_1fr] gap-4">
+      <div className="flex-1 min-h-0 grid grid-cols-[2.3fr_1fr] gap-4">
         <section className="tv-glass rounded-[2rem] p-3 min-h-0 flex">
           <div className="flex-1 rounded-[1.5rem] overflow-hidden bg-foreground shadow-2xl"><MediaPlaylist items={mediaItems} fallback={videoUrl} audible={soundOn && videoSound} /></div>
         </section>
 
-        <section className="tv-glass rounded-[2rem] p-5 min-h-0 flex flex-col">
-          <div className="grid grid-cols-[110px_1fr_auto] gap-3 px-4 pb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+        <section className="tv-glass rounded-[2rem] p-3 min-h-0 flex flex-col">
+          <div className="grid grid-cols-[72px_1fr_auto] gap-2 px-3 pb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
             <span>No.</span><span>Nama</span><span>Status</span>
           </div>
           <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden" style={{ perspective: '1000px' }}>
@@ -278,9 +278,9 @@ const POSQueueDisplay = () => {
               const isReady = t.status === 'ready';
               return (
                 <div key={t.id} style={{ animationDelay: `${i * 70}ms` }}
-                  className={`tv-row-drop tv-glass-row grid grid-cols-[110px_1fr_auto] items-center gap-3 rounded-2xl px-4 py-3 ${isReady ? 'tv-row-ready' : ''} ${highlight === t.id ? 'tv-row-call' : ''}`}>
-                  <span className="text-4xl font-black tabular-nums text-foreground">{queueNo(t)}</span>
-                  <span className="text-2xl font-semibold truncate text-foreground">{t.customer_name ? `Kak ${t.customer_name}` : t.table_number ? `Meja ${t.table_number}` : '—'}</span>
+                  className={`tv-row-drop tv-glass-row grid grid-cols-[72px_1fr_auto] items-center gap-2 rounded-2xl px-3 py-2.5 ${isReady ? 'tv-row-ready' : ''} ${highlight === t.id ? 'tv-row-call' : ''}`}>
+                  <span className="text-3xl font-black tabular-nums tracking-tight text-foreground">{queueNo(t)}</span>
+                  <span className="text-xl font-semibold truncate text-foreground">{t.customer_name ? `Kak ${t.customer_name}` : t.table_number ? `Meja ${t.table_number}` : '—'}</span>
                   <span className={`tv-badge ${isReady ? 'tv-badge-ready' : 'tv-badge-process'}`}>{isReady ? 'Siap Diambil' : 'Sedang Diproses'}</span>
                 </div>
               );
