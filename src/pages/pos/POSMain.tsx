@@ -61,7 +61,12 @@ const POSMain = () => {
   const promo = usePOSPromo();
 
   const [branchName, setBranchName] = useState('Cabang');
-  const [orderType, setOrderType] = useState('take_away');
+  const [orderType, setOrderType] = useState(() => getCachedDefaultMode(userProfile?.branch_id || null));
+  const defaultModeRef = useRef(orderType);
+  useEffect(() => {
+    const b = userProfile?.branch_id;
+    if (b) loadDefaultMode(b).then((m) => { defaultModeRef.current = m; setOrderType((cur) => (cur === 'take_away' || cur === 'dine_in' ? m : cur)); });
+  }, [userProfile?.branch_id]);
   const [pax, setPax] = useState(1);
   const [modeOpen, setModeOpen] = useState(false);
   const { settings: branchPos } = usePOSBranchSettings(userProfile?.branch_id || null);
@@ -785,7 +790,7 @@ const POSMain = () => {
       />
       <CashMovementModal open={cashOpen} onClose={() => setCashOpen(false)} onSubmit={addCashMovement} />
       <POSModeDialog allowedModes={branchPos?.order_modes} open={modeOpen} onOpenChange={setModeOpen} orderType={orderType} pax={pax} externalOrderId={externalOrderId}
-        onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); if (v.orderType === 'dine_in' && !tableNumber) setTableMapOpen(true); }} />
+        onConfirm={(v) => { setOrderType(v.orderType); setPax(v.pax); setExternalOrderId(v.externalOrderId); }} />
       <POSQuickMember branchId={userProfile?.branch_id || null} cashierName={cashier?.name || userProfile?.full_name || null} open={quickMemberOpen} onOpenChange={setQuickMemberOpen} onSelect={(m) => { setMember(m); if (!customerName && m.name) setCustomerName(m.name); }} />
       <POSReportsDialog open={reportsOpen} onOpenChange={setReportsOpen} branchId={userProfile?.branch_id || null} shiftId={activeShift?.id || null} branchName={branchName} />
       <MemberScanDialog
