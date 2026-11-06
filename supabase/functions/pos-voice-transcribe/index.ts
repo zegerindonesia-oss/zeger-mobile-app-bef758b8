@@ -15,8 +15,8 @@ Deno.serve(async (req) => {
     const file = form.get("file");
     if (!(file instanceof Blob) || file.size === 0) return json({ error: "Rekaman kosong" }, 400);
     if (file.size > 15 * 1024 * 1024) return json({ error: "Rekaman terlalu panjang" }, 400);
-    const res: any = await transcribeAudio({
-      model: "openai/gpt-4o-transcribe",
+    const res: any = await (transcribeAudio as any)({
+      model: "openai/gpt-transcribe",
       file: new File([file], "voice.webm", { type: file.type || "audio/webm" }),
       language: "id",
       prompt: "Percakapan kasir coffee shop Indonesia: pesanan menu, jumlah, less sugar, es, nomor HP.",
