@@ -34,7 +34,17 @@ const POSSettings = () => {
   const [newType, setNewType] = useState<TvMediaType | 'auto'>('auto');
   const [saving, setSaving] = useState(false);
 
-  const tvUrl = branchId ? `${window.location.origin}/tv?branch=${branchId}` : '';
+  const [tvCode, setTvCode] = useState('');
+  const loadTvCode = async (rotate = false) => {
+    if (!branchId) return;
+    const { data, error } = await (supabase as any).rpc('tv_pairing_code', { _branch_id: branchId, _rotate: rotate });
+    if (error) return toast.error(error.message);
+    setTvCode(data || '');
+    if (rotate) toast.success('Kode TV baru dibuat. TV lama tetap tersambung sampai di-reset.');
+  };
+  useEffect(() => { loadTvCode(); /* eslint-disable-next-line */ }, [branchId]);
+  const tvShort = `${window.location.host}/tv`;
+  const tvUrl = tvCode ? `${window.location.origin}/tv/${tvCode}` : '';
   const qr = tvUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(tvUrl)}` : '';
 
   useEffect(() => {
@@ -164,10 +174,15 @@ const POSSettings = () => {
                   <h2 className="text-lg font-bold">Hubungkan TV (sekali saja)</h2>
                   <ol className="list-decimal pl-5 text-sm space-y-1 text-muted-foreground">
                     <li>Buka browser di Smart TV / Android TV box.</li>
-                    <li>Scan QR di samping, atau ketik link di bawah.</li>
+                    <li>Scan QR di samping, atau ketik <b className="text-foreground">{tvShort}</b> lalu masukkan kode TV.</li>
                     <li>TV akan mengingat outlet ini — besok cukup buka browser lagi, tanpa login.</li>
                     <li>Tekan "Aktifkan Suara & Layar Penuh" di TV agar nomor dipanggil otomatis.</li>
                   </ol>
+                  <div className="rounded-2xl bg-muted p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Kode TV</p>
+                    <p className="text-4xl font-black tracking-[0.3em]">{tvCode || '------'}</p>
+                    <Button size="sm" variant="ghost" className="mt-1" onClick={() => loadTvCode(true)}>Buat kode baru</Button>
+                  </div>
                   <div className="flex gap-2">
                     <Input readOnly value={tvUrl} className="font-mono text-xs" />
                     <Button variant="outline" onClick={() => { navigator.clipboard.writeText(tvUrl); toast.success('Link disalin'); }}><Copy className="h-4 w-4" /></Button>

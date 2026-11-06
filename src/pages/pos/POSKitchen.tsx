@@ -41,6 +41,7 @@ const POSKitchen = ({ kiosk = false }: { kiosk?: boolean }) => {
   const [filter, setFilter] = useState<'all' | 'dine_in' | 'online'>('all');
   const [station, setStation] = useState<KDSStation>('all');
   const [recallOpen, setRecallOpen] = useState(false);
+  const [mTab, setMTab] = useState<'queued' | 'cooking' | 'ready'>('queued');
 
   const filtered = useMemo(() => {
     let list = tickets;
@@ -75,7 +76,7 @@ const POSKitchen = ({ kiosk = false }: { kiosk?: boolean }) => {
   );
 
   const Chip = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
-    <button data-active={active} onClick={onClick} className="pos-kds-chip rounded-xl px-3 py-2 text-sm font-semibold flex items-center gap-1.5 transition">
+    <button data-active={active} onClick={onClick} className="pos-kds-chip rounded-full px-4 min-h-11 text-sm font-semibold flex items-center gap-1.5 transition">
       {children}
     </button>
   );
@@ -91,8 +92,8 @@ const POSKitchen = ({ kiosk = false }: { kiosk?: boolean }) => {
   }
 
   return (
-    <div className="pos-kds-shell h-screen flex flex-col font-sans">
-      <div className="pos-kds-bar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+    <div className="pos-kds-shell h-[100dvh] flex flex-col font-sans">
+      <div className="pos-kds-bar flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3">
         <div className="flex items-center gap-3">
           {!kiosk && (
             <Button size="icon" variant="ghost" className="text-white hover:bg-white/10" onClick={() => navigate('/pos')}>
@@ -106,7 +107,7 @@ const POSKitchen = ({ kiosk = false }: { kiosk?: boolean }) => {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto md:flex-wrap -mx-1 px-1 pb-1 md:pb-0 [&>*]:shrink-0">
           <Chip active={station === 'all'} onClick={() => setStation('all')}><LayoutGrid className="h-4 w-4" />Semua Stasiun</Chip>
           <Chip active={station === 'bar'} onClick={() => setStation('bar')}><Coffee className="h-4 w-4" />Barista</Chip>
           <Chip active={station === 'kitchen'} onClick={() => setStation('kitchen')}><Utensils className="h-4 w-4" />Dapur</Chip>
@@ -126,11 +127,28 @@ const POSKitchen = ({ kiosk = false }: { kiosk?: boolean }) => {
           <div className="animate-spin h-10 w-10 border-b-2 border-primary rounded-full" />
         </div>
       ) : (
-        <div className="flex-1 flex gap-3 p-3 min-h-0">
+        <>
+        <div className="md:hidden grid grid-cols-3 gap-2 px-3 pt-3">
+          {([['queued','Antri','bg-warning'],['cooking','Diproses','bg-primary'],['ready','Siap','bg-success']] as const).map(([k,l,d]) => (
+            <button key={k} data-active={mTab===k} onClick={() => setMTab(k)} className="pos-kds-chip rounded-2xl min-h-14 font-bold flex items-center justify-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${d}`} />{l}
+              <span className="rounded-full bg-white/15 px-2 text-sm">{filtered.filter((t) => t.status === k).length}</span>
+            </button>
+          ))}
+        </div>
+        <div className="md:hidden flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+          {filtered.filter((t) => t.status === mTab).length === 0
+            ? <div className="text-center pos-kds-muted py-16">Tidak ada tiket</div>
+            : filtered.filter((t) => t.status === mTab).map((t) => (
+              <KDSTicketCard key={t.id} ticket={t} station={station} onUpdateStatus={updateStatus} onToggleItem={toggleItemDone} />
+            ))}
+        </div>
+        <div className="hidden md:flex flex-1 gap-3 p-3 min-h-0">
           <Column title="ANTRI" dot="bg-warning" items={filtered.filter((t) => t.status === 'queued')} />
           <Column title="DIPROSES" dot="bg-primary" items={filtered.filter((t) => t.status === 'cooking')} />
           <Column title="SIAP" dot="bg-success" items={filtered.filter((t) => t.status === 'ready')} />
         </div>
+        </>
       )}
 
       <Sheet open={recallOpen} onOpenChange={setRecallOpen}>
