@@ -191,8 +191,8 @@ const POSMain = () => {
   };
 
   const decrementInventory = async (branchId: string, itemsToDecrement: { product_id: string; qty: number; is_custom?: boolean }[]) => {
-    for (const it of itemsToDecrement) {
-      if (it.is_custom) continue;
+    // Parallel per product (was sequential: 2 round-trips × N items before the receipt appeared).
+    await Promise.all(itemsToDecrement.filter((it) => !it.is_custom).map(async (it) => {
       const { data: invRow } = await supabase
         .from('inventory')
         .select('id, stock_quantity')
@@ -209,7 +209,7 @@ const POSMain = () => {
           })
           .eq('id', invRow.id);
       }
-    }
+    }));
   };
 
   const markVoucherUsed = async (voucherId: string, transactionId: string) => {
@@ -313,23 +313,16 @@ const POSMain = () => {
         const { error: itemErr } = await supabase.from('pos_transaction_items').insert(itemsPayload);
         if (itemErr) throw itemErr;
 
-        await decrementInventory(
-          userProfile.branch_id,
-          cart.items.map((i) => ({ product_id: i.product_id, qty: i.qty, is_custom: i.is_custom }))
-        );
-        try {
-          await (supabase as any).rpc('deduct_recipe_for_transaction', { _transaction_id: tx.id });
-        } catch (err) {
-          console.error('deduct recipe failed', err);
-        }
-        if (voucher?.voucher_id) await markVoucherUsed(voucher.voucher_id, tx.id);
-        if (redemption?.code) {
-          try {
-            await useRedemption(redemption.code, cart.totals.total - voucherDiscount, 'pos', tx.id);
-          } catch (err) {
-            console.error('use_redemption failed', err);
-          }
-        }
+        // Secondary bookkeeping runs in the background so the receipt shows immediately.
+        const stockItems = cart.items.map((i) => ({ product_id: i.product_id, qty: i.qty, is_custom: i.is_custom }));
+        const redemptionCode = redemption?.code;
+        const redemptionBase = cart.totals.total - voucherDiscount;
+        void Promise.allSettled([
+          decrementInventory(userProfile.branch_id, stockItems),
+          (supabase as any).rpc('deduct_recipe_for_transaction', { _transaction_id: tx.id }),
+          voucher?.voucher_id ? markVoucherUsed(voucher.voucher_id, tx.id) : Promise.resolve(),
+          redemptionCode ? useRedemption(redemptionCode, redemptionBase, 'pos', tx.id) : Promise.resolve(),
+        ]).then((r) => r.forEach((x) => x.status === 'rejected' && console.error('post-payment task failed', x.reason)));
       }
 
       // Build receipt
@@ -385,7 +378,7 @@ const POSMain = () => {
       // Auto-release table (and merged tables) after payment
       if (selectedTable && !isOffline) {
         const db = supabase as any;
-        await db.from('pos_tables').update({
+        void db.from('pos_tables').update({
           status: 'available', guest_name: null, guest_count: null, occupied_at: null,
           current_total: 0, open_bill: null, merged_into: null,
         }).or(`id.eq.${selectedTable.id},merged_into.eq.${selectedTable.id}`);
@@ -402,18 +395,20 @@ const POSMain = () => {
       setExternalOrderId('');
       setCustomerName('');
       if (member?.id && !isOffline) {
-        const pts = await awardLoyaltyPoints({
-          memberId: member.id,
+        const m = member;
+        setMember(null);
+        void awardLoyaltyPoints({
+          memberId: m.id,
           amount: finalTotal,
           source: 'pos',
           referenceId: tx.id,
           description: `Poin dari transaksi ${txNum}`,
-        });
-        if (pts > 0) {
-          await supabase.from('pos_transactions').update({ point_earned: pts } as any).eq('id', tx.id);
-          toast.success(`${member.name || 'Member'} mendapat ${pts} poin`);
-        }
-        setMember(null);
+        }).then(async (pts) => {
+          if (pts > 0) {
+            await supabase.from('pos_transactions').update({ point_earned: pts } as any).eq('id', tx.id);
+            toast.success(`${m.name || 'Member'} mendapat ${pts} poin`);
+          }
+        }).catch((err) => console.error('award points failed', err));
       }
       setStatsKey((k) => k + 1);
       toast.success(isOffline ? 'Tersimpan offline — akan disinkronkan otomatis saat online' : 'Pembayaran berhasil');
