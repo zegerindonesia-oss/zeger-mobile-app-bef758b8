@@ -370,7 +370,7 @@ const POSMain = () => {
         if (!tableTxnId) {
           await printKitchen(fresh, {
             ref: txNum, order_type: orderType, table_number: tableNumber || null,
-            customer_name: customerName || null, created_at: new Date().toISOString(), items: printItems,
+            customer_name: customerName || null, created_at: new Date().toISOString(), items: printItems, queue_number: queueNo,
           });
         }
       });
@@ -758,12 +758,12 @@ const POSMain = () => {
         onPrint={() => receipt && safePrint(() => printReceipt(printSettings, receipt, false))}
         onPrintStickers={() => receipt && safePrint(() => printStickersOnly(printSettings, {
           ref: receipt.transaction_number, order_type: receipt.order_type, table_number: receipt.table_number || null,
-          customer_name: receipt.customer_name || null, created_at: receipt.created_at,
+          customer_name: receipt.customer_name || null, created_at: receipt.created_at, queue_number: receipt.queue_number ?? null,
           items: receipt.items.map((i) => ({ product_name: i.product_name, qty: i.qty, notes: i.notes })),
         }))}
         onPrintKitchen={() => receipt && safePrint(() => printKitchen(printSettings, {
           ref: receipt.transaction_number, order_type: receipt.order_type, table_number: receipt.table_number || null,
-          customer_name: receipt.customer_name || null, created_at: receipt.created_at,
+          customer_name: receipt.customer_name || null, created_at: receipt.created_at, queue_number: receipt.queue_number ?? null,
           items: receipt.items.map((i) => ({ product_name: i.product_name, qty: i.qty, notes: i.notes })) as any,
         }, false))}
         onVoid={() => { setReceipt(null); navigate('/pos/transactions'); }} />

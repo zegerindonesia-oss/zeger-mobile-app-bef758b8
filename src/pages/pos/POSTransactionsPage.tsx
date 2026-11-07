@@ -210,7 +210,7 @@ function TxDetail({ tx, branchId, branchName, onClose, onVoided, onReorder }: {
     subtotal: Number(tx.subtotal), discount: Number(tx.discount_item || 0) + Number(tx.discount_bill || 0), service_charge: Number(tx.service_charge || 0), tax: Number(tx.tax || 0), total: Number(tx.total),
     payment_method_1: tx.payment_method_1 || 'cash', amount_1: Number(tx.amount_1 || 0), payment_method_2: tx.payment_method_2, amount_2: Number(tx.amount_2 || 0), change_amount: Number(tx.change_amount || 0),
   };
-  const kitchen = { ref: tx.transaction_number, order_type: tx.order_type, table_number: tx.table_number, customer_name: tx.customer_name, created_at: tx.created_at, items: printItems };
+  const kitchen = { ref: tx.transaction_number, order_type: tx.order_type, table_number: tx.table_number, customer_name: tx.customer_name, created_at: tx.created_at, items: printItems, queue_number: tx.queue_number ?? null };
 
   const run = async (key: string, fn: () => Promise<any>, ok: string) => {
     if (!settings) return toast.error('Pengaturan printer belum dimuat');
