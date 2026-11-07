@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2, MessageCircle } from "lucide-react";
+import { POSSalesAnalytics } from "@/components/pos/POSSalesAnalytics";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 
@@ -35,10 +36,11 @@ export default function POSBackOfficeReports() {
   const [to, setTo] = useState(today);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [branch, setBranch] = useState("all");
-  const [tab, setTab] = useState("rekap");
+  const [tab, setTab] = useState("grafik");
   const [loading, setLoading] = useState(false);
-  const [txs, setTxs] = useState<any[]>([]);
-  const [items, setItems] = useState<any[]>([]);
+  const [rawTxs, setTxs] = useState<any[]>([]);
+  const [rawItems, setItems] = useState<any[]>([]);
+  const [brandF, setBrandF] = useState("all");
   const [shifts, setShifts] = useState<any[]>([]);
   const [cash, setCash] = useState<any[]>([]);
   const [tables, setTables] = useState<any[]>([]);
@@ -78,6 +80,15 @@ export default function POSBackOfficeReports() {
     return () => { off = true; };
   }, [from, to, bId]);
 
+  const brandList = useMemo(() => [...new Set(rawItems.map((i) => brandOf.get(i.product_id) || "Tanpa Brand"))].sort(), [rawItems, brandOf]);
+  const items = useMemo(() => (brandF === "all" ? rawItems : rawItems.filter((i) => (brandOf.get(i.product_id) || "Tanpa Brand") === brandF)), [rawItems, brandF, brandOf]);
+  const txs = useMemo(() => {
+    if (brandF === "all") return rawTxs;
+    // Per-brand view: transaction totals become that brand's item subtotal.
+    const m = new Map<string, number>();
+    items.forEach((i) => m.set(i.transaction_id, (m.get(i.transaction_id) || 0) + Number(i.subtotal_item || 0)));
+    return rawTxs.filter((t) => m.has(t.id)).map((t) => ({ ...t, subtotal: m.get(t.id), total: m.get(t.id), discount_item: 0, discount_bill: 0, service_charge: 0, tax: 0, amount_1: t.payment_method_2 ? t.amount_1 : m.get(t.id), change_amount: 0 }));
+  }, [rawTxs, items, brandF]);
   const paid = txs.filter((t) => t.status === "paid" && !t.void_at);
   const voids = txs.filter((t) => t.void_at || t.status === "void" || t.status === "voided");
   const sum = (k: string) => paid.reduce((s, t) => s + Number(t[k] || 0), 0);
@@ -117,6 +128,11 @@ export default function POSBackOfficeReports() {
       bayar: { title: "Data Pembayaran", head: ["Metode", "Jumlah", "Nominal", "%"], rows: group(payRows, (r) => String(r.m).toUpperCase(), (r) => r.v).map(([k, v]) => [k, v.n, rp(v.v), pct(v.v, payTot)]) },
       menu: { title: "Penjualan per Menu", head: ["Menu", "Kategori", "Brand", "Qty", "Omzet", "%"], rows: menuG.map(([k, v]) => [k, cat.get(k) || "-", brandOf.get(items.find((i) => i.product_name === k)?.product_id) || "-", v.n, rp(v.v), pct(v.v, itemTot)]) },
       brand: { title: "Penjualan per Brand", head: ["Brand", "Qty", "Omzet", "%"], rows: brandG.map(([k, v]) => [k, v.n, rp(v.v), pct(v.v, itemTot)]) },
+      brandmenu: { title: "Rincian Menu per Brand", head: ["Brand", "Menu", "Kategori", "Qty", "Omzet", "% Brand"], rows: brandG.flatMap(([b, bv]) => [
+        ...group(items.filter((i) => (brandOf.get(i.product_id) || "Tanpa Brand") === b), (i) => i.product_name || "Item", (i) => Number(i.subtotal_item || 0), (i) => Number(i.qty || 0))
+          .map(([k, v]) => [b, k, cat.get(k) || "-", v.n, rp(v.v), pct(v.v, bv.v)]),
+        [`TOTAL ${b}`, "", "", bv.n, rp(bv.v), "100%"],
+      ]) },
       shift: { title: "Riwayat Shift & Tutup Laci", head: ["Cabang", "Kasir", "Buka", "Tutup", "Modal", "Penjualan", "Kas Masuk", "Kas Keluar", "Seharusnya", "Uang Fisik", "Selisih", "Status"], rows: shifts.map((s) => [
         bName.get(s.branch_id) || "-", s.cashier_name || "-", dt(s.opened_at), dt(s.closed_at), rp(s.opening_cash), rp(s.total_sales), rp(s.total_cash_in), rp(s.total_cash_out), rp(s.expected_cash), s.closing_cash == null ? "-" : rp(s.closing_cash), s.cash_difference == null ? "-" : rp(s.cash_difference), s.status]) },
       kas: { title: "Kas Masuk / Keluar Laci", head: ["Waktu", "Cabang", "Jenis", "Kategori", "Nominal", "Keterangan"], rows: cash.map((c) => [dt(c.created_at), bName.get(c.branch_id) || "-", c.movement_type === "in" || c.movement_type === "cash_in" ? "Masuk" : "Keluar", c.category || "-", rp(c.amount), c.reason || "-"]) },
@@ -124,8 +140,14 @@ export default function POSBackOfficeReports() {
     };
   }, [txs, items, shifts, cash, tables, brandOf, bName]);
 
-  const label = `${bId ? bName.get(bId) : "Semua Cabang"} · ${from}${from !== to ? " s/d " + to : ""}`;
-  const cur = tablesData[tab];
+  const label = `${bId ? bName.get(bId) : "Semua Cabang"}${brandF !== "all" ? " · Brand " + brandF : ""} · ${from}${from !== to ? " s/d " + to : ""}`;
+  const cur = tablesData[tab] || tablesData.rekap;
+  const sendWa = () => {
+    const r = tablesData.rekap.rows.slice(0, 9).map((x) => `${x[0]}: ${x[1]}`);
+    const b = tablesData.brand.rows.map((x) => `- ${x[0]} (${x[1]}): ${x[2]}`);
+    const text = [`*Laporan POS*`, label, "", ...r, "", "*Per Brand*", ...b].join("\n");
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
 
   const exportXlsx = () => {
     const wb = XLSX.utils.book_new();
@@ -149,7 +171,7 @@ export default function POSBackOfficeReports() {
     pdf.save(`${cur.title}-${from}_${to}.pdf`);
   };
 
-  const TABS: [string, string][] = [["rekap", "Rekap"], ["rincian", "Rincian Penjualan"], ["bayar", "Pembayaran"], ["menu", "Per Menu"], ["brand", "Per Brand"], ["shift", "Shift & Tutup Laci"], ["kas", "Kas Laci"], ["titip", "Titip / Open Bill"]];
+  const TABS: [string, string][] = [["grafik", "Grafik & Analisa"], ["rekap", "Rekap"], ["rincian", "Rincian Penjualan"], ["bayar", "Pembayaran"], ["menu", "Per Menu"], ["brand", "Per Brand"], ["brandmenu", "Rincian Brand & Menu"], ["shift", "Shift & Tutup Laci"], ["kas", "Kas Laci"], ["titip", "Titip / Open Bill"]];
 
   return (
     <div className="space-y-4">
@@ -168,7 +190,15 @@ export default function POSBackOfficeReports() {
         <Input type="date" className="w-auto" value={from} onChange={(e) => setFrom(e.target.value)} />
         <span className="text-muted-foreground text-sm">s/d</span>
         <Input type="date" className="w-auto" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Select value={brandF} onValueChange={setBrandF}>
+          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Brand</SelectItem>
+            {brandList.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div className="ml-auto flex gap-2">
+          <Button variant="outline" onClick={sendWa} disabled={loading}><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
           <Button variant="outline" onClick={exportPdf} disabled={loading}><FileText className="h-4 w-4" /> PDF</Button>
           <Button onClick={exportXlsx} disabled={loading}><FileSpreadsheet className="h-4 w-4" /> Excel (semua)</Button>
         </div>
@@ -179,6 +209,8 @@ export default function POSBackOfficeReports() {
         </TabsList>
         {TABS.map(([k]) => (
           <TabsContent key={k} value={k}>
+            {k === "grafik" ? (loading ? <div className="py-16 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+              : <POSSalesAnalytics txs={paid} items={items} brandOf={brandOf} from={from} to={to} />) :
             <div className="bo-card p-0 overflow-x-auto">
               {loading ? <div className="py-16 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div> : (
                 <table className="w-full text-sm">
@@ -189,7 +221,7 @@ export default function POSBackOfficeReports() {
                   </tbody>
                 </table>
               )}
-            </div>
+            </div>}
           </TabsContent>
         ))}
       </Tabs>

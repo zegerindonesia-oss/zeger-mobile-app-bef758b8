@@ -266,6 +266,16 @@ const ShiftHistory = ({ branchId, onOpen }: { branchId: string | null; onOpen: (
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-bold">Detail Rekapitulasi Shift</h2>
+      <div className="flex flex-wrap gap-2">
+        {([['Hari Ini', 0], ['Kemarin', 1], ['Bulan Ini', -1]] as const).map(([l, n]) => (
+          <Button key={l} variant="outline" size="sm" className="rounded-xl" onClick={() => {
+            const d = new Date();
+            if (n === -1) { setFrom(ymd(new Date(d.getFullYear(), d.getMonth(), 1))); setTo(ymd(d)); }
+            else { d.setDate(d.getDate() - n); setFrom(ymd(d)); setTo(ymd(d)); }
+          }}>{l}</Button>
+        ))}
+        <span className="text-xs text-muted-foreground self-center">Klik baris shift untuk melihat rekap lengkap, termasuk rincian menu per brand.</span>
+      </div>
       <div className="grid sm:grid-cols-[auto_auto_1fr] gap-2">
         <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-11 rounded-xl" />
         <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-11 rounded-xl" />
