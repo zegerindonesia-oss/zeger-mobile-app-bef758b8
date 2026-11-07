@@ -246,12 +246,16 @@ export const SAMPLE_RECEIPT: ReceiptPrint = {
 export interface KitchenPrint {
   station: string; ref: string; order_type: string; table_number?: string | null;
   customer_name?: string | null; created_at: string; items: PrintItem[]; addition?: boolean;
+  queue_number?: number | null;
 }
+/** Same queue label as the receipt, TV and KDS. */
+export const kitchenQueue = (k: { queue_number?: number | null; ref: string }) =>
+  k.queue_number ? String(k.queue_number).padStart(3, '0') : k.ref.slice(-3);
 
 export const renderKitchenTicket = (k: KitchenPrint, paper: PaperWidth) => doc(paper, `Dapur ${k.ref}`, `
 <div class="c b">${esc(k.station.toUpperCase())}</div>
 ${k.addition ? '<div class="c b">** TAMBAHAN **</div>' : ''}
-<div class="c big">${k.table_number ? `MEJA ${esc(k.table_number)}` : `#${esc(k.ref.slice(-3))}`}</div>
+<div class="c big">${k.table_number ? `MEJA ${esc(k.table_number)}` : `#${esc(kitchenQueue(k))}`}</div>${k.table_number && k.queue_number ? `<div class="c b">Antrean #${esc(kitchenQueue(k))}</div>` : ''}
 <div class="c">${esc(k.order_type.replace('_', ' ').toUpperCase())}${k.customer_name ? ` · ${esc(k.customer_name)}` : ''}</div>
 <div class="c">${esc(k.ref)} · ${jkt(k.created_at)}</div>
 <div class="hr"></div>
@@ -286,7 +290,7 @@ export const drawCustomerLabel = (k: KitchenPrint, item: KitchenPrint['items'][n
   const font = (w: number, s: number) => (g.font = `${w} ${s}px Arial, Helvetica, sans-serif`);
   const pad = Math.round(0.8 * D), R = W - pad, B = H - pad;
   // Right block: queue number (big) + cup n/total
-  const q = k.table_number ? `M${k.table_number}` : `#${k.ref.slice(-3)}`;
+  const q = k.queue_number ? `#${kitchenQueue(k)}` : k.table_number ? `M${k.table_number}` : `#${kitchenQueue(k)}`;
   const qS = px(11); font(900, qS); const qW = g.measureText(q).width;
   const cS = px(5); font(800, cS); const cTxt = `${n}/${total}`; const cW = g.measureText(cTxt).width;
   const rW = Math.max(qW, cW); const rx = R - rW;
@@ -480,7 +484,9 @@ export const escKitchen = (k: KitchenPrint, p: PrinterConfig) => {
   const e = new EscPos(colsOf(p));
   e.align('c').bold(true).line(k.station.toUpperCase());
   if (k.addition) e.line('** TAMBAHAN **');
-  e.size(2, 2).line(k.table_number ? `MEJA ${k.table_number}` : `#${k.ref.slice(-3)}`).size(1, 1).bold(false);
+  e.size(2, 2).line(k.table_number ? `MEJA ${k.table_number}` : `#${kitchenQueue(k)}`).size(1, 1);
+  if (k.table_number && k.queue_number) e.line(`Antrean #${kitchenQueue(k)}`);
+  e.bold(false);
   e.line(k.order_type.replace('_', ' ').toUpperCase() + (k.customer_name ? ` - ${k.customer_name}` : ''));
   e.line(`${k.ref}  ${jkt(k.created_at)}`).align('l').hr();
   k.items.forEach((i) => { e.bold(true).size(1, 2).line(`${i.qty}x ${i.product_name}`).size(1, 1).bold(false); if (i.notes) e.line(`  >> ${i.notes}`); });
