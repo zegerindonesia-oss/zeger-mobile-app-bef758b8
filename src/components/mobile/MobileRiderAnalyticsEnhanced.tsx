@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -123,8 +123,9 @@ const MobileRiderAnalyticsEnhanced = () => {
 
   const { user: authUser, userProfile: authProfile } = useAuth();
 
+  const reqIdRef = useRef(0);
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !authProfile?.id) return;
     fetchAnalytics();
   }, [startDate, endDate, authUser?.id, authProfile?.id]);
 
@@ -198,6 +199,7 @@ const MobileRiderAnalyticsEnhanced = () => {
   };
 
   const fetchAnalytics = async () => {
+    const myReq = ++reqIdRef.current;
     try {
       setLoading(true);
       let profile: any = authProfile?.id
@@ -399,10 +401,6 @@ const MobileRiderAnalyticsEnhanced = () => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       // Fetch stock status and product sales summary
-      const { data: inventory } = await supabase
-        .from('inventory')
-        .select('stock_quantity, min_stock_level')
-        .eq('rider_id', profile.id);
 
       const stockStatus = {
         total_items: inventory?.length || 0,
@@ -441,7 +439,7 @@ const MobileRiderAnalyticsEnhanced = () => {
     } catch (error: any) {
       toast.error("Gagal memuat data analytics");
     } finally {
-      setLoading(false);
+      if (myReq === reqIdRef.current) setLoading(false);
     }
   };
 
