@@ -315,6 +315,7 @@ const MobileRiderAnalyticsEnhanced = () => {
         .gte('shift_date', startDate)
         .lte('shift_date', endDate)
         .order('shift_start_time', { ascending: true });
+      */
 
       const findShiftNumber = (dateStr: string) => {
         const t = new Date(dateStr).getTime();
