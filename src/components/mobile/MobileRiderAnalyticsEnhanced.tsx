@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -123,8 +123,9 @@ const MobileRiderAnalyticsEnhanced = () => {
 
   const { user: authUser, userProfile: authProfile } = useAuth();
 
+  const reqIdRef = useRef(0);
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !authProfile?.id) return;
     fetchAnalytics();
   }, [startDate, endDate, authUser?.id, authProfile?.id]);
 
@@ -198,6 +199,7 @@ const MobileRiderAnalyticsEnhanced = () => {
   };
 
   const fetchAnalytics = async () => {
+    const myReq = ++reqIdRef.current;
     try {
       setLoading(true);
       let profile: any = authProfile?.id
@@ -222,8 +224,43 @@ const MobileRiderAnalyticsEnhanced = () => {
       const startDateTime = `${startDate}T00:00:00+07:00`;
       const endDateTime = `${endDate}T23:59:59+07:00`;
 
-      // Fetch transactions with detailed data
-      const { data: allTransactions } = await supabase
+      const txSelect = `id, transaction_number, transaction_date, final_amount, status, payment_method,
+          location_name, transaction_latitude, transaction_longitude, customer_id, is_voided, void_reason, voided_at,
+          transaction_items ( quantity, unit_price, total_price, products (name) )`;
+      const [activeRes, voidRes, pendingRes, shiftsRes, invRes] = await Promise.all([
+        supabase.from('transactions').select(txSelect)
+          .eq('rider_id', profile.id).eq('is_voided', false)
+          .gte('transaction_date', startDateTime).lte('transaction_date', endDateTime)
+          .order('transaction_date', { ascending: false }),
+        supabase.from('transactions').select(txSelect)
+          .eq('rider_id', profile.id).eq('is_voided', true)
+          .gte('transaction_date', startDateTime).lte('transaction_date', endDateTime)
+          .order('transaction_date', { ascending: false }),
+        supabase.from('transaction_void_requests').select('transaction_id')
+          .eq('rider_id', profile.id).eq('status', 'pending'),
+        supabase.from('shift_management')
+          .select('id, shift_date, shift_number, shift_start_time, shift_end_time, status')
+          .eq('rider_id', profile.id).gte('shift_date', startDate).lte('shift_date', endDate)
+          .order('shift_start_time', { ascending: true }),
+        supabase.from('inventory').select('stock_quantity, min_stock_level').eq('rider_id', profile.id),
+      ]);
+      if (myReq !== reqIdRef.current) return;
+
+      const transactions: any[] = activeRes.data || [];
+      const voidedRaw: any[] = voidRes.data || [];
+      const allTransactions = [...transactions, ...voidedRaw];
+      setPendingVoidIds((pendingRes.data || []).map((r: any) => r.transaction_id));
+      const shifts = shiftsRes.data;
+      const inventory = invRes.data;
+
+      const customerIds = Array.from(new Set(allTransactions.filter(t => t.customer_id).map(t => t.customer_id)));
+      const { data: customers } = customerIds.length > 0 ? await supabase
+        .from('customers').select('id, name').in('id', customerIds) : { data: [] as any[] };
+      if (myReq !== reqIdRef.current) return;
+      const customerMap = new Map((customers || []).map((c: any) => [c.id, c.name]));
+
+      /* legacy sequential queries removed
+      const { data: allTransactions_ } = await supabase
         .from('transactions')
         .select(`
           id,
@@ -280,6 +317,7 @@ const MobileRiderAnalyticsEnhanced = () => {
         .gte('shift_date', startDate)
         .lte('shift_date', endDate)
         .order('shift_start_time', { ascending: true });
+      */
 
       const findShiftNumber = (dateStr: string) => {
         const t = new Date(dateStr).getTime();
@@ -363,10 +401,6 @@ const MobileRiderAnalyticsEnhanced = () => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       // Fetch stock status and product sales summary
-      const { data: inventory } = await supabase
-        .from('inventory')
-        .select('stock_quantity, min_stock_level')
-        .eq('rider_id', profile.id);
 
       const stockStatus = {
         total_items: inventory?.length || 0,
@@ -405,7 +439,7 @@ const MobileRiderAnalyticsEnhanced = () => {
     } catch (error: any) {
       toast.error("Gagal memuat data analytics");
     } finally {
-      setLoading(false);
+      if (myReq === reqIdRef.current) setLoading(false);
     }
   };
 
