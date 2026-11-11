@@ -81,6 +81,7 @@ import SubscriptionPlans from "./pages/settings/SubscriptionPlans";
 import TenantManagement from "./pages/settings/TenantManagement";
 import VoucherManagement from "./pages/settings/VoucherManagement";
 import { BranchHubReportLayout } from "./components/layout/BranchHubReportLayout";
+import BranchReportLayout from "./components/layout/BranchReportLayout";
 import { BranchHubReportDashboard } from "./components/dashboard/BranchHubReportDashboard";
 import CreateMalangBranch from "./pages/CreateMalangBranch";
 import ProductManagement from "./pages/master/ProductManagement";
@@ -562,6 +563,11 @@ const App = () => (
               </RoleBasedRoute>
             } />
             
+            <Route path="/branch-report" element={
+              <RoleBasedRoute allowedRoles={['sb_report']}>
+                <BranchReportLayout><POSBackOfficeReports /></BranchReportLayout>
+              </RoleBasedRoute>
+            } />
             {/* Branch Hub Report Routes */}
             <Route path="/bh-report-dashboard" element={
               <RoleBasedRoute allowedRoles={['bh_report']}>

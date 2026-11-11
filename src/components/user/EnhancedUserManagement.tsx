@@ -570,7 +570,7 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
         { value: 'sb_branch_manager', label: 'Small Branch Manager', access: 'web_backoffice', icon: Building2 },
         { value: 'sb_kasir', label: 'Small Branch Kasir', access: 'pos_app', icon: CreditCard },
         { value: 'sb_rider', label: 'Small Branch Rider', access: 'rider_app', icon: MapPin },
-        { value: 'sb_report', label: 'Small Branch Report', access: 'web_backoffice', icon: FileText },
+        { value: 'sb_report', label: 'Laporan Cabang / Mitra (lihat penjualan saja)', access: 'web_backoffice', icon: FileText },
         { value: 'rider', label: 'Legacy Rider', access: 'rider_app', icon: MapPin }
       ];
     } else if (role === 'branch_manager') {
@@ -582,14 +582,14 @@ export function EnhancedUserManagement({ role, branchId }: UserManagementProps) 
         { value: 'sb_branch_manager', label: 'Small Branch Manager', access: 'web_backoffice', icon: Store },
         { value: 'sb_kasir', label: 'Small Branch Kasir', access: 'pos_app', icon: CreditCard },
         { value: 'sb_rider', label: 'Small Branch Rider', access: 'rider_app', icon: MapPin },
-        { value: 'sb_report', label: 'Small Branch Report', access: 'web_backoffice', icon: FileText },
+        { value: 'sb_report', label: 'Laporan Cabang / Mitra (lihat penjualan saja)', access: 'web_backoffice', icon: FileText },
         { value: 'rider', label: 'Legacy Rider', access: 'rider_app', icon: MapPin }
       ];
     } else if (role === 'sb_branch_manager') {
       return [
         { value: 'sb_kasir', label: 'Small Branch Kasir', access: 'pos_app', icon: CreditCard },
         { value: 'sb_rider', label: 'Small Branch Rider', access: 'rider_app', icon: MapPin },
-        { value: 'sb_report', label: 'Small Branch Report', access: 'web_backoffice', icon: FileText }
+        { value: 'sb_report', label: 'Laporan Cabang / Mitra (lihat penjualan saja)', access: 'web_backoffice', icon: FileText }
       ];
     }
     return [];
