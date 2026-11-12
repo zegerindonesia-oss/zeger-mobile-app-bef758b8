@@ -55,6 +55,49 @@ function groupByDay(rows: any[]): [string, any[]][] {
 }
 
 /** Rider (On The Wheels): order menu jadi ke Branch Hub / Central Kitchen */
+export const RIDER_BRANDS_KEY = "rider_stock_order.allowed_brands";
+
+/** Back Office: pilih brand yang muncul di Order Stok aplikasi Rider (kosong = semua brand). */
+export function RiderBrandSettings() {
+  const [brands, setBrands] = useState<string[]>([]);
+  const [sel, setSel] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    db.from("products").select("brand").eq("is_active", true).then(({ data }: any) =>
+      setBrands(Array.from(new Set((data || []).map((p: any) => p.brand).filter(Boolean))).sort() as string[]));
+    db.from("app_settings").select("setting_value").eq("setting_key", RIDER_BRANDS_KEY).maybeSingle().then(({ data }: any) =>
+      setSel(Array.isArray(data?.setting_value) ? data.setting_value : []));
+  }, []);
+  const save = async () => {
+    setBusy(true);
+    const { error } = await db.from("app_settings").upsert({ setting_key: RIDER_BRANDS_KEY, setting_value: sel, setting_type: "rider_app", is_active: true, description: "Brand yang tampil di Order Stok Rider" }, { onConflict: "setting_key" });
+    setBusy(false);
+    error ? toast.error(error.message) : toast.success("Pengaturan brand rider tersimpan");
+  };
+  const toggle = (b: string) => setSel((s) => s.includes(b) ? s.filter((x) => x !== b) : [...s, b]);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">Brand yang Muncul di Order Stok Rider</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">Centang brand yang boleh dipesan rider. Jika tidak ada yang dicentang, semua brand muncul.</p>
+        <div className="flex flex-wrap gap-2">
+          {brands.map((b) => (
+            <label key={b} className="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm">
+              <input type="checkbox" className="h-4 w-4 accent-primary" checked={sel.includes(b)} onChange={() => toggle(b)} />{b}
+            </label>
+          ))}
+          {!brands.length && <p className="text-sm text-muted-foreground">Belum ada brand di master produk.</p>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {brands.some((b) => /on\s*the\s*wheel/i.test(b)) && <Button size="sm" variant="outline" onClick={() => setSel(brands.filter((b) => /on\s*the\s*wheel/i.test(b)))}>Hanya Zeger On The Wheels</Button>}
+          <Button size="sm" variant="outline" onClick={() => setSel([])}>Semua Brand</Button>
+          <Button size="sm" disabled={busy} onClick={save}>Simpan</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function RiderStockRequestForm() {
   const { userProfile } = useAuth() as any;
   const [hubs, setHubs] = useState<any[]>([]);
@@ -71,8 +114,12 @@ export function RiderStockRequestForm() {
       setHubs(data || []);
       setHubId(userProfile?.branch_id && data?.some((b: any) => b.id === userProfile.branch_id) ? userProfile.branch_id : data?.[0]?.id || "");
     });
-    db.from("products").select("id,name,category,sub_category,brand,cost_price").eq("is_active", true).order("name").then(({ data }: any) => {
-      const list = data || [];
+    Promise.all([
+      db.from("products").select("id,name,category,sub_category,brand,cost_price").eq("is_active", true).order("name"),
+      db.from("app_settings").select("setting_value").eq("setting_key", RIDER_BRANDS_KEY).maybeSingle(),
+    ]).then(([{ data }, { data: cfg }]: any) => {
+      const allowed: string[] = Array.isArray(cfg?.setting_value) ? cfg.setting_value : [];
+      const list = (data || []).filter((p: any) => !allowed.length || allowed.includes(p.brand));
       setProducts(list);
       setBrand((cur) => cur || list.map((p: any) => p.brand).find((b: string) => b && /on\s*the\s*wheel/i.test(b)) || "__all");
     });
@@ -112,8 +159,8 @@ export function RiderStockRequestForm() {
           <select className="w-full rounded-md border bg-background p-2 text-sm" value={hubId} onChange={(e) => setHubId(e.target.value)}>
             {hubs.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
           </select>
-          <Input placeholder="Cari menu (semua brand)…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          {brands.length > 0 && (
+          <Input placeholder="Cari menu…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          {brands.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {[...brands, "__all"].map((b) => (
                 <Button key={b} type="button" size="sm" variant={brand === b ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => { setBrand(b); setCats([]); }}>
